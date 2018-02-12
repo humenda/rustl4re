@@ -1,0 +1,16 @@
+This package is aimed at being the successor of rt_mon while
+incorporating my MS Research Cambridge experiences and some of
+grtmon's features.
+
+It is not fully working yet and will be an experimental testbed for my
+runtime monitoring stuff.
+
+Martin Pohlack
+
+
+FAQ:
+====
+
+Q: What does this package name 'ferret' mean?
+
+A: ferret - a very curious animal, investigating everything ...

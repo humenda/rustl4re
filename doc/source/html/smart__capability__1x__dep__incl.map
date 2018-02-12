@@ -1,0 +1,13 @@
+<map id="l4/sys/cxx/smart_capability_1x" name="l4/sys/cxx/smart_capability_1x">
+<area shape="rect" id="node2" href="$util_2unique__cap.html" title="Unique_cap / Unique_del_cap. " alt="" coords="185,80,332,107"/>
+<area shape="rect" id="node7" href="$unique__cap.html" title="Unique_cap / Unique_del_cap. " alt="" coords="523,80,650,107"/>
+<area shape="rect" id="node11" href="$shared__cap.html" title="Shared_cap / Shared_del_cap. " alt="" coords="674,80,803,107"/>
+<area shape="rect" id="node12" href="$util_2shared__cap.html" title="Shared_cap / Shared_del_cap. " alt="" coords="827,80,978,107"/>
+<area shape="rect" id="node3" href="$server_2l4virtio_source.html" title="l4/l4virtio/server\l/l4virtio" alt="" coords="5,155,128,196"/>
+<area shape="rect" id="node4" href="$virtio-block_source.html" title="l4/l4virtio/server\l/virtio&#45;block" alt="" coords="55,244,177,285"/>
+<area shape="rect" id="node5" href="$util_2event.html" title="l4/re/util/event" alt="" coords="203,162,314,189"/>
+<area shape="rect" id="node6" href="$object__registry_source.html" title="l4/re/util/object_registry" alt="" coords="338,162,505,189"/>
+<area shape="rect" id="node8" href="$ns__fs_8h_source.html" title="l4/l4re_vfs/impl/ns_fs.h" alt="" coords="580,162,745,189"/>
+<area shape="rect" id="node9" href="$ns__fs__impl_8h_source.html" title="l4/l4re_vfs/impl/ns\l_fs_impl.h" alt="" coords="495,244,630,285"/>
+<area shape="rect" id="node10" href="$vfs__impl_8h_source.html" title="l4/l4re_vfs/impl/vfs\l_impl.h" alt="" coords="693,244,832,285"/>
+</map>

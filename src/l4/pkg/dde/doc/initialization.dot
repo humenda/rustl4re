@@ -1,0 +1,38 @@
+/* DDEKit + DDELinux initialization dependencies.
+
+Small graph to help understanding the dependencies between different
+subsystems and the calls to initialize those systems. It should help to
+determine the order in which init calls are executed.
+
+Functions
+=========
+* ddekit_init()
+* l4dde26_init()
+* l4dde26_process_init()
+
+Subsystems that need initialization
+===================================
+* DDEKit Mem
+* DDEKit Threads
+* DDEKit IRQs
+* DDELx Mem
+
+How to read the graph
+=====================
+
+function1 -> function2 ::= function1 calls function2
+function  -> subsystem ::= function initializes subsystem
+subsystem -> function  ::= subsystem is required for function to run
+
+*/
+digraph InitCallDepgraph {
+	"ddekit_init()" -> "DDEKit Mem";
+	"ddekit_init()" -> "DDEKit Threads";
+	"ddekit_init()" -> "DDEKit IRQs";
+	"l4dde26_init()" -> "ddekit_init()";
+	"l4dde26_init()" -> "DDELx Mem";
+	"l4dde26_init()" -> "Linux driver core";
+	"DDELx Mem" -> "DDEKit Mem";
+	"DDEKit Threads" -> "l4dde26_process_init()";
+	"DDELx Mem" -> "l4dde26_process_init()";
+}

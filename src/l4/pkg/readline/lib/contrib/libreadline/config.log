@@ -1,0 +1,59 @@
+This file contains any messages produced by compilers while
+running configure, to aid debugging if configure makes a mistake.
+
+configure:661: checking host system type
+configure:702: checking for gcc
+configure:815: checking whether the C compiler (gcc -g ) works
+configure:831: gcc -o conftest -g   conftest.c  1>&5
+configure:857: checking whether the C compiler (gcc -g ) is a cross-compiler
+configure:862: checking whether we are using GNU C
+configure:890: checking whether gcc accepts -g
+configure:922: checking how to run the C preprocessor
+configure:1003: checking for minix/config.h
+configure:1056: checking whether gcc needs -traditional
+configure:1113: checking for a BSD compatible install
+configure:1168: checking for ar
+configure:1198: checking for ranlib
+configure:1230: checking return type of signal handlers
+configure:1272: checking whether stat file-mode macros are broken
+configure:1332: checking for dirent.h that defines DIR
+configure:1370: checking for opendir in -ldir
+configure:1457: checking for lstat
+configure:1457: checking for memmove
+configure:1457: checking for putenv
+configure:1457: checking for select
+configure:1457: checking for setenv
+configure:1457: checking for setlocale
+configure:1457: checking for strcasecmp
+configure:1457: checking for tcgetattr
+configure:1511: checking for working strcoll
+configure:1558: checking for unistd.h
+configure:1558: checking for stdlib.h
+configure:1558: checking for varargs.h
+configure:1558: checking for stdarg.h
+configure:1558: checking for string.h
+configure:1558: checking for sys/ptem.h
+configure:1558: checking for sys/pte.h
+configure:1558: checking for sys/stream.h
+configure:1558: checking for sys/select.h
+configure:1558: checking for termcap.h
+configure:1558: checking for termios.h
+configure:1558: checking for termio.h
+configure:1558: checking for sys/file.h
+configure:1558: checking for locale.h
+configure:1597: checking for type of signal functions
+configure:1698: checking if signal handlers must be reinstalled when invoked
+configure:1780: checking for presence of POSIX-style sigsetjmp/siglongjmp
+configure:1854: checking for lstat
+configure:1890: checking whether programs are able to redeclare getpw functions
+configure:1928: checking whether or not strcoll and strcmp differ
+configure:2001: checking whether signal handlers are of type void
+configure:2041: checking for TIOCGWINSZ in sys/ioctl.h
+configure:2075: checking for TIOCSTAT in sys/ioctl.h
+configure:2109: checking for FIONREAD in sys/ioctl.h
+configure:2143: checking for speed_t in sys/types.h
+configure:2176: checking for struct winsize in sys/ioctl.h and termios.h
+configure:2238: checking if struct dirent has a d_ino member
+configure:2294: checking if struct dirent has a d_fileno member
+configure:2357: checking which library has the termcap functions
+configure:2525: checking configuration for building shared libraries

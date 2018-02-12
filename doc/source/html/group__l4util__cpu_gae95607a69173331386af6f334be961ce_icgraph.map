@@ -1,0 +1,3 @@
+<map id="l4util_cpu_has_cpuid" name="l4util_cpu_has_cpuid">
+<area shape="rect" id="node2" href="$group__l4util__cpu.html#ga8c07254a927cdb66b4639c7b977eeead" title="Returns the CPU capabilities if the &quot;cpuid&quot; instruction is available. " alt="" coords="205,5,363,32"/>
+</map>

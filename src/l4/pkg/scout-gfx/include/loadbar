@@ -1,0 +1,145 @@
+// vi:ft=cpp
+/*
+ * \brief  Loadbar widget
+ * \author Norman Feske
+ * \date   2006-08-30
+ */
+
+/*
+ * Copyright (C) 2006-2009
+ * Genode Labs, Feske & Helmuth Systementwicklung GbR
+ *
+ * This file is part of the Genode OS framework, which is distributed
+ * under the terms of the GNU General Public License version 2.
+ */
+
+#pragma once
+
+#include <l4/scout-gfx/factory>
+#include <l4/scout-gfx/icon>
+#include <l4/scout-gfx/style>
+#include <l4/scout-gfx/widget>
+
+#include <algorithm>
+#include <cstring>
+
+namespace Scout_gfx {
+
+class Loadbar;
+
+class Loadbar_listener
+{
+public:
+  virtual ~Loadbar_listener() { }
+  virtual void loadbar_changed(Loadbar *, int mx) = 0;
+};
+
+
+class Loadbar_event_handler : public Event_handler
+{
+private:
+  Loadbar_listener *_listener;
+  Loadbar *_lb;
+
+public:
+  explicit Loadbar_event_handler(Loadbar *lb, Loadbar_listener *listener)
+  : _listener(listener), _lb(lb)
+  {}
+
+  /**
+   * Event handler interface
+   */
+  bool handle(Event const &ev)
+  {
+    if (ev.type == Event::PRESS || ev.type == Event::MOTION)
+      if (_listener && ev.key_cnt > 0)
+	_listener->loadbar_changed(_lb, ev.m.x());
+
+    return true;
+  }
+};
+
+
+class Loadbar : public Parent_widget
+{
+private:
+  enum
+  {
+    _LW = 16,
+    _LH = 16,
+  };
+
+  bool _active;
+
+  Icon *_cover;
+  Icon *_bar;
+
+  Loadbar_event_handler _ev_handler;
+
+  int _value;
+  int _max_value;
+
+  const char *_txt;
+  int _txt_len;
+  Mag_gfx::Area _txt_sz;
+  Mag_gfx::Font *_font;
+
+  void _update_bar_geometry(int w);
+
+public:
+  explicit Loadbar(Factory *f, Loadbar_listener *listener = 0,
+                   Mag_gfx::Font *font = 0);
+
+  int value_by_xpos(int xpos)
+  {
+    xpos -= _LW/2;
+    int max_w = _size.w() - _LW;
+    return std::max(std::min((_max_value * xpos) / max_w, _max_value), 0);
+  }
+
+  Orientations expanding() const { return Horizontal; }
+
+  Area preferred_size() const
+  {
+    return Area(Area::Max_w, std::max<int>(_LH, _txt_sz.h()));
+  }
+
+  bool empty() const { return false; }
+  int value() const { return _value; }
+
+  void value(int value);
+
+  int  max_value() const { return _max_value; }
+
+  void max_value(int max_value);
+
+  void txt(const char *txt);
+
+  /**
+   * Element interface
+   */
+  void set_geometry(Rect const &);
+  Area min_size() const
+  { return Area(_LW, _LH).max(_txt_sz); }
+
+  void draw(Mag_gfx::Canvas *c, Mag_gfx::Point const &p);
+  void mfocus(int flag);
+};
+
+class Kbyte_loadbar : public Loadbar
+{
+private:
+  char _label[32];
+
+  void _print_kbytes(int kbytes, char *dst, int dst_len);
+  void _update_label();
+
+public:
+  explicit Kbyte_loadbar(Factory *f, Loadbar_listener *listener,
+                         Mag_gfx::Font *font = 0);
+
+  void value(int val);
+  void max_value(int max_value);
+};
+
+}

@@ -1,0 +1,76 @@
+Threads in Valgrind
+===================
+
+1. Every thread in Valgrind has two contexts:
+    Valgrind (vg)
+    Client   (cl)
+
+2. Each context consists of:
+    Instruction-Pointer 
+    Stack-Pointer
+
+3. Things todo if a client would create a thread:
+    1. change context (cl->vg)
+    2. collect all needed infos to create new thread
+        - instruction- and stack-pointer for context of client
+        - cap of new thread 
+        - flags for thread_ex_regs
+
+    3. create a new thread in vg context
+    4. change context (vg->cl)
+
+pThreads
+========
+
+Starting the pthread manager thread:
+------------------------------------
+
+pthread_create (uclibc/lib/libpthread/src/pthread.c)
+  |
+  +---> __pthread_initialize_manager (uclibc/lib/libpthread/src/manager.cc)
+           |
+           +----> __pthread_start_manager (uclibc/lib/libpthread/src/manager.cc)
+                    |
+                    +---> __pthread_mgr_create_thread (uclibc/lib/libpthread/src/manager.cc)
+                             |
+                          SYSCALL (ex_regs)
+                             |
+                             +---> __pthread_manager (uclibc/lib/libpthread/src/manager.cc)
+                                          pthread manager main-loop
+
+
+Starting a normal pthread:
+--------------------------
+
+pthread_create (uclibc/lib/libpthread/src/pthread.c)
+  |
+  +---> Request to pthread manager req_kind = REQ_CREATE
+         |
+        IPC
+         |
+         +---> __pthread_manager (uclibc/lib/libpthread/src/manager.cc)
+                 |
+                 +----> pthread_handle_create (uclibc/lib/libpthread/src/manager.cc)
+                          |
+                          +---> __pthread_mgr_create_thread (uclibc/lib/libpthread/src/manager.cc)
+                                  |
+                               SYSCALL (ex_regs)
+                                  |
+                                  +---> function specified by user
+                                    
+
+Exiting of a normal pthread:
+----------------------------
+
+TODO
+
+__pthread_do_exit (uclibc/lib/libpthread/src/join.c)
+  |
+  +----> l4_sleep_forever (l4util/include/util.h)
+          |
+          +----> l4_ipc_sleep (l4sys/include/L4API-l4f/ipc-impl.h)
+                   |
+                   +----> l4_ipc_receive (l4sys/include/ARCH-x86/L4API-l4f/ipc-l42-gcc3-nopic.h)
+
+Exit-Cases of a client inside Valgrind:
+

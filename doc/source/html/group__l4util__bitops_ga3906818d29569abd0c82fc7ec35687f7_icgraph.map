@@ -1,0 +1,4 @@
+<map id="l4util_bsf" name="l4util_bsf">
+<area shape="rect" id="node2" href="$group__l4util__api.html#ga4b64c17b6e4392997addc015b4ed53ab" title="Return log2 base and size aligned length of a range. " alt="" coords="129,5,272,32"/>
+<area shape="rect" id="node3" href="$group__l4util__api.html#gab91ed7305d923e57c844060ac1b63234" title="Split a range into log2 base and size aligned chunks. " alt="" coords="320,5,457,32"/>
+</map>

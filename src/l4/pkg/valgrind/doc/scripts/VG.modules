@@ -1,0 +1,9 @@
+entry VG_None_Hello
+roottask moe rom/none.lua
+kernel fiasco -serial_esc -jdb_cmd=JS
+module l4re
+module ned 
+module none-x86-l4re
+module hello
+module lua/none.lua
+module lua/VG.lua

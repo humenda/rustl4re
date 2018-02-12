@@ -1,0 +1,307 @@
+#!/usr/bin/python
+# -*- coding: iso-8859-1 -*-
+#vi: ft=python
+#
+# TSAR - Trace Sequence AnalyzeR
+#        *     *        *      *
+# Tool to extract and analyze Romain event logs
+#
+# (c) 2012-2013 Björn Döbel <doebel@os.inf.tu-dresden.de>,
+#     economic rights: Technische Universität Dresden (Germany)
+#
+#  This file is part of TUD:OS and distributed under the terms of the
+#  GNU General Public License 2.
+#  Please see the COPYING-GPL-2 file for details.
+
+import gzip
+import operator
+import re
+import sys
+import struct
+import tempfile
+import uu
+
+import tsar_events
+import tsar_rules
+
+#pylint: disable=C0103,R0903
+
+
+class EventFactory:
+    """Event factory: random access to Event objects
+       based on an underlying trace reader."""
+
+    def __init__(self, traceReader):
+        self.reader = traceReader
+        self.input = traceReader.raw_read()
+        self.offset = 0
+        self.idpfx = traceReader.prefix()
+
+        self.eventCount = len(self.input) / tsar_events.Event.EVENTSIZE
+        #print self.idpfx
+
+    def uid(self, utcb):
+        return "%s:%x" % (self.idpfx, utcb)
+
+    def reset(self):
+        self.offset = 0
+
+    def print_status(self):
+        sys.stderr.write("\033[34;46m\033[s%s: %8d / %8d\033[u" %
+                         (self.reader.zipFile.name, self.offset,
+                         self.eventCount))
+
+    def _build(self, start):
+        """Get the Event object in the input stream
+           at the given position"""
+
+        if start >= len(self.input):
+            return None
+
+        eventTypes = [
+            tsar_events.Event,
+            tsar_events.SyscallEvent,
+            tsar_events.PagefaultEvent,
+            tsar_events.SwifiEvent,
+            tsar_events.FooEvent,
+            tsar_events.TrapEvent,
+            tsar_events.ThreadStartEvent,
+            tsar_events.ThreadStopEvent,
+            tsar_events.LockingEvent,
+            tsar_events.SHMLockingEvent,
+            tsar_events.MapEvent,
+            tsar_events.BarnesEvent,
+        ]
+
+        #print "Input: %d bytes" % len(self.input)
+
+        (tsc, utcb, typ) = struct.unpack_from("QIB", self.input[start:])
+        if (utcb == 0):
+            return None
+
+        #print typ, self.uid(utcb)
+
+        try:
+            return eventTypes[typ](self.input[start:], tsc, utcb,
+                                   self.uid(utcb))
+        except IndexError:
+            print "Index error with event type %d" % typ
+            sys.exit(1)
+
+    def nextEvent(self):
+        """Get the next event in stream
+
+        Allows iterating over the stream."""
+        start = self.offset * tsar_events.Event.EVENTSIZE
+        if (self.offset % 1000 == 0) or (self.offset == self.eventCount):
+            self.print_status()
+
+        self.offset += 1
+        return self._build(start)
+
+    def eventAtOffset(self, offset):
+        """Get event at a specified offset.
+
+        Random access to the stream."""
+        start = offset * tsar_events.Event.EVENTSIZE
+        return self._build(start)
+
+
+class TraceReader:
+    """Reader for zipped uu-encoded data"""
+
+    def __init__(self, logfile):
+        #tmp = tempfile.NamedTemporaryFile(mode="w+b")
+        # XXX also print UID here
+        tmp = file(logfile.readlines()[0].strip().split(" ")[2], "wb")
+        sys.stderr.write("UUDecoding %s -> %s\n" % (logfile.name, tmp.name))
+        logfile.seek(0)
+        uu.decode(logfile.name, tmp.name)
+        self.zipFile = gzip.open(tmp.name)
+
+        self.pfx = tmp.name.split(".")[0]
+
+    def prefix(self):
+        return self.pfx
+
+    def raw_read(self):
+        """Read the raw bytes from the underlying stream
+           into a string."""
+        decomp = ""
+        bytes = self.zipFile.read(1024)
+        while bytes != "":
+            decomp += bytes
+            bytes = self.zipFile.read(1024)
+        sys.stderr.write("Read %d bytes.\n" % len(decomp))
+
+        return decomp
+
+
+class EventList:
+    """
+    Raw list of events from potentially multiple event stream sources
+    """
+    def __init__(self):
+        self.streams = []
+        self.stream_index = 0
+
+    def addStream(self, eventFactory):
+        """Add another stream to the event sources"""
+        self.streams += [eventFactory]
+
+    def reset(self):
+        """Reset the event list"""
+        for s in self.streams:
+            s.reset()
+        self.stream_index = 0
+
+    def next(self):
+        """Return the next event.
+
+        Continuously calling this function iterates over the associated
+        streams one at a time. Returns 'None' if no more events are to
+        be found
+        """
+
+        if self.stream_index >= len(self.streams):
+            return None
+
+        ev = self.streams[self.stream_index].nextEvent()
+
+        if ev is None:
+            sys.stderr.write("\033[0m\n")
+            self.stream_index += 1
+            return self.next()
+
+        return ev
+
+
+def print_plain(events):
+    """Plain dump of an event list"""
+    for e in events:
+        print e
+
+
+def print_pretty(events):
+    """Pretty-printed event list.
+
+    Prints a table. First column is a time stamp. Every other
+    colunm represents one distinct replica
+    """
+    ids = []
+    last_ts = 0
+
+    # first run to determine UTCB IDs
+    for e in events:
+        if e.type != 0 and e.uid() not in ids:
+            ids += [e.uid()]
+    ids.sort()
+
+    # header
+    print "\033[32m%14s" % "Timestamp",
+    for i in ids:
+        print "| %20s" % ("UID %s" % i[0:16]),
+    print "\033[0m"
+
+    # printing run
+    for e in events:
+        if e.type == 0:
+            continue
+
+        # set to True if you need horizontal separators between events
+        want_horizontal_spacers = False
+        if want_horizontal_spacers:
+            print "." * 14,
+            for i in range(len(ids)):
+                print "|",
+                print "." * 20,
+            print
+
+        first = True
+        for line in e.pretty():
+            if first:
+                print "%14d" % (int(e.timestamp) - last_ts),
+                last_ts = int(e.timestamp)
+                first = False
+            else:
+                print " " * 14,
+
+            idx = ids.index(e.uid())
+
+            for i in range(0, idx):
+                print "|",
+                print " " * 20,
+            sys.stdout.write(" | %s" % line)
+            remainder = 21 - len(remove_vt100(line))
+            if remainder > 0:
+                sys.stdout.write(" " * remainder)
+            for i in range(idx + 1, len(ids)):
+                print "|",
+                print " " * 20,
+            print
+
+
+def remove_vt100(line):
+    """Remoe any occurrence of a VT100 color sequence from a string"""
+    return re.sub("\033\[\d+(;\d+)?m", "", line)
+
+
+def extractLogs(inputFile):
+    """Take a QEMU log file (Fiasco serial output) and extract the
+       UU-encoded trace dumps from it.
+    """
+    files = []         # list of trace files
+    inLogFile = False  # are we currently operating on a dump?
+
+    for l in file(inputFile).readlines():
+        v = remove_vt100(l)
+
+        # start and end indicators
+        startmo = re.match("romain.*(begin 644 .*.gz)", v)
+        endmo = re.match("romain.*end", v)
+
+        if startmo:
+            curFile = tempfile.NamedTemporaryFile(mode="w+")
+            inLogFile = True
+
+        # Write lines belonging to the dump to temporary file.
+        # Remove L4Re's log prefix upfront
+        if inLogFile:
+            curFile.write(v.replace("romain  | ", ""))
+
+        if inLogFile and endmo:
+            files += [curFile]
+            inLogFile = False
+
+    return files
+
+
+def main():
+    if len(sys.argv) < 2:
+        print "Need at least 1 argument"
+        sys.exit(1)
+
+    elist = EventList()
+    evproc = tsar_rules.EventPreprocessor()
+
+    for f in extractLogs(sys.argv[1]):
+        sys.stderr.write("=== %s ===\n" % f.name)
+        f.seek(0)  # need to reset file seek ptr
+        elist.addStream(EventFactory(TraceReader(f)))
+
+    events = []
+
+    e = elist.next()
+    while e is not None:
+        events += [evproc.process(e)]
+        e = elist.next()
+
+    # events are not necessarily sorted by time right now!
+    events.sort(key=operator.attrgetter('timestamp'))
+
+    #print_plain(events)
+    print_pretty(events)
+
+
+if __name__ == "__main__":
+    main()

@@ -1,0 +1,68 @@
+var group__l4__msgtag__api =
+[
+    [ "l4_msgtag_t", "structl4__msgtag__t.html", [
+      [ "flags", "structl4__msgtag__t.html#a6474820cd12a54260fcc2e6ea2c55979", null ],
+      [ "has_error", "structl4__msgtag__t.html#a26b13889368ed62ec4c85682e29c0dd4", null ],
+      [ "is_exception", "structl4__msgtag__t.html#a10f4278b393457d6e3d8a228691216de", null ],
+      [ "is_io_page_fault", "structl4__msgtag__t.html#ab718981ede39f2089d3c63ec6087875a", null ],
+      [ "is_page_fault", "structl4__msgtag__t.html#a93002bd8038c9a7fc487626b2edcc6b2", null ],
+      [ "is_preemption", "structl4__msgtag__t.html#a976073c2be1d3093f3488d25d6142d83", null ],
+      [ "is_sigma0", "structl4__msgtag__t.html#ad0dc884fb3aea443dd01dd53a90cd6e7", null ],
+      [ "is_sys_exception", "structl4__msgtag__t.html#a75b9532def7916024d6ddac329442963", null ],
+      [ "items", "structl4__msgtag__t.html#a3501f3dd92f575a05ae16ecbfec15627", null ],
+      [ "label", "structl4__msgtag__t.html#a55113867a8fe404c4ed019dacceb84e6", null ],
+      [ "label", "structl4__msgtag__t.html#a2ddba5b1307e019dfe0b82d0ee351484", null ],
+      [ "words", "structl4__msgtag__t.html#ac83d977d5290b342cd18e36e0fb0a04b", null ],
+      [ "raw", "structl4__msgtag__t.html#adcc4bbec40c01f7418f800e071d9712f", null ]
+    ] ],
+    [ "l4_msgtag_t", "group__l4__msgtag__api.html#ga05eb6ccb839e1686f5a1c474430de788", null ],
+    [ "l4_msgtag_flags", "group__l4__msgtag__api.html#ga65d15ec03a90046ba12ba0d3ca9dae15", [
+      [ "L4_MSGTAG_ERROR", "group__l4__msgtag__api.html#gga65d15ec03a90046ba12ba0d3ca9dae15aad1669664171cc979970b1e2300bd463", null ],
+      [ "L4_MSGTAG_TRANSFER_FPU", "group__l4__msgtag__api.html#gga65d15ec03a90046ba12ba0d3ca9dae15aea4fd67d2f81b00e6949ddcdc7beb5f9", null ],
+      [ "L4_MSGTAG_SCHEDULE", "group__l4__msgtag__api.html#gga65d15ec03a90046ba12ba0d3ca9dae15ad220e1ca078f0ea69c8368cb3401d941", null ],
+      [ "L4_MSGTAG_PROPAGATE", "group__l4__msgtag__api.html#gga65d15ec03a90046ba12ba0d3ca9dae15ad5e61a12d8f4b5e214d5e31ae4632be6", null ],
+      [ "L4_MSGTAG_FLAGS", "group__l4__msgtag__api.html#gga65d15ec03a90046ba12ba0d3ca9dae15a0c76a62b96b46f93fe3041b9c4ffac8c", null ]
+    ] ],
+    [ "l4_msgtag_protocol", "group__l4__msgtag__api.html#ga61165805662641702f50e4f524a8df01", [
+      [ "L4_PROTO_NONE", "group__l4__msgtag__api.html#gga61165805662641702f50e4f524a8df01a63abaed5cabd213543da25a35dec12ed", null ],
+      [ "L4_PROTO_ALLOW_SYSCALL", "group__l4__msgtag__api.html#gga61165805662641702f50e4f524a8df01ac9e6947daeaab9c1e21efebda2fd38f0", null ],
+      [ "L4_PROTO_PF_EXCEPTION", "group__l4__msgtag__api.html#gga61165805662641702f50e4f524a8df01a9a628f9ed28dcb429985ce2c16cecf38", null ],
+      [ "L4_PROTO_IRQ", "group__l4__msgtag__api.html#gga61165805662641702f50e4f524a8df01a14626c86a76af96c381216274dbc6689", null ],
+      [ "L4_PROTO_PAGE_FAULT", "group__l4__msgtag__api.html#gga61165805662641702f50e4f524a8df01aba37d00ea2c658680f0d64caf8c19431", null ],
+      [ "L4_PROTO_PREEMPTION", "group__l4__msgtag__api.html#gga61165805662641702f50e4f524a8df01a4046cf8c37888996244029d78dd4d3bd", null ],
+      [ "L4_PROTO_SYS_EXCEPTION", "group__l4__msgtag__api.html#gga61165805662641702f50e4f524a8df01a282bc07dec0af67118e60d496508f5e2", null ],
+      [ "L4_PROTO_EXCEPTION", "group__l4__msgtag__api.html#gga61165805662641702f50e4f524a8df01a2e55dc1556dde35d665042665b68159a", null ],
+      [ "L4_PROTO_SIGMA0", "group__l4__msgtag__api.html#gga61165805662641702f50e4f524a8df01a8f520d989dbd79fc77af6f1940ee478b", null ],
+      [ "L4_PROTO_IO_PAGE_FAULT", "group__l4__msgtag__api.html#gga61165805662641702f50e4f524a8df01a639afc5cbe1ab656656a229ee2917aa8", null ],
+      [ "L4_PROTO_KOBJECT", "group__l4__msgtag__api.html#gga61165805662641702f50e4f524a8df01a4d73bcf33c37734b33c47ef4b11ec5fa", null ],
+      [ "L4_PROTO_TASK", "group__l4__msgtag__api.html#gga61165805662641702f50e4f524a8df01a5a866db052f859a32768fc3a703fa40d", null ],
+      [ "L4_PROTO_THREAD", "group__l4__msgtag__api.html#gga61165805662641702f50e4f524a8df01a924bae5fb10fe4a7ad46e959a7fa87d3", null ],
+      [ "L4_PROTO_LOG", "group__l4__msgtag__api.html#gga61165805662641702f50e4f524a8df01adb158baaf67913cb67a611ba3bed07a5", null ],
+      [ "L4_PROTO_SCHEDULER", "group__l4__msgtag__api.html#gga61165805662641702f50e4f524a8df01a268c2ee39d5ca854c5879837ce735997", null ],
+      [ "L4_PROTO_FACTORY", "group__l4__msgtag__api.html#gga61165805662641702f50e4f524a8df01a1e724834489de744eef38d977501028b", null ],
+      [ "L4_PROTO_VM", "group__l4__msgtag__api.html#gga61165805662641702f50e4f524a8df01a8d0e16f6e162aa12c02bfb1362120709", null ],
+      [ "L4_PROTO_DMA_SPACE", "group__l4__msgtag__api.html#gga61165805662641702f50e4f524a8df01a20d545b6f6f850a28a0b8dea1023c612", null ],
+      [ "L4_PROTO_IRQ_SENDER", "group__l4__msgtag__api.html#gga61165805662641702f50e4f524a8df01a2e94be749ce45b69241588aa93d0c920", null ],
+      [ "L4_PROTO_IRQ_MUX", "group__l4__msgtag__api.html#gga61165805662641702f50e4f524a8df01a9e37a6b617cd404fb67b853198dffdda", null ],
+      [ "L4_PROTO_SEMAPHORE", "group__l4__msgtag__api.html#gga61165805662641702f50e4f524a8df01ad93a31752d5bd7e8076bec7d8e4293f3", null ],
+      [ "L4_PROTO_META", "group__l4__msgtag__api.html#gga61165805662641702f50e4f524a8df01a9c3bab59b9863f958ab21ac418eb1596", null ],
+      [ "L4_PROTO_IOMMU", "group__l4__msgtag__api.html#gga61165805662641702f50e4f524a8df01aba6bc7fb4446c4527d485a6c2dea153d", null ],
+      [ "L4_PROTO_DEBUGGER", "group__l4__msgtag__api.html#gga61165805662641702f50e4f524a8df01adc55eb8da9eba43b3a014e5a5e0a9ac2", null ],
+      [ "L4_PROTO_SMCCC", "group__l4__msgtag__api.html#gga61165805662641702f50e4f524a8df01af9d0a853f2f7a508b9452c01cf17e8ee", null ]
+    ] ],
+    [ "L4_platform_ctl_proto", "group__l4__msgtag__api.html#ga3b9e290891059ae64daab8e01c02eeb3", [
+      [ "L4_PROTO_PLATFORM_CTL", "group__l4__msgtag__api.html#gga3b9e290891059ae64daab8e01c02eeb3a107f89be6beed111d0f240371876e73d", null ]
+    ] ],
+    [ "l4_msgtag", "group__l4__msgtag__api.html#ga661d71acad9d096fa990f7c94943bc78", null ],
+    [ "l4_msgtag_flags", "group__l4__msgtag__api.html#gaa8193318cfb7b2c055682481ef316cde", null ],
+    [ "l4_msgtag_has_error", "group__l4__msgtag__api.html#ga52e71bb66855f4d78fa5c82b5f0c5a87", null ],
+    [ "l4_msgtag_is_exception", "group__l4__msgtag__api.html#ga0f2cf0a5f8d4a733f69b94dcc388c2ef", null ],
+    [ "l4_msgtag_is_io_page_fault", "group__l4__msgtag__api.html#ga463384faf9cb37d3f65f24913e34d687", null ],
+    [ "l4_msgtag_is_page_fault", "group__l4__msgtag__api.html#gaf949daa8e7aa7d20743502de15e86dcd", null ],
+    [ "l4_msgtag_is_preemption", "group__l4__msgtag__api.html#gafb02742f6231ff4568412fed96e7e272", null ],
+    [ "l4_msgtag_is_sigma0", "group__l4__msgtag__api.html#ga047100a8ec6216015fbd1385f5443760", null ],
+    [ "l4_msgtag_is_sys_exception", "group__l4__msgtag__api.html#gafc73bad60b56767f6eb04cf4b71838ee", null ],
+    [ "l4_msgtag_items", "group__l4__msgtag__api.html#ga2f57b9cb540e4cbb6a77363828b9a671", null ],
+    [ "l4_msgtag_label", "group__l4__msgtag__api.html#gab0c4422a230cf5ef5793dbab1faeb3af", null ],
+    [ "l4_msgtag_words", "group__l4__msgtag__api.html#ga6d29d688c50ece7ec55f3c6ed749d375", null ]
+];

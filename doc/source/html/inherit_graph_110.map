@@ -1,0 +1,5 @@
+<map id="Graphical Class Hierarchy" name="Graphical Class Hierarchy">
+<area shape="rect" id="node1" href="$classL4_1_1Ipc_1_1Istream.html" title="Input stream for IPC unmarshalling. " alt="" coords="9,5,125,32"/>
+<area shape="rect" id="node2" href="$classL4_1_1Ipc_1_1Iostream.html" title="Input/Output stream for IPC [un]marshalling. " alt="" coords="176,31,300,57"/>
+<area shape="rect" id="node3" href="$classL4_1_1Ipc_1_1Ostream.html" title="Output stream for IPC marshalling. " alt="" coords="5,56,128,83"/>
+</map>

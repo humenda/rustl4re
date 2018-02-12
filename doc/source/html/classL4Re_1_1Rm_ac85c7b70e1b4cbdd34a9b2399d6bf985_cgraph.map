@@ -1,0 +1,13 @@
+<map id="L4Re::Rm::attach" name="L4Re::Rm::attach">
+<area shape="rect" id="node2" href="$classL4_1_1Ipc_1_1Cap.html#ac4a9f2a8e33b64adbeec5175a1707d34" title="Return the L4::Cap&lt;T&gt; of this Cap. " alt="" coords="201,5,325,32"/>
+<area shape="rect" id="node3" href="$classL4Re_1_1Rm.html#a87922edfbf74322dcb2ac12424824739" title="Detach a region from the address space. " alt="" coords="197,56,329,83"/>
+<area shape="rect" id="node4" href="$classL4_1_1Cap__base.html#a316c26926eef4b54dc6c7afa13bae5f9" title="Test whether the capability is a valid capability index (i.e., not L4_INVALID_CAP). " alt="" coords="182,107,343,133"/>
+<area shape="rect" id="node5" href="$group__l4__fpage__api.html#ga48705696780cda4e2f04dbdb54946f75" title="Create a memory flex page. " alt="" coords="224,157,301,184"/>
+<area shape="rect" id="node6" href="$group__l4__memory__api.html#ga96e3b2d8e69308aecbb11d1d24f61662" title="Round address up to the next page. " alt="" coords="747,297,864,324"/>
+<area shape="rect" id="node8" href="$classL4Re_1_1Dataspace.html#a089936bd4f23665cb8c968c8679d3ab2" title="Map a part of a dataspace completely. " alt="" coords="181,302,344,343"/>
+<area shape="rect" id="node12" href="$classL4_1_1Task.html#ad14a3bf59ff1449fcf7a307587c28175" title="Revoke rights from the task. " alt="" coords="201,368,324,395"/>
+<area shape="rect" id="node7" href="$group__l4__memory__api.html#gae8aa66c17956ac2dfc2a6d5788fd97a9" title="Round value up to the next alignment with bits size. " alt="" coords="912,380,1023,407"/>
+<area shape="rect" id="node9" href="$group__l4__fpage__api.html#ga960465b596caf60adc6c5042e9257f0a" title="Determine maximum flex page size of a region. " alt="" coords="392,360,545,387"/>
+<area shape="rect" id="node10" href="$group__l4__memory__api.html#ga792959ba1e87fecf90018876f32d7bc9" title="Round an address down to the next lower flex page with size bits. " alt="" coords="593,335,699,361"/>
+<area shape="rect" id="node11" href="$group__l4__memory__api.html#ga70b72ae96c18cb49a3445198711bba0d" title="Round an address down to the next lower page boundary. " alt="" coords="413,411,525,437"/>
+</map>

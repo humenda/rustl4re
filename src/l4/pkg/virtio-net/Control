@@ -1,0 +1,2 @@
+requires: libstdc++ stdlibs l4virtio-server
+maintainer: matthias.lange@kernkonzept.com alexander.warg@kernkonzept.com

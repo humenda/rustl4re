@@ -1,0 +1,6 @@
+<map id="l4_task_unmap" name="l4_task_unmap">
+<area shape="rect" id="node2" href="$classL4Re_1_1Util_1_1Cap__alloc__base.html#a31c89aaa2ab78ca277cedad435a52162" title="Free a capability slot. " alt="" coords="171,5,321,47"/>
+<area shape="rect" id="node3" href="$classL4Re_1_1Util_1_1Counting__cap__alloc.html#aecd7d5744bae1cbdc6da24a9c443f8bb" title="Free the capability. " alt="" coords="174,71,318,112"/>
+<area shape="rect" id="node5" href="$classL4Re_1_1Util_1_1Counting__cap__alloc.html#a256ec4df19309885a394418848121081" title="Decrease the reference counter for a capability. " alt="" coords="174,136,318,177"/>
+<area shape="rect" id="node4" href="$classL4Re_1_1Util_1_1Object__registry.html#aeeea59583ffddfef4e7c1c3e6eed41b6" title="Remove a server object from the handler list. " alt="" coords="369,71,541,112"/>
+</map>

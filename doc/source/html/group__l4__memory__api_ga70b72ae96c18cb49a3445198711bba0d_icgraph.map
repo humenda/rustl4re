@@ -1,0 +1,8 @@
+<map id="l4_trunc_page" name="l4_trunc_page">
+<area shape="rect" id="node2" href="$group__l4util__api.html#gac1e88025beb28c8f090592bf2f046080" title="Touch data area to force mapping (read&#45;only) " alt="" coords="199,5,295,32"/>
+<area shape="rect" id="node4" href="$group__l4util__api.html#ga8e840257faffbb57a49003cfb7d41594" title="Touch data areas to force mapping (read&#45;write) " alt="" coords="197,56,296,83"/>
+<area shape="rect" id="node5" href="$classL4Re_1_1Dataspace.html#a01f1c1c3511f0a802313113f661ee94d" title="Request a flex&#45;page mapping from the dataspace. " alt="" coords="165,107,328,133"/>
+<area shape="rect" id="node6" href="$classL4Re_1_1Dataspace.html#a089936bd4f23665cb8c968c8679d3ab2" title="Map a part of a dataspace completely. " alt="" coords="165,158,328,199"/>
+<area shape="rect" id="node3" href="$group__l4util__api.html#ga3a74b4dee439a339ed5a6368845cad37" title="Go sleep and never wake up. " alt="" coords="376,31,504,57"/>
+<area shape="rect" id="node7" href="$classL4Re_1_1Rm.html#ac85c7b70e1b4cbdd34a9b2399d6bf985" title="Attach a data space to a region. " alt="" coords="376,165,504,192"/>
+</map>

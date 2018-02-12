@@ -1,0 +1,72 @@
+Index: ../l4sys/include/ARCH-x86/kdebug.h
+===================================================================
+--- ../l4sys/include/ARCH-x86/kdebug.h
++++ ../l4sys/include/ARCH-x86/kdebug.h
+@@ -53,6 +53,13 @@
+     1:
+ #endif
+ 
++#define enter_kdebug42(text) \
++asm(\
++    "int	$0x42\n\t"\
++    "jmp	1f	\n\t"\
++    ".ascii	\"" text "\"\n\t"\
++    "1:			\n\t"\
++    )
+ /**
+  * Enter L4 kernel debugger (plain assembler version)
+  * \ingroup l4_debugger_api
+@@ -111,6 +118,8 @@
+  */
+ L4_INLINE void
+ outchar(char c) L4_NOTHROW;
++L4_INLINE void
++outchar42(char c) L4_NOTHROW;
+ 
+ /**
+  * Print character string
+@@ -139,6 +148,8 @@
+  */
+ L4_INLINE void
+ outhex32(int number) L4_NOTHROW;
++L4_INLINE void
++outhex42(int number) L4_NOTHROW;
+ 
+ /**
+  * Print 20 bit number (hexadecimal)
+@@ -270,6 +281,17 @@
+       );
+ }
+ 
++L4_INLINE void
++outchar42(char c) L4_NOTHROW
++{
++  asm(
++      "int	$0x42\n\t"
++      "cmpb	$0,%%al	\n\t"
++      : /* No output */
++      : "a" (c)
++      );
++}
++
+ /* actually outstring is outcstring */
+ L4_INLINE void
+ outstring(const char *text) L4_NOTHROW
+@@ -311,6 +333,17 @@
+ }
+ 
+ L4_INLINE void
++outhex42(int number) L4_NOTHROW
++{
++  asm(
++      "int	$0x42\n\t"
++      "cmpb	$5,%%al	\n\t"
++      : /* No output */
++      : "a" (number)
++      );
++}
++
++L4_INLINE void
+ outhex20(int number) L4_NOTHROW
+ {
+   asm(

@@ -1,0 +1,5 @@
+<map id="L4virtio::Svr::Dev_config::ds" name="L4virtio::Svr::Dev_config::ds">
+<area shape="rect" id="node2" href="$classL4virtio_1_1Svr_1_1Driver__mem__list__t.html#a6749bd65e419d7f814dd4c27e0567f28" title="Add a new region to the list. " alt="" coords="188,5,351,61"/>
+<area shape="rect" id="node3" href="$classL4virtio_1_1Svr_1_1Device__t.html#a460f5dc2b32e33a616eb822ffd2f88f0" title="Check for a value in the cmd register and handle a write. " alt="" coords="189,85,349,141"/>
+<area shape="rect" id="node4" href="$classL4virtio_1_1Svr_1_1Device__t.html#a3fa20bf911056f0d03c8274982b1e167" title="Get the memory region list used for this device. " alt="" coords="180,166,359,207"/>
+</map>

@@ -1,0 +1,1343 @@
+Index: src/kern/context-vcpu.cpp
+===================================================================
+--- src/kern/context-vcpu.cpp	(revision 42489)
++++ src/kern/context-vcpu.cpp	(working copy)
+@@ -65,6 +65,12 @@
+       else
+ 	vcpu->_sp = regs()->sp();
+ 
++			if (EXPECT_FALSE(state() & Thread_perf))
++				{
++					if (EXPECT_TRUE(!perf_stopped))
++						stop_pmc();
++				}
++
+       if (_space.user_mode())
+ 	{
+ 	  _space.user_mode(false);
+Index: src/kern/context.cpp
+===================================================================
+--- src/kern/context.cpp	(revision 42489)
++++ src/kern/context.cpp	(working copy)
+@@ -114,6 +114,7 @@
+ protected:
+   virtual void finish_migration() = 0;
+   virtual bool initiate_migration() = 0;
++	virtual void trigger_perf_irq() = 0;
+ 
+   struct State_request
+   {
+@@ -336,6 +337,18 @@
+ private:
+   static Per_cpu<Clock> _clock;
+   static Per_cpu<Context *> _kernel_ctxt;
++
++protected:
++	Unsigned64  current_perf_cnt;
++	Unsigned64  current_perf_config;
++	Unsigned64  perf_start_value;
++	bool				perf_pebs;
++	bool        perf_migrated;
++	bool				perf_migrating_overflow;
++	bool        perf_saved;
++	bool        perf_restored;
++	bool        perf_stopped;
++	bool 				perf_running;
+ };
+ 
+ 
+@@ -412,6 +425,8 @@
+ #include "thread_state.h"
+ #include "timer.h"
+ #include "timeout.h"
++#include "perf_cnt.h"
++#include "apic.h"
+ 
+ DEFINE_PER_CPU Per_cpu<Clock> Context::_clock(true);
+ DEFINE_PER_CPU Per_cpu<Context *> Context::_kernel_ctxt;
+@@ -459,8 +474,146 @@
+   set_cpu_of(this, Cpu::invalid());
+ }
+ 
++PUBLIC
++void
++Context::stop_pmc()
++{
++	perf_running = false;
++	Perf_cnt::pcnt->stop_pmc(Perf_cnt::Default_perf_slot);
++	if (perf_pebs)
++		Perf_cnt::pcnt->disable_pebs(Perf_cnt::Default_perf_slot);
++}
++
++PUBLIC
++void
++Context::start_pmc()
++{
++	perf_running = true;
++	if (perf_pebs)
++		Perf_cnt::pcnt->enable_pebs(Perf_cnt::Default_perf_slot);
++	Perf_cnt::pcnt->start_pmc(Perf_cnt::Default_perf_slot);
++}
++
++PUBLIC
++bool
++Context::is_perf_stopped()
++{ return perf_stopped; }
++
+ PUBLIC inline
+ void
++Context::enable_perf()
++{ 
++	state_add_dirty(Thread_perf); 
++	Perf_cnt::pcnt->increment_threads_perf_counting();
++}
++
++PUBLIC inline
++void
++Context::disable_perf()
++{
++	state_del_dirty(Thread_perf);
++	Perf_cnt::pcnt->set_pmc(0, Perf_cnt::Default_perf_slot);
++	Perf_cnt::pcnt->set_pmc_config(0, Perf_cnt::Default_perf_slot);
++	Perf_cnt::pcnt->decrement_threads_perf_counting();
++
++	if (perf_pebs) 
++		{
++			Perf_cnt::pcnt->disable_pebs(Perf_cnt::Default_perf_slot);
++			Perf_cnt::pcnt->cleanup_pebs();
++		}
++}
++
++PUBLIC inline NEEDS["perf_cnt.h"]
++void
++Context::save_current_perf_cnt(bool migrating)
++{
++	if (EXPECT_FALSE(migrating))
++		perf_migrated = true;
++
++  if (EXPECT_TRUE(!perf_saved))
++		{
++    	stop_pmc();
++    
++			current_perf_cnt = Perf_cnt::pcnt->get_pmc(Perf_cnt::Default_perf_slot);
++    	current_perf_config = Perf_cnt::pcnt->get_pmc_config(Perf_cnt::Default_perf_slot);
++			Perf_cnt::pcnt->set_pmc(0, Perf_cnt::Default_perf_slot);
++			Perf_cnt::pcnt->set_pmc_config(0, Perf_cnt::Default_perf_slot);
++
++    	perf_saved = true;
++    	perf_restored = false;
++
++			if (EXPECT_FALSE(Perf_cnt::pcnt->is_pmc_overflown(Perf_cnt::Default_perf_slot) 
++					|| Perf_cnt::pcnt->is_buffer_overflown()))
++				{
++					if (EXPECT_TRUE(!migrating))
++						{
++							cpu_lock.clear();
++							Proc::irq_chance();
++							cpu_lock.lock();
++						} 
++					else 
++						{
++							perf_migrating_overflow = true;
++							if(Perf_cnt::pcnt->is_pmc_overflown(Perf_cnt::Default_perf_slot))
++								Perf_cnt::pcnt->clear_overflow_flag(Perf_cnt::Default_perf_slot);
++							if(Perf_cnt::pcnt->is_buffer_overflown())
++								{
++									Perf_cnt::pcnt->clear_buffer_overflow_flag();
++									Perf_cnt::pcnt->reset_ds();
++								}
++							reset_perf_cnt();
++						}
++				}
++		}
++}
++
++PUBLIC inline NEEDS["perf_cnt.h"]
++void
++Context::reset_perf_cnt()
++{
++  current_perf_cnt = perf_start_value;
++  Perf_cnt::pcnt->set_pmc(perf_start_value, Perf_cnt::Default_perf_slot);
++}
++
++PUBLIC inline NEEDS["perf_cnt.h", "apic.h"]
++void
++Context::restore_perf_cnt()
++{
++	if (EXPECT_TRUE(!perf_restored)) 
++		{
++    	perf_restored = true;
++    	perf_saved = false;
++
++    	Perf_cnt::pcnt->set_pmc(current_perf_cnt, Perf_cnt::Default_perf_slot);
++
++			if (EXPECT_TRUE(!perf_migrated))
++				Perf_cnt::pcnt->set_pmc_config(current_perf_config, Perf_cnt::Default_perf_slot);
++			else
++				{
++					perf_migrated = false;
++					Apic::set_perf_irq_vector();
++					if (perf_pebs)
++						Perf_cnt::pcnt->setup_pebs_migrated(Perf_cnt::Default_perf_slot, current_perf_config);
++					else
++						Perf_cnt::pcnt->set_pmc_config(current_perf_config, Perf_cnt::Default_perf_slot);
++					
++					if (perf_migrating_overflow)
++						{
++							perf_migrating_overflow = false;
++							trigger_perf_irq();
++						}
++				} 
++			
++			if (EXPECT_TRUE((state() & Thread_vcpu_enabled) && !(state() & Thread_vcpu_user)))
++				return;
++
++    	if (EXPECT_TRUE(!perf_stopped))
++				start_pmc();
++  	}
++}
++
++PUBLIC inline
++void
+ Context::spill_fpu_if_owner()
+ {
+   // spill FPU state into memory before migration
+@@ -1205,8 +1358,14 @@
+     return handle_drq();
+ 
+   LOG_CONTEXT_SWITCH;
+-  CNT_CONTEXT_SWITCH;
++  CNT_CONTEXT_SWITCH;	
+ 
++	if (EXPECT_FALSE(state() & Thread_perf))
++		save_current_perf_cnt(false);
++
++	if (EXPECT_FALSE(t->state() & Thread_perf))
++		t->restore_perf_cnt();
++
+   // Can only switch to ready threads!
+   if (EXPECT_FALSE (!(t->state() & Thread_ready_mask)))
+     {
+Index: src/kern/ia32/32/entry.S
+===================================================================
+--- src/kern/ia32/32/entry.S	(revision 42489)
++++ src/kern/ia32/32/entry.S	(working copy)
+@@ -115,7 +115,9 @@
+ EXCEPTION(0x12,vec12_mcheck)
+ EXCEPTION(0x13,vec13_simd_err)
+ 
++EXCEP_USR(APIC_IRQ_BASE - 3, vec8d)
+ 
++
+ 	.p2align 4
+ 	.type	slowtraps,@function
+ 	.globl	slowtraps
+Index: src/kern/ia32/apic-ia32.cpp
+===================================================================
+--- src/kern/ia32/apic-ia32.cpp	(revision 42489)
++++ src/kern/ia32/apic-ia32.cpp	(working copy)
+@@ -691,6 +691,15 @@
+     reg_write(APIC_lvtpc, 0x400);
+ }
+ 
++PUBLIC static
++void
++Apic::set_perf_irq_vector()
++{
++	if (have_pcint())
++		reg_write(APIC_lvtpc, APIC_IRQ_BASE - 3);
++}
++
++
+ static FIASCO_INIT_CPU
+ void
+ Apic::calibrate_timer()
+Index: src/kern/ia32/perf_cnt-ia32.cpp
+===================================================================
+--- src/kern/ia32/perf_cnt-ia32.cpp	(revision 42489)
++++ src/kern/ia32/perf_cnt-ia32.cpp	(working copy)
+@@ -9,6 +9,9 @@
+   enum Perf_event_type
+     { P5, P6, P4, };
+ 
++	enum
++	{ Default_perf_slot 		= 0 };
++
+   static Perf_read_fn read_pmc[Max_slot];
+   virtual void init_loadcnt() = 0;
+   virtual void start_pmc(Mword) = 0;
+@@ -33,7 +36,30 @@
+ 
+   inline void touch_watchdog()
+     { Cpu::wrmsr(hold_watchdog, _ctr_reg0+pmc_watchdog); }
++	
++	struct Debug_store
++	{
++		Unsigned64 bts_buffer_base;
++		Unsigned64 bts_index;
++		Unsigned64 bts_absolute_maximum;
++		Unsigned64 bts_interrupt_threshold;
++		Unsigned64 pebs_buffer_base;
++		Unsigned64 pebs_index;
++		Unsigned64 pebs_absolute_maximum;
++		Unsigned64 pebs_interrupt_threshold;
++		Unsigned64 pebs_event_reset[4];
++	};
+ 
++	struct Pebs_record
++	{
++		Unsigned64 flags, ip;
++		Unsigned64 ax, bx, cx, dx;
++		Unsigned64 si, di, bp, sp;
++		Unsigned64 r8, r9, r10, r11;
++		Unsigned64 r12, r13, r14, r15;
++		Unsigned64 perf, adr, enc, lat;
++	};
++	
+ protected:
+   Mword _nr_regs;
+   Mword _sel_reg0;
+@@ -50,11 +76,17 @@
+     Mword evnt;		// event selector
+   };
+ 
+-  static Mword    pmc_watchdog;                   // # perfcounter of watchdog
++	static Mword    pmc_watchdog;                   // # perfcounter of watchdog
+   static Mword    pmc_loadcnt;                    // # perfcounter of loadcnt
+   static Signed64 hold_watchdog;
+   static Event    pmc_event[Perf_cnt::Max_slot];  // index is slot number
+   static char     pmc_alloc[Perf_cnt::Max_pmc];   // index is # of perfcounter
++
++	//typedef Per_cpu_array<Debug_store> Debug_store_array;
++	
++	Debug_store			per_cpu_ds[Config::Max_num_cpus];
++	Mword 					pebs_already_setup[Config::Max_num_cpus];
++	static Mword 		num_threads_perf_counting;
+ };
+ 
+ class Perf_cnt_p5 : public Perf_cnt_arch {};
+@@ -72,6 +104,8 @@
+ #include "regdefs.h"
+ #include "static_init.h"
+ #include "tb_entry.h"
++#include "kmem_alloc.h"
++#include "cpu_lock.h"
+ 
+ Perf_cnt::Perf_read_fn Perf_cnt::read_pmc[Perf_cnt::Max_slot] =
+ { dummy_read_pmc, dummy_read_pmc };
+@@ -88,6 +122,7 @@
+ Signed64 Perf_cnt_arch::hold_watchdog;
+ Perf_cnt_arch::Event Perf_cnt_arch::pmc_event[Perf_cnt::Max_slot];
+ char  Perf_cnt_arch::pmc_alloc[Perf_cnt::Max_pmc];
++Mword Perf_cnt_arch::num_threads_perf_counting = 0;
+ 
+ static Perf_cnt_p5 perf_cnt_p5 __attribute__ ((init_priority(PERF_CNT_INIT_PRIO)));
+ static Perf_cnt_p6 perf_cnt_p6 __attribute__ ((init_priority(PERF_CNT_INIT_PRIO)));
+@@ -115,11 +150,20 @@
+   // Intel P6/PII/PIII
+   Msr_p6_perfctr0	= 0xC1,
+   Msr_p6_evntsel0	= 0x186,
++  Msr_p6_perfglbstat    = 0x38E,
++	Msr_p6_perfglbctl 		= 0x38F,
++  Msr_p6_perfglbovfctrl = 0x390,
++	Msr_p6_dsarea = 0x600,
++	Msr_p6_pebs_enable = 0x3F1,
++	Msr_p6_misc_enable = 0x1A0,
++	Msr_p6_perf_cap = 0x345,
+   P6_evntsel_enable	= 0x00400000,
+   P6_evntsel_int	= 0x00100000,
+   P6_evntsel_user	= 0x00010000,
+   P6_evntsel_kern	= 0x00020000,
+   P6_evntsel_edge	= 0x00040000,
++	P6_misc_pebs 		= 0x00001000,
++	P6_misc_monitor	= 0x00000080,
+ 
+   // AMD K7/K8
+   Msr_k7_evntsel0	= 0xC0010000,
+@@ -303,13 +347,13 @@
+ PUBLIC inline NOEXPORT
+ Perf_cnt_p6::Perf_cnt_p6()
+   : Perf_cnt_arch(Msr_p6_evntsel0, Msr_p6_perfctr0, 2, 1)
+-{}
++{ }
+ 
+ PROTECTED
+ Perf_cnt_p6::Perf_cnt_p6(Mword sel_reg0, Mword ctr_reg0, 
+       			 Mword nr_regs, Mword watchdog)
+   : Perf_cnt_arch(sel_reg0, ctr_reg0, nr_regs, watchdog)
+-{}
++{ }
+ 
+ FIASCO_INIT_CPU
+ int
+@@ -320,6 +364,12 @@
+       Cpu::wrmsr(0, _sel_reg0+i);
+       Cpu::wrmsr(0, _ctr_reg0+i);
+     }
++
++	for (Mword i=0; i < Config::Max_num_cpus; i++)
++		{ 
++			pebs_already_setup[i] = 0;
++		}
++
+   return 1;
+ }
+ 
+@@ -337,17 +387,18 @@
+     event += P6_evntsel_edge;
+ 
+   // select event
+-  Cpu::wrmsr(event, _sel_reg0+pmc_event[slot].pmc);
++  //Cpu::wrmsr(event, _sel_reg0+pmc_event[slot].pmc);
++  Cpu::wrmsr(event, _sel_reg0+slot);
+ }
+ 
+ void
+-Perf_cnt_p6::start_pmc(Mword /*reg_nr*/)
++Perf_cnt_p6::start_pmc(Mword reg_nr)
+ {
+   Unsigned64 msr;
+ 
+-  msr = Cpu::rdmsr(_sel_reg0);
+-  msr |= P6_evntsel_enable;  // enable both!! counters
+-  Cpu::wrmsr(msr, _sel_reg0);
++  msr = Cpu::rdmsr(_sel_reg0+reg_nr);
++  msr |= P6_evntsel_enable;
++  Cpu::wrmsr(msr, _sel_reg0+reg_nr);
+ }
+ 
+ void
+@@ -395,6 +446,133 @@
+   Cpu::wrmsr(msr, _sel_reg0+pmc_watchdog);
+ }
+ 
++void
++Perf_cnt_p6::stop_pmc(Mword reg_nr)
++{
++  Unsigned64 msr;
++  msr = Cpu::rdmsr(_sel_reg0 + reg_nr);
++  msr &= ~P6_evntsel_enable;
++  Cpu::wrmsr(msr, _sel_reg0 + reg_nr);
++}
++
++void
++Perf_cnt_p6::enable_interrupt(Mword reg_nr)
++{
++  Unsigned64 msr;
++  msr = Cpu::rdmsr(_sel_reg0 + reg_nr);
++  msr |= P6_evntsel_int;
++  Cpu::wrmsr(msr, _sel_reg0 + reg_nr);
++}
++
++void
++Perf_cnt_p6::disable_interrupt(Mword reg_nr)
++{
++  Unsigned64 msr;
++  msr = Cpu::rdmsr(_sel_reg0 + reg_nr);
++  msr &= ~P6_evntsel_int;
++  Cpu::wrmsr(msr, _sel_reg0 + reg_nr);
++}
++
++bool
++Perf_cnt_p6::is_pmc_overflown(Mword reg_nr)
++{
++  Unsigned64 msr = Cpu::rdmsr(Msr_p6_perfglbstat);
++  
++	if (msr & (1 << reg_nr))
++    return true;
++  else
++    return false;
++}
++
++void
++Perf_cnt_p6::clear_overflow_flag(Mword reg_nr)
++{
++  Unsigned64 msr;
++  msr = Cpu::rdmsr(Msr_p6_perfglbovfctrl);
++  msr |= (1 << reg_nr);
++  Cpu::wrmsr(msr, Msr_p6_perfglbovfctrl);
++}
++
++bool
++Perf_cnt_p6::is_buffer_overflown()
++{
++	Unsigned64 msr = Cpu::rdmsr(Msr_p6_perfglbstat);
++
++	if (msr & ((Unsigned64)1 << 62))
++		return true;
++	else
++		return false;
++}
++
++void
++Perf_cnt_p6::clear_buffer_overflow_flag()
++{
++	Unsigned64 msr = Cpu::rdmsr(Msr_p6_perfglbovfctrl);
++	msr |= ((Unsigned64)1 << 62);
++	Cpu::wrmsr(msr, Msr_p6_perfglbovfctrl);
++}
++
++void
++Perf_cnt_p6::write_ds_area()
++{ Cpu::wrmsr((Unsigned64)&per_cpu_ds[cxx::int_value<Cpu_number>(current_cpu())], Msr_p6_dsarea); }
++
++void
++Perf_cnt_p6::enable_pebs(Mword reg_nr)
++{ 
++	Unsigned64 msr;
++	msr = Cpu::rdmsr(Msr_p6_pebs_enable);
++	msr |= (1 << reg_nr);
++	Cpu::wrmsr(msr, Msr_p6_pebs_enable);
++}
++
++void
++Perf_cnt_p6::disable_pebs(Mword reg_nr)
++{
++	Unsigned64 msr;
++	msr = Cpu::rdmsr(Msr_p6_pebs_enable);
++	msr &= ~((Unsigned64)1 << reg_nr);
++	Cpu::wrmsr(msr, Msr_p6_pebs_enable);
++}
++
++void
++Perf_cnt_p6::start_pmc_global(Mword reg_nr)
++{ 
++	Unsigned64 msr;
++	msr = Cpu::rdmsr(Msr_p6_perfglbctl);
++	msr |= (1 << reg_nr);
++	Cpu::wrmsr(msr, Msr_p6_perfglbctl);
++}
++
++void
++Perf_cnt_p6::stop_pmc_global(Mword reg_nr)
++{ 
++	Unsigned64 msr;
++	msr = Cpu::rdmsr(Msr_p6_perfglbctl);
++	msr &= ~(1 << reg_nr);
++	Cpu::wrmsr(msr, Msr_p6_perfglbctl);
++}
++
++bool
++Perf_cnt_p6::is_pebs_available()
++{
++	Unsigned64 misc_msr = Cpu::rdmsr(Msr_p6_misc_enable);
++
++	if ((misc_msr & P6_misc_monitor) && (misc_msr & ~(P6_misc_pebs)))
++		return true;
++	else
++		return false;
++}
++
++bool
++Perf_cnt_p6::is_pebs_trap()
++{
++	Unsigned64 msr = Cpu::rdmsr(Msr_p6_perf_cap);
++	if (msr & (1 << 6))
++		return true;
++	else
++		return false;
++}
++
+ static Mword p6_read_pmc_0() { return Cpu::rdpmc(0, 0xC1); }
+ static Mword p6_read_pmc_1() { return Cpu::rdpmc(1, 0xC2); }
+ 
+@@ -782,8 +960,9 @@
+       pmc_event[slot].evnt    = event;
+       pmc_event[slot].bitmask = bitmask;
+       set_pmc_event(slot);
+-      clear_pmc(pmc_event[slot].pmc);
+-      start_pmc(pmc_event[slot].pmc);
++			clear_pmc(slot);
++      //clear_pmc(pmc_event[slot].pmc);
++      //start_pmc(pmc_event[slot].pmc);
+     }
+ }
+ 
+@@ -856,6 +1035,226 @@
+ Perf_cnt_arch::stop_watchdog()
+ {} // no watchdog per default
+ 
++PUBLIC
++void
++Perf_cnt_arch::alloc_pebs_buffer()
++{
++	int max = 1, thresh = 1;
++	void *buffer;
++	Cpu const &boot_cpu = *Cpu::boot_cpu();
++	unsigned cpu = cxx::int_value<Cpu_number>(current_cpu());
++	enum { Pebs_buffer_size = sizeof(struct Pebs_record) };
++
++	if (boot_cpu.model() == 15)
++		thresh = 0;
++
++ 	buffer = Kmem_alloc::allocator()->unaligned_alloc(Pebs_buffer_size);
++
++	per_cpu_ds[cpu].pebs_buffer_base = (Unsigned64)buffer;
++	per_cpu_ds[cpu].pebs_index = per_cpu_ds[cpu].pebs_buffer_base;
++	per_cpu_ds[cpu].pebs_absolute_maximum = per_cpu_ds[cpu].pebs_buffer_base + max * Pebs_buffer_size;
++	per_cpu_ds[cpu].pebs_interrupt_threshold = per_cpu_ds[cpu].pebs_buffer_base + thresh * Pebs_buffer_size;
++}
++
++PUBLIC
++void
++Perf_cnt_arch::cleanup_pebs()
++{
++	auto g = lock_guard(cpu_lock);
++	if (num_threads_perf_counting == 0)
++		{
++			for (Mword cpu = 0; cpu < Config::Max_num_cpus; cpu++)
++				{
++					if(pebs_already_setup[cpu])
++						{
++							Kmem_alloc::allocator()->unaligned_free(sizeof(struct Pebs_record), (void *)per_cpu_ds[cpu].pebs_buffer_base);
++							pebs_already_setup[cpu] = 0;
++						}	
++				}		
++		}
++}
++
++PUBLIC
++void
++Perf_cnt_arch::reset_ds()
++{ unsigned cpu = cxx::int_value<Cpu_number>(current_cpu());
++	per_cpu_ds[cpu].pebs_index = per_cpu_ds[cpu].pebs_buffer_base; }
++
++PUBLIC
++void
++Perf_cnt_arch::pre_setup_pebs(Mword slot)
++{
++	stop_pmc_global(slot);
++	disable_pebs(slot);
++
++	if (is_pmc_overflown(slot))
++		clear_overflow_flag(slot);
++}
++
++PUBLIC
++void
++Perf_cnt_arch::post_setup_pebs(Mword slot)
++{
++	alloc_pebs_buffer();	
++	write_ds_area();
++	enable_pebs(slot);
++		
++	start_pmc_global(slot);
++
++	pebs_already_setup[cxx::int_value<Cpu_number>(current_cpu())] = 1;
++}
++
++PUBLIC
++void
++Perf_cnt_arch::setup_pebs(Mword slot, Mword event, Mword user, Mword kern, Mword edge)
++{
++	auto g = lock_guard(cpu_lock);
++	
++	if (!(pebs_already_setup[cxx::int_value<Cpu_number>(current_cpu())]))
++		{
++			pre_setup_pebs(slot);
++			Perf_cnt::setup_pmc(slot, event, user, kern, edge);
++			disable_interrupt(slot);
++			post_setup_pebs(slot);
++		}
++	else 
++		{
++			Perf_cnt::setup_pmc(slot, event, user, kern, edge);
++			disable_interrupt(slot);
++		}
++} 
++
++PUBLIC
++void
++Perf_cnt_arch::setup_pebs_migrated(Mword slot, Unsigned64 perf_event_msr)
++{
++	auto g = lock_guard(cpu_lock);
++	
++	if (!(pebs_already_setup[cxx::int_value<Cpu_number>(current_cpu())]))
++		{
++			pre_setup_pebs(slot);
++			set_pmc_config(perf_event_msr, slot);
++			post_setup_pebs(slot);
++		}
++	else
++		{
++			set_pmc_config(perf_event_msr, slot);
++		}
++}
++
++PUBLIC
++Perf_cnt_arch::Debug_store*
++Perf_cnt_arch::get_debug_store()
++{ return &per_cpu_ds[cxx::int_value<Cpu_number>(current_cpu())]; }
++
++PUBLIC
++void
++Perf_cnt_arch::increment_threads_perf_counting()
++{
++	auto g = lock_guard(cpu_lock);
++	num_threads_perf_counting++;
++}
++
++PUBLIC
++void
++Perf_cnt_arch::decrement_threads_perf_counting()
++{
++	auto g = lock_guard(cpu_lock); 
++	num_threads_perf_counting--;
++}
++
++PUBLIC
++Mword
++Perf_cnt_arch::get_num_threads_perf_counting()
++{ return num_threads_perf_counting; }
++
++PUBLIC virtual
++void
++Perf_cnt_arch::write_ds_area() { }
++
++PUBLIC virtual
++void
++Perf_cnt_arch::clear_pmc_config(Mword reg_nr)
++{ Cpu::wrmsr(0, _sel_reg0 + reg_nr); }
++
++PUBLIC virtual
++bool
++Perf_cnt_arch::is_interrupt_enabled(Mword)
++{ return false; }
++
++PUBLIC
++void
++Perf_cnt_arch::set_pmc(Unsigned64 pmc, Mword reg_nr)
++{ Cpu::wrmsr(pmc, _ctr_reg0 + reg_nr); }
++
++PUBLIC
++Unsigned64
++Perf_cnt_arch::get_pmc_config(Mword reg_nr)
++{ return Cpu::rdmsr(_sel_reg0 + reg_nr); }
++
++PUBLIC
++void
++Perf_cnt_arch::set_pmc_config(Unsigned64 msr, Mword reg_nr)
++{ Cpu::wrmsr(msr, _sel_reg0 + reg_nr); }
++
++PUBLIC virtual
++void
++Perf_cnt_arch::stop_pmc(Mword)
++{ }
++
++PUBLIC virtual
++Unsigned64
++Perf_cnt_arch::get_pmc(Mword reg_nr)
++{ return Cpu::rdmsr(_ctr_reg0 + reg_nr); }
++
++PUBLIC virtual
++bool
++Perf_cnt_arch::is_buffer_overflown() { return false; }
++
++PUBLIC virtual
++void
++Perf_cnt_arch::clear_buffer_overflow_flag() { }
++
++PUBLIC virtual
++bool
++Perf_cnt_arch::is_pmc_overflown(Mword) { return false; }
++
++PUBLIC virtual
++void
++Perf_cnt_arch::clear_overflow_flag(Mword) { }
++
++PUBLIC virtual
++void
++Perf_cnt_arch::enable_interrupt(Mword) { }
++
++PUBLIC virtual
++void
++Perf_cnt_arch::disable_interrupt(Mword) { }
++
++PUBLIC virtual
++void
++Perf_cnt_arch::start_pmc_global(Mword) { }
++
++PUBLIC virtual
++void
++Perf_cnt_arch::stop_pmc_global(Mword) { }
++
++PUBLIC virtual
++bool
++Perf_cnt_arch::is_pebs_available() { return false; }
++
++PUBLIC virtual
++void
++Perf_cnt_arch::enable_pebs(Mword) { }
++
++PUBLIC virtual
++void
++Perf_cnt_arch::disable_pebs(Mword) { }
++
++PUBLIC virtual
++bool
++Perf_cnt_arch::is_pebs_trap() { return false; }
++
+ //--------------------------------------------------------------------
+ 
+ STATIC_INITIALIZE_P(Perf_cnt, PERF_CNT_INIT_PRIO);
+Index: src/kern/ia32/shortcut.h
+===================================================================
+--- src/kern/ia32/shortcut.h	(revision 42489)
++++ src/kern/ia32/shortcut.h	(working copy)
+@@ -28,7 +28,7 @@
+ #define Thread_ipc_mask                (Thread_ipc_in_progress		| \
+ 					Thread_ipc_sending_mask		| \
+ 					Thread_ipc_receiving_mask)
+-
++#define Thread_perf       0x4000000
+ // stackframe structure
+ #ifdef CONFIG_BIT32
+ #define REG_ECX
+Index: src/kern/ia32/thread-ia32.cpp
+===================================================================
+--- src/kern/ia32/thread-ia32.cpp	(revision 42489)
++++ src/kern/ia32/thread-ia32.cpp	(working copy)
+@@ -51,7 +51,11 @@
+ #include "thread.h"
+ #include "timer.h"
+ #include "trap_state.h"
++#include "perf_cnt.h"
++#include "apic.h"
++#include "processor.h"
+ 
++
+ Trap_state::Handler Thread::nested_trap_handler FIASCO_FASTCALL;
+ 
+ IMPLEMENT
+@@ -165,6 +169,42 @@
+   printf("%lx", e);
+ }
+ 
++PUBLIC
++void
++Thread::thread_perf_interrupt()
++{
++	bool my_counter_overflown = false;
++
++	if (Perf_cnt::pcnt->is_pmc_overflown(Perf_cnt::Default_perf_slot))
++		{
++			my_counter_overflown = true;
++			Perf_cnt::pcnt->clear_overflow_flag(Perf_cnt::Default_perf_slot);
++		}
++		
++	if (Perf_cnt::pcnt->is_buffer_overflown())
++		{
++			my_counter_overflown = true;
++			Perf_cnt::pcnt->clear_buffer_overflow_flag();
++			Perf_cnt::pcnt->reset_ds();
++		}
++	
++	Perf_cnt::pcnt->reset_ds();
++	
++	Apic::set_perf_irq_vector();
++	Apic::irq_ack();
++
++  if (EXPECT_TRUE((state() & Thread_perf) && my_counter_overflown)) 
++		{
++    	reset_perf_cnt();
++			trigger_perf_irq();
++  	}
++	else 
++		{
++			printf("not my interrupt!\n");
++			kdb_ke("");
++		} 
++}
++
+ /**
+  * The global trap handler switch.
+  * This function handles CPU-exception reflection, emulation of CPU 
+@@ -182,6 +222,11 @@
+   Address ip;
+   int from_user = ts->cs() & 3;
+ 
++  if (EXPECT_FALSE(ts->_trapno == (APIC_IRQ_BASE - 3))) {
++    thread_perf_interrupt();
++    goto success;
++  }
++
+   if (EXPECT_FALSE(ts->_trapno == 0xee)) //debug IPI
+     {
+       Ipi::eoi(Ipi::Debug, cpu());
+@@ -777,13 +822,14 @@
+ 	   "\033[1;31mSYSENTER not supported on this machine\033[0m",
+ 	   this);
+ 
++			
+       if (Cpu::have_sysenter())
+ 	// GP exception if sysenter is not correctly set up..
+         WARN("MSR_SYSENTER_CS: %llx", Cpu::rdmsr(MSR_SYSENTER_CS));
+       else
+ 	// We get UD exception on processors without SYSENTER/SYSEXIT.
+         WARN("SYSENTER/EXIT not available.");
+-
++		
+       return false;
+     }
+ 
+Index: src/kern/perf_cnt.cpp
+===================================================================
+--- src/kern/perf_cnt.cpp	(revision 42489)
++++ src/kern/perf_cnt.cpp	(working copy)
+@@ -8,8 +8,12 @@
+ {
+ public:
+   enum {
++		/*
+     Max_slot = 2,
+     Max_pmc  = 4,
++		*/
++		Max_slot = 8,
++    Max_pmc  = 8,
+   };
+ 
+   enum Unit_mask_type
+Index: src/kern/task.cpp
+===================================================================
+--- src/kern/task.cpp	(revision 42489)
++++ src/kern/task.cpp	(working copy)
+@@ -89,6 +89,11 @@
+       ctxt->state_add_dirty(Thread_vcpu_user);
+       vcpu->state |= Vcpu_state::F_traps | Vcpu_state::F_exceptions
+                      | Vcpu_state::F_debug_exc;
++			if (EXPECT_FALSE(ctxt->state() & Thread_perf))
++				{
++        	if (EXPECT_TRUE(!(ctxt->is_perf_stopped())))
++						ctxt->start_pmc();
++      	}
+     }
+ 
+   ctxt->space_ref()->user_mode(user_mode);
+Index: src/kern/thread-ipc.cpp
+===================================================================
+--- src/kern/thread-ipc.cpp	(revision 42489)
++++ src/kern/thread-ipc.cpp	(working copy)
+@@ -738,6 +738,21 @@
+ {
+   assert(cpu_lock.test());
+ 
++	/*
++	if(ts->trapno() == 0xd) {
++		printf("cs = %llx\n", Cpu::rdmsr(MSR_SYSENTER_CS));
++		printf("esp = %llx\n", Cpu::rdmsr(MSR_SYSENTER_ESP));
++		printf("eip = %llx\n", Cpu::rdmsr(MSR_SYSENTER_EIP));
++		printf("have_sysenter = %i\n", Cpu::have_sysenter());
++		kdb_ke("");
++	}*/
++
++	/*	
++	if(ts->trapno() != 0x8d && ts->trapno() != 0x6) {
++    printf("trapno = %lx, ip = %lx\n", ts->trapno(), ts->ip());
++    kdb_ke("");
++  }*/
++
+   Vcpu_state *vcpu = vcpu_state().access();
+ 
+   if (vcpu_exceptions_enabled(vcpu))
+Index: src/kern/thread.cpp
+===================================================================
+--- src/kern/thread.cpp	(revision 42489)
++++ src/kern/thread.cpp	(working copy)
+@@ -55,6 +55,8 @@
+     Op_register_del_irq = 5,
+     Op_modify_senders = 6,
+     Op_vcpu_control= 7,
++    Op_watchdog_enable = 8,
++    Op_watchdog_control = 9,
+     Op_gdt_x86 = 0x10,
+     Op_set_tpidruro_arm = 0x10,
+     Op_set_fs_amd64 = 0x12,
+@@ -162,6 +164,9 @@
+   // debugging stuff
+   unsigned _magic;
+   static const unsigned magic = 0xf001c001;
++
++private:
++  Irq_base*   _perf_irq;
+ };
+ 
+ 
+@@ -320,7 +325,7 @@
+   _kernel_sp = 0;
+   *--init_sp = 0;
+   Fpu_alloc::free_state(fpu_state());
+-  _state = Thread_invalid;
++	_state = Thread_invalid;
+ }
+ 
+ 
+@@ -386,7 +391,60 @@
+ 
+ // end of: IPC-gate deletion stuff -------------------------------
+ 
++class Perf_irq_chip : public Irq_chip_soft
++{
++public:
++  static Perf_irq_chip chip;
++};
+ 
++Perf_irq_chip Perf_irq_chip::chip;
++
++PUBLIC static inline
++Thread *Perf_irq_chip::thread(Mword pin)
++{ return (Thread*)pin; }
++
++PUBLIC inline
++Mword
++Perf_irq_chip::pin(Thread *t)
++{ return (Mword)t; }
++
++PUBLIC inline
++void
++Perf_irq_chip::unbind(Irq_base *irq)
++{ thread(irq->pin())->remove_perf_irq(); }
++
++PUBLIC
++void
++Thread::register_perf_irq(Irq_base *irq)
++{
++  irq->unbind();
++  Perf_irq_chip::chip.bind(irq, (Mword)this);
++  _perf_irq = irq;
++}
++
++PUBLIC
++void
++Thread::trigger_perf_irq()
++{
++  auto g = lock_guard(cpu_lock);
++  if(_perf_irq)
++    _perf_irq->hit(0);
++}
++
++PUBLIC
++void
++Thread::remove_perf_irq()
++{
++  if (!_perf_irq)
++    return;
++
++  Irq_base *tmp = _perf_irq;
++  _perf_irq = 0;
++  tmp->unbind();
++}
++
++
++
+ /** Currently executing thread.
+     @return currently executing thread.
+  */
+@@ -517,6 +575,10 @@
+   if (state() == Thread_invalid)
+     return false;
+ 
++	if (EXPECT_FALSE(state() & Thread_perf)) {
++		disable_perf();
++	}
++
+   //
+   // Kill this thread
+   //
+@@ -779,7 +841,15 @@
+   if ((Mword)inf & 3)
+     return (Mword)inf & 1; // already migrated, nothing to do
+ 
++	if(cpu() != current_cpu()) {
++		printf("migration: cpu() != current_cpu()\n");
++		kdb_ke("");
++	}
++
+   spill_fpu_if_owner();
++	
++	if (EXPECT_FALSE(state() & Thread_perf))
++		save_current_perf_cnt(true);
+ 
+   if (current() == this)
+     {
+@@ -996,7 +1066,7 @@
+       handle_drq();
+       return false;
+     }
+-
++	
+   auto &rq = Sched_context::rq.current();
+   if (state() & Thread_ready_mask && !in_ready_list())
+     rq.ready_enqueue(sched());
+@@ -1070,7 +1140,7 @@
+       if (old)
+         old->in_progress = true;
+     }
+-
++	
+   Cpu_number cpu = this->cpu();
+ 
+   if (current_cpu() == cpu || Config::Max_num_cpus == 1)
+Index: src/kern/thread_object.cpp
+===================================================================
+--- src/kern/thread_object.cpp	(revision 42489)
++++ src/kern/thread_object.cpp	(working copy)
+@@ -29,9 +29,9 @@
+ #include "task.h"
+ #include "thread_state.h"
+ #include "timer.h"
++#include "perf_cnt.h"
++#include "apic.h"
+ 
+-
+-
+ PUBLIC inline
+ Obj_cap::Obj_cap(L4_obj_ref const &o) : L4_obj_ref(o) {}
+ 
+@@ -158,7 +158,13 @@
+     case Op_vcpu_control:
+       f->tag(sys_vcpu_control(rights, f->tag(), utcb));
+       return;
+-    default:
++    case Op_watchdog_enable:
++      f->tag(sys_thread_watchdog_enable(f->tag(), utcb));
++      return;
++    case Op_watchdog_control:
++      f->tag(sys_thread_watchdog_control(f->tag(), utcb));
++      return;
++		default:
+       f->tag(invoke_arch(f->tag(), utcb));
+       return;
+     }
+@@ -175,7 +181,7 @@
+   Space *s = space();
+   Vcpu_state *vcpu = vcpu_state().access(true);
+ 
+-  L4_obj_ref user_task = vcpu->user_task;
++	L4_obj_ref user_task = vcpu->user_task;
+   if (user_task.valid())
+     {
+       L4_fpage::Rights task_rights = L4_fpage::Rights(0);
+@@ -290,7 +296,7 @@
+       l->sp = vcpu->_ts.sp();
+       l->space = target_space->dbg_id();
+       );
+-
++	
+   return commit_result(target_space->resume_vcpu(this, vcpu, user_mode));
+ }
+ 
+@@ -692,4 +698,204 @@
+   return commit_result(0, Utcb::Time_val::Words);
+ }
+ 
++PRIVATE static
++unsigned
++Thread_object::handle_remote_watchdog_enable(Drq *, Context *self, void *p)
++{
++  Remote_syscall *params = reinterpret_cast<Remote_syscall*>(p);
++  params->result = nonull_static_cast<Thread_object*>
++		(self)->watchdog_enable(params->result, params->thread->utcb().access());
++  return params->result.proto() == 0 ? Drq::Need_resched : 0;
++}
+ 
++PRIVATE inline NOEXPORT
++L4_msg_tag
++Thread_object::sys_thread_watchdog_enable(L4_msg_tag const &tag, Utcb *utcb)
++{
++  if (current() == this)
++    return watchdog_enable(tag, utcb, false);
++  else 
++		{
++			Remote_syscall params;
++			params.thread = current_thread();
++			params.result = tag;
++
++			drq(handle_remote_watchdog_enable, &params, 0, Drq::Any_ctxt);
++			return params.result;
++  	}
++}
++
++PUBLIC inline
++L4_msg_tag
++Thread_object::watchdog_enable(L4_msg_tag const &tag, Utcb *utcb, bool remote = true)
++{
++  enum {    PMC_EVENT_USER  = 1,
++            PMC_EVENT_KERN  = 0,
++            PMC_EVENT_EDGE  = 0,
++
++						CORE_INSTRUCTION_RETIRED = 0x00c0,
++						IVY_INSTRUCTION_RETIRED = 0x01c0
++       };
++
++	Mword event = 0;
++	Irq_base *irq;
++	Cpu const &cpu = *Cpu::boot_cpu();
++	Mword pebs = 1; // try PEBS per default
++  Mword slot = Perf_cnt::Default_perf_slot; //must be a PEBS capable register
++	Unsigned64 start_value  = utcb->values[3];
++
++	perf_saved = false;
++	perf_restored = false;
++	perf_stopped = false;
++	perf_migrated = false;
++	perf_migrating_overflow = false;
++
++	{ // check for irq object first	
++		L4_snd_item_iter snd_items(utcb, tag.words());
++
++		if (!tag.items() || !snd_items.next())
++			return commit_result(-L4_err::EInval);
++
++		L4_fpage bind_irq(snd_items.get()->d);
++
++		if (EXPECT_FALSE(!bind_irq.is_objpage()))
++			return commit_error(utcb, L4_error::Overflow);
++
++		register Context *const c_thread = ::current();
++		register Space *const c_space = c_thread->space();
++		L4_fpage::Rights irq_rights = L4_fpage::Rights(0);
++		irq = Irq_base::dcast(c_space->lookup_local(bind_irq.obj_index(), &irq_rights));
++
++		if (!irq)
++			return commit_result(-L4_err::EInval);
++
++		if (EXPECT_FALSE(!(irq_rights & L4_fpage::Rights::X())))
++			return commit_result(-L4_err::EPerm);
++	}
++	
++	/* Perf watchdog only implemented for the 
++	 * architectual performance monitoring and Intel P6 family!
++	 */
++	if (cpu.vendor() == cpu.Vendor_intel && cpu.family() == 6)
++		enable_perf();
++	else
++		return commit_result(-L4_err::ENosys);
++	
++	register_perf_irq(irq);
++	
++	if (cpu.vendor() == cpu.Vendor_intel) 
++		{
++			if(!Perf_cnt::pcnt->is_pebs_available())
++				{
++					printf("PEBS not available on this CPU, defaulting to std perf cnt...\n");
++					pebs = 0;
++				} 
++		} 
++	else 
++		pebs = 0;
++
++	if (cpu.model() == 58)
++		event = IVY_INSTRUCTION_RETIRED;
++	else
++		event = CORE_INSTRUCTION_RETIRED;		
++
++	// Performance counter setup
++	if (pebs)
++		{
++			perf_pebs = true;
++			Perf_cnt::pcnt->setup_pebs(slot, event, 
++															 PMC_EVENT_USER, PMC_EVENT_KERN, PMC_EVENT_EDGE);
++		} 
++	else 
++		{
++			perf_pebs = false;
++			Perf_cnt::setup_pmc(slot, event,
++												PMC_EVENT_USER, PMC_EVENT_KERN, PMC_EVENT_EDGE);
++			Perf_cnt::pcnt->enable_interrupt(slot);
++			Perf_cnt::pcnt->start_pmc_global(slot);
++		}
++
++	Perf_cnt::pcnt->set_pmc(start_value, slot);
++
++	Apic::set_perf_irq_vector();
++
++	if (!remote) 
++		{
++			if (!(state() & Thread_vcpu_enabled))
++				Perf_cnt::pcnt->start_pmc(slot);
++			else 
++				{
++					if (state() & Thread_vcpu_user)
++						Perf_cnt::pcnt->start_pmc(slot);
++				}
++		}
++
++	// save initial state
++	perf_start_value = start_value;  
++ 	current_perf_cnt = start_value;
++	current_perf_config = Perf_cnt::pcnt->get_pmc_config(slot);
++	
++	return commit_result(0);
++}
++
++PRIVATE static
++unsigned
++Thread_object::handle_remote_watchdog_control(Drq *, Context *self, void *p)
++{
++  Remote_syscall *params = reinterpret_cast<Remote_syscall*>(p);
++  params->result = nonull_static_cast<Thread_object*>
++		(self)->watchdog_control(params->thread->utcb().access());
++  return params->result.proto() == 0 ? Drq::Need_resched : 0;
++}
++
++PRIVATE inline NOEXPORT
++L4_msg_tag
++Thread_object::sys_thread_watchdog_control(L4_msg_tag const /*&tag*/, Utcb *utcb)
++{
++  if (current() == this)
++    return watchdog_control(utcb);
++  else 
++		{
++    	Remote_syscall params;
++    	params.thread = current_thread();
++
++    	drq(handle_remote_watchdog_control, &params, 0, Drq::Any_ctxt);
++    	return params.result;
++  	}
++}
++
++PUBLIC inline
++L4_msg_tag
++Thread_object::watchdog_control(Utcb *utcb)
++{
++	if (EXPECT_FALSE(!(state() & Thread_perf)))
++		return commit_result(-L4_err::EBadproto);
++  
++	switch(utcb->values[1]) {
++		case 0x0001:
++			// Set performance counter start value (implicit pmc reset)
++			perf_start_value = utcb->values[2];
++			current_perf_cnt = perf_start_value;
++			Perf_cnt::pcnt->set_pmc(perf_start_value, Perf_cnt::Default_perf_slot);
++			break;	
++		case 0x0002:
++			// Start a performance counter
++			perf_stopped = false;
++			start_pmc();
++			break;
++		case 0x0003:
++			// Stop a performance counter
++			perf_stopped = true;
++			stop_pmc();
++			break;
++		case 0x0004:
++			// Disable performance counting
++			disable_perf();
++			break;
++		default:
++			return commit_result(-L4_err::EInval);
++  }
++
++  return commit_result(0);
++}
++
+Index: src/kern/thread_state.cpp
+===================================================================
+--- src/kern/thread_state.cpp	(revision 42489)
++++ src/kern/thread_state.cpp	(working copy)
+@@ -48,4 +48,5 @@
+   Thread_vcpu_user            = 0x800000,
+   Thread_vcpu_fpu_disabled    = 0x1000000,
+   Thread_ext_vcpu_enabled     = 0x2000000,
++  Thread_perf                 = 0x4000000 // Thread uses performance counter
+ };

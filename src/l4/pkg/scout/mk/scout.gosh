@@ -1,0 +1,572 @@
+
+proc split_accentuation {acc_list expr acc_name {wipe_out ""}} {
+
+       set result {}
+
+       foreach acc_entry $acc_list {
+               set string [lindex $acc_entry 0]
+               set styles [lindex $acc_entry 1]
+
+               set new_styles $styles
+               lappend new_styles $acc_name
+
+               while {[regexp $expr $string dummy head code_text tail_char]} {
+                       regsub $expr $string "$tail_char" string
+
+                       if {$wipe_out != ""} {
+                               regsub -all $wipe_out $code_text " " code_text
+                       }
+
+                       lappend result [list $head $styles]
+                       lappend result [list $code_text $new_styles]
+               }
+               regsub {^ *$} $string "" string
+               if {$string != ""} {
+                       lappend result [list $string $styles]
+               }
+       }
+       return $result
+}
+
+
+#
+# For plain text, we support some accentuations.
+#
+proc use_style {style_list} {
+       global curr_type
+
+       if {$curr_type != "plain"} {
+               return $curr_type
+       }
+       if {[lsearch $style_list bold] != -1} {
+               return bold
+       }
+       if {[lsearch $style_list mono] != -1} {
+               return mono
+       }
+       if {[lsearch $style_list italic] != -1} {
+               return italic
+       }
+       if {[lsearch $style_list link] != -1} {
+               return link
+       }
+       return plain
+}
+
+
+proc out_tut {string} {
+       global curr_depth curr_container curr_type references
+       global launchers num_launchers
+
+       set string " $string "
+
+       set acc_list [list [list $string [list plain]]]
+       if {$curr_type == "plain"} {
+               set acc_list [split_accentuation $acc_list {(^.*?[\- \"\(])\'(.+?)\'([ \)\.\",!?])} mono]
+               set acc_list [split_accentuation $acc_list {(^.*?[\- \"\(])\*(.+?)\*([ \)\.\",!?])} bold {\*}]
+               set acc_list [split_accentuation $acc_list {(^.*?[\- \"\(])_(.+?)_([ \)\.\",!?\-])} italic {_}]
+               set acc_list [split_accentuation $acc_list {(^.*?[\- \"\(])\[(.+?)\]([ \)\.\",!?])} link]
+       }
+
+       set result ""
+       foreach string $acc_list {
+
+               set txt [lindex $string 0]
+               set style [lindex $string 1]
+
+               regsub {^ *} $txt "" txt
+               regsub { *$} $txt "" txt
+               regsub -all {"} $txt "\\\"" txt
+
+               if {$txt != ""} {
+                       if {[use_style $style] == "link"} {
+                               if {[info exists references($txt,anchor_name)]} {
+                                       set anchor_name $references($txt,anchor_name)
+                                       append result "\t$curr_container->append_text<Link_token>(\"$txt\", &link_style, $anchor_name);\n"
+                               } elseif {[regexp {^exec(-once)?:} $txt dummy once]} {
+                                       set launcher_name "lll"
+                                       set prg_name ""
+                                       set linktext ""
+                                       set once_opt ""
+
+                                       if {$once == "-once"} {
+                                               set once_opt ", 1"
+                                       }
+
+                                       regexp {^exec(-once)?:([^ ]+)}       $txt dummy1 dummy2 prg_name
+                                       regexp {^exec(-once)?:[^ ]+ - (.*)$} $txt dummy1 dummy2 linktext
+
+                                       # create laucher variable if needed
+                                       if {![info exists launchers($prg_name)]} {
+                                               set launcher_name "l$num_launchers"
+                                               set launchers($prg_name) $launcher_name
+                                               incr num_launchers
+                                               append result "\t// Launcher *$launcher_name = new Launcher(\"$prg_name\"$once_opt);\n"
+                                       } else {
+                                               set launcher_name $launchers($prg_name)
+                                       }
+
+                                       append result "\t// $curr_container->append_launchertext(\"$linktext\", &link_style, $launcher_name);\n"
+                               } else {
+                                       append result "\t$curr_container->append_plaintext(\"$txt\", &[use_style $style]\_style);\n"
+                               }
+                       } else {
+                               append result "\t$curr_container->append_plaintext(\"$txt\", &[use_style $style]\_style);\n"
+                       }
+               }
+       }
+       regsub "\n$" $result "" result
+       return $result
+}
+
+
+### TABLE OF CONTENTS ###
+proc table_of_contents {} {
+       global curr_depth curr_container curr_type vars
+       global title authors references toc_refs
+
+       printline "\n\t/**\n\t * Table of contents\n\t */\n"
+
+       set num_anchors 0
+
+       set parent_container $curr_container
+       set curr_container "tc"
+       set curr_type plain
+
+       printline "\tChapter *toc = new Chapter();"
+       printline "\tCenter *tc = new Center();"
+       printline "\t$curr_container->append(new Spacer(1, 20));"
+
+       foreach ref_name $toc_refs {
+
+               set anchor_name "anchor$num_anchors"
+               incr num_anchors
+
+               set references($ref_name,anchor_name) $anchor_name
+               printline "\n\t/* anchor for section \"$ref_name\" */"
+               printline "\tAnchor *$anchor_name = new Anchor();"
+
+               set txtblock {}
+               lappend txtblock [list 0 "\[$ref_name\]"]
+
+               print_block $txtblock plain
+       }
+
+       printline "\ttoc->append(tc);"
+       printline "\ttoc->append(new Spacer(1, 20));"
+       printline "\tdoc->toc = toc;"
+       set curr_container $parent_container
+}
+
+
+### FILE HEADER ###
+proc produce_head_tut {} {
+       global title authors references toc_refs config_tut_toc
+       puts {
+#include <l4/scout-gfx/document>
+#include <l4/scout-gfx/png_image>
+#include <l4/scout-gfx/doc/link>
+#include <l4/scout-gfx/doc/navbar>
+#include <l4/scout-gfx/factory>
+#include <l4/scout-gfx/doc/verbatim>
+#include <l4/scout-gfx/doc/block>
+#include <l4/scout-gfx/doc/item>
+#include <l4/scout/styles>
+#include <l4/scout-gfx/loadbar>
+
+using namespace Scout_gfx;
+
+Document *create_document(Factory *f)}
+       puts "\{"
+       puts "\tDocument *doc = new Document();"
+
+       printline "\tdoc->title = \"$title\";"
+       table_of_contents
+
+       printline "\tdoc->append(new Spacer(1, 10));"
+
+       printline "\tBlock *title = new Block(Block::CENTER);"
+       printline "\ttitle->append_plaintext(\"$title\", &chapter_style);"
+       printline "\tdoc->append(new Center(title));"
+       printline "\tdoc->append(new Spacer(1, 10));"
+       printline "\tBlock *authors = new Block(Block::CENTER);"
+       printline "\tauthors->append_plaintext(\"$authors\", &section_style);"
+       printline "\tdoc->append(new Center(authors));"
+       printline "\tdoc->append(new Spacer(1, 10));"
+       printline "\tBlock *date = new Block(Block::CENTER);"
+       printline "\tdate->append_plaintext(\"[exec date --iso-8601]\", &subsection_style);"
+       printline "\tdoc->append(new Center(date));"
+       printline "\tdoc->append(new Spacer(1, 10));"
+}
+
+
+### DETERMINE PREVIOUS CHAPTER OF SPECIFIED CHAPTER REFERENCE ###
+proc prev_chapter {ref_name} {
+       global toc_refs references
+
+       set prev_toc_ref ""
+       foreach toc_ref $toc_refs {
+
+               if {$references($toc_ref,type) == "chapter"} {
+
+                       if {$toc_ref == $ref_name} {
+                               return $prev_toc_ref
+                       }
+
+                       set prev_toc_ref $toc_ref
+               }
+       }
+       return ""
+}
+
+
+### DETERMINE NEXT CHAPTER OF SPECIFIED CHAPTER REFERENCE ###
+proc next_chapter {ref_name} {
+       global toc_refs references
+
+       set prev_toc_ref ""
+       foreach toc_ref $toc_refs {
+
+               if {$references($toc_ref,type) == "chapter"} {
+
+                       if {$prev_toc_ref == $ref_name} {
+                               return $toc_ref
+                       }
+
+                       set prev_toc_ref $toc_ref
+               }
+       }
+       return ""
+}
+
+
+### DETERMINE FIRST CHAPTER OF THE DOCUMENT ###
+proc first_chapter {} {
+       global toc_refs references
+
+       foreach toc_ref $toc_refs {
+
+               if {$references($toc_ref,type) == "chapter"} {
+                       return $toc_ref
+               }
+       }
+}
+
+
+### CREATE DOCUMENT NAVIGATION BAR ###
+proc navbar {prev_ref_name curr_ref_name next_ref_name} {
+       global vars curr_container references
+
+       if {($prev_ref_name == "") && ($next_ref_name == "")} { return }
+
+       set prefix ""
+       if {![info exists vars(navbar)]} {
+               set vars(navbar) 1
+               set prefix "Navbar *"
+       }
+
+       printline "\n\t[append prefix navbar] = new Navbar(f, &navbar_style);"
+
+       if {$curr_ref_name == [first_chapter]} {
+               printline "\tnavbar->prev_link(\"Home\", doc);"
+       }
+       if {$prev_ref_name != ""} {
+               set anchor_name $references($prev_ref_name,anchor_name)
+               printline "\tnavbar->prev_link(\"$prev_ref_name\", $anchor_name);"
+       }
+       if {$next_ref_name != ""} {
+               set anchor_name $references($next_ref_name,anchor_name)
+               printline "\tnavbar->next_link(\"$next_ref_name\", $anchor_name);"
+       }
+
+       printline "\t$curr_container->append(navbar);"
+}
+
+
+### FILE TAIL ###
+proc produce_tail_tut {} {
+       global authors
+
+       navbar "" "" [first_chapter]
+
+       puts "\n\treturn doc;"
+       puts "\}"
+}
+
+
+### RAW TEXT ###
+proc process_raw_tut {txtblock} {
+}
+
+
+proc print_block {txtblock style {space 0}} {
+       global curr_depth curr_container curr_type vars
+
+       if {$space != 0} {
+               printline "\t$curr_container->append(new Spacer(1, $space));"
+       }
+
+       set parent_container $curr_container
+       set curr_container "b$curr_depth"
+       set curr_type $style
+
+       set prefix ""
+       if {![info exists vars($curr_container)]} {
+               set vars($curr_container) 1
+               set prefix "Block *"
+       }
+
+       printline "\n\t$prefix$curr_container = new Block();"
+       foreach txtline $txtblock {
+               printline "[out_tut [linetxt $txtline]]"
+       }
+
+       printline "\t$parent_container->append($curr_container);"
+       set curr_container $parent_container
+}
+
+
+### PLAIN TEXT ###
+proc process_plain_tut {plaintxtblock} {
+       print_block $plaintxtblock plain
+}
+
+
+### ITEMIZE ###
+proc process_itemize_tut {txtblock} {
+       handle_txtblock itemize $txtblock
+}
+
+
+### ENUMERATION ###
+proc process_enumeration_tut {txtblock} {
+       global curr_depth enum_cnt
+       set enum_cnt($curr_depth) 0
+       handle_txtblock enumeration $txtblock
+}
+
+
+### DESCRIPTION ###
+proc process_description_tut {txtblock} {
+       global curr_depth desc_cnt
+       set desc_cnt($curr_depth) 0
+       handle_txtblock description $txtblock
+}
+
+
+proc handle_item {txtblock item_type tag} {
+       global curr_depth curr_container curr_type vars
+
+       set parent_container $curr_container
+       set curr_container "i$curr_depth"
+       set curr_type plain
+
+       set prefix ""
+       if {![info exists vars($curr_container)]} {
+               set vars($curr_container) 1
+               set prefix "Item *"
+       }
+
+       printline "\n\t$prefix$curr_container = new Item(&$curr_type\_style, \"$tag\", 20);"
+       incr curr_depth
+       handle_txtblock $item_type [extract_item_text $txtblock]
+       incr curr_depth -1
+       printline "\t$parent_container->append($curr_container);"
+       set curr_container $parent_container
+}
+
+
+### ITEM ###
+proc process_item_tut {txtblock} {
+       handle_item $txtblock item " o"
+}
+
+
+
+### DESCRIPTION ITEM ###
+proc process_descitem_tut {txtblock} {
+       global curr_depth curr_container curr_type vars
+
+       set txtline [lindex $txtblock 0]
+       set desc_name ""
+       set txt [linetxt $txtline]
+       regexp {^\:(.+)\:} $txt dummy desc_name
+       set txtline [lineregsub {^\:(.+)\: *} $txtline ""]
+
+       set parent_container $curr_container
+       set curr_container "descitem"
+       set curr_type plain
+
+       set prefix ""
+       if {![info exists vars($curr_container)]} {
+               set vars($curr_container) 1
+               set prefix "Block *"
+       }
+
+       printline "\n\t$prefix$curr_container = new Block(32);"
+
+       printline "\t$curr_container->append_plaintext(\"$desc_name\", &bold_style);"
+
+       incr curr_depth
+
+       printline [out_tut [linetxt $txtline]]
+       foreach txtline [lrange $txtblock 1 end] {
+               set txtline [lineregsub {^\ \ } $txtline ""]
+               printline [out_tut [linetxt $txtline]]
+       }
+
+       incr curr_depth -1
+       printline "\t$parent_container->append($curr_container);"
+
+       set curr_container $parent_container
+}
+
+
+proc get_enum_tag {depth cnt} {
+       if {$depth == 1} {
+               return "[lindex [list 0 a b c d e f g h i j k l m n o p q r s t u v w] $cnt])"
+       }
+       if {$depth == 2} {
+               return "[lindex [list 0 I II III IV V VI VII VIII IIX IX X] $cnt]."
+       }
+       return "$cnt."
+}
+
+
+### ENUM ###
+proc process_enum_tut {txtblock} {
+       global curr_depth enum_cnt
+       if {![info exists enum_cnt($curr_depth)]} {
+               set enum_cnt($curr_depth) 0
+       }
+       incr enum_cnt($curr_depth)
+       handle_item $txtblock enum " [get_enum_tag $curr_depth $enum_cnt($curr_depth)]"
+}
+
+
+### CHAPTER ###
+proc process_chapter_tut {txtblock} {
+       global curr_depth curr_container curr_type vars references
+
+       set parent_container $curr_container
+       set curr_container "chapter"
+       set curr_type plain
+
+       set title [list [lindex $txtblock 0]]
+       set ref_name [linetxt [lindex $txtblock 0]]
+
+       printline "\n\t/**\n\t * Chapter \"$ref_name\"\n\t */"
+
+       set prefix ""
+       if {![info exists vars($curr_container)]} {
+               set vars($curr_container) 1
+               set prefix "Chapter *"
+       }
+
+       printline "\n\t$prefix$curr_container = new Chapter();"
+
+       printline "\t$curr_container->append($references($ref_name,anchor_name));"
+       print_block $title chapter 20
+
+       handle_txtblock chapter [lrange $txtblock 2 end]
+
+       navbar [prev_chapter $ref_name] $ref_name [next_chapter $ref_name]
+#      printline "\t$curr_container->append(new Navbar());"
+       set curr_container $parent_container
+}
+
+
+### SECTION ###
+proc process_section_tut {txtblock} {
+       global curr_container references
+
+       set title [list [lindex $txtblock 0]]
+       set title_txt [linetxt [lindex $txtblock 0]]
+
+       printline "\t$curr_container->append($references($title_txt,anchor_name));"
+       print_block $title section 15
+
+       handle_txtblock section [lrange $txtblock 2 end]
+}
+
+
+### IMAGE ###
+proc process_image_tut {txtblock} {
+       global curr_container vars
+
+       set img_info ""
+       set img_size 80
+       set img_angle "0"
+       regexp {\[(image \w+.*)\]} [lindex $txtblock 0] dummy img_info
+       if {$img_info == ""} return
+       set img_name [lindex $img_info 1]
+       regexp { (\d+)%} $img_info dummy img_size
+       regexp { (\d+)¿} $img_info dummy img_angle
+       
+       set img_cap ""
+       foreach img_capline $txtblock {
+               set txt [linetxt $img_capline]
+               regsub {^\[.*\]} $txt "" txt
+               regsub {^ *} $txt "" txt
+               append img_cap $txt " "
+       }
+       regsub { *$} $img_cap "" img_cap
+
+       set png_symbol "_binary_$img_name\_png_start"
+
+       # declare external reference to png image
+       printline "\n\textern char $png_symbol\[\];"
+
+       set prefix ""
+       if {![info exists vars(png)]} {
+               set vars(png) 1
+               set prefix "Png_image *"
+       }
+
+       printline "\t$prefix\png = new Png_image($png_symbol);"
+       printline "\t$curr_container->append(new Spacer(1, 10));"
+       printline "\t$curr_container->append(new Center(png));"
+       printline "\t$curr_container->append(new Spacer(1, 10));"
+}
+
+
+### VERBATIM ###
+proc process_verbatim_tut {txtblock} {
+       global curr_depth curr_container curr_type vars
+
+       set parent_container $curr_container
+       set curr_container "v$curr_depth"
+       set curr_type mono
+
+       set prefix ""
+       if {![info exists vars($curr_container)]} {
+               set vars($curr_container) 1
+               set prefix "Verbatim *"
+       }
+
+       printline "\n\t$prefix$curr_container = new Verbatim(verbatim_bgcol);"
+       incr curr_depth
+
+       while {[lindex $txtblock end] == ""} {
+               set txtblock [lrange $txtblock 0 [expr [llength $txtblock]-2]]
+       }
+       set curr_type mono
+       foreach txtline $txtblock {
+               set txt [linetxt $txtline]
+               regsub {^\!} $txt "" txt
+               regsub -all {\t} $txt "  " txt
+
+               printline "\t$curr_container->append_textline(\"$txt\", &$curr_type\_style);"
+       }
+
+       incr curr_depth -1
+       printline "\t$parent_container->append($curr_container);"
+       set curr_container $parent_container
+}
+
+set num_launchers 0
+set curr_container doc
+set curr_depth 0
+set curr_type plain
+set outmode tut
+set config_indent 0

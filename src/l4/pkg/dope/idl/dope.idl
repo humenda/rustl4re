@@ -1,0 +1,37 @@
+/*
+ * \brief   IDL Interface to the DOpE server
+ * \date    2002-11-25
+ * \author  Norman Feske <nf2@inf.tu-dresden.de>
+ */
+
+/*
+ * Copyright (C) 2002-2003  Norman Feske  <nf2@os.inf.tu-dresden.de>
+ * Technische Universitaet Dresden, Operating Systems Research Group
+ *
+ * This file is part of the DOpE package, which is distributed under
+ * the  terms  of the  GNU General Public Licence 2.  Please see the
+ * COPYING file for details.
+ */
+
+
+interface dope_manager {
+	
+	long init_app      ([in, string] char *appname,
+	                    [in, string] char *listener);
+	
+	void deinit_app    ([in] long app_id);
+	
+	long exec_cmd      ([in] long app_id,
+	                    [in, string] char *cmd);
+//	                    [out, string, prealloc] char **result);
+	
+	long exec_req      ([in] long app_id,
+	                    [in, string] char *cmd,
+	                    [out, size_is(res_len), max_is(256)] char res[],
+	                    [in, out] int *res_len);
+	
+	long get_keystate  ([in] long keycode);
+	
+	char get_ascii     ([in] long keycode);
+	
+};

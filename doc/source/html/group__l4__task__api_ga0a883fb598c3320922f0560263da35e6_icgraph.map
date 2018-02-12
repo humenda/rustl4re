@@ -1,0 +1,7 @@
+<map id="l4_task_map" name="l4_task_map">
+<area shape="rect" id="node2" href="$classL4_1_1Cap__base.html#a1501f9852fda4c01a1591a7c53585d5f" title="Copy a capability. " alt="" coords="158,53,302,79"/>
+<area shape="rect" id="node5" href="$classL4_1_1Cap__base.html#ab6cd8e73ebbdb5dfa45355b7c1fde1c2" title="Replace this capability with the contents of src. " alt="" coords="156,103,304,130"/>
+<area shape="rect" id="node3" href="$classL4_1_1Cap.html#a03750491e2cb888d26e2fbdfcc0b7dbc" title="Copy a capability to this cap slot. " alt="" coords="352,5,511,47"/>
+<area shape="rect" id="node4" href="$classL4_1_1Cap.html#a580ae207f1a9a54c3a2ffd93fa3f4eef" title="Member access of a T. " alt="" coords="352,71,511,112"/>
+<area shape="rect" id="node6" href="$classL4_1_1Cap.html#ae097fe17d218b76dc368a5383372168f" title="Move a capability to this cap slot. " alt="" coords="352,136,511,177"/>
+</map>

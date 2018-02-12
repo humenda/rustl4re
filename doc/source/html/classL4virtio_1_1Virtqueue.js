@@ -1,0 +1,27 @@
+var classL4virtio_1_1Virtqueue =
+[
+    [ "Avail", "classL4virtio_1_1Virtqueue_1_1Avail.html", "classL4virtio_1_1Virtqueue_1_1Avail" ],
+    [ "Desc", "classL4virtio_1_1Virtqueue_1_1Desc.html", "classL4virtio_1_1Virtqueue_1_1Desc" ],
+    [ "Used", "classL4virtio_1_1Virtqueue_1_1Used.html", "classL4virtio_1_1Virtqueue_1_1Used" ],
+    [ "Used_elem", "structL4virtio_1_1Virtqueue_1_1Used__elem.html", "structL4virtio_1_1Virtqueue_1_1Used__elem" ],
+    [ "Virtqueue", "classL4virtio_1_1Virtqueue.html#a9868a89211f9713543b13e564d2ce8bd", null ],
+    [ "avail_offset", "classL4virtio_1_1Virtqueue.html#a5a4db3f2c9356da05cd5b472ebc2f0e6", null ],
+    [ "disable", "classL4virtio_1_1Virtqueue.html#a031d371276beec1cb5cf550be6fac491", null ],
+    [ "dump", "classL4virtio_1_1Virtqueue.html#a3abd68687a8a7d957e9b765433a313ed", null ],
+    [ "get_avail_idx", "classL4virtio_1_1Virtqueue.html#abc1894fea1ed246b57027323f611de9d", null ],
+    [ "get_tail_avail_idx", "classL4virtio_1_1Virtqueue.html#a1b548bdf762ff26ca411c20763377986", null ],
+    [ "no_notify_guest", "classL4virtio_1_1Virtqueue.html#a2aa2efa2e5f6ee73423ec9beab40232a", null ],
+    [ "no_notify_host", "classL4virtio_1_1Virtqueue.html#ad478e575bf6023866e8bd4ea6b5b0200", null ],
+    [ "no_notify_host", "classL4virtio_1_1Virtqueue.html#a019fa2078eaca937bd0685b79728f986", null ],
+    [ "num", "classL4virtio_1_1Virtqueue.html#af61e3e4e436b93f37f22243a1c0ffe0e", null ],
+    [ "ready", "classL4virtio_1_1Virtqueue.html#aa242e930433e8705c4ee00afaf58f686", null ],
+    [ "setup", "classL4virtio_1_1Virtqueue.html#a109ea5677dd074df1d2c6a06056c7d82", null ],
+    [ "setup_simple", "classL4virtio_1_1Virtqueue.html#a437c0ed2eb83201cc69c41d011503036", null ],
+    [ "total_size", "classL4virtio_1_1Virtqueue.html#a96dfd139f3a022e9e2328e28716acdc9", null ],
+    [ "used_offset", "classL4virtio_1_1Virtqueue.html#a80c6d7100b025658ad3c05a844e4391b", null ],
+    [ "_avail", "classL4virtio_1_1Virtqueue.html#ad569bf985c1849caadd7fd7c15d75cec", null ],
+    [ "_current_avail", "classL4virtio_1_1Virtqueue.html#af4c017e70aa977b3d8f7a024ee3473f3", null ],
+    [ "_desc", "classL4virtio_1_1Virtqueue.html#ab2dc5f70a0c42fa15e91cd8084d29cd0", null ],
+    [ "_idx_mask", "classL4virtio_1_1Virtqueue.html#aa4730e5b53806a3d72164e917c20e91a", null ],
+    [ "_used", "classL4virtio_1_1Virtqueue.html#a287fe9fe8bef92049b4f0163ed39c405", null ]
+];

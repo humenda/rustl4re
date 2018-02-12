@@ -1,0 +1,7 @@
+<map id="L4::Vcon::write" name="L4::Vcon::write">
+<area shape="rect" id="node2" href="$classL4_1_1Kobject.html#a314161cb755de6fd0c50da0a757eb4c7" title="Return capability selector. " alt="" coords="168,5,287,32"/>
+<area shape="rect" id="node3" href="$group__l4__vcon__api.html#ga899728ba23baf18f59f62142534e039c" title="Write data to this virtual console. " alt="" coords="165,56,289,83"/>
+<area shape="rect" id="node4" href="$group__l4__ipc__err__api.html#ga05c11e3e10b6c2aa941396ac2018899f" title="Return error code of a system call return message tag. " alt="" coords="380,5,452,32"/>
+<area shape="rect" id="node5" href="$group__l4__msgtag__api.html#ga52e71bb66855f4d78fa5c82b5f0c5a87" title="Test for error indicator flag. " alt="" coords="337,56,495,83"/>
+<area shape="rect" id="node6" href="$group__l4__vcon__api.html#ga05df63a45bb7ade1e0e19caaa6e35f5f" title="Send data to this virtual console. " alt="" coords="353,107,479,133"/>
+</map>

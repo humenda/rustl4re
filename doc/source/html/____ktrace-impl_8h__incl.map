@@ -1,0 +1,12 @@
+<map id="l4/sys/__ktrace&#45;impl.h" name="l4/sys/__ktrace&#45;impl.h">
+<area shape="rect" id="node2" href="$l4_2sys_2types_8h.html" title="Common L4 ABI Data Types. " alt="" coords="225,304,332,331"/>
+<area shape="rect" id="node9" href="$kdebug_8h_source.html" title="l4/sys/kdebug.h" alt="" coords="550,80,668,107"/>
+<area shape="rect" id="node3" href="$l4_2sys_2l4int_8h.html" title="Fixed sized integer types, generic version. " alt="" coords="184,453,282,480"/>
+<area shape="rect" id="node4" href="$compiler_8h.html" title="L4 compiler related defines. " alt="" coords="546,453,672,480"/>
+<area shape="rect" id="node6" href="$l4_2sys_2consts_8h.html" title="Common constants. " alt="" coords="457,379,572,405"/>
+<area shape="rect" id="node7" href="$____l4__fpage_8h_source.html" title="l4/sys/__l4_fpage.h" alt="" coords="188,379,332,405"/>
+<area shape="rect" id="node8" href="$____timeout_8h_source.html" title="l4/sys/__timeout.h" alt="" coords="28,379,163,405"/>
+<area shape="rect" id="node10" href="$l4_2sys_2ipc_8h.html" title="Common IPC interface. " alt="" coords="456,155,546,181"/>
+<area shape="rect" id="node11" href="$l4_2sys_2utcb_8h.html" title="UTCB definitions. " alt="" coords="398,229,497,256"/>
+<area shape="rect" id="node12" href="$err_8h.html" title="Error codes. " alt="" coords="532,304,622,331"/>
+</map>

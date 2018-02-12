@@ -1,0 +1,6 @@
+* timers
+* PCI stuff
+* example driver
+* measurements
+* replace l4thread with pthread_*, because l4thread has race conditions
+  when exiting threads (must not raise page fault while exiting)

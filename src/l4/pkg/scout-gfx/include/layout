@@ -1,0 +1,45 @@
+// vi:ft=cpp
+/*
+ * (c) 2010 Alexander Warg <warg@os.inf.tu-dresden.de>
+ *     economic rights: Technische Universität Dresden (Germany)
+ *
+ * This file is part of TUD:OS and distributed under the terms of the
+ * GNU General Public License 2.
+ * Please see the COPYING-GPL-2 file for details.
+ */
+#pragma once
+
+#include <l4/scout-gfx/layout_item>
+
+namespace Scout_gfx {
+
+class Layout : public Layout_item
+{
+private:
+  int _margin;
+  int _spacing;
+
+public:
+  int _dbg;
+  Layout() : _margin(0), _spacing(0), _dbg(0) {}
+  virtual ~Layout() {}
+
+  int margin() const { return _margin; }
+  void set_margin(int m) { _margin = m; }
+
+  int spacing() const { return _spacing; }
+  void set_spacing(int s) { _spacing = s; }
+
+
+  Rect aligned_rect(Rect const &);
+
+  virtual void add_item(Layout_item *) = 0;
+  void remove_item(Layout_item *);
+  virtual Layout_item *remove_item(int idx) = 0;
+  virtual Layout_item *item(int idx) const = 0;
+  virtual Area max_size() const = 0;
+  void child_invalidate() { invalidate(); }
+
+};
+
+}

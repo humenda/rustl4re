@@ -1,0 +1,4 @@
+<map id="l4_vcon_send" name="l4_vcon_send">
+<area shape="rect" id="node2" href="$group__l4__utcb__api.html#gadc099b4a59e1d99638c72c11a8c8b644" title="Get the UTCB address. " alt="" coords="193,5,260,32"/>
+<area shape="rect" id="node3" href="$group__l4__vcon__api.html#ga05df63a45bb7ade1e0e19caaa6e35f5f" title="Send data to this virtual console. " alt="" coords="164,56,289,83"/>
+</map>

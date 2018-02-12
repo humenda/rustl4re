@@ -1,0 +1,284 @@
+// vim: ft=cpp ts=4
+#pragma once
+
+#include <l4/cxx/ipc_server>
+#include <l4/shmc/shmc.h>
+#include <l4/ankh/protocol>
+#include <l4/ankh/session>
+#include <l4/ankh/shm>
+#include <pthread-l4.h>
+#include <iostream>
+#include <cstring>
+#include <cassert>
+#include <cstdio>
+#include <boost/format.hpp>
+#include "device"
+
+EXTERN_C void *xmit_thread_fn(void*);
+
+namespace Ankh
+{
+	enum Constants
+	{
+		name_len = 32,
+		MOD_ADLER = 65521,
+	};
+
+
+	/*
+	 * Utility functions
+	 */
+	class Util
+	{
+		public:
+
+		/*
+		 * Adler32 checksum algorithm (forgot where I copied it from. Wikipedia?)
+		 */
+		static unsigned adler32(unsigned char *buf, unsigned len)
+		{
+			unsigned int a=1, b=0;
+
+			/* sanity check */
+			if (!buf)
+				return 0;
+
+			while (len) {
+				unsigned tlen = len > 5550 ? 5550 : len;
+				len -= tlen;
+				do {
+					a += *buf++;
+					b += a;
+				} while (--tlen);
+				a = (a & 0xffff) + (a >> 16) * (65536-MOD_ADLER);
+				b = (b & 0xffff) + (b >> 16) * (65536-MOD_ADLER);
+			}
+
+			/* It can be shown that a <= 0x1013a here, so a single subtract will do. */
+			if (a >= MOD_ADLER)
+				a -= MOD_ADLER;
+
+			/* It can be shown that b can reach 0xffef1 here. */
+			b = (b & 0xffff) + (b >> 16) * (65536-MOD_ADLER);
+			if (b >= MOD_ADLER)
+				b -= MOD_ADLER;
+
+			return b << 16 | a;
+		}
+
+
+		static inline bool is_broadcast_mac(char const * const buf)
+		{
+			static unsigned char bcast[6] = { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff };
+			return (memcmp(buf, bcast, 6) == 0);
+		}
+
+
+		static void print_mac(unsigned char *macptr)
+		{
+			char macbuf_size = 32;
+			char mac_buf[macbuf_size];
+			snprintf(mac_buf, macbuf_size, mac_fmt, mac_str(macptr));
+			boost::format f("%1$-18s");
+			f % &mac_buf[0];
+			std::cout << f;
+		}
+
+
+	};
+
+
+	/*
+	 * Server-side representation of a session.
+	 */
+	class ServerSession : public L4::Server_object_t<Ankh::Svc>,
+	                      public Ankh::Session
+	{
+		private:
+			/*
+			 * Session settings
+			 */
+			bool _phys;         ///< want physical device MAC
+			bool _promisc;      ///< use promiscuous mode for device
+			bool _debug;        ///< debug mode
+			char _mac[6];       ///< virtual MAC (unless phys==true)
+			char _name[name_len];     ///< device name to request
+			char _shmname[name_len];  ///< name of shm area
+			Ankh::Device *_dev; ///< underlying device
+			unsigned _shm_ringsize;
+
+			/* 
+			 * SHM area for sending/receiving packets.
+			 */
+			l4shmc_area_t    _shm_area;
+			void create_shm_area()
+			{
+				int err = l4shmc_create(_shmname, _shm_ringsize * 2
+				                                 + sizeof(struct AnkhSessionDescriptor)
+				                                 + L4_PAGESIZE);
+				std::cout << "shmc_create: " << err << "\n";
+				if (err)
+					std::cerr << "[ERR] Could not create shm area\n";
+				else
+					std::cout << "Created shmc area '" << _shmname << "'\n";
+			}
+
+			Ankh::Shm_chunk    *_head_chunk;
+			Ankh::Shm_sender   *_recv_chunk;
+			Ankh::Shm_receiver *_xmit_chunk;
+
+			pthread_t           _xmit_thread;
+			bool                _active;
+			bool                _want_broadcast;
+
+			void generate_mac();
+			void init_shm_info();
+
+			void activate()   { _active = true; }
+			void deactivate() { _active = false; }
+
+			static int count;
+
+		public:
+			int dispatch(l4_umword_t, L4::Ipc::Iostream &ios);
+
+			ServerSession(bool want_phys, bool promisc,bool debug,
+			              char const *name, char const *shmname, unsigned bufsize,
+			              bool want_broad)
+				: _phys(want_phys), _promisc(promisc), _debug(debug),
+				  _dev(0), _shm_ringsize(bufsize), _head_chunk(0),
+				  _recv_chunk(0), _xmit_chunk(0), _active(false),
+				  _want_broadcast(want_broad)
+			{
+				assert(name);
+				assert(shmname);
+				strncpy(&_name[0], name, name_len);
+				strncpy(&_shmname[0], shmname, name_len);
+
+				// get Device, assume this does not fail!
+				_dev = Ankh::Device_manager::dev_mgr()->find_device_by_name(name, debug);
+				if (!_dev) {
+					std::cout << "Could not open device: " << name << std::endl;
+					std::cout << "Please check the spelling as well as " << std::endl
+					          << "the initialization sequence above." << std::endl;
+					enter_kdebug("no device");
+				}
+
+				// the area needs to be created immediately, chunks are created
+				// on shm_open()
+				create_shm_area();
+				
+				// if the user does not request the physical MAC _or_ if the device's
+				// physical MAC is already assigned to someone else, generate a custom
+				// MAC address
+				if (!want_phys)
+				{
+					generate_mac();
+				}
+				else
+				{
+					if (!_dev->phys_mac_assigned())
+					{
+						_dev->get_phys_mac();
+						memcpy(_mac, _dev->hw_addr(), 6);
+						/*
+						 * Promiscuous mode only makes sense if we got the physical MAC
+						 * for this device.
+						 */
+						if (!promisc)
+							_dev->switch_promiscuous(false);
+					}
+					else
+						generate_mac();
+				}
+
+				if (_debug)
+				{
+					char macbuf_size = 32;
+					char mac_buf[macbuf_size];
+					snprintf(mac_buf, macbuf_size, mac_fmt, mac_str(_mac));
+					std::cout << "Assigning MAC address: " << mac_buf << "\n";
+				}
+			}
+
+			~ServerSession()
+			{
+				// if we had debugging enabled, tell the Linux layer
+				// that we'll be gone
+				if (_debug)
+					ankh_unset_debug();
+
+				free(_name);
+
+				if (_recv_chunk)
+					delete _recv_chunk;
+				if (_xmit_chunk)
+					delete _xmit_chunk;
+				if (_head_chunk)
+					delete _head_chunk;
+			}
+
+
+			bool use_phys()   { return _phys; }
+			bool is_promisc() { return _promisc; }
+			bool debug()      { return _debug; }
+			virtual char *mac()  { return _mac; }
+			Ankh::Device* dev() { return _dev; }
+			unsigned ringsize() { return _shm_ringsize; }
+			bool is_active()  { return _active; }
+			bool want_bcast() { return _want_broadcast; }
+
+			struct AnkhSessionDescriptor *info()
+			{
+				return reinterpret_cast<struct AnkhSessionDescriptor*>(_head_chunk->addr());
+			}
+
+
+			void print_stats()
+			{
+				struct AnkhSessionDescriptor *sd = info();
+
+				std::cout << "info @ " << (void*)sd << "\n";
+				Ankh::Util::print_mac(&sd->mac[0]); std::cout << "MTU " << sd->mtu << "\n";
+				std::cout << "RX packets: " << sd->num_rx << " dropped: "    << sd->rx_dropped << "\n";
+				std::cout << "TX packets: " << sd->num_tx << " dropped: "    << sd->tx_dropped << "\n";
+				std::cout << "RX bytes: "   << sd->rx_bytes << " TX bytes: " << sd->tx_bytes << "\n";
+				std::cout << "---------------------------------------------------\n";
+			}
+
+			virtual void configure();
+
+			int shm_create();
+			void deliver(char *packet, unsigned len);
+
+			friend void* ::xmit_thread_fn(void *);
+	};
+
+
+	class Session_factory
+	{
+		private:
+			std::list<Ankh::ServerSession*> _sessions;
+			~Session_factory() { }
+
+		public:
+			Session_factory() {
+				std::cout << "Creating session factory.\n";
+			}
+
+			static Ankh::Session_factory *get()
+			{
+				static Ankh::Session_factory *_inst = 0;
+				if (!_inst)
+					_inst = new Ankh::Session_factory();
+
+				return _inst;
+			}
+
+			Ankh::ServerSession *create(char *config);
+			Ankh::ServerSession *find_session_for_mac(char const * const mac,
+			                                          char const * const name,
+			                                          Ankh::ServerSession* prev = 0);
+	};
+}
+

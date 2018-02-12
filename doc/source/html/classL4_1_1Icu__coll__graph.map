@@ -1,0 +1,5 @@
+<map id="L4::Icu" name="L4::Icu">
+<area shape="rect" id="node2" href="$classL4_1_1Kobject__t.html" title="{L4::Kobject_t\&lt; Icu,\l Irq_eoi, L4_PROTO_IRQ,\l Type_info::Demand_t\&lt; 1 \&gt; \&gt;\n||# c()\l# __check_protocols__()\l}" alt="" coords="38,204,242,325"/>
+<area shape="rect" id="node3" href="$classL4_1_1Irq__eoi.html" title="Interface for sending an acknowledge message to an object. " alt="" coords="5,20,99,97"/>
+<area shape="rect" id="node4" href="$classL4_1_1Kobject__t.html" title="Helper class to create an L4Re interface class that is derived from a single base class..." alt="" coords="123,5,333,112"/>
+</map>

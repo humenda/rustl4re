@@ -1,0 +1,128 @@
+// vi:ft=cpp
+/*
+ * (c) 2010 Alexander Warg <warg@os.inf.tu-dresden.de>
+ *     economic rights: Technische Universität Dresden (Germany)
+ *
+ * This file is part of TUD:OS and distributed under the terms of the
+ * GNU General Public License 2.
+ * Please see the COPYING-GPL-2 file for details.
+ */
+#pragma once
+
+#include <l4/cxx/dlist>
+#include <l4/mag-gfx/geometry>
+#include <l4/mag-gfx/font>
+#include <l4/mag-gfx/gfx_colors>
+#include <l4/mag/server/mode>
+#include <l4/mag/server/session>
+#include <l4/re/event>
+
+namespace Mag_gfx {
+class Canvas;
+}
+
+
+namespace Mag_server {
+
+using namespace Mag_gfx;
+
+class View_stack;
+class Session;
+class Hid_report;
+
+class View : public cxx::D_list_item, public Rect
+{
+private:
+  friend class View_stack;
+
+  View(View const &);
+  void operator = (View const &);
+
+  unsigned _flags;
+  Point _label_pos;
+  Area _label_sz;
+
+protected:
+  explicit View(Rect const &size, unsigned flags = 0)
+  : Rect(size), _flags(flags)
+  {}
+
+public:
+  enum Consts
+  {
+    Label_sep = 8  // space between session label and view title
+  };
+
+  static Rgb32::Color frame_color() { return Rgb32::Color(255, 200, 127); }
+  static Rgb32::Color kill_color() { return Rgb32::Color(255, 0, 0); }
+  enum
+  {
+    F_transparent = 0x01,
+    F_need_frame  = 0x02,
+    F_ignore      = 0x04,
+    F_focused     = 0x08,
+    F_background  = 0x10,
+    F_above       = 0x20,
+    F_no_label    = 0x40,
+    F_super_view  = 0x80,
+  };
+
+  void set_geometry(Rect const &p)
+  { this->Rect::operator = (p); }
+
+  Area size() const { return Area(w(), h()); }
+
+  bool transparent() const { return _flags & F_transparent; }
+  bool need_frame() const { return _flags & F_need_frame; }
+  bool ignore() const { return _flags & F_ignore; }
+  bool focused() const { return _flags & F_focused; }
+  bool background() const { return _flags & F_background; }
+  bool above() const { return _flags & F_above; }
+  bool super_view() const { return _flags & F_super_view; }
+
+  void set_as_background() { _flags |= F_background; }
+  void set_above(bool on)
+  {
+    if (on)
+      _flags |= F_above;
+    else
+      _flags &= ~F_above;
+  }
+
+  void set_focus(bool on)
+  {
+    if (on)
+      _flags |= F_focused;
+    else
+      _flags &= ~F_focused;
+  }
+
+  typedef L4Re::Event_buffer::Event Event;
+
+  virtual void draw(Canvas *, View_stack const *, Mode) const = 0;
+  virtual void handle_event(Hid_report *, Point const &, bool core_dev) = 0;
+  virtual ~View() {}
+
+  virtual Session *session() const { return 0; }
+
+  char const *title() const { return 0; }
+  Area calc_label_sz(Font const *font);
+  Point label_pos() const { return _label_pos; }
+  void label_pos(Point const &pos) { _label_pos = pos; }
+  Area label_sz() const { return _label_sz; }
+
+  int frame_width() const { return 4; }
+};
+
+
+inline
+Area
+View::calc_label_sz(Font const *font)
+{
+  char const *const l1 = session()->label();
+  char const *const l2 = title();
+  _label_sz = Area(font->str_w(l1) + (l2 ? (Label_sep + font->str_w(l2) + 2) : 2), font->str_h(l1) + 2);
+  return _label_sz;
+}
+
+}

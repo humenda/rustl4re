@@ -1,0 +1,20 @@
+
+obj-y				+= kernel/			\
+				   kernel/arch-$(L4X_SRCARCH)/	\
+				   mm/arch-$(L4X_SRCARCH)/
+obj-$(CONFIG_L4_ARCH_X86)	+= ../x86/crypto/
+obj-$(CONFIG_L4_ARCH_X86)	+= ../x86/platform/
+obj-$(CONFIG_L4_ARCH_X86)	+= ../x86/net/
+obj-$(CONFIG_L4_ARCH_X86)	+= entry/
+obj-$(CONFIG_IA32_EMULATION)	+= ia32/
+
+ifeq ($(L4X_SRCARCH),x86)
+obj-$(CONFIG_PERF_EVENTS) += ../x86/events/
+obj-$(CONFIG_KEXEC_FILE) += ../x86/purgatory/
+endif
+
+ifeq ($(L4X_SRCARCH),arm)
+obj-$(CONFIG_FPE_NWFPE)		+= ../arm/nwfpe/
+obj-$(CONFIG_VFP)		+= vfp/
+endif
+

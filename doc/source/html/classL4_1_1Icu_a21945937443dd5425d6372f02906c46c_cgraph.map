@@ -1,0 +1,5 @@
+<map id="L4::Icu::info" name="L4::Icu::info">
+<area shape="rect" id="node2" href="$classL4_1_1Kobject.html#a314161cb755de6fd0c50da0a757eb4c7" title="Return capability selector. " alt="" coords="144,5,263,32"/>
+<area shape="rect" id="node3" href="$group__l4__icu__api.html#ga7850caf0c29c87ba3477e1fe1139681f" title="Get information about the capabilities of the ICU. " alt="" coords="151,56,255,83"/>
+<area shape="rect" id="node4" href="$group__l4__utcb__api.html#gadc099b4a59e1d99638c72c11a8c8b644" title="Get the UTCB address. " alt="" coords="170,107,237,133"/>
+</map>

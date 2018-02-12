@@ -1,0 +1,4 @@
+<map id="L4vbus::Pci_dev::cfg_write" name="L4vbus::Pci_dev::cfg_write">
+<area shape="rect" id="node2" href="$classL4vbus_1_1Device.html#a86e2a0b4eb5abb5ce6443690c6e2361f" title="Access the Vbus capability of the underlying virtual bus. " alt="" coords="201,5,374,32"/>
+<area shape="rect" id="node3" href="$group__l4vbus__pci__module.html#gaed48c2e41fa4fc7cefeaca2b15b34aa5" title="Write to the device&#39;s vPCI configuration space. " alt="" coords="200,56,375,83"/>
+</map>

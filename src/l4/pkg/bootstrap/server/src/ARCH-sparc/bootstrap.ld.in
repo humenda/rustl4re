@@ -1,0 +1,78 @@
+
+#include "ldscript.inc"
+
+ENTRY(_start)
+
+PHDRS {
+  common PT_LOAD;
+#ifdef IMAGE_MODE
+  mods PT_LOAD;
+#endif
+}
+
+SECTIONS
+{
+  . = LINKADDR;
+  /* Merge .text, .rodata, and .data in one segment to save space */
+  .text :
+  {
+	_stext = .;
+    *(.init)
+    *(.text .text.* .gnu.linkonce.t.*)
+  } : common
+
+  .data :
+  {
+    *(.rodata* .gnu.linkonce.r.*)
+    . = ALIGN(8);
+    *(.data)
+    *(.data.*)
+
+    CTORS
+    PLATFORMS
+
+    _module_info_start = .;
+    KEEP(*(.module_info))
+    _module_info_end = .;
+
+  } : common
+
+  _edata  =  .;
+  PROVIDE (edata = .);
+  . = ALIGN(4096);
+  _bss_start = .;
+  .bss :
+  {
+   *(.bss)
+   *(COMMON)
+   *(.bss_memmap)
+  } : common
+  _bss_end = .;
+  _end = . ;
+  PROVIDE (end = .);
+
+/* Only move modules to modaddr if bootstrap is being loaded by an elf
+ * loader, and we do not need to copy images around at runtime (e.g. with
+ * compression) */
+#ifdef IMAGE_MODE
+#if defined(PLACE_MODULES_AT_MODADDR) && !defined(SINGLE_SECTION)
+  . = RAM_BASE + MODADDR;
+#endif
+  _module_data_start = .;
+  .module_data : {
+    *(EXCLUDE_FILE (*mod00.bin *mod01.bin *mod02.bin) .module_data)
+    *(.module_data)
+  } : mods
+  _module_data_end = .;
+#endif
+
+  /DISCARD/ : {
+    *(.interp)
+    *(.comment)
+    *(.note)
+    *(.eh_frame)
+    *(.stab)
+    *(.stabstr)
+    *(.fini)
+  }
+}

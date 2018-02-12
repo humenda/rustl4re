@@ -1,0 +1,5 @@
+<map id="L4::Ipc::Ostream::put" name="L4::Ipc::Ostream::put">
+<area shape="rect" id="node2" href="$ipc__stream.html#aabb21a8717620197539698c340d2b977" title="Insert an element to type T into the stream s. " alt="" coords="221,5,313,32"/>
+<area shape="rect" id="node4" href="$classL4_1_1Ipc_1_1Iostream.html#a1015a0966b9faef7e344530b1eb6e13a" title="Reset the stream to its initial state. " alt="" coords="201,57,332,98"/>
+<area shape="rect" id="node3" href="$ipc__stream.html#a4a9b955c1207f1d1e71fd57fac767072" title="Extract one element of type T from the stream s. " alt="" coords="380,5,472,32"/>
+</map>

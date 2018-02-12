@@ -1,0 +1,4 @@
+<map id="L4Re::Util::Event_t::init_poll" name="L4Re::Util::Event_t::init_poll">
+<area shape="rect" id="node2" href="$classL4Re_1_1Event.html#adc8f166274c62be37c30ff4faf0bacc9" title="Get event signal buffer. " alt="" coords="189,5,356,32"/>
+<area shape="rect" id="node3" href="$namespaceL4_1_1Ipc.html#a1beb107cf1e6be1f43b0861dacf48969" title="Make an L4::Ipc::Cap&lt;T&gt; for the given capability with L4_CAP_FPAGE_RW rights. " alt="" coords="194,56,351,83"/>
+</map>

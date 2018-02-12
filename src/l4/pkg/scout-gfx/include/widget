@@ -1,0 +1,277 @@
+// vi:ft=cpp
+/*
+ * (c) 2010 Alexander Warg <warg@os.inf.tu-dresden.de>
+ *     economic rights: Technische Universität Dresden (Germany)
+ *
+ * This file is part of TUD:OS and distributed under the terms of the
+ * GNU General Public License 2.
+ * Please see the COPYING-GPL-2 file for details.
+ */
+#pragma once
+
+#include <l4/scout-gfx/event>
+#include <l4/scout-gfx/layout_item>
+#include <l4/scout-gfx/layout>
+
+#include <l4/mag-gfx/gfx_colors>
+
+namespace Mag_gfx {
+class Canvas;
+}
+
+namespace Scout_gfx {
+
+using Mag_gfx::Canvas;
+
+class Parent_widget;
+
+class Widget : public Layout_item
+{
+protected:
+  Point _pos;
+  Area  _size;
+  Parent_widget *_parent;
+  Event_handler *_evh;
+  struct
+  {
+    int mfocus      : 1; ///< Widget has mouse focus
+    int selected    : 1; ///< Widget is currently selected
+    int takes_focus : 1; ///< Widget highlights mouse focus
+    int findable    : 1; ///< Regard element in find function
+    int visible     : 1; ///< Widget is visible
+    int keyb_focusable : 1; ///< Widget can receive keyboard focus
+  } _flags;
+
+public:
+  Widget *next;
+
+  Widget()
+  : _pos(0, 0), _size(1, 0), _parent(0), _evh(0), next(0)
+  {
+    _flags.mfocus = 0;
+    _flags.selected = 0;
+    _flags.findable = 1;
+    _flags.visible = 1;
+    _flags.keyb_focusable = 0;
+  }
+
+  virtual ~Widget();
+
+  Area size() const { return _size; }
+  Point pos() const { return _pos; }
+  Rect geometry() const { return Rect(_pos, _size); }
+  void set_geometry(Rect const &g)
+  {
+    _pos = g.p1();
+    _size = g.area();
+  }
+
+  inline Point map_to_parent(Point const &po, Widget *p = 0) const;
+
+  Point map_from_parent(Point const &po, Widget *p = 0) const
+  { return po - map_to_parent(Point(0, 0), p); }
+
+
+  void findable(int flag) { _flags.findable = flag; }
+  bool findable() const { return _flags.findable; }
+
+  void visible(bool flag) { _flags.visible = flag; }
+  bool visible() const { return _flags.visible; }
+
+  virtual bool is_keyb_focusable() const { return _flags.keyb_focusable; }
+  virtual void keyb_focus(bool) {};
+
+  virtual void draw(Canvas *c, Point const &p) = 0;
+  virtual Widget *find(Point const &p);
+
+  virtual void fill_cache(Mag_gfx::Pixel_info const *) {}
+  virtual void flush_cache(Mag_gfx::Pixel_info const *) {}
+
+  void parent(Parent_widget *parent) { _parent = parent; }
+  Parent_widget *parent() const { return _parent; }
+
+  /**
+   * Define event handler object
+   */
+  void event_handler(Event_handler *evh) { _evh = evh; }
+
+  /**
+   * Check if element is completely clipped and draw it otherwise
+   */
+  void try_draw(Canvas *c, Point const &p)
+  {
+    if (!visible())
+      return;
+#if 0
+    /* check if element is completely outside the clipping area */
+    if (!(c->clip() & Rect(p + _pos, _size)).valid())
+      return;
+#endif
+    /* call actual drawing function */
+    draw(c, p);
+  }
+
+  /**
+   * Update area of an element on screen
+   *
+   * We propagate the redraw request through the element hierarchy to
+   * the parent. The root parent should overwrite this function with
+   * a function that performs the actual redraw.
+   */
+  virtual void redraw_area(Rect const &r) const;
+
+  /**
+   * Trigger the refresh of an element on screen
+   */
+  void refresh() const
+  { redraw_area(Rect(_size)); }
+
+  virtual void mfocus(int flag)
+  {
+    if ((_flags.mfocus == flag) || !_flags.takes_focus)
+      return;
+
+    _flags.mfocus = flag;
+  }
+
+  /**
+   * Handle user input or timer event
+   */
+  virtual Widget *handle_event(Event const &ev)
+  {
+    if (_evh && _evh->handle(ev))
+      return this;
+    return 0;
+  }
+
+  /**
+   * \returns the root of a Widget hierarchy.
+   */
+  Widget *root();
+
+  /**
+   * \returns the next Widget of the hierarchy in pre-order DFS
+   *
+   * \param bt: This flag sets the search in back-tracking mode.
+   *            The bt flag is primarily used internally and defaults for a
+   *            regular depth-first search to false.
+   */
+  virtual Widget *next_widget(bool bt = false);
+};
+
+class Parent_widget : public Widget
+{
+protected:
+  Widget *_first;
+  Widget *_last;
+
+private:
+  Layout *_child_layout;
+
+public:
+
+  Parent_widget() : Widget(), _first(0), _last(0), _child_layout(0) {}
+
+  ~Parent_widget()
+  {
+    for (Widget *e = _first; e; e = e->next)
+      e->parent(0);
+  }
+
+  Layout *child_layout() const { return _child_layout; }
+  /**
+   * Adopt a child element
+   */
+  virtual void append(Widget *e);
+
+  /**
+   * Release child element from parent element
+   */
+  virtual void remove(Widget *e);
+
+  /**
+   * Dispose references to the specified element
+   *
+   * The element is not necessarily an immediate child but some element
+   * of the element-subtree.  This function gets propagated to the root
+   * parent (e.g., user state manager), which can reset the mouse focus
+   * of the focused element vanishes.
+   */
+  virtual void forget(Widget *e);
+
+  void set_child_layout(Layout *l)
+  {
+    _child_layout = l;
+    if (l)
+      l->set_parent_layout_item(this);
+  }
+
+  Area preferred_size() const
+  {
+    return child_layout() ? child_layout()->preferred_size() : Area(0, 0);
+  }
+
+  Area min_size() const
+  {
+    return child_layout() ? child_layout()->min_size() : Area(0, 0);
+  }
+
+  Area max_size() const
+  {
+    return child_layout() ? child_layout()->max_size() : Area(Area::Max_w, Area::Max_h);
+  }
+
+  Orientations expanding() const
+  {
+    return child_layout() ? child_layout()->expanding() : 0;
+  }
+
+  bool empty() const
+  {
+    return child_layout() ? child_layout()->empty() : true;
+  }
+
+  void set_geometry(Rect const &r)
+  {
+    if (child_layout())
+      child_layout()->set_geometry(Rect(r.area()));
+
+    _pos = r.p1();
+    _size = min_size().max(r.area()).min(max_size());
+  }
+
+  Rect geometry() const { return Rect(_pos, _size); }
+
+  void child_invalidate()
+  { invalidate(); }
+
+  bool has_height_for_width() const
+  { return child_layout() ? child_layout()->has_height_for_width() : false; }
+
+  int height_for_width(int w) const
+  { return child_layout() ? child_layout()->height_for_width(w) : -1; }
+
+  int min_height_for_width(int w) const
+  { return child_layout() ? child_layout()->min_height_for_width(w) : -1; }
+
+
+  void draw(Canvas *c, Point const &p);
+  Widget *find(Point const &p);
+  virtual Widget *find_child(Point const &p);
+  Widget *next_widget(bool bt = false);
+};
+
+/**
+ * translates widget-relative coordinates to parent coordinates
+ */
+inline
+Point
+Widget::map_to_parent(Point const &po, Widget *p) const
+{
+  if (p == _parent || !_parent)
+    return po + _pos;
+
+  return _parent->map_to_parent(po + _pos, p);
+}
+
+} //namespace Scout_gfx

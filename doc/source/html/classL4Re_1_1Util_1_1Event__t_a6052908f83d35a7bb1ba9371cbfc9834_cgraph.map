@@ -1,0 +1,9 @@
+<map id="L4Re::Util::Event_t::init" name="L4Re::Util::Event_t::init">
+<area shape="rect" id="node2" href="$classL4_1_1Icu.html#a998aaa8314b29b44aac4e3b59d7abfa0" title="Bind an interrupt line of an interrupt controller to an interrupt object. " alt="" coords="225,56,320,83"/>
+<area shape="rect" id="node6" href="$classL4Re_1_1Event.html#adc8f166274c62be37c30ff4faf0bacc9" title="Get event signal buffer. " alt="" coords="189,107,356,133"/>
+<area shape="rect" id="node7" href="$group__l4__ipc__err__api.html#ga05c11e3e10b6c2aa941396ac2018899f" title="Return error code of a system call return message tag. " alt="" coords="237,157,309,184"/>
+<area shape="rect" id="node8" href="$namespaceL4_1_1Ipc.html#a1beb107cf1e6be1f43b0861dacf48969" title="Make an L4::Ipc::Cap&lt;T&gt; for the given capability with L4_CAP_FPAGE_RW rights. " alt="" coords="194,208,351,235"/>
+<area shape="rect" id="node3" href="$classL4_1_1Cap__base.html#a6181bad79c41cdbf5c030877b94e25bf" title="Return capability selector. " alt="" coords="404,5,541,32"/>
+<area shape="rect" id="node4" href="$classL4_1_1Kobject.html#a314161cb755de6fd0c50da0a757eb4c7" title="Return capability selector. " alt="" coords="413,56,532,83"/>
+<area shape="rect" id="node5" href="$group__l4__icu__api.html#ga29217a67f405c5d860002dd902bf71e4" title="Bind an interrupt line of an interrupt controller to an interrupt object. " alt="" coords="419,107,526,133"/>
+</map>

@@ -1,0 +1,6 @@
+<map id="L4::Ipc::Istream::tag" name="L4::Ipc::Istream::tag">
+<area shape="rect" id="node2" href="$classL4_1_1Ipc_1_1Iostream.html#a18ac55dddefc29f84d47935dbc86b7ca" title="Do an IPC call using the message in the output stream and receiving to the input stream. " alt="" coords="196,5,347,32"/>
+<area shape="rect" id="node3" href="$classL4_1_1Ipc_1_1Iostream.html#a7b81e97c60209a67575b0c765b38e789" title="Create an IPC IO stream with a single message buffer. " alt="" coords="206,57,337,98"/>
+<area shape="rect" id="node4" href="$ipc__stream.html#ae54a3946ca6e1b6e9b1c3b327fb2d7a3" title="Extract the L4 message tag from the stream s. " alt="" coords="225,123,317,149"/>
+<area shape="rect" id="node5" href="$classL4_1_1Ipc_1_1Iostream.html#a38428e61e86208016e9653937da01f6d" title="Do an IPC reply and wait. " alt="" coords="206,174,337,215"/>
+</map>

@@ -1,0 +1,159 @@
+// vi:ft=cpp
+/*
+ * (c) 2010 Adam Lackorzynski <adam@os.inf.tu-dresden.de>,
+ *          Alexander Warg <warg@os.inf.tu-dresden.de>
+ *     economic rights: Technische Universität Dresden (Germany)
+ *
+ * This file is part of TUD:OS and distributed under the terms of the
+ * GNU General Public License 2.
+ * Please see the COPYING-GPL-2 file for details.
+ */
+#pragma once
+
+#include <l4/mag/server/user_state>
+#include <l4/mag/server/plugin>
+
+#include <l4/re/event_enums.h>
+
+namespace Mag_server {
+
+template<int Max_axis>
+class Motion_merger
+{
+private:
+  unsigned long _changed;
+  int _v[Max_axis];
+
+  enum Type
+  {
+    T_none = 0,
+    T_abs  = 1,
+    T_rel  = 2,
+  };
+
+  Type axis_inf(unsigned char axis) const
+  { return Type((_changed >> (2*axis)) & 3); }
+
+  void set_axis_inf(unsigned char axis, Type t)
+  { _changed |= ((unsigned long)t) << (axis*2); }
+
+public:
+  Motion_merger() : _changed(0) {}
+
+  void reset() { _changed = 0; }
+
+
+
+  bool handle(User_state::Event const &e)
+  {
+    if (!(e.payload.type == L4RE_EV_REL || e.payload.type == L4RE_EV_ABS))
+      return false;
+
+    if (e.payload.code >= Max_axis)
+      return false;
+
+    unsigned char ax = e.payload.code;
+
+    if (axis_inf(ax) == T_none && e.payload.type == L4RE_EV_REL)
+      {
+        _v[ax] = 0;
+	set_axis_inf(ax, T_rel);
+      }
+
+    switch (e.payload.type)
+      {
+      case L4RE_EV_REL:
+	_v[ax] += e.payload.value;
+	break;
+      case L4RE_EV_ABS:
+	_v[ax] = e.payload.value;
+	set_axis_inf(ax, T_abs);
+	break;
+      }
+
+    return true;
+  }
+
+  bool set_event(unsigned char axis, User_state::Event *e)
+  {
+    unsigned i = axis_inf(axis);
+    if (!i)
+      return false;
+
+    if (i & T_abs)
+      e->payload.type = L4RE_EV_ABS;
+    else
+      e->payload.type = L4RE_EV_REL;
+
+    e->payload.code = axis;
+    e->payload.value = _v[axis];
+
+    return true;
+  }
+
+  template< typename I, typename T >
+  I merge(I const &s, I const &e, T *last_time)
+  {
+    for (I i = s; i != e; ++i)
+      if (handle(*i))
+	{
+	  *last_time = i->time;
+	  i->free();
+	}
+      else
+	return i;
+
+    return e;
+  }
+
+  template< typename E, typename I, typename F >
+  void process(I const &s, I const &end, F const &f)
+  {
+    for (I e = s; e != end; ++e)
+      {
+	E me;
+	me.payload.stream_id = e->payload.stream_id;
+	e = merge(e, end, &me.time);
+
+	for (unsigned i = 0; i < Max_axis; ++i)
+	  if (set_event(i, &me))
+	    f(me);
+
+	if (e != end)
+	  {
+	    reset();
+	    f(*e);
+	  }
+	else
+	  break;
+	e->free();
+      }
+  }
+};
+
+class Motion_fwd
+{
+public:
+  template< /*typename E,*/ typename I, typename F >
+  void process(I const &s, I const &end, F const &f)
+  {
+    for (I e = s; e != end; ++e)
+      {
+	f(*e);
+	e->free();
+      }
+  }
+};
+
+class Input_driver : public Plugin
+{
+public:
+  explicit Input_driver(char const *name)
+  : Plugin(name)
+  {}
+
+  char const *type() const { return "input-driver"; }
+  virtual ~Input_driver() {}
+};
+
+}

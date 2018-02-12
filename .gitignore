@@ -1,6 +1,7 @@
 bin
 Cargo.lock
 files
+Makeconf.local
 *.o
 obj
 __pycache__

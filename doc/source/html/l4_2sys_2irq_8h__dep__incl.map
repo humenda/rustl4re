@@ -1,0 +1,35 @@
+<map id="l4/sys/irq.h" name="l4/sys/irq.h">
+<area shape="rect" id="node2" href="$internal_8h_source.html" title="l4/shmc/internal.h" alt="" coords="541,80,673,107"/>
+<area shape="rect" id="node4" href="$irq.html" title="C++ Irq interface. " alt="" coords="891,80,969,107"/>
+<area shape="rect" id="node34" href="$semaphore_8h_source.html" title="l4/sys/semaphore.h" alt="" coords="1098,80,1242,107"/>
+<area shape="rect" id="node3" href="$shmc_8h.html" title="Shared memory library header file. " alt="" coords="173,155,292,181"/>
+<area shape="rect" id="node5" href="$icu.html" title="Interrupt controller. " alt="" coords="839,155,917,181"/>
+<area shape="rect" id="node29" href="$l4virtio_source.html" title="l4/l4virtio/l4virtio" alt="" coords="1529,386,1651,413"/>
+<area shape="rect" id="node30" href="$event_source.html" title="l4/re/event" alt="" coords="316,155,405,181"/>
+<area shape="rect" id="node33" href="$semaphore.html" title="Semaphore class definition. " alt="" coords="1157,155,1290,181"/>
+<area shape="rect" id="node6" href="$vcon.html" title="Virtual console interface. " alt="" coords="832,229,924,256"/>
+<area shape="rect" id="node18" href="$icu__svr_source.html" title="l4/re/util/icu_svr" alt="" coords="319,475,437,502"/>
+<area shape="rect" id="node24" href="$vbus_source.html" title="l4/vbus/vbus" alt="" coords="440,229,537,256"/>
+<area shape="rect" id="node28" href="$scheduler.html" title="Scheduler object functions. " alt="" coords="949,229,1071,256"/>
+<area shape="rect" id="node7" href="$log.html" title="Log interface. " alt="" coords="957,304,1031,331"/>
+<area shape="rect" id="node22" href="$vcon__stream_8h_source.html" title="l4/l4re_vfs/impl/vcon\l_stream.h" alt="" coords="1237,379,1388,420"/>
+<area shape="rect" id="node23" href="$vcon__svr_source.html" title="l4/re/util/vcon_svr" alt="" coords="801,304,933,331"/>
+<area shape="rect" id="node8" href="$env.html" title="Environment interface. " alt="" coords="927,386,1005,413"/>
+<area shape="rect" id="node9" href="$vcpu_source.html" title="l4/vcpu/vcpu" alt="" coords="607,475,706,502"/>
+<area shape="rect" id="node10" href="$server_2l4virtio_source.html" title="l4/l4virtio/server\l/l4virtio" alt="" coords="1597,468,1719,509"/>
+<area shape="rect" id="node12" href="$env__ns_source.html" title="l4/re/util/env_ns" alt="" coords="461,475,583,502"/>
+<area shape="rect" id="node14" href="$ro__file__impl_8h_source.html" title="l4/l4re_vfs/impl/ro\l_file_impl.h" alt="" coords="730,468,863,509"/>
+<area shape="rect" id="node15" href="$vcon__stream__impl_8h_source.html" title="l4/l4re_vfs/impl/vcon\l_stream_impl.h" alt="" coords="1259,468,1409,509"/>
+<area shape="rect" id="node16" href="$vfs__impl_8h_source.html" title="l4/l4re_vfs/impl/vfs\l_impl.h" alt="" coords="1434,468,1573,509"/>
+<area shape="rect" id="node17" href="$util_2event.html" title="l4/re/util/event" alt="" coords="184,475,295,502"/>
+<area shape="rect" id="node20" href="$kumem__alloc.html" title="Kumem allocator helper. " alt="" coords="888,475,1044,502"/>
+<area shape="rect" id="node21" href="$object__registry_source.html" title="l4/re/util/object_registry" alt="" coords="1068,475,1235,502"/>
+<area shape="rect" id="node11" href="$virtio-block_source.html" title="l4/l4virtio/server\l/virtio&#45;block" alt="" coords="1597,557,1719,599"/>
+<area shape="rect" id="node13" href="$ns__fs__impl_8h_source.html" title="l4/l4re_vfs/impl/ns\l_fs_impl.h" alt="" coords="455,557,589,599"/>
+<area shape="rect" id="node19" href="$event__svr_source.html" title="l4/re/util/event_svr" alt="" coords="185,565,323,591"/>
+<area shape="rect" id="node25" href="$vbus__generic_source.html" title="l4/vbus/vbus_generic" alt="" coords="574,304,726,331"/>
+<area shape="rect" id="node26" href="$vbus__gpio_source.html" title="l4/vbus/vbus_gpio" alt="" coords="271,304,403,331"/>
+<area shape="rect" id="node27" href="$vbus__pci_source.html" title="l4/vbus/vbus_pci" alt="" coords="427,304,550,331"/>
+<area shape="rect" id="node31" href="$console_source.html" title="l4/re/console" alt="" coords="5,229,108,256"/>
+<area shape="rect" id="node32" href="$event__buffer_source.html" title="l4/re/util/event_buffer" alt="" coords="184,386,337,413"/>
+</map>

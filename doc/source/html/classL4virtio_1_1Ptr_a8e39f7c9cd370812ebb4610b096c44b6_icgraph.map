@@ -1,0 +1,6 @@
+<map id="L4virtio::Ptr::get" name="L4virtio::Ptr::get">
+<area shape="rect" id="node2" href="$classL4virtio_1_1Virtqueue_1_1Desc.html#a71bbf562153b0bcdb7c38e572c2f85ec" title="Dump a single descriptor. " alt="" coords="198,5,331,47"/>
+<area shape="rect" id="node4" href="$classL4virtio_1_1Svr_1_1Driver__mem__list__t.html#a270520dc38853577d41834c95148eb43" title="Default implementation for loading an indirect descriptor. " alt="" coords="183,71,346,127"/>
+<area shape="rect" id="node5" href="$classL4virtio_1_1Svr_1_1Driver__mem__region__t.html#a393117104bc267dc79c258f1902abf4b" title="Get the local address for driver address p. " alt="" coords="172,151,357,207"/>
+<area shape="rect" id="node3" href="$classL4virtio_1_1Virtqueue.html#a3abd68687a8a7d957e9b765433a313ed" title="Dump descriptors for this queue. " alt="" coords="405,5,539,47"/>
+</map>

@@ -1,0 +1,36 @@
+// vi:ft=cpp
+/*
+ * (c) 2010 Alexander Warg <warg@os.inf.tu-dresden.de>
+ *     economic rights: Technische Universität Dresden (Germany)
+ *
+ * This file is part of TUD:OS and distributed under the terms of the
+ * GNU General Public License 2.
+ * Please see the COPYING-GPL-2 file for details.
+ */
+
+#pragma once
+
+#include <l4/mag-gfx/canvas>
+#include <l4/mag-gfx/factory>
+#include <l4/re/video/goos>
+
+namespace Mag_gfx {
+  class Texture;
+}
+
+
+namespace Mag_server {
+
+using namespace Mag_gfx;
+
+class View;
+
+class Screen_factory : public virtual Factory
+{
+public:
+  virtual View *create_cursor(Texture const *cursor) = 0;
+
+  virtual ~Screen_factory() {}
+};
+
+}

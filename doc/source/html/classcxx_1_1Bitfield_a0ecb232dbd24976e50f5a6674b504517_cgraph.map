@@ -1,0 +1,5 @@
+<map id="cxx::Bitfield::set" name="cxx::Bitfield::set">
+<area shape="rect" id="node2" href="$classcxx_1_1Bitfield.html#a68f3092e1839bc709beb3611c2f5cb31" title="Set the bits corresponding to val. " alt="" coords="169,5,285,47"/>
+<area shape="rect" id="node3" href="$classcxx_1_1Bitfield.html#a3384706160a84e15a283e2c639071a26" title="Get the shifted bits for val. " alt="" coords="170,71,285,98"/>
+<area shape="rect" id="node4" href="$classcxx_1_1Bitfield.html#a8180660e03ca6acf85047dba64bb77a3" title="Get the shifted bits for val. " alt="" coords="333,64,448,105"/>
+</map>

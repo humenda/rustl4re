@@ -1,0 +1,77 @@
+#! /usr/bin/perl -w
+#
+# (c) 2009-2011 Technische Universität Dresden
+# This file is part of TUD:OS and distributed under the terms of the
+# GNU General Public License 2.
+# Please see the COPYING-GPL-2 file for details.
+#
+# Adam Lackorzynski <adam@os.inf.tu-dresden.de>
+#
+# Do not use 'perl -W' here, as with perl-5.20 we'll get
+# Use of uninitialized value in string ne at /usr/lib/..../perl/5.20/File/Spec/Unix.pm line 92.
+# Maybe sometime later we could use -W again?
+
+use strict;
+use File::Temp qw/tempfile/;
+
+BEGIN { unshift @INC, $ENV{L4DIR}.'/tool/lib'
+           if $ENV{L4DIR} && -d $ENV{L4DIR}.'/tool/lib/L4';}
+
+use L4::ModList;
+
+unless (defined $ARGV[1]) {
+  print "ERROR: Need to give command and modules file!\n";
+  exit 1;
+}
+
+system("dialog > /dev/null 2>&1");
+if ($?)
+  {
+    print "\nERROR: 'dialog' program not installed. Please install.\n\n";
+    exit 1;
+  }
+
+my @e = L4::ModList::get_entries($ARGV[1]);
+
+if ($ARGV[0] eq 'menu')
+  {
+    my ($tmpfd, $tmpfilename) = tempfile();
+
+    my $backtitle = '--menu ""';
+    if (defined $ENV{BACKTITLE})
+      {
+        $backtitle = $ENV{BACKTITLE};
+        $backtitle =~ s/'/'\\''/g;
+        $backtitle = "--menu '$backtitle'";
+      }
+
+    system("dialog --visit-items --title 'Select entry to launch:' "
+        ." $backtitle -1 -1 0 ".
+        join(' ', map { "$_ '$e[$_]'" } (0 .. $#e) )." 2> $tmpfilename");
+
+    if ($?)
+      {
+        print "ERROR: dialog aborted!\n";
+        exit 1;
+      }
+
+    my $o;
+    read $tmpfd, $o, 100;
+    close $tmpfd;
+    unlink $tmpfilename;
+
+    chomp $o;
+
+    if ($o !~ /^\d+$/)
+      {
+        print "ERROR: Invalid return value from dialog!\n";
+        exit 1;
+      }
+
+    print STDERR $e[$o];
+    exit 0;
+  }
+elsif ($ARGV[0] eq 'list')
+  {
+    print join("\n ", "Entries in modules file:", @e), "\n";
+  }

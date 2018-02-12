@@ -1,0 +1,22 @@
+// vim:set ft=cpp:
+/*
+ * (c) 2010 Adam Lackorzynski <adam@os.inf.tu-dresden.de>
+ *     economic rights: Technische Universität Dresden (Germany)
+ *
+ * This file is part of TUD:OS and distributed under the terms of the
+ * GNU General Public License 2.
+ * Please see the COPYING-GPL-2 file for details.
+ */
+#pragma once
+
+#include <l4/mag-gfx/font>
+
+namespace Scout_gfx { namespace Fonts {
+extern Mag_gfx::Font verabi10;
+extern Mag_gfx::Font vera16;
+extern Mag_gfx::Font verai16;
+extern Mag_gfx::Font mono16;
+extern Mag_gfx::Font vera24;
+extern Mag_gfx::Font vera20;
+extern Mag_gfx::Font vera18;
+}}

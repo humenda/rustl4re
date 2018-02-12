@@ -1,0 +1,3 @@
+provides: input input-dummy
+requires: libirq libio l4re_c libpthread
+Maintainer: adam@os.inf.tu-dresden.de

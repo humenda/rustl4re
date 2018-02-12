@@ -1,0 +1,597 @@
+// vim: ft=cpp
+
+/*
+ * memory --
+ *
+ *     Memory management classes, mirroring the L4 RM's ones.
+ *
+ * (c) 2011-2013 Björn Döbel <doebel@os.inf.tu-dresden.de>,
+ *     economic rights: Technische Universität Dresden (Germany)
+ * This file is part of TUD:OS and distributed under the terms of the
+ * GNU General Public License 2.
+ * Please see the COPYING-GPL-2 file for details.
+ */
+
+/*
+ * Memory management (e.g., region manager)
+ */
+
+#pragma once
+
+#include <cstdlib>
+#include <vector>
+#include <sstream>
+
+#include <l4/re/env>
+#include <l4/sys/kip>
+#include <l4/util/util.h>
+#include <l4/re/util/cap_alloc>
+#include <l4/re/util/region_mapping>
+#include <l4/re/util/dataspace_svr>
+#include <l4/util/bitops.h>
+#include <l4/util/rdtsc.h>
+
+#include <l4/sys/kdebug.h>
+
+#include "constants.h"
+#include "log"
+#include "exceptions"
+
+namespace Romain
+{
+	class Stack
+	{
+		l4_addr_t _sp;
+		
+		public:
+			Stack(l4_addr_t sp)
+				: _sp(sp)
+			{ }
+
+			l4_addr_t sp() { return _sp; }
+
+
+			/*
+			 * Push a value to the stack
+			 */
+			template <typename T>
+			l4_addr_t push(T value)
+			{
+				_sp -= sizeof(T);
+				*(T*)_sp = value;
+				return _sp;
+			}
+
+
+			/*
+			 * Push a buffer to stack.
+			 *
+			 * Returns difference to previous stack ptr. This diff may be
+			 * different from the len parameter for alignment reasons.
+			 */
+			template <typename T>
+			l4_umword_t push_data(T* buf, l4_umword_t len)
+			{
+				l4_addr_t orig_sp = _sp;
+				l4_umword_t space = len * sizeof(T);
+				_sp -= space;
+				_sp &= ~0x03; // word alignment XXX
+				memcpy((char*)_sp, buf, space);
+				return orig_sp - _sp;
+			}
+
+	};
+
+	/*
+	 * Allocator
+	 */
+	template <typename TYPE>
+		struct Allocator
+		{
+			enum { can_free = true };
+
+			Allocator() throw() {}
+			Allocator(Romain::Allocator<TYPE> const &) throw() {}
+			~Allocator() throw() {}
+
+			TYPE *alloc() throw() { return static_cast<TYPE*>(::malloc(sizeof(TYPE))); }
+			void free(void* ptr) throw() { ::free(ptr); }
+
+		};
+
+
+	class Region : public L4Re::Util::Region
+	{
+		public:
+			typedef L4Re::Util::Region Base;
+
+			Region(l4_addr_t addr = 0) throw()
+				: Base(addr)
+			{}
+
+			Region(l4_addr_t start, l4_addr_t end) throw()
+				: Base(start, end)
+			{}
+
+#if 0
+			void touch_rw()
+			{
+#if 1
+				DEBUG() << "touching 0x" << std::hex << this->start()
+				        << " + " << this->size() << " rw'able";
+#endif
+				l4_touch_rw((void*)this->start(), this->size());
+			}
+#endif
+	};
+
+
+	/*
+	 * Romain Memory region handler. This handler is different from L4Re's region
+	 * handler in that it can manage multiple source mappings.
+	 *
+	 * Multiple sources are used for handling multiple replicas which have
+	 * write access to a memory region. In this case we need to establish a
+	 * mapping per replica.
+	 */
+	template <typename DS, typename OPS>
+	class Region_handler_template
+	{
+		public:
+			typedef L4::Cap<L4Re::Dataspace> DSCAP;
+			typedef DS Dataspace;
+			typedef OPS Ops;
+			typedef typename OPS::Map_result Map_result;
+
+			enum RegionWritableType {
+				Read_only,
+				Read_only_emulate_write,
+				Writable,
+				Copy_and_execute,
+			};
+
+		private:
+			l4_cap_idx_t             _cap;        // capability of the underlying dataspace
+			Romain::Region            _local_regions[Romain::MAX_REPLICAS]; // replicated regions (writable regions exist in
+				                                                            // multiple instances)
+			l4_addr_t                _offs;       // offset in DS
+			DS                       _mem[Romain::MAX_REPLICAS]; // DS capabilities of underlying dataspaces
+			l4_uint8_t            _flags;      // region flags
+			RegionWritableType       _row;        // rw state
+			bool                     _shared;     // is DS shared across all replicas
+			                                      // (true for internal determinism's lock info page)
+			l4_umword_t              _alignment;  // alignment of this DS within master
+			l4_umword_t              _align_diff; // diff between alignment and real start address
+			                                      // (see Region_map::attach_locally() for an explanation)
+			l4_umword_t              _numpf;      // page faults seen on this region
+
+		public:
+
+			Region_handler_template()
+				: _cap(L4_INVALID_CAP),  _offs(0), _flags(),
+			      _row(Romain::Region_handler_template<DS, OPS>::Read_only),
+			      _shared(false), _alignment(L4_PAGESHIFT), _align_diff(0), _numpf(0)
+			{}
+
+
+			Region_handler_template(const Region_handler_template& o)
+				: _cap(o.client_cap_idx()),
+				  _offs(o.offset()),
+				  _flags(o.flags()),
+				  _row(o.writable()),
+				  _shared(o.shared()),
+				  _alignment(o.alignment()),
+				  _align_diff(o.align_diff()),
+				  _numpf(o.numpf())
+			{
+				for (l4_umword_t i = 0; i < o.local_region_count(); ++i) {
+					_local_regions[i] = o.local_region(i);
+					_mem[i]           = o.local_memory(i);
+				}
+			}
+
+			Region_handler_template(DSCAP cap, l4_cap_idx_t client_cap = L4_INVALID_CAP, l4_addr_t offset = 0,
+			                        l4_umword_t flags = 0, Romain::Region local_reg = Romain::Region(0,0))
+				: _cap(client_cap), _offs(offset), _flags(flags), _shared(false),
+				  _alignment(L4_PAGESHIFT), _align_diff(0), _numpf(0)
+			{
+				_local_regions[0] = local_reg;
+				_mem[0]           = cap;
+				for (l4_umword_t i = 1; i < Romain::MAX_REPLICAS; ++i)
+					_mem[i] = DSCAP();
+
+				/*
+				 * Yes, this looks like a copy of the RO flag. But in our case, this is actually
+				 * a tri-state. A page may be writable but mapped read-only if the mapping is
+				 * shared memory. This fact is however established by someone else (e.g., the syscall
+				 * observer) and here we just set one of the two default states.
+				 */
+				if (flags & L4Re::Rm::Read_only) {
+					writable(Romain::Region_handler_template<DS, OPS>::Read_only);
+				} else {
+					writable(Romain::Region_handler_template<DS, OPS>::Writable);
+				}
+			}
+
+			l4_umword_t            local_region_count() const { return MAX_REPLICAS; }
+			Romain::Region const & local_region(l4_umword_t idx) const { return _local_regions[idx]; }
+
+			void                writable(RegionWritableType rw) { _row = rw; }
+			RegionWritableType  writable() const { return _row; }
+
+			/*
+			 * Set a value for the mapping established for a given combination
+			 * of Region and Instance.
+			 */
+			void set_local_region(l4_umword_t idx, Romain::Region const & r)
+			{
+				_check(idx >= Romain::MAX_REPLICAS, "invalid instance");
+				_local_regions[idx] = r;
+			}
+
+			//DS const &memory() const throw() { return _mem; }
+			l4_cap_idx_t memory() const throw()                 { return _cap; }
+			l4_cap_idx_t client_cap_idx() const throw()         { return _cap; }
+			DS const &   local_memory(l4_umword_t idx) const throw()  { return _mem[idx]; }
+			void         local_memory(l4_umword_t idx, DS const & m)  { _mem[idx] = m; }
+			l4_addr_t    offset() const throw()                 { return _offs; }
+			void         offset(l4_addr_t o)                    { _offs = o; }
+			l4_addr_t    is_ro() const throw()                  { return _flags & L4Re::Rm::Read_only; }
+			l4_umword_t     flags() const throw()                  { return _flags; }
+
+			bool         shared() const throw()                 { return _shared; }
+			void         shared(bool yn) { _shared = yn; }
+			l4_addr_t    alignment() const throw()				{ return _alignment; }
+			l4_addr_t    align_diff() const throw()             { return _align_diff; }
+			l4_umword_t  numpf() const throw()                  { return _numpf; }
+			void         count_pf() throw()                     { _numpf++; }
+
+			/* Compute the target alignment for attaching locally.
+			 *
+			 * This alignment is necessary to make sure that a large region
+			 * is attached to matching addresses in the replica and master
+			 * address spaces. Only then can we map memory in chunks of more
+			 * than one page a time when resolving page faults.
+			 */
+			void alignToAddressAndSize(l4_addr_t address, l4_size_t size)
+			{
+				enum {
+					MIN_ALIGNMENT = 
+				        //12, /* 4 kB -> minimum! */
+				        //16, /* 64 kB */
+					    //19, /* 512 kB */
+				        22, /* 4 MB */
+				};
+
+				DEBUGf(Romain::Log::Memory) << "alignToAddressAndSize(" << std::hex << address
+				        << ", " << size << ")";
+
+				l4_addr_t min_align = MIN_ALIGNMENT;
+				if (size < (1 << MIN_ALIGNMENT)) {
+					min_align = l4util_bsr(size);
+				}
+				DEBUGf(Romain::Log::Memory) << "Minimum alignment: " << std::hex << min_align;
+
+				if (min_align > L4_SUPERPAGESHIFT) {
+					min_align = L4_SUPERPAGESHIFT;
+				}
+				DEBUGf(Romain::Log::Memory) << std::hex << address
+				        << " --> [max: super page] alignment: "
+				        << min_align;
+
+				_alignment             = min_align;
+				l4_umword_t align_mask = (1 << _alignment) - 1;
+				_align_diff            = address & align_mask;
+				DEBUGf(Romain::Log::Memory) << std::hex
+					   << address << " --> align diff =  " << align_diff();
+
+			}
+
+			void         take() const                           { Ops::take(this); }
+			void         release() const                        { Ops::release(this); }
+
+
+			Region_handler_template operator + (long offset) const throw()
+			{ Region_handler_template n = *this; n._offs += offset; return n; }
+
+			void unmap(l4_addr_t va, l4_addr_t ds_offs, l4_umword_t size) const throw()
+			{ Ops::unmap(this, va, ds_offs, size); }
+
+			void free(l4_addr_t start, l4_umword_t size) const throw()
+			{ Ops::free(this, start, size); }
+
+			int map(l4_addr_t adr, Region const &r, bool writable, Map_result *result) const
+			{ return Ops::map(this, adr, r, writable, result); }
+
+	};
+
+	class Region_ops;
+	typedef Romain::Region_handler_template<L4::Cap<L4Re::Dataspace>, Romain::Region_ops> Region_handler;
+
+
+	class Region_ops
+	{
+		public:
+			typedef l4_umword_t Map_result;
+			static int  map(Region_handler const *h, l4_addr_t addr,
+			                L4Re::Util::Region const &r, bool writable,
+			                l4_umword_t *result);
+
+			static void unmap(Region_handler const *h, l4_addr_t vaddr,
+			                  l4_addr_t offs, l4_umword_t size);
+
+			static void free(Region_handler const *h, l4_addr_t start, l4_umword_t size);
+
+			static void take(Region_handler const *h);
+			static void release(Region_handler const *h);
+	};
+
+
+	/* Note to self: L4Re's Region_map is a cxx::avl_map<> that maps from a Region key to
+	 * Region_handler data. It can be indexed using the find() funtion that takes an l4_addr_t
+	 * and returns the respective tree node. The node's entries are:
+	 *
+	 *   node->first  -> the Region object
+	 *   node->second -> the Region_handler object
+	 */
+	class Region_map
+		: public L4Re::Util::Region_map<Romain::Region_handler,
+		                                Romain::Allocator>
+	{
+		pthread_mutex_t _mtx;
+		public:
+			typedef L4Re::Util::Region_map<Romain::Region_handler, Romain::Allocator> Base;
+			enum { Invalid_inst = ~0U };
+
+			void activate(l4_umword_t inst)
+			{
+				pthread_mutex_lock(&_mtx);
+				_check(_active_instance != Invalid_inst, "rm already used, lock!!!");
+				_active_instance = inst;
+			}
+
+			void release()
+			{
+				_active_instance = Invalid_inst;
+				pthread_mutex_unlock(&_mtx);
+			}
+
+			/*
+			 * Initialization, see loader/server/src/region.cc
+			 */
+			Region_map();
+
+			l4_addr_t remote_to_local(l4_addr_t remote, l4_umword_t inst)
+			{
+				Base::Node n = find(remote);
+
+				if (n) {
+					if (n->second.local_region(inst).start() == 0)
+						lazy_map_region(n, inst);
+					l4_addr_t offs = remote - n->first.start();
+					return n->second.local_region(inst).start() + offs;
+				}
+
+				return ~0UL;
+			}
+
+
+			bool copy_existing_mapping(Romain::Region_handler& r,
+			                           l4_umword_t orig_id,
+			                           l4_umword_t inst_id,
+			                           bool writepf = false) const
+			{
+				(void)writepf;
+				if (orig_id == inst_id) return true;
+
+				L4::Cap<L4Re::Dataspace> mem;
+				l4_umword_t size = r.local_region(orig_id).size();
+
+				DEBUG() << "copy existing: " << std::hex << r.alignment()
+				        << " diff " << r.align_diff();
+				l4_addr_t a = Romain::Region_map::allocate_and_attach(&mem, size,
+			                                                          0,  0,
+			                                                          r.alignment(),
+			                                                          r.align_diff());
+				_check(a == 0, "DS allocation failed");
+
+#if 0
+				DEBUG() << "COPY: DS " << std::hex << mem.cap() << " SIZE " << size
+					<< " attached @ " << a;
+				DEBUG() << "memcpy(" << (void*)a << ", "
+				        << (void*)r.local_region(orig_id).start()
+				        << ", " << size << ")";
+#endif
+				memcpy((void*)a, (void*)r.local_region(orig_id).start(), size);
+
+				r.set_local_region(inst_id, Romain::Region(a, a+size-1));
+				r.local_memory(inst_id, mem);
+
+				return true;
+			}
+
+
+			/*
+			 * Allocate a master-local dataspace object.
+			 */
+			static void
+			allocate_ds(L4::Cap<L4Re::Dataspace> *cap, l4_umword_t size)
+			{
+				l4_umword_t flags = 0;
+				if (size >= (L4_SUPERPAGESIZE >> 2)) { // use super pages from 1 MB...
+					flags |= L4Re::Mem_alloc::Super_pages;
+					flags |= L4Re::Mem_alloc::Continuous;
+				}
+				
+				*cap = L4Re::Util::cap_alloc.alloc<L4Re::Dataspace>();
+				_check(!cap->is_valid(), "error allocating DS capability");
+
+				int error = L4Re::Env::env()->mem_alloc()->alloc(size, *cap, flags);
+				_check(error != 0, "error allocating memory");
+			}
+
+
+			static l4_addr_t
+			attach_aligned(L4::Cap<L4Re::Dataspace> const * ds, l4_umword_t size,
+			               l4_umword_t offs = 0, l4_umword_t flags = 0,
+			               l4_umword_t align = L4_PAGESHIFT, l4_umword_t aligndiff = 0)
+			{
+				l4_addr_t a           = 0;
+				l4_addr_t search_size = size + aligndiff;
+
+				l4_umword_t r = L4Re::Env::env()->rm()->reserve_area(&a, search_size,
+				                                                     L4Re::Rm::Search_addr | flags,
+				                                                     align);
+				_check(r != 0, "reserve area failed");
+				DEBUG() << std::hex << "Reserved area at " << a << " and will attach to "
+				        << a + aligndiff;
+
+				a += aligndiff;
+				l4_addr_t tmp_a = a;
+
+				r = L4Re::Env::env()->rm()->attach(&a, size, L4Re::Rm::In_area | L4Re::Rm::Eager_map | flags,
+				                                   *ds, offs);
+				_check(r != 0, "attach error");
+				_check(a != tmp_a, "did not attach to correct location");
+
+				DEBUG() << "att: " << (void*)a;
+
+				r = L4Re::Env::env()->rm()->free_area(a);
+				_check(r != 0, "free area failed");
+
+				return a;
+			}
+
+
+			/*
+			 * Allocate and attach a master-local dataspace object.
+			 */
+			static l4_addr_t
+			allocate_and_attach(L4::Cap<L4Re::Dataspace> *cap, l4_umword_t size,
+				                l4_umword_t offs = 0, l4_umword_t flags = 0,
+				                l4_umword_t align = L4_PAGESHIFT,
+				                l4_umword_t aligndiff = 0)
+			{
+				Romain::Region_map::allocate_ds(cap, size);
+
+				return Romain::Region_map::attach_aligned(cap, size, offs,
+				                                          flags, align,
+				                                          aligndiff);
+			}
+
+
+			/*
+			 * Check if a node already has a mapping to one of the replicas. If so,
+			 * take a shortcut mapping to the next one (determined by inst parameter).
+			 */
+			bool lazy_map_region(Romain::Region_map::Base::Node &n, l4_umword_t inst, bool writepf=false);
+
+		private:
+			l4_umword_t _active_instance;
+
+			/*
+			 * Determine the index of the first instance that already holds a
+			 * valid mapping for an existing region.
+			 */
+			int find_existing_region(Romain::Region_map::Base::Node n) const
+			{
+				l4_mword_t ret;
+				for (ret = 0; ret < static_cast<l4_mword_t>(Romain::MAX_REPLICAS); ++ret) {
+					if (n->second.local_region(ret).start())
+						return ret;
+				}
+				return -1;
+			}
+
+		public:
+			/*
+			 * Every DS we attach to the client is also attached locally within
+			 * the master process.
+			 */
+			void *attach_locally(void* addr, l4_umword_t size, Romain::Region_handler *hdlr,
+			                     l4_umword_t flags = None, l4_uint8_t align=L4_PAGESHIFT);
+
+
+			void *attach(void* addr, l4_umword_t size, Romain::Region_handler const &hdlr,
+			             l4_umword_t flags = None, l4_uint8_t align=L4_PAGESHIFT, bool shared = false);
+
+			l4_addr_t attach_area(l4_addr_t addr, l4_umword_t size, l4_umword_t flags = None,
+			                      l4_uint8_t align = L4_PAGESHIFT) throw()
+			{
+				DEBUG() << "attach_area(" << std::hex << addr << ", " << size << ", " << flags << ")";
+				return Base::attach_area(addr, size, flags, align);
+			}
+
+
+			bool detach_area(l4_addr_t addr) throw()
+			{
+				DEBUG() << "detach_area(" << std::hex << addr << ")";
+				return Base::detach_area(addr);
+			}
+
+			Base::Node find(Base::Key_type const& k) const throw()
+			{
+				Base::Node n = Base::find(k);
+				DEBUGf(Romain::Log::Memory) << GREEN << "find(" << std::hex << k.start() << "): " << NOCOLOR
+				        << "addr " << (n ? n->first.start() : 0xF00)
+				        << " memcap " << (n ? n->second.client_cap_idx() : 0xF00);
+				return n;
+			}
+
+			int detach(void* addr, l4_umword_t size, l4_umword_t flags,
+                       L4Re::Util::Region* reg, Romain::Region_handler* h);
+
+			/*
+			 * Copy the content of all writable regions of instance 'from' to
+			 * the respective regions of instance 'to'.
+			 */
+			void replicate(l4_umword_t from, l4_umword_t to)
+			{
+				for (auto i = begin(); i != end(); ++i) {
+					// if the region is writeable and is already mapped
+					if (!i->second.is_ro() && i->second.local_region(from).start() != 0) {
+						l4_umword_t size = i->first.end() - i->first.start() - 1;
+						memcpy((void*)i->second.local_region(to).start(),
+						       (void*)i->second.local_region(from).start(), size);
+					}
+				}
+			}
+
+
+			static char const* print_mapping(Node n, l4_umword_t id)
+			{
+				std::stringstream s;
+				s << "[" << std::hex << n->second.local_region(id).start()
+				  << " - " << n->second.local_region(id).end() << "] ==> "
+				  << "[" << n->first.start() << " - " << n->first.end() << "]";
+				s << std::endl;
+				s << "   DS " << std::hex <<  n->second.local_memory(id).cap();
+
+				return s.str().c_str();
+			}
+	};
+
+
+	class Region_map_server
+	{
+		public:
+			typedef L4::Cap<L4Re::Dataspace> Dataspace;
+			enum { Have_find = true };
+
+			static int validate_ds(void *, L4::Ipc::Snd_fpage const &ds_cap,
+			                       l4_umword_t, L4::Cap<L4Re::Dataspace> *ds)
+			{
+				/*
+				 * XXX  We need to check if actually a cap was received.
+				 * However, the default check for ds_cap.local_id_received()
+				 * fails here, because we are only proxying this call.
+				 */
+				*ds = L4::Cap<L4Re::Dataspace>(ds_cap.base());
+				return L4_EOK;
+			}
+
+
+			//static l4_umword_t find_res(L4::Cap<void> const &ds) { return ds.cap(); }
+			static l4_umword_t find_res(l4_cap_idx_t cap) { return cap; }
+	};
+}

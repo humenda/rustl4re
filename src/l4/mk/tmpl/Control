@@ -1,0 +1,3 @@
+requires: xyz
+provides: abc
+maintainer: your@email.example.com

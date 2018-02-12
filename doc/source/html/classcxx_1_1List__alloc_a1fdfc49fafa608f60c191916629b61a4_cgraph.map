@@ -1,0 +1,11 @@
+<map id="cxx::List_alloc::List_alloc" name="cxx::List_alloc::List_alloc">
+<area shape="rect" id="node2" href="$classcxx_1_1List__alloc.html#a1db43253e50d3c478ed74ea089f2340f" title="Alloc a memory block. " alt="" coords="207,5,349,32"/>
+<area shape="rect" id="node3" href="$classcxx_1_1List__alloc.html#a6add9811cb611b9a1e7ee21c92809131" title="Allocate a memory block of min &lt;= size &lt;=max. " alt="" coords="189,56,367,83"/>
+<area shape="rect" id="node7" href="$group__cxx__api.html#ga1d7a566ab5b06016155d693f91a7ee2d" title="Get the maximum of a and b. " alt="" coords="430,107,505,133"/>
+<area shape="rect" id="node8" href="$classcxx_1_1List__alloc.html#a086c8ed553f575408d7048510561fb0a" title="Get the amount of available memory. " alt="" coords="207,157,349,184"/>
+<area shape="rect" id="node9" href="$classcxx_1_1List__alloc.html#aec3e78fdc391fd56e161b10c9937e395" title="Return a free memory block to the allocator. " alt="" coords="209,208,347,235"/>
+<area shape="rect" id="node10" href="$group__cxx__api.html#ga0bd9662898a7499fcd3feefe594a699b" title="Get the minimum of a and b. " alt="" coords="243,259,313,285"/>
+<area shape="rect" id="node4" href="$group__l4__memory__api.html#gae8aa66c17956ac2dfc2a6d5788fd97a9" title="Round value up to the next alignment with bits size. " alt="" coords="733,31,844,57"/>
+<area shape="rect" id="node5" href="$group__l4__memory__api.html#ga792959ba1e87fecf90018876f32d7bc9" title="Round an address down to the next lower flex page with size bits. " alt="" coords="415,56,520,83"/>
+<area shape="rect" id="node6" href="$group__l4__memory__api.html#ga96e3b2d8e69308aecbb11d1d24f61662" title="Round address up to the next page. " alt="" coords="568,56,685,83"/>
+</map>

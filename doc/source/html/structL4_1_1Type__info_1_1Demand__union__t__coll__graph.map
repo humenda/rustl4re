@@ -1,0 +1,5 @@
+<map id="L4::Type_info::Demand_union_t&lt; D1, D2 &gt;" name="L4::Type_info::Demand_union_t&lt; D1, D2 &gt;">
+<area shape="rect" id="node2" href="$structL4_1_1Type__info_1_1Demand__t.html" title="{L4::Type_info::Demand\l_t\&lt; __I::Max\&lt; D1::Caps,\l D2::Caps \&gt;::Res, D1::Flags\|\lD2::Flags, __I::Max\&lt; D1::Mem,\l D2::Mem \&gt;::Res, __I::Max\&lt; D1\l::Ports, D2::Ports \&gt;::Res \&gt;\n||+ Demand_t()\l}" alt="" coords="5,448,220,599"/>
+<area shape="rect" id="node3" href="$classL4_1_1Type__info_1_1Demand.html" title="Data type for expressing the needed receive buffers at the server&#45;side of an interface. " alt="" coords="48,5,215,156"/>
+<area shape="rect" id="node4" href="$structL4_1_1Type__info_1_1Demand__t.html" title="Template type statically describing demand of receive buffers. " alt="" coords="129,205,307,312"/>
+</map>

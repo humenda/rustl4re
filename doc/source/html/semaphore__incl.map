@@ -1,0 +1,31 @@
+<map id="l4/sys/semaphore" name="l4/sys/semaphore">
+<area shape="rect" id="node2" href="$irq.html" title="C++ Irq interface. " alt="" coords="661,80,739,107"/>
+<area shape="rect" id="node31" href="$semaphore_8h_source.html" title="l4/sys/semaphore.h" alt="" coords="1007,80,1151,107"/>
+<area shape="rect" id="node3" href="$icu_8h.html" title="Interrupt controller. " alt="" coords="659,528,749,555"/>
+<area shape="rect" id="node16" href="$l4_2sys_2irq_8h.html" title="C Irq interface. " alt="" coords="1043,528,1133,555"/>
+<area shape="rect" id="node18" href="$capability.html" title="L4::Cap related definitions. " alt="" coords="689,229,809,256"/>
+<area shape="rect" id="node26" href="$ipc__iface.html" title="Interface Definition Language. " alt="" coords="298,379,401,405"/>
+<area shape="rect" id="node27" href="$ipc__types.html" title="l4/sys/cxx/ipc_types" alt="" coords="144,528,291,555"/>
+<area shape="rect" id="node30" href="$rcv__endpoint.html" title="The C++ Receive endpoint interface. " alt="" coords="737,155,881,181"/>
+<area shape="rect" id="node4" href="$kernel__object_8h.html" title="Kernel object system calls. " alt="" coords="739,603,896,629"/>
+<area shape="rect" id="node14" href="$l4_2sys_2ipc_8h.html" title="Common IPC interface. " alt="" coords="693,767,784,793"/>
+<area shape="rect" id="node5" href="$l4_2sys_2types_8h.html" title="Common L4 ABI Data Types. " alt="" coords="716,916,823,943"/>
+<area shape="rect" id="node7" href="$compiler_8h.html" title="L4 compiler related defines. " alt="" coords="361,1065,487,1092"/>
+<area shape="rect" id="node12" href="$l4_2sys_2utcb_8h.html" title="UTCB definitions. " alt="" coords="520,841,619,868"/>
+<area shape="rect" id="node13" href="$____kernel__object__impl_8h.html" title="Low&#45;level kernel debugger functions. " alt="" coords="640,677,803,719"/>
+<area shape="rect" id="node6" href="$l4_2sys_2l4int_8h.html" title="Fixed sized integer types, generic version. " alt="" coords="571,1065,669,1092"/>
+<area shape="rect" id="node9" href="$l4_2sys_2consts_8h.html" title="Common constants. " alt="" coords="367,991,481,1017"/>
+<area shape="rect" id="node10" href="$____l4__fpage_8h_source.html" title="l4/sys/__l4_fpage.h" alt="" coords="708,991,852,1017"/>
+<area shape="rect" id="node11" href="$____timeout_8h_source.html" title="l4/sys/__timeout.h" alt="" coords="877,991,1011,1017"/>
+<area shape="rect" id="node15" href="$err_8h.html" title="Error codes. " alt="" coords="200,841,291,868"/>
+<area shape="rect" id="node17" href="$rcv__endpoint_8h.html" title="Receive endpoint C interface. " alt="" coords="1029,685,1184,711"/>
+<area shape="rect" id="node19" href="$kobject_source.html" title="l4/sys/kobject" alt="" coords="741,453,848,480"/>
+<area shape="rect" id="node24" href="$task_8h.html" title="Common task related definitions. " alt="" coords="467,685,565,711"/>
+<area shape="rect" id="node25" href="$sys_2meta.html" title="Meta interface for getting dynamic type information about objects behind capabilities. " alt="" coords="471,304,564,331"/>
+<area shape="rect" id="node20" href="$____typeinfo_8h.html" title="Type information handling. " alt="" coords="416,528,515,555"/>
+<area shape="rect" id="node21" href="$types.html" title="cxx/types" alt="" coords="209,685,290,711"/>
+<area shape="rect" id="node22" href="$ipc__basics_source.html" title="cxx/ipc_basics" alt="" coords="104,603,216,629"/>
+<area shape="rect" id="node23" href="$capability_8h_source.html" title="cxx/capability.h" alt="" coords="449,603,565,629"/>
+<area shape="rect" id="node28" href="$ipc__string_source.html" title="cxx/ipc_string" alt="" coords="442,379,550,405"/>
+<area shape="rect" id="node29" href="$ipc__array_source.html" title="ipc_array" alt="" coords="318,453,399,480"/>
+</map>

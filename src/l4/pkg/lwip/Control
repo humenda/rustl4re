@@ -1,0 +1,3 @@
+provides: lwip libc_be_socket_lwip
+requires: libc libl4re-vfs libstdc++
+Maintainer: warg@os.inf.tu-dresden.de

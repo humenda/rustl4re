@@ -1,0 +1,14 @@
+<map id="L4::Cap_base::is_valid" name="L4::Cap_base::is_valid">
+<area shape="rect" id="node2" href="$classL4Re_1_1Rm.html#ac85c7b70e1b4cbdd34a9b2399d6bf985" title="Attach a data space to a region. " alt="" coords="237,5,365,32"/>
+<area shape="rect" id="node3" href="$classL4_1_1Cap__base.html#a1501f9852fda4c01a1591a7c53585d5f" title="Copy a capability. " alt="" coords="229,56,373,83"/>
+<area shape="rect" id="node6" href="$classL4Re_1_1Smart__count__cap.html#a4f5fee6c54e153aba5b2cf33e4c5c5ec" title="Copy operation for L4::Smart_cap (increment ref count). " alt="" coords="215,158,387,199"/>
+<area shape="rect" id="node7" href="$classL4Re_1_1Util_1_1Smart__cap__auto.html#a4dfba4f2c4731689f1a53992c83371a6" title="Free operation for L4::Smart_cap. " alt="" coords="223,223,379,265"/>
+<area shape="rect" id="node8" href="$classL4Re_1_1Util_1_1Smart__cap__auto.html#a19c486ceece95f48ce148fc3235ddca5" title="Invalidate operation for L4::Smart_cap. " alt="" coords="223,289,379,330"/>
+<area shape="rect" id="node10" href="$namespaceL4_1_1Ipc.html#ac9fc8ab1571be4a1e7811d19a8caf916" title="Make an L4::IPC::Cap&lt;T&gt; for the given capability with full fpage and object&#45;specific rights..." alt="" coords="221,355,380,381"/>
+<area shape="rect" id="node11" href="$classL4_1_1Cap__base.html#ab6cd8e73ebbdb5dfa45355b7c1fde1c2" title="Replace this capability with the contents of src. " alt="" coords="227,107,375,133"/>
+<area shape="rect" id="node13" href="$classL4Re_1_1Video_1_1View.html#aac22679f4bbdd1d3fd9ed856c173dc03" title="Return whether this view is valid. " alt="" coords="231,406,371,447"/>
+<area shape="rect" id="node4" href="$classL4_1_1Cap.html#a03750491e2cb888d26e2fbdfcc0b7dbc" title="Copy a capability to this cap slot. " alt="" coords="435,9,593,50"/>
+<area shape="rect" id="node5" href="$classL4_1_1Cap.html#a580ae207f1a9a54c3a2ffd93fa3f4eef" title="Member access of a T. " alt="" coords="435,74,593,115"/>
+<area shape="rect" id="node9" href="$classL4Re_1_1Util_1_1Smart__cap__auto.html#a5bd9db013c30e736b5cc2071589de771" title="Copy operation for L4::Smart_cap. " alt="" coords="436,289,592,330"/>
+<area shape="rect" id="node12" href="$classL4_1_1Cap.html#ae097fe17d218b76dc368a5383372168f" title="Move a capability to this cap slot. " alt="" coords="435,139,593,181"/>
+</map>

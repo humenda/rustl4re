@@ -1,0 +1,232 @@
+mainmenu "L4Re Configuration"
+
+config KERNELVERSION
+        string
+	option env="KERNELVERSION"
+
+config ARCH_ENABLE_STACK_PROTECTOR
+	bool
+
+choice
+	prompt "Target Architecture"
+#  ARCH_CHOICE_DEFAULT
+	help
+	  Specify for which processor architecture you want to build.
+
+#  ARCH_CHOICE
+
+endchoice
+
+config BUILD_ARCH
+	string
+# ARCH_NAME
+
+# currently we have nothing for abi linux, so just do not offer this option
+#choice
+#	prompt "ABI"
+#	default BUILD_ABI_l4f
+#
+#config BUILD_ABI_l4f
+#	bool "L4/Fiasco"
+#
+#config BUILD_ABI_linux
+#	bool "Linux"
+#
+#endchoice
+config BUILD_ABI_l4f
+	def_bool y
+
+
+config BUILD_ABI
+	string
+	default "l4f"   if BUILD_ABI_l4f
+	default "linux" if BUILD_ABI_linux
+
+# PF_INCLUDE
+
+choice
+	prompt "Platform Selection"
+
+INSERT_PLATFORMS
+
+config PLATFORM_TYPE_custom
+	bool "Custom platform"
+	help
+	  Define your own platform, alternatively define the following
+	  in conf/platforms/yourname.conf:
+	    PLATFORM_RAM_BASE    = 0
+	    PLATFORM_RAM_SIZE_MB = 64
+
+
+endchoice
+
+if PLATFORM_TYPE_custom
+
+menu "Custom Platform Definition"
+
+config PLATFORM_TYPE
+	string "Name of your platform"
+
+config PLATFORM_RAM_BASE
+	hex "Start of RAM"
+	default 0x0
+	help
+	  Hexadecimal physical address where RAM memory starts on the
+	  platform.
+
+config PLATFORM_RAM_SIZE_MB
+	int "RAM-Memory available on the platform in MB"
+	default 128
+
+config PLATFORM_UART_NR
+	int "Select UART to use"
+	default 0
+
+endmenu # Custom platform
+endif
+
+INSERT_PLATFORM_TYPES
+
+config USE_DROPS_STDDIR
+	def_bool n
+
+config USE_DICE
+	def_bool n
+
+config DROPS_STDDIR
+	string
+	default "/path/to/l4re"
+
+config DROPS_INSTDIR
+	string
+	default "/path/to/l4re"
+
+config BID_COLORED_PHASES
+	bool
+	default y
+
+menu "Building"
+
+config YACC
+	string
+	default "yacc"
+
+config LEX
+	string
+	default "flex"
+
+config CTAGS
+	string
+	default "ctags"
+
+config ETAGS
+	string
+	default "etags"
+
+
+config HAVE_LDSO
+	def_bool y
+
+config INT_CPP_NAME_SWITCH
+	bool "Automatically determine internal gcc preprocessor names"
+	default y
+
+config INT_LD_NAME_SWITCH
+	bool "Automatically determine internal ld names"
+	default y
+
+config INT_PP_NAME
+	string "Internal name of the compiler preprocessor"
+	default "cpp0"
+	depends on !INT_CPP_NAME_SWITCH
+
+config INT_LD_NAME
+	string "Internal name of the compiler linker"
+	default "ld"
+	depends on !INT_LD_NAME_SWITCH
+
+
+config BID_STRIP_PROGS
+	bool "Strip binaries on install"
+	help
+	  If enabled, binaries will be stripped on installation into
+	  $(L4DIR)/bin or $(DROPS_STDDIR)/bin. If you want to load them with
+	  all their symbols (eg to show the symbols with the Fiasco kernel
+	  debugger), say 'N' here.
+
+	  If unsure, say 'Y'.
+
+config BID_GCC_OMIT_FP
+	bool "GCC: Omit Frame-pointers"
+	default y
+	help
+	  If enabled, gcc will be passed the '-fomit-frame-pointer' cmdline
+	  option, adding an additional register to the register set for the
+	  generated code. Programs will be faster, but backtraces cannot be
+	  done, seriously hindering debugging.
+
+	  If unsure, say 'Y'.
+
+config BID_GCC_ENABLE_STACK_PROTECTOR
+    bool "GCC: enable stack protector"
+    default y if ARCH_ENABLE_STACK_PROTECTOR
+    help
+      If enabled, support for the gcc stack protector will be enabled.
+      The stack protector uses stack canaries to detect stack smashing
+      attacks (see "man gcc" for details). In L4Re the stack protector is
+      enabled only for packages that are linked against the full uclibc.
+      Enabling this feature will add some overhead, but increase security.
+
+      If unsure, say 'Y'.
+
+choice
+    prompt "GCC: Enable stack protector"
+    depends on BID_GCC_ENABLE_STACK_PROTECTOR
+    default BID_GCC_STACK_PROTECTOR
+
+config BID_GCC_STACK_PROTECTOR_ALL
+    bool "on all functions"
+    help
+        If enabled, '-fstack-protector-all' flag is used for gcc. This
+        option adds significant overhead, as the stack canary is checked on
+        every function return. See "man gcc" for details.
+
+config BID_GCC_STACK_PROTECTOR
+    bool "exclusively for functions with vulnerable objects"
+    help
+        If enabled, '-fstack-protector' flag is passed to gcc. If this
+        flag is set, gcc will add stack canaries to vulnerable functions, such as
+        functions that call "alloca", and functions with buffers larger than 8
+        bytes.
+
+endchoice
+
+config BID_GENERATE_MAPFILE
+	bool #"Generate Map-files for binaries"
+	help
+	  Enabling this option will generate map-files together with the
+	  binaries. This might be handy for debugging purposes. See ld(1)
+	  for details on mapfiles.
+
+          If unsure, say N.
+
+config BID_BUILD_DOC
+	bool "Build doc directories"
+	help
+	  Say Y if you also want to build the doc directories.
+
+config RELEASE_MODE
+	bool "Enable RELEASE flag"
+	help
+	  Enable to leave out debugging and other code normally not needed.
+
+	  Say N.
+
+config MAKECONFS_ADD
+	string "Additional Makeconf files"
+	help
+	  List of white space separated suffixes of Makeconf files
+	  which will be included in every source directory as
+	  Makeconf.<suffix>.
+
+endmenu

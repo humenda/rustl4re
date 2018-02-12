@@ -1,0 +1,116 @@
+/*!\mainpage DDE Concepts and implementation
+ *
+ * \ref p_overview
+ *
+ * \ref p_ddekit
+ *
+ * \ref p_implement
+ *
+ * \ref p_refs
+ *
+ * \ref p_credits
+ */
+
+/** \page p_overview Overview
+
+  The Device Driver Environment (DDE) is a framework for incorporating
+  legacy device drivers into DROPS. It consists of two parts:
+  <ul>
+    <li>\ref p_ddekit provides a basic set of functions that are
+          typically needed by drivers, such as threading, IRQs, PCI access
+          and so on. Its purpose is to decouple the OS-dependent code from
+          the L4 code.</li>
+    <li>An OS-dependent part such as DDELinux2.6 implements an environment
+        for drivers from a certain legacy OS. It maps the legacy OS's functions
+        to the DDEKit.</li>
+  </ul>
+
+  */
+
+/** \page p_ddekit The DDEKit
+
+    This page gives an overview of the DDEKit.
+
+    \section s_ddekit_layout DDEKit subsystems
+
+      \subsection sub_threads    Threads
+        The thread subsystem maps legacy OS threads to L4 threads. It
+        contains functions for starting and stopping threads, accessing
+        thread-local storage as well as sleeping.
+
+        A detailed description can be found in \ref DDEKit_threads
+
+      \subsection sub_memory     Memory
+        Memory. \todo Krishna
+
+      \subsection sub_irq        Interrupts
+
+      \subsection sub_iomem      IO-Ports and IO memory
+
+      \subsection sub_sync       Synchronization
+        DDEKit provides synchronization mechanisms in form of locks (mutexes),
+        semaphores and conditional variables. See \ref DDEKit_synchronization.
+
+      \subsection sub_pci        PCI access
+        DDEKit provides PCI access functions that are mapped to L4IO. It manages
+        a virtual PCI bus where all hardware devices found at L4IO are chained to.
+        Note that currently it only uses a virtual bus number while slot and function
+        number remain unchanged. This may lead to problems if you have a system where
+        two devices with the same slot and fn numbers are attached to different busses.
+
+        See \ref DDEKit_pci.
+
+      \subsection sub_time       Timers
+        DDEKit provides a generic timer implementation that enables users
+        to execute a function with some arguments after a certain period
+        of time. DDEKit therefore starts a timer thread that executes these
+        functions and keeps track of the currently running timers.
+
+      \subsection sub_util       Utilities
+        DDEKit also provides utility functions. \ref ddekit_printf is used for
+        printing data, \ref Assert can be used to insert assertions into code
+        and \ref ddekit_panic enters the kernel debugger. See \ref DDEKit_util.
+  */
+
+/** \page p_implement DDE Implementations
+
+    Based on DDEKit one can implement OS-specific device driver frameworks. Currently,
+    three of those are available in L4, however only one of them is part of the DDE
+    package.
+
+    <ul>
+      <li><b>DDE Linux 2.4</b> was implemented by Christian Helmuth way before DDEKit 
+        and supports Linux 2.4 device drivers.</li>
+      <li><b>DDE FreeBSD</b> has been implemented by Thomas Friebel. The DDEKit was
+        initiated by this project. DDEFreeBSD still needs to be incorporated into
+        the DDE package.</li>
+      <li><b>DDE Linux 2.6</b> was implemented by Christian Helmuth and Bjoern Doebel
+        on top of the DDEKit. It is part of the DDE package.</li>
+    </ul>
+  */
+
+/** \page p_refs References
+    \section drivers	Device Drivers in L4
+     <ul>
+      <li>Christian Helmuth: <a href="http://os.inf.tu-dresden.de/papers_ps/helmuth-diplom.pdf">
+          <i>"Generische Portierung von Linux-Ger&auml;tetreibern auf die 
+          DROPS-Architektur"</i></a></li>
+      <li>Thomas Friebel: <a href="http://os.inf.tu-dresden.de/papers_ps/friebel-diplom.pdf">
+          <i>&Uuml;bertragung des Device-Driver-Environment-Ansatzes auf 
+          Subsysteme des BSD-Betriebssystemkerns</i> </a></li>
+     </ul>
+
+    \section linux26	Linux 2.6 device drivers
+     <ul>
+      <li><a href="http://lwn.net/Articles/driver-porting/">LWN.net Linux 2.6
+        porting guide</a></li>
+      <li><a href="http://lwn.net/Kernel/LDD3/">Linux Device Drivers, 3rd
+        Edition</a></li>
+      <li><a href="http://ezs.kr.hsnr.de/TreiberBuch/html/index.html">
+        Linux Ger&auml;tetreiber entwickeln</a></li>
+     </ul>
+  */
+
+/** \page p_credits Credits
+    People involved (ch12, tf13, bjoernd)
+  */

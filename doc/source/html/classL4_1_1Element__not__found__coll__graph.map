@@ -1,0 +1,5 @@
+<map id="L4::Element_not_found" name="L4::Element_not_found">
+<area shape="rect" id="node2" href="$classL4_1_1Runtime__error.html" title="Exception for an abstract runtime error. " alt="" coords="17,315,160,451"/>
+<area shape="rect" id="node3" href="$classL4_1_1Base__exception.html" title="Base class for all exceptions, thrown by the L4Re framework. " alt="" coords="11,160,166,267"/>
+<area shape="rect" id="node4" href="$classL4_1_1Exception__tracer.html" title="Back&#45;trace support for exceptions. " alt="" coords="13,5,164,112"/>
+</map>

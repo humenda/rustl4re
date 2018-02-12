@@ -1,0 +1,5 @@
+<map id="Graphical Class Hierarchy" name="Graphical Class Hierarchy">
+<area shape="rect" id="node1" href="$structL4_1_1Ipc_1_1Call.html" title="RPC attribute for a standard RPC call. " alt="" coords="5,35,99,61"/>
+<area shape="rect" id="node2" href="$structL4_1_1Ipc_1_1Call__t.html" title="RPC attribute for an RPC call with required rights. " alt="" coords="147,5,329,32"/>
+<area shape="rect" id="node3" href="$structL4_1_1Ipc_1_1Call__zero__send__timeout.html" title="RPC attribute for an RPC call, with zero send timeout. " alt="" coords="173,57,303,98"/>
+</map>

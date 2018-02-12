@@ -1,0 +1,98 @@
+// vi:ft=cpp
+/*
+ * (c) 2010 Alexander Warg <warg@os.inf.tu-dresden.de>
+ *     economic rights: Technische Universität Dresden (Germany)
+ *
+ * This file is part of TUD:OS and distributed under the terms of the
+ * GNU General Public License 2.
+ * Please see the COPYING-GPL-2 file for details.
+ */
+#pragma once
+
+#include <l4/mag/server/object>
+#include <l4/mag/server/session>
+#include <l4/re/video/goos>
+#include <l4/sys/cxx/ipc_varg>
+
+#include <l4/cxx/hlist>
+#include <l4/cxx/observer>
+
+struct lua_State;
+
+namespace Mag_gfx {
+class Font;
+}
+
+namespace Mag_server {
+
+class User_state;
+class Input_source;
+
+class Core_api
+{
+private:
+  User_state *_ust;
+  L4::Cap<L4Re::Video::Goos> _fb;
+  lua_State *_lua;
+  Mag_gfx::Font const *_label_font;
+
+  // not instanziatable
+  Core_api(Core_api const &);
+  void operator = (Core_api const &);
+
+protected:
+  Core_api(lua_State *lua, User_state *u,
+           L4::Cap<L4Re::Video::Goos> fb, Mag_gfx::Font const *label_font);
+
+public:
+  User_state *user_state() const { return _ust; }
+  L4::Cap<L4Re::Video::Goos> backend_fb() const { return _fb; }
+  Mag_gfx::Font const *label_font() const { return _label_font; }
+  lua_State *lua_state() const { return _lua; }
+
+  virtual Registry *registry() const = 0;
+  virtual void set_session_options(Session *s, L4::Ipc::Varg_list_ref ios,
+                                   Session::Property_handler const *extra = 0) const;
+  virtual void add_input_source(Input_source *i) = 0;
+  virtual void register_session(Session *) const = 0;
+  virtual Session_list *sessions() const = 0;
+  virtual void add_session_observer(cxx::Observer *) const = 0;
+  virtual void get_ticks(cxx::Observer *) const = 0;
+};
+
+class Plugin
+{
+private:
+  friend class Plugin_manager;
+
+  char const *const _name;
+  unsigned _flags;
+  Plugin *_next;
+
+  static Plugin *_first __attribute__((visibility("hidden")));
+
+  Plugin(Plugin const &);
+  void operator = (Plugin const &);
+
+protected:
+  unsigned &get_flags() { return _flags; }
+  Plugin(char const *name) : _name(name), _flags(0), _next(_first)
+  { _first = this; }
+
+public:
+  enum Flag
+  {
+    F_started = 1
+  };
+
+  virtual char const *type() const { return "generic"; }
+  char const *name() const { return _name; }
+
+  bool started() const { return _flags & F_started; }
+
+  virtual void start(Core_api *) = 0;
+  virtual void stop() {}
+  virtual ~Plugin() {}
+};
+
+}

@@ -1,0 +1,5 @@
+<map id="L4::Factory::create_vm" name="L4::Factory::create_vm">
+<area shape="rect" id="node2" href="$classL4_1_1Cap__base.html#a6181bad79c41cdbf5c030877b94e25bf" title="Return capability selector. " alt="" coords="234,5,371,32"/>
+<area shape="rect" id="node3" href="$classL4_1_1Kobject.html#a314161cb755de6fd0c50da0a757eb4c7" title="Return capability selector. " alt="" coords="243,56,362,83"/>
+<area shape="rect" id="node4" href="$group__l4__factory__api.html#ga9e9cb188b7c634a09ac2ae476c9b1761" title="Create a new virtual machine. " alt="" coords="216,107,389,133"/>
+</map>

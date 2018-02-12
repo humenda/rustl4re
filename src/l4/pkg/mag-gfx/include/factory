@@ -1,0 +1,65 @@
+// vi:ft=cpp
+/*
+ * (c) 2010 Alexander Warg <warg@os.inf.tu-dresden.de>
+ *     economic rights: Technische Universität Dresden (Germany)
+ *
+ * This file is part of TUD:OS and distributed under the terms of the
+ * GNU General Public License 2.
+ * Please see the COPYING-GPL-2 file for details.
+ */
+#pragma once
+
+#include <l4/mag-gfx/geometry>
+#include <l4/mag-gfx/gfx_colors>
+
+namespace Mag_gfx {
+
+class Canvas;
+class Texture;
+
+class Factory
+{
+public:
+  class Set
+  {
+  private:
+    Factory *_scrs[10];
+
+  public:
+    Factory *find(L4Re::Video::Pixel_info const &pi)
+    {
+      for (unsigned i = 0; i < sizeof(_scrs)/sizeof(_scrs[0]); ++i)
+	if (_scrs[i] && *_scrs[i]->pixel_info() == pi)
+	  return _scrs[i];
+
+      return 0;
+    }
+
+    bool add(Factory *f)
+    {
+      for (unsigned i = 0; i < sizeof(_scrs)/sizeof(_scrs[0]); ++i)
+	if (!_scrs[i])
+	  {
+	    _scrs[i] = f;
+	    return true;
+	  }
+
+      return false;
+    }
+  };
+
+
+  static Set set;
+
+  virtual Pixel_info const *pixel_info() = 0;
+  virtual Canvas *create_canvas(void *pixels, Area const &size, unsigned bpl) = 0;
+  virtual Texture *create_texture(Area const &size, void *buffer = 0,
+                                  bool alpha = false) = 0;
+  virtual unsigned long get_texture_size(Area const &size,
+                                         bool alpha = false) = 0;
+
+  virtual ~Factory() {}
+};
+
+
+}

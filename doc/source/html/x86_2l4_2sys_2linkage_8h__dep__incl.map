@@ -1,0 +1,101 @@
+<map id="x86/l4/sys/linkage.h" name="x86/l4/sys/linkage.h">
+<area shape="rect" id="node2" href="$shmc_8h.html" title="Shared memory library header file. " alt="" coords="577,311,695,338"/>
+<area shape="rect" id="node3" href="$compiler_8h.html" title="L4 compiler related defines. " alt="" coords="2734,80,2861,107"/>
+<area shape="rect" id="node43" href="$io_8h.html" title="contrib/libio&#45;io/l4\l/io/io.h" alt="" coords="5729,304,5852,345"/>
+<area shape="rect" id="node57" href="$cap__alloc_8h.html" title="Capability allocator C interface. " alt="" coords="6493,311,6651,338"/>
+<area shape="rect" id="node58" href="$kumem__alloc_8h.html" title="Kumem allocator utility C interface. " alt="" coords="6747,304,6877,345"/>
+<area shape="rect" id="node61" href="$splitlog2_8h.html" title="Split a range in log2 aligned and size&#45;aligned chunks. " alt="" coords="217,311,338,338"/>
+<area shape="rect" id="node100" href="$event__buffer_8h_source.html" title="l4/re/c/event_buffer.h" alt="" coords="7349,80,7504,107"/>
+<area shape="rect" id="node4" href="$l4_2sys_2types_8h.html" title="Common L4 ABI Data Types. " alt="" coords="3667,229,3773,256"/>
+<area shape="rect" id="node8" href="$font_8h.html" title="Bitmap font renderer header file. " alt="" coords="4935,557,5084,584"/>
+<area shape="rect" id="node9" href="$goos__fb_8h.html" title="Framebuffer utility functionality. " alt="" coords="3433,393,3553,435"/>
+<area shape="rect" id="node10" href="$kernel__object_8h.html" title="Kernel object system calls. " alt="" coords="3863,483,4020,509"/>
+<area shape="rect" id="node17" href="$vfs_8h_source.html" title="l4/l4re_vfs/vfs.h" alt="" coords="4947,781,5067,808"/>
+<area shape="rect" id="node19" href="$debugger_8h.html" title="Debugger related definitions. " alt="" coords="3482,557,3614,584"/>
+<area shape="rect" id="node20" href="$l4_2sys_2utcb_8h.html" title="UTCB definitions. " alt="" coords="3628,311,3727,338"/>
+<area shape="rect" id="node25" href="$factory_8h.html" title="Common factory related definitions. " alt="" coords="2889,483,3005,509"/>
+<area shape="rect" id="node27" href="$x86_2l4f_2l4_2util_2port__io_8h.html" title="port I/O functions " alt="" coords="4207,483,4366,509"/>
+<area shape="rect" id="node28" href="$amd64_2l4_2util_2util_8h.html" title="Utilities, amd64 version. " alt="" coords="3029,483,3163,509"/>
+<area shape="rect" id="node29" href="$l4_2util_2util_8h_source.html" title="l4/util/util.h" alt="" coords="3187,483,3274,509"/>
+<area shape="rect" id="node30" href="$x86_2l4_2util_2util_8h.html" title="Utilities for x86. " alt="" coords="3298,483,3411,509"/>
+<area shape="rect" id="node31" href="$kdebug_8h_source.html" title="l4/sys/kdebug.h" alt="" coords="353,483,471,509"/>
+<area shape="rect" id="node34" href="$sys_2kip_8h.html" title="Kernel Info Page access functions. " alt="" coords="6981,401,7072,427"/>
+<area shape="rect" id="node35" href="$sigma0_8h.html" title="Sigma0 interface. " alt="" coords="6786,483,6929,509"/>
+<area shape="rect" id="node36" href="$amd64_2l4_2util_2rdtsc_8h.html" title="time stamp counter related functions " alt="" coords="6953,483,7100,509"/>
+<area shape="rect" id="node37" href="$util_2kip_8h.html" title="l4/util/kip.h" alt="" coords="7125,483,7211,509"/>
+<area shape="rect" id="node38" href="$x86_2l4_2util_2rdtsc_8h.html" title="time stamp counter related functions " alt="" coords="7235,483,7362,509"/>
+<area shape="rect" id="node40" href="$l4_2irq_2irq_8h.html" title="IRQ handling routines. " alt="" coords="1081,311,1165,338"/>
+<area shape="rect" id="node44" href="$vbus_8h.html" title="Description of the vbus C API. " alt="" coords="1189,311,1297,338"/>
+<area shape="rect" id="node45" href="$vbus__pm_8h_source.html" title="l4/vbus/vbus_pm.h" alt="" coords="1321,311,1455,338"/>
+<area shape="rect" id="node46" href="$vbus__gpio_8h_source.html" title="l4/vbus/vbus_gpio.h" alt="" coords="1479,311,1622,338"/>
+<area shape="rect" id="node47" href="$vbus__i2c_8h_source.html" title="l4/vbus/vbus_i2c.h" alt="" coords="1646,311,1781,338"/>
+<area shape="rect" id="node48" href="$vbus__mcspi_8h_source.html" title="l4/vbus/vbus_mcspi.h" alt="" coords="1805,311,1957,338"/>
+<area shape="rect" id="node49" href="$vbus__pci_8h_source.html" title="l4/vbus/vbus_pci.h" alt="" coords="1982,311,2117,338"/>
+<area shape="rect" id="node50" href="$amd64_2l4f_2l4_2util_2setjmp_8h.html" title="Inter&#45;thread setjmp/longjmp. " alt="" coords="2141,311,2317,338"/>
+<area shape="rect" id="node51" href="$amd64_2l4_2util_2apic_8h.html" title="APIC for AMD64. " alt="" coords="2342,311,2485,338"/>
+<area shape="rect" id="node52" href="$amd64_2l4_2util_2perform_8h.html" title="Perfomance Monitoring using P5/P6 Measurement Counters. " alt="" coords="2509,311,2675,338"/>
+<area shape="rect" id="node53" href="$stack_8h.html" title="Some helper functions for stack manipulation. " alt="" coords="2699,311,2802,338"/>
+<area shape="rect" id="node54" href="$x86_2l4f_2l4_2util_2setjmp_8h.html" title="Inter&#45;thread setjmp/longjmp. " alt="" coords="2826,311,2982,338"/>
+<area shape="rect" id="node55" href="$x86_2l4_2util_2apic_8h.html" title="APIC for X86. " alt="" coords="3007,311,3129,338"/>
+<area shape="rect" id="node56" href="$x86_2l4_2util_2perform_8h.html" title="Perfomance Monitoring using P5/P6 Measurement Counters. " alt="" coords="3154,311,3299,338"/>
+<area shape="rect" id="node59" href="$l4_2sys_2consts_8h.html" title="Common constants. " alt="" coords="6437,155,6552,181"/>
+<area shape="rect" id="node60" href="$err_8h.html" title="Error codes. " alt="" coords="699,229,789,256"/>
+<area shape="rect" id="node62" href="$l4_2util_2atomic_8h.html" title="atomic operations header and generic implementations " alt="" coords="310,155,421,181"/>
+<area shape="rect" id="node63" href="$bitops_8h.html" title="bit manipulation functions " alt="" coords="195,229,301,256"/>
+<area shape="rect" id="node64" href="$util_2alloc_8h.html" title="Allocator using a bit&#45;array. " alt="" coords="93,311,192,338"/>
+<area shape="rect" id="node65" href="$lock_8h.html" title="Simple lock implementation. " alt="" coords="377,229,471,256"/>
+<area shape="rect" id="node66" href="$colors_8h.html" title="l4/re/c/video/colors.h" alt="" coords="6667,229,6819,256"/>
+<area shape="rect" id="node67" href="$colors_source.html" title="l4/re/video/colors" alt="" coords="1675,155,1805,181"/>
+<area shape="rect" id="node68" href="$edid_8h.html" title="l4/libedid/edid.h" alt="" coords="1830,155,1949,181"/>
+<area shape="rect" id="node69" href="$sys_2assert_8h.html" title="Low&#45;level assert implementation. " alt="" coords="1972,155,2084,181"/>
+<area shape="rect" id="node70" href="$event_8h.html" title="Events. " alt="" coords="2107,155,2207,181"/>
+<area shape="rect" id="node71" href="$arm_2l4_2util_2irq_8h.html" title="ARM specific implementation of irq functions. " alt="" coords="2231,155,2345,181"/>
+<area shape="rect" id="node72" href="$x86_2l4_2util_2mbi__argv_8h.html" title="command line handling " alt="" coords="2369,155,2522,181"/>
+<area shape="rect" id="node73" href="$arm_2l4_2util_2stack__impl_8h.html" title="Stack utilities, arm version. " alt="" coords="2547,155,2709,181"/>
+<area shape="rect" id="node74" href="$x86_2l4_2util_2port__io_8h.html" title="x86 port I/O " alt="" coords="6627,155,6767,181"/>
+<area shape="rect" id="node75" href="$amd64_2l4_2util_2irq_8h.html" title="some PIC and hardware interrupt related functions " alt="" coords="5927,229,6059,256"/>
+<area shape="rect" id="node76" href="$x86_2l4_2util_2irq_8h.html" title="some PIC and hardware interrupt related functions " alt="" coords="6531,229,6643,256"/>
+<area shape="rect" id="node77" href="$amd64_2l4_2util_2cpu_8h.html" title="CPU related functions. " alt="" coords="2885,155,3024,181"/>
+<area shape="rect" id="node78" href="$amd64_2l4_2util_2idt_8h.html" title="IDT related functions. " alt="" coords="3048,155,3179,181"/>
+<area shape="rect" id="node79" href="$amd64_2l4_2util_2mbi__argv_8h.html" title="command line handling " alt="" coords="3203,155,3376,181"/>
+<area shape="rect" id="node80" href="$amd64_2l4_2util_2spin_8h.html" title="Spinning for amd64. " alt="" coords="3401,155,3543,181"/>
+<area shape="rect" id="node81" href="$base64_8h.html" title="base 64 encoding and decoding functions adapted from Bob Trower 08/04/01 " alt="" coords="3568,155,3683,181"/>
+<area shape="rect" id="node82" href="$getopt_8h.html" title="getopt " alt="" coords="3707,155,3816,181"/>
+<area shape="rect" id="node83" href="$keymap_8h.html" title="Event to ASCII key mapping. " alt="" coords="3841,155,3959,181"/>
+<area shape="rect" id="node84" href="$kprintf_8h.html" title="printf using the kernel debugger " alt="" coords="3983,155,4091,181"/>
+<area shape="rect" id="node85" href="$list__alloc_8h.html" title="Simple list&#45;based allocator. " alt="" coords="4116,155,4239,181"/>
+<area shape="rect" id="node86" href="$parse__cmd_8h.html" title="comfortable command&#45;line parsing " alt="" coords="4263,155,4401,181"/>
+<area shape="rect" id="node87" href="$rand_8h.html" title="Simple Pseudo&#45;Random Number Generator. " alt="" coords="4425,155,4524,181"/>
+<area shape="rect" id="node88" href="$reboot_8h.html" title="Machine restarting functions. " alt="" coords="4548,155,4657,181"/>
+<area shape="rect" id="node89" href="$sll_8h.html" title="List implemenation. " alt="" coords="4681,155,4764,181"/>
+<area shape="rect" id="node90" href="$x86_2l4_2util_2cpu_8h.html" title="CPU related functions. " alt="" coords="4789,155,4907,181"/>
+<area shape="rect" id="node91" href="$x86_2l4_2util_2idt_8h.html" title="IDT related functions. " alt="" coords="4931,155,5042,181"/>
+<area shape="rect" id="node92" href="$x86_2l4_2util_2spin_8h.html" title="Spinning for x86. " alt="" coords="5067,155,5189,181"/>
+<area shape="rect" id="node93" href="$l4_2sys_2cache_8h.html" title="Cache&#45;consistency functions. " alt="" coords="5214,155,5325,181"/>
+<area shape="rect" id="node94" href="$arm_2l4f_2l4_2sys_2ipc_8h.html" title="L4 IPC System Calls, ARM. " alt="" coords="5349,155,5488,181"/>
+<area shape="rect" id="node95" href="$arm_2l4_2sys_2atomic_8h.html" title="Atomic memory modifications. " alt="" coords="5513,155,5655,181"/>
+<area shape="rect" id="node96" href="$arm_2l4_2sys_2cache_8h.html" title="Cache functions. " alt="" coords="5680,155,5819,181"/>
+<area shape="rect" id="node97" href="$mem__op_8h.html" title="Memory access functions (ARM specific) " alt="" coords="5843,155,5997,181"/>
+<area shape="rect" id="node98" href="$amd64_2l4f_2l4_2sys_2segment_8h.html" title="l4f specific fs/gs manipulation " alt="" coords="6022,155,6215,181"/>
+<area shape="rect" id="node99" href="$x86_2l4f_2l4_2sys_2segment_8h.html" title="l4f specific segment manipulation " alt="" coords="6240,155,6413,181"/>
+<area shape="rect" id="node5" href="$dataspace_8h.html" title="Data space C interface. " alt="" coords="3853,311,3995,338"/>
+<area shape="rect" id="node6" href="$view_8h.html" title="l4/re/c/video/view.h" alt="" coords="4941,401,5083,427"/>
+<area shape="rect" id="node7" href="$bitmap_8h.html" title="Bitmap renderer header file. " alt="" coords="4866,483,5033,509"/>
+<area shape="rect" id="node11" href="$kobject_source.html" title="l4/sys/kobject" alt="" coords="4401,557,4508,584"/>
+<area shape="rect" id="node12" href="$capability.html" title="L4::Cap related definitions. " alt="" coords="5044,632,5164,659"/>
+<area shape="rect" id="node13" href="$rm.html" title="Region mapper interface. " alt="" coords="5209,781,5279,808"/>
+<area shape="rect" id="node14" href="$env.html" title="Environment interface. " alt="" coords="5205,856,5283,883"/>
+<area shape="rect" id="node15" href="$pager.html" title="Pager and Io_pager C++ interface. " alt="" coords="5239,707,5337,733"/>
+<area shape="rect" id="node16" href="$dataspace.html" title="Dataspace interface. " alt="" coords="5044,707,5164,733"/>
+<area shape="rect" id="node18" href="$rcv__endpoint.html" title="The C++ Receive endpoint interface. " alt="" coords="4095,707,4239,733"/>
+<area shape="rect" id="node21" href="$l4_2sys_2ipc_8h.html" title="Common IPC interface. " alt="" coords="3319,401,3409,427"/>
+<area shape="rect" id="node22" href="$rcv__endpoint_8h.html" title="Receive endpoint C interface. " alt="" coords="3684,483,3839,509"/>
+<area shape="rect" id="node23" href="$task_8h.html" title="Common task related definitions. " alt="" coords="4496,483,4595,509"/>
+<area shape="rect" id="node24" href="$capability_8h_source.html" title="l4/sys/cxx/capability.h" alt="" coords="4583,557,4739,584"/>
+<area shape="rect" id="node26" href="$virtio_8h_source.html" title="l4/l4virtio/virtio.h" alt="" coords="3487,483,3609,509"/>
+<area shape="rect" id="node32" href="$env_8h.html" title="Environment interface. " alt="" coords="5639,483,5727,509"/>
+<area shape="rect" id="node33" href="$____kip-64bit_8h_source.html" title="l4/sys/__kip&#45;64bit.h" alt="" coords="5564,311,5705,338"/>
+<area shape="rect" id="node39" href="$sys_2vcpu_8h_source.html" title="l4/sys/vcpu.h" alt="" coords="4173,311,4275,338"/>
+<area shape="rect" id="node41" href="$error__helper.html" title="Error helper. " alt="" coords="872,311,1005,338"/>
+<area shape="rect" id="node42" href="$l4types_8h.html" title="L4 Types. " alt="" coords="4299,311,4418,338"/>
+</map>

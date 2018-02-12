@@ -1,0 +1,9 @@
+- set priority of vc thread depending if client is a real-time task or not
+- initiate client callbacks with timeout 0
+
+- include/ARCH-x86/l4con.h:
+  - GRAPH_* macros used internally only
+  - CON_E* error macros could (mostly) be mapped to L4_E*
+  - CON_CLOSED, CON_CLOSING, CON_OPENING, CON_MASTER macros are for internal use
+    only
+  - ALL macros should begin with L4CON_

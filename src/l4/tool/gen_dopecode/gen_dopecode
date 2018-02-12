@@ -1,0 +1,12 @@
+#! /usr/bin/perl -w
+
+use strict;
+
+while (<>) {
+  chomp;
+  next if /^\s*#/;
+  next if /^\s*$/;
+  s/"/\\"/g;
+  s/^\s*(.+?)\s*$/$1/;
+  print "	dope_cmd(\"$_\");\n";
+}

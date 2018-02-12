@@ -1,0 +1,14 @@
+<map id="Kernel Objects" name="Kernel Objects">
+<area shape="rect" id="node1" href="$group__l4__platform__control__api.html" title="C interface for controlling platform&#45;wide properties. " alt="" coords="296,5,460,32"/>
+<area shape="rect" id="node2" href="$group__l4__scheduler__api.html" title="C interface of the Scheduler kernel object. " alt="" coords="335,56,421,83"/>
+<area shape="rect" id="node3" href="$group__l4__irq__api.html" title="C IRQ interface. " alt="" coords="351,107,405,133"/>
+<area shape="rect" id="node4" href="$group__l4__thread__api.html" title="Thread object. " alt="" coords="344,157,412,184"/>
+<area shape="rect" id="node5" href="$group__l4__icu__api.html" title="The C Icu interface. " alt="" coords="309,208,447,235"/>
+<area shape="rect" id="node6" href="$group__l4__vm__api.html" title="Virtual Machine API. " alt="" coords="315,259,441,285"/>
+<area shape="rect" id="node7" href="$group__l4__kernel__object__gate__api.html" title="Secure communication object. " alt="" coords="325,309,431,336"/>
+<area shape="rect" id="node8" href="$group__l4__factory__api.html" title="C factory interface to create kernel objects. " alt="" coords="343,360,413,387"/>
+<area shape="rect" id="node9" href="$group__l4__vcon__api.html" title="Virtual console for simple character based input and output. " alt="" coords="319,411,437,437"/>
+<area shape="rect" id="node10" href="$group__l4__api.html" title="Interfaces for all kinds of base functionality. " alt="" coords="5,259,85,285"/>
+<area shape="rect" id="node12" href="$group__l4__kobject__rtti.html" title="Type information for L4 server objects that can be called via IPC. " alt="" coords="301,462,455,503"/>
+<area shape="rect" id="node13" href="$group__l4__task__api.html" title="C interface of the Task kernel object. " alt="" coords="351,528,405,555"/>
+</map>

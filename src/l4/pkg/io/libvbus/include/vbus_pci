@@ -1,0 +1,138 @@
+// vi:ft=cpp
+/*
+ * (c) 2014 Sarah Hoffmann <sarah.hoffmann@kernkonzept.com>
+ *
+ * This file is part of TUD:OS and distributed under the terms of the
+ * GNU General Public License 2.
+ * Please see the COPYING-GPL-2 file for details.
+ */
+
+#pragma once
+
+#include <l4/vbus/vbus>
+#include <l4/vbus/vbus_pci.h>
+
+namespace L4vbus {
+
+/**
+ * \brief A Pci host bridge
+ */
+class Pci_host_bridge : public Device
+{
+public:
+  /**
+   * \brief Read from the vPCI configuration space using the PCI root bridge.
+   *
+   * \param  bus          Bus number
+   * \param  devfn        Device id (upper 16bit) and function (lower 16bit)
+   * \param  reg          Register in configuration space to read
+   * \param[out] value    Value that has been read
+   * \param  width        Width to read in bits (e.g. 8, 16, 32)
+   *
+   * \return 0 on success, else failure
+   */
+  int cfg_read(l4_uint32_t bus, l4_uint32_t devfn, l4_uint32_t reg,
+               l4_uint32_t *value, l4_uint32_t width) const
+  {
+    return l4vbus_pci_cfg_read(bus_cap().cap(), _dev, bus,
+                               devfn, reg, value, width);
+  }
+
+
+  /**
+   * \brief Write to the vPCI configuration space using the PCI root bridge.
+   *
+   * \param  bus          Bus number
+   * \param  devfn        Device id (upper 16bit) and function (lower 16bit)
+   * \param  reg          Register in configuration space to write
+   * \param  value        Value to write
+   * \param  width        Width to write in bits (e.g. 8, 16, 32)
+   *
+   * \return 0 on success, else failure
+   */
+  int cfg_write(l4_uint32_t bus, l4_uint32_t devfn, l4_uint32_t reg,
+                l4_uint32_t value, l4_uint32_t width) const
+  {
+    return l4vbus_pci_cfg_write(bus_cap().cap(), _dev, bus,
+                                devfn, reg, value, width);
+  }
+
+
+  /**
+   * \brief Enable PCI interrupt for a specific device using the PCI root bridge.
+   *
+   * \param  bus          Bus number
+   * \param  devfn        Device id (upper 16bit) and function (lower 16bit)
+   * \param  pin          Interrupt pin (normally as reported in
+   *                      configuration register INTR)
+   * \param[out] trigger      False if interrupt is level-triggered
+   * \param[out] polarity     True if interrupt is of low polarity
+   *
+   * \return On success: Interrupt line to be used,
+   *         else failure
+   */
+  int irq_enable(l4_uint32_t bus, l4_uint32_t devfn, int pin,
+                 unsigned char *trigger, unsigned char *polarity) const
+  {
+    return l4vbus_pci_irq_enable(bus_cap().cap(), _dev, bus,
+                                 devfn, pin, trigger, polarity);
+  }
+
+};
+
+
+/**
+ * \brief A PCI device
+ */
+class Pci_dev : public Device
+{
+public:
+  /**
+   * \brief Read from the device's vPCI configuration space.
+   *
+   * \param      reg          Register in configuration space to read
+   * \param[out] value        Value that has been read
+   * \param      width        Width to read in bits (e.g. 8, 16, 32)
+   *
+   * \return 0 on success, else failure
+   */
+  int cfg_read(l4_uint32_t reg, l4_uint32_t *value,
+               l4_uint32_t width) const
+  {
+    return l4vbus_pcidev_cfg_read(bus_cap().cap(), _dev, reg, value, width);
+  }
+
+
+  /**
+   * \brief Write to the device's vPCI configuration space.
+   *
+   * \param  reg          Register in configuration space to write
+   * \param  value        Value to write
+   * \param  width        Width to write in bits (e.g. 8, 16, 32)
+   *
+   * \return 0 on success, else failure
+   */
+  int cfg_write(l4_uint32_t reg, l4_uint32_t value,
+                l4_uint32_t width) const
+  {
+    return l4vbus_pcidev_cfg_write(bus_cap().cap(), _dev, reg, value, width);
+  }
+
+
+  /**
+   * \brief Enable the device's PCI interrupt.
+   *
+   * \param[out] trigger      False if interrupt is level-triggered
+   * \param[out] polarity     True if interrupt is of low polarity
+   *
+   * \return On success: Interrupt line to be used,
+   *         else failure
+   */
+  int irq_enable(unsigned char *trigger, unsigned char *polarity) const
+  {
+    return l4vbus_pcidev_irq_enable(bus_cap().cap(), _dev, trigger, polarity);
+  }
+
+};
+
+}

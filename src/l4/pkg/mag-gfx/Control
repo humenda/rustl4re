@@ -1,0 +1,3 @@
+Provides: mag-gfx
+Requires: l4sys libstdc++-headers libc l4re
+Maintainer: warg@os.inf.tu-dresden.de

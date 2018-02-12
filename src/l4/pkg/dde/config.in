@@ -1,0 +1,17 @@
+# vim:se ft=sh:
+
+mainmenu_name "DDE Configuration"
+
+#bool 'Build DDE Linux 2.4'	CONFIG_DDE24
+
+bool 'Build DDE Linux 2.6' CONFIG_DDE26
+if [ "$CONFIG_DDE26" = "y" ]; then
+	bool '  Common library' CONFIG_DDE26_COMMON
+	bool '  Network driver support library' CONFIG_DDE26_NET
+	bool '  Sound driver support library' CONFIG_DDE26_SOUND
+	bool '  Block device layer support library' CONFIG_DDE26_BLOCK
+#bool '  USB support library (now common stuff in future usbcore)' CONFIG_DDE26_USB
+fi
+
+bool 'Build DDE FreeBSD'	CONFIG_FBSD
+

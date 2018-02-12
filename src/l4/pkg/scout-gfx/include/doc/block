@@ -1,0 +1,124 @@
+// vi:ft=cpp
+/*
+ * (c) 2010 Alexander Warg <warg@os.inf.tu-dresden.de>
+ *     economic rights: Technische Universität Dresden (Germany)
+ *
+ * This file is part of TUD:OS and distributed under the terms of the
+ * GNU General Public License 2.
+ * Please see the COPYING-GPL-2 file for details.
+ */
+#pragma once
+
+#include <l4/scout-gfx/widget>
+#include <l4/scout-gfx/doc/token>
+
+namespace Scout_gfx {
+
+/**
+ * Text block
+ *
+ * A block is a group of tokens that form a paragraph. A block layouts its
+ * tokens while using line wrapping.
+ */
+class Block : public Parent_widget
+{
+public:
+
+  enum Alignment { LEFT, CENTER, RIGHT };
+  enum Text_type { PLAIN, LINK, LAUNCHER };
+
+private:
+
+  int       _second_indent;   /* indentation of second line */
+  Alignment _align;           /* text alignment             */
+  Area _minsz;
+
+  class Token_factory
+  {
+  public:
+    virtual Token *create(Style *style, char const *s, int len) const = 0;
+    virtual ~Token_factory() {}
+  };
+
+  template< typename TT >
+  class TT_factory : public Token_factory
+  {
+  public:
+    virtual TT *create(Style *style, char const *s, int len) const
+    { return new TT(style, s, len); }
+  };
+
+  template< typename TT, typename P >
+  class TT_factory_p : public Token_factory
+  {
+  private:
+    P _p;
+  public:
+    TT_factory_p(P const &p) :_p(p) {}
+    virtual TT *create(Style *style, char const *s, int len) const
+    { return new TT(style, s, len, _p); }
+  };
+
+  /**
+   * Append text to block
+   */
+  void append_text(const char *str, Style *style, Token_factory const &tf);
+
+public:
+  /**
+   * Constructors
+   */
+  explicit Block(int second_indent = 0) : _second_indent(second_indent), _align(LEFT) {}
+  explicit Block(Alignment align) : _second_indent(0), _align(align) {}
+
+
+  bool has_height_for_width() const { return true; }
+  int height_for_width(int w) const;
+  int min_height_for_width(int w) const { return Block::height_for_width(w); }
+  Orientations expanding() const { return Horizontal; }
+  Area min_size() const;
+  Area max_size() const { return Area(Area::Max_w, Area::Max_h); }
+  Area preferred_size() const { return Block::min_size(); }
+  bool empty() const { return !_first; }
+  void set_geometry(Rect const &r)
+  {
+    format_fixed_width(r.w());
+    _size = _size.min(r.area());
+    _pos = r.p1();
+    refresh();
+  }
+
+  Rect geometry() const { return Rect(_pos, _size); }
+
+
+  /**
+   * Define alignment of text
+   */
+  void align(Alignment);
+
+  /**
+   * Append a string of space-separated words
+   */
+  void append_plaintext(const char *str, Style *style)
+  {
+    append_text(str, style, TT_factory<Token>());
+  }
+
+  /**
+   * Append a string of space-separated words a link
+   *
+   * \param dst  anchor that defines the link destination
+   */
+  template< typename TT, typename P >
+  void append_text(const char *str, Style *style, P a)
+  {
+    append_text(str, style, TT_factory_p<TT, P>(a));
+  }
+
+private:
+  void format_fixed_width(int w);
+};
+
+
+
+}

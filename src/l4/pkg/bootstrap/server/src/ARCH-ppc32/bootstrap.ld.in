@@ -1,0 +1,105 @@
+
+#include "ldscript.inc"
+
+OUTPUT_FORMAT("elf32-powerpc", "elf32-big",
+              "elf32-little")
+ENTRY(_start)
+
+PHDRS {
+  text PT_LOAD;
+  data PT_LOAD;
+  mods PT_LOAD;
+}
+
+SECTIONS
+{
+  /* Read-only sections, merged into text segment. The start address of
+   * the text segment is : */
+  . = LINKADDR;
+  .text :
+  {
+    . = ALIGN(4);
+    _stext = .;
+    *(.text.init) 
+    *(.init)
+    *(.text .text.* .gnu.linkonce.t.*)
+    *(.glue_7t) *(.glue_7)
+    KEEP (*(.fini))
+    LONG(0xc3)  /* terminate .fini */
+    . = ALIGN(0x40);
+    *(.rodata .rodata.* .gnu.linkonce.r.* .rodata1)
+  } : text
+
+  _etext = .;
+  PROVIDE (etext = .);
+
+  /* ensure that data starts at a new L4 page */
+  . = ALIGN(4096);
+  .data :
+  {
+    *(.data .data.* .gnu.linkonce.d.*)
+    *(.anno)
+
+    CTORS
+    PLATFORMS
+
+    . = ALIGN(4);
+    _module_info_start = .;
+    KEEP(*(.module_info))
+    _module_info_end   = .;
+  } : data
+  /* exception frames for C++ */
+  .eh_frame : 
+  { 
+    KEEP (*(.eh_frame)) 
+    LONG(0) /* terminate .eh_frame */
+  } : data
+
+  . = ALIGN(4);
+  _edata  =  .;
+  PROVIDE (edata = .);
+
+  _bss_start = .;
+  .bss :
+  {
+   *(.dynbss)
+   *(.bss .gnu.linkonce.b.*)
+   *(COMMON)
+  } : data
+  _bss_end = .;
+  _end = . ;
+  PROVIDE (end = .);
+
+  /* Moved here to ensure that these sections are located _after_ the text
+   * section. In the other case we would get program sections with a virtual
+   * address of 0 */
+  .hash    : { *(.hash)    }
+  .dynsym  : { *(.dynsym)  }
+  .dynstr  : { *(.dynstr)  }
+  .rel.dyn : { *(.rel.dyn) }
+
+/* Only move modules to modaddr if bootstrap is being loaded by an elf
+ * loader, and we do not need to copy images around at runtime (e.g. with
+ * compression) */
+#if defined(PLACE_MODULES_AT_MODADDR) && !defined(SINGLE_SECTION)
+  . = MODADDR;
+#else
+  . = ALIGN(4096);
+#endif
+  _module_data_start = .;
+  .module_data : {
+    *(EXCLUDE_FILE (*mod00.bin *mod01.bin *mod02.bin) .module_data)
+    *(.module_data)
+  } : mods
+  _module_data_end = .;
+
+  /* drop the following sections since we do not need them for DROPS */
+  /DISCARD/ : {
+    *(.interp)
+    *(.comment)
+    *(.note)
+    *(.stab)
+    *(.stabstr*)
+  } 
+}
+

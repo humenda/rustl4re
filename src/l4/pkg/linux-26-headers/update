@@ -1,0 +1,58 @@
+#! /bin/sh
+
+install_header()
+{
+  arch=$1
+
+  make ARCH=$arch headers_install
+  mv usr/include/asm usr/include/asm-$arch
+}
+
+pkgdir=$(pwd)
+
+if [ ! -e $pkgdir/Control -o ! -e $pkgdir/include/Makefile ]; then
+  echo "Not called from l4/pkg/linux-26-headers directory."
+  exit 1
+fi
+
+linuxtree=$1
+
+if [ ! -e $linuxtree/MAINTAINERS -o ! -e $linuxtree/Kbuild ]; then
+  echo "Usage: $0 linuxtree"
+  exit 1
+fi
+
+cd $linuxtree
+
+install_header x86
+install_header arm
+install_header arm64
+install_header mips
+install_header powerpc
+install_header sparc
+
+find usr/include -name ..install.cmd | xargs rm
+find usr/include -name .install | xargs rm
+
+cp -r usr/include $pkgdir
+
+# additionally copy
+for f in linux/pci_ids.h; do
+  cp include/$f $pkgdir/include/$f
+done
+
+cd -
+
+echo "Now check for removed/added files."
+
+echo "Disappeared files:"
+(
+  cd $pkgdir/include
+  find -name '*.h' | while read i; do
+    if [ "$i" != "./linux/pci_ids.h" ]; then
+      if [ ! -e $linuxtree/usr/include/$i ]; then
+        echo "include/${i#./}"
+      fi
+    fi
+  done
+)

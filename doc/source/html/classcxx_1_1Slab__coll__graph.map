@@ -1,0 +1,4 @@
+<map id="cxx::Slab&lt; Type, Slab_size, Max_free, Alloc &gt;" name="cxx::Slab&lt; Type, Slab_size, Max_free, Alloc &gt;">
+<area shape="rect" id="node2" href="$classcxx_1_1Base__slab.html" title="{cxx::Base_slab\&lt; sizeof\l(Type), Slab_size, Max\l_free, Alloc \&gt;\n||+ Base_slab()\l+ ~Base_slab()\l+ alloc()\l+ free()\l+ total_objects()\l+ free_objects()\l}" alt="" coords="8,263,173,443"/>
+<area shape="rect" id="node3" href="$classcxx_1_1Base__slab.html" title="Basic slab allocator. " alt="" coords="13,5,169,185"/>
+</map>

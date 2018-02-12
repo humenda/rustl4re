@@ -1,0 +1,307 @@
+// vim: ft=cpp
+#pragma once
+
+#include <cstdlib>
+#include <cstring>
+#include <cassert>
+#include <cstdio>
+#include <l4/shmc/ringbuf.h>
+#include <l4/re/error_helper>
+#include <pthread-l4.h>
+#include <l4/sys/kdebug.h>
+
+/*
+ * Implementation of a 1:1 shared-memory channel
+ * and corresponding ring buffer implementation based on the
+ * l4shmc library.
+ */
+namespace Ankh
+{
+
+enum
+{
+	NOBLOCK = 0,
+	BLOCK = 1,
+};
+
+/*
+ * One SHM chunk. Can be used if we just need a shared memory area
+ * and want to benefit from L4SHMC's lookup features. Ring buffer
+ * implementations derive from this class as well.
+ */
+class Shm_chunk
+{
+	protected:
+		l4shmc_area_t   *_shm_area;        ///< l4shmc area we are located in
+		l4shmc_chunk_t  _shm_chunk;        ///< l4shmc chunk info
+
+		char           *_chunkname;  ///< chunk name
+		char           *_addr;       ///< address this chunk is attached to
+		unsigned        _size;       ///< chunk size (header + data area)
+
+
+	public:
+		/*
+		 * \param base        pointer to a valid l4shmc area (created
+		 *                    beforehand using l4shmc_create())
+		 * \param chunk_name
+		 * \param signal_name
+		 * \param size
+		 */
+		Shm_chunk(l4shmc_area_t *base, char const *chunk_name,
+		          unsigned size = 0)
+			: _shm_area(base),
+			  _addr(0),
+			  _size(size)
+		{
+			_chunkname = strdup(chunk_name);
+			assert(_chunkname);
+		}
+
+
+		virtual ~Shm_chunk()
+		{
+			free(_chunkname);
+		}
+
+
+		/*
+		 * Get chunk size
+		 */
+		virtual unsigned size() { return _size; }
+
+		/*
+		 * Get base address
+		 */
+		char    *addr() { return _addr; }
+
+		/*
+		 * Set base address
+		 */
+		void     addr(char *add) { _addr = add; }
+
+
+		/*
+		 * Create a plain chunk. Used by non-ring buffer users.
+		 */
+		static Shm_chunk *create(l4shmc_area_t *base, char const *name,
+		                         unsigned size)
+		{
+			Shm_chunk *s = new Shm_chunk(base, name, size);
+			L4Re::chksys( l4shmc_add_chunk(base, name, s->size(), &s->_shm_chunk),
+			              "Chunk creation failed.");
+			s->addr(static_cast<char*>(l4shmc_chunk_ptr(&s->_shm_chunk)));
+			return s;
+		}
+
+
+		/*
+		 * Get an existing plain chunk. Used by non-ring buffer users.
+		 */
+		static Shm_chunk *get(l4shmc_area_t *base, char const *name, unsigned size)
+		{
+			Shm_chunk *s = new Shm_chunk(base, name, size);
+			L4Re::chksys( l4shmc_get_chunk(base, name, &s->_shm_chunk),
+			              "Could not get shm chunk.");
+			s->addr(static_cast<char*>(l4shmc_chunk_ptr(&s->_shm_chunk)));
+			return s;
+		}
+};
+
+
+class Shm_ringbuffer
+{
+	protected:
+		l4shmc_ringbuf_t buf;
+
+	public:
+		Shm_ringbuffer()
+		{ }
+
+		virtual ~Shm_ringbuffer()
+		{ }
+
+		l4shmc_ringbuf_t * buffer() const
+		{ return const_cast<l4shmc_ringbuf_t * const>(&buf); }
+
+		/*
+		 * Get complete size (header + data)
+		 */
+		unsigned size() const { return buffer()->_size; }
+		/*
+		 * Get data size only
+		 */
+		unsigned data_size() const { return L4SHMC_RINGBUF_DATA_SIZE(buffer()); }
+		/*
+		 * Get data area address
+		 */
+		char    *data_addr() const { return L4SHMC_RINGBUF_HEAD(buffer())->data; }
+		/*
+		 * Get buffer base address
+		 */
+		char    *base_addr() const { return reinterpret_cast<char*>(L4SHMC_RINGBUF_HEAD(buffer())); }
+
+
+		/*
+		 * Create a new ring buffer
+		 */
+		static Shm_ringbuffer *create(l4shmc_area_t *base, char const * name,
+		                              char const *signal_name, unsigned size)
+		{
+			Shm_ringbuffer *rb = new Shm_ringbuffer();
+			int __attribute__((unused)) err
+			    = l4shmc_rb_init_buffer(rb->buffer(), base, name,
+			                            signal_name, size);
+			ASSERT_OK(err);
+			return rb;
+		}
+
+
+		static Shm_ringbuffer *get(l4shmc_area_t *base, char const *chunk,
+		                           char const *signal_name)
+		{
+			Shm_ringbuffer *rb = new Shm_ringbuffer();
+			int __attribute__((unused)) err
+			    = l4shmc_rb_init_receiver(rb->buffer(), base, chunk,
+			                              signal_name);
+			ASSERT_OK(err);
+			return rb;
+		}
+};
+
+
+class Shm_ringbuffer_user 
+{
+	protected:
+		Shm_ringbuffer *_rb;
+
+	public:
+		Shm_ringbuffer_user(l4shmc_area_t *base,
+		                    char const *chunk_name,
+		                    char const *signal_name)
+		{
+			_rb = Shm_ringbuffer::get(base, chunk_name, signal_name);
+			ASSERT_NOT_NULL(_rb);
+		}
+
+		Shm_ringbuffer_user(Shm_ringbuffer * const rb)
+			: _rb(rb)
+		{ }
+
+		virtual ~Shm_ringbuffer_user()
+		{ l4shmc_rb_deinit_buffer(_rb->buffer()); }
+
+		Shm_ringbuffer * buffer() const
+		{ return _rb; }
+};
+
+
+/*
+ * Receiver side of a shmc ring buffer chunk.
+ *
+ * The receiver does only lookup the already created shmc areas.
+ */
+class Shm_receiver : public Shm_ringbuffer_user
+{
+	public:
+		Shm_receiver(l4shmc_area_t *base, char const *chunk_name,
+		             char const *signal_name)
+			: Shm_ringbuffer_user(base, chunk_name, signal_name)
+		{
+			l4shmc_rb_attach_receiver(_rb->buffer(),
+			                          pthread_l4_cap(pthread_self()));
+		}
+
+		virtual ~Shm_receiver()
+		{ }
+
+		/*
+		 * Block until new data is ready.
+		 *
+		 * Returns immediately, if data is available.
+		 */
+		void wait_for_data()
+		{
+			l4shmc_rb_receiver_wait_for_data(_rb->buffer(), BLOCK);
+		}
+
+
+		/* 
+		 * Copy data out of the buffer.
+		 *
+		 * \param target   valid target buffer
+		 * \param tsize    size of target buffer (must be >= packet size!)
+		 * \return tsize   real data size
+		 */
+		int next_copy_out(char *target, unsigned *tsize)
+		{
+			int err = l4shmc_rb_receiver_copy_out(L4SHMC_RINGBUF_HEAD(_rb->buffer()), target, tsize);
+			return err;
+		}
+		
+
+		/*
+		 * Notify producer that space is available.
+		 */
+		void notify_done()
+		{
+			l4shmc_rb_receiver_notify_done(_rb->buffer());
+		}
+};
+
+
+/*
+ * Sender side of an SHMC ring buffer.
+ *
+ * The sender is responsible for creating the underlying l4shmc chunk as well
+ * as the empty and full signals. So you'd better make sure to create the
+ * Sender object before instantiating the receiver.
+ */
+class Shm_sender : public Shm_ringbuffer_user
+{
+	public:
+		Shm_sender(l4shmc_area_t *base, char const *chunk_name,
+		           char const *signal_name)
+			: Shm_ringbuffer_user(base, chunk_name, signal_name)
+		{
+			int __attribute__((unused)) err
+			    = l4shmc_rb_attach_sender(_rb->buffer(), signal_name,
+			                              pthread_l4_cap(pthread_self()));
+			ASSERT_OK(err);
+		}
+
+
+		virtual ~Shm_sender()
+		{ }
+
+
+		/*
+		 * Copy in packet from an external data source.
+		 *
+		 * This is the function you'll want to use. Just pass it a buffer
+		 * pointer and let the lib do the work.
+		 *
+		 * \param data                valid buffer
+		 * \param size                data size
+		 * \param block_if_necessary  bool: block if buffer currently full
+		 *
+		 * \return 0           on success
+		 * \return -L4_ENOMEM  if block == false and no space available
+		 */
+		int next_copy_in(char *data, unsigned size, bool block_if_necessary = true)
+		{
+			return l4shmc_rb_sender_next_copy_in(_rb->buffer(), data, size,
+			                              static_cast<int>(block_if_necessary));
+		}
+
+
+		/*
+		 * Tell the consumer that new data is available.
+		 */
+		void commit_packet()
+		{
+			l4shmc_rb_sender_commit_packet(_rb->buffer());
+		}
+};
+
+}

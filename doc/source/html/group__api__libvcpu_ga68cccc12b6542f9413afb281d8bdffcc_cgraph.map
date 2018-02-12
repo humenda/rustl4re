@@ -1,0 +1,5 @@
+<map id="l4vcpu_irq_restore" name="l4vcpu_irq_restore">
+<area shape="rect" id="node2" href="$group__api__libvcpu.html#gac8dd177f5382328e3922754cc9d36b28" title="Disable a vCPU for event delivery. " alt="" coords="192,5,331,32"/>
+<area shape="rect" id="node4" href="$group__api__libvcpu.html#ga58a61ec0b02bed0a03f708e1594cf8a5" title="Enable a vCPU for event delivery. " alt="" coords="193,56,329,83"/>
+<area shape="rect" id="node3" href="$group__l4sys__defines.html#ga4accdcabe8bddb4964f8986855e7c728" title="Memory barrier. " alt="" coords="379,31,461,57"/>
+</map>

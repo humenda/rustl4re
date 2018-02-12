@@ -1,0 +1,4 @@
+<map id="l4_thread_vcpu_control_ext" name="l4_thread_vcpu_control_ext">
+<area shape="rect" id="node2" href="$group__l4__thread__api.html#ga1015c5500bcfeaa01d209ee116cf57ec" title="Enable or disable the extended vCPU feature for the thread. " alt="" coords="251,5,421,47"/>
+<area shape="rect" id="node3" href="$group__l4__utcb__api.html#gadc099b4a59e1d99638c72c11a8c8b644" title="Get the UTCB address. " alt="" coords="303,71,369,98"/>
+</map>

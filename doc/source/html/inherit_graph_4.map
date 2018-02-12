@@ -1,0 +1,4 @@
+<map id="Graphical Class Hierarchy" name="Graphical Class Hierarchy">
+<area shape="rect" id="node1" href="$classcxx_1_1Base__slab__static.html" title="cxx::Base_slab_static\l\&lt; sizeof(Type), Slab\l_size, Max_free, Alloc \&gt;" alt="" coords="5,5,176,61"/>
+<area shape="rect" id="node2" href="$classcxx_1_1Slab__static.html" title="Merged slab allocator (allocators for objects of the same size are merged together). " alt="" coords="224,5,388,61"/>
+</map>

@@ -1,0 +1,155 @@
+// vim: set ft=cpp:
+/*
+ * (c) 2010 Adam Lackorzynski <adam@os.inf.tu-dresden.de>
+ *     economic rights: Technische Universität Dresden (Germany)
+ *
+ * This file is part of TUD:OS and distributed under the terms of the
+ * GNU General Public License 2.
+ * Please see the COPYING-GPL-2 file for details.
+ */
+#pragma once
+
+#include <l4/sys/compiler.h>
+#include <l4/sys/types.h>
+
+namespace L4 {
+namespace Driver {
+
+class Hpet
+{
+public:
+  // General Capabilities and ID Register
+  unsigned rev_id() const { l4_mb(); return _cap_and_id & 0xff; }
+  unsigned num_tim_cap() const { l4_mb(); return ((_cap_and_id >> 8) & 0x1f) + 1; }
+  unsigned count_size_cap() const { l4_mb(); return _cap_and_id & (1 << 13); }
+  unsigned leg_rt_cap() const { l4_mb(); return _cap_and_id & (1 << 13); }
+  unsigned vendor_id() const { l4_mb(); return (_cap_and_id >> 16) & 0xffff; };
+  l4_uint32_t counter_clk_period() const { l4_mb(); return _cap_and_id >> 32; }
+
+  // General Configuration Register
+  unsigned enabled() const { return _conf & 1; }
+  void enable() { _conf |= 1; l4_wmb(); }
+  void disable() { _conf &= ~1; l4_wmb(); }
+  unsigned leg_rt_cnf() const { return _conf & 2; }
+  void legacy_route_enable() { _conf |= 2; l4_wmb(); }
+  void legacy_route_disable() { _conf &= ~2; l4_wmb(); }
+
+  // General Interrupt Status Register
+  unsigned irq_active(int irqnum) const { l4_mb(); return (1 << irqnum) & _int_status; }
+  void irq_clear_active(int irqnum)
+  {
+    _int_status = 1 << irqnum; l4_wmb();
+    __typeof(_int_status) dummy = *(volatile __typeof(_int_status) *)&_int_status;
+    (void)dummy;
+  }
+
+  // Main Counter Register
+  l4_uint64_t main_counter_val() const { l4_mb(); return _main_counter; }
+  void main_counter_val(l4_uint64_t v) { _main_counter = v; l4_wmb(); }
+
+  class Timer
+  {
+  public:
+    // Timer N Configuration and Capability Register
+    void set_int_type_level() { _conf_and_cap |= 2; l4_wmb(); }
+    void set_int_type_edge() { _conf_and_cap &= ~2; l4_wmb(); }
+    unsigned is_int_type_level() const { return _conf_and_cap & 2; }
+    unsigned is_int_type_edge() const { return !is_int_type_level(); }
+
+    void enable_int() { _conf_and_cap |= 4; l4_wmb(); }
+    void disable_int() { _conf_and_cap &= ~4; l4_wmb(); }
+    unsigned is_int_enabled() const { return _conf_and_cap & 4; }
+
+    void set_periodic() { _conf_and_cap |= 8; l4_wmb(); }
+    void set_nonperiodic() { _conf_and_cap &= ~8; l4_wmb(); }
+    unsigned is_periodic() const { return _conf_and_cap & 8; }
+    unsigned is_nonperiodic() const { return !is_periodic(); }
+
+    unsigned periodic_int_capable() const { return _conf_and_cap & (1 << 4); }
+    unsigned can_64bit() const { return _conf_and_cap & (1 << 5); }
+
+    void val_set_cnf() { _conf_and_cap |= 1 << 6; l4_wmb(); }
+
+    void force_32bit() { _conf_and_cap |= 1 << 8; l4_wmb(); }
+    unsigned forced_32bit() const { return _conf_and_cap & (1 << 8); }
+
+    unsigned int_route_cnf() const { return (_conf_and_cap >> 9) & 0x1f; }
+    void set_int_route(unsigned irqnum)
+    { _conf_and_cap = (_conf_and_cap & ~(31 << 9)) | (irqnum << 9); }
+
+    void enable_fsb() { _conf_and_cap |= 1 << 14; l4_wmb(); }
+    void disable_fsb() { _conf_and_cap &= ~(1 << 14); l4_wmb(); }
+    unsigned is_fsb() const { return _conf_and_cap & (1 << 14); }
+
+    unsigned can_fsb() const { return _conf_and_cap & (1 << 15); }
+
+
+    l4_uint32_t int_route_cap() const { return _conf_and_cap >> 32; }
+    unsigned int_avail(int int_nr) const { return int_route_cap() & (1 << int_nr); }
+    unsigned ints_avail() const { return int_route_cap(); }
+
+    int get_first_int(int i = 0)
+    {
+      l4_uint32_t cap = int_route_cap();
+      for (; i < 32; ++i)
+        if (cap & (1 << i))
+          return i;
+      return ~0U;
+    }
+
+    l4_uint64_t comparator() const { return _comp; }
+    void set_comparator(l4_uint64_t v) { _comp = v; l4_wmb(); }
+
+    void fsb_int_addr(l4_uint32_t addr) { _int_route_addr = addr; }
+    void fsb_int_val(l4_uint32_t val) { _int_route_val = val; }
+
+    void print_state() const;
+
+    l4_uint64_t conf_and_cap() const { return _conf_and_cap; }
+    l4_uint64_t comp() const { return _comp; }
+
+  private:
+    l4_uint64_t _conf_and_cap;
+    l4_uint64_t _comp;
+    l4_uint32_t _int_route_addr; // right order?
+    l4_uint32_t _int_route_val;
+  } __attribute__((packed));
+
+  Timer *timer(int nr) const
+  {
+    return reinterpret_cast<Timer *>((char *)this + 0x100 + 0x20 * nr);
+  }
+
+  unsigned ioapic_irq(int nr) const
+  {
+    return timer(nr)->int_route_cnf();
+  }
+
+  void print_state() const;
+
+  l4_uint64_t clk2ns(l4_uint64_t v) const
+  { return v * counter_clk_period() / 1000000ULL; }
+
+  l4_uint64_t clk2us(l4_uint64_t v) const
+  { return v * counter_clk_period() / 1000000000ULL; }
+
+  l4_uint64_t us2clk(unsigned us) const
+  { return us * 1000000000ULL / counter_clk_period(); }
+
+  l4_uint64_t ns2clk(unsigned us) const
+  { return us * 1000000ULL / counter_clk_period(); }
+
+  l4_uint64_t cap_and_id() const { return _cap_and_id; }
+  l4_uint64_t conf() const { return _conf; }
+
+private:
+  l4_uint64_t _cap_and_id;   // 0x0
+  l4_uint64_t _pad1;
+  l4_uint64_t _conf;         // 0x10
+  l4_uint64_t _pad2;
+  l4_uint64_t _int_status;   // 0x20
+  l4_uint64_t _pad3[(0xf0 - 0x28) / sizeof(l4_uint64_t)];
+  l4_uint64_t _main_counter;
+} __attribute__((packed));
+
+}}

@@ -1,0 +1,4 @@
+provides: ankh libankh_packet_analyzer liblwip_netif_ankh
+requires: lwip l4util dde-linux26 dde-linux26_net libboost-lite
+          shmc_ringbuf lxfuxlibc libstdc++
+Maintainer: doebel@os.inf.tu-dresden.de

@@ -1,0 +1,3 @@
+provides: libgfxbitmap libgfxbitmap-support
+requires: l4sys l4re_c libc
+maintainer: adam@os.inf.tu-dresden.de

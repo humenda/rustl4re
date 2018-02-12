@@ -1,0 +1,33 @@
+# -*- makefile -*-
+# vim:se ft=make:
+
+exception.o: $(TCBOFFSET)
+
+# Add future prerequisites somewhere among the list of libraries.
+# You really should not have to add anything in the $(LD) line.
+
+-include .kernel.mips.lds.d
+
+$(KERNEL).debug: kernel.mips.lds $(CRT0) $(OBJ_KERNEL) $(JDB) $(MINILIBC) $(LIBK) $(KERNEL_EXTRA_LIBS) $(LIBDISASM) $(ABI) libdrivers.a $(LIBUART) $(CXXLIB) $(MINILIBC) libgluedriverslibc.a
+	$(LINK_MESSAGE)
+	$(VERBOSE)$(LD) $(LDFLAGS) -m $(LD_EMULATION) -N -defsym kernel_load_addr=$(CONFIG_KERNEL_LOAD_ADDR) \
+	  $(KERNEL_LDFLAGS) \
+          -T $< -o $@ $(filter-out $<,$+)
+	$(call ADD_CONFIGFILE,$@)
+
+# Remove '$(RM) fiasco.image' after a transition period -- Added late 2016
+$(KERNEL): $(KERNEL).debug
+	$(LINK_MESSAGE)
+	$(VERBOSE)$(STRIP) $< -o $@
+	$(VERBOSE)$(OBJCOPY) --add-gnu-debuglink=$< $@
+	$(VERBOSE)chmod 755 $@
+	$(VERBOSE)$(RM) fiasco.image
+
+Symbols: $(KERNEL).debug
+	$(COMP_MESSAGE)
+	$(VERBOSE)$(NM) $(KERNEL).debug | c++filt | sort > $@.new
+	$(VERBOSE)mv $@.new $@
+	$(VERBOSE)chmod 644 $@
+
+clean-KERNEL:
+

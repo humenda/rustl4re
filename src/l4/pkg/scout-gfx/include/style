@@ -1,0 +1,41 @@
+// vi:ft=cpp
+/*
+ * (c) 2010 Alexander Warg <warg@os.inf.tu-dresden.de>
+ *     economic rights: Technische Universität Dresden (Germany)
+ *
+ * This file is part of TUD:OS and distributed under the terms of the
+ * GNU General Public License 2.
+ * Please see the COPYING-GPL-2 file for details.
+ */
+#pragma once
+
+#include <l4/mag-gfx/font>
+#include <l4/mag-gfx/gfx_colors>
+
+namespace Scout_gfx {
+
+typedef Mag_gfx::Rgba32::Color Color;
+
+/**
+ * Textual style
+ *
+ * A style describes the font, color and accentuations of tokens.
+ */
+class Style
+{
+public:
+  enum
+  {
+    ATTR_BOLD      = 0x1,
+    ATTR_UNDERLINE = 0x2,
+  };
+
+  Mag_gfx::Font  *font;
+  Color  color;
+  int    attr;
+
+  Style(Mag_gfx::Font *f, Color c, int a) : font(f), color(c), attr(a) {}
+};
+
+
+}

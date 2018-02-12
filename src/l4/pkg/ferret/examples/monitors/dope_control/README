@@ -1,0 +1,4 @@
+This is a small GUI application for DOPE which can insert special
+control events (start/stop recording, dump, clear buffers, ping etc.) 
+into a dedicated control sensor.  Monitors can listen to these control
+events and react accordingly.

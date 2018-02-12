@@ -1,0 +1,102 @@
+Starting an application on L4RE in Valgrind
+===========================================
+
+Possibilities:
+
+1. Valgrind starts the application directly,
+   it plays the role of the l4re-kernel
+--------------------------------------------
+
+    +----------------+
+    |                |
+    |     Client     |
+    |                |
+    +----------------+
+
+    +----------------+
+    |                |
+    |   Valgrind     |
+    |                |
+    +----------------+
+
+    Advantages:
+     * no relinking of the l4re-kernel required
+     * Valgrind must provide everything for the app -> flexibility
+
+    Disadvantages:
+     * Valgrind must provide a ldso-backend for dynamic linked apps
+     * Valgrind cannot check the region mapper of the client
+
+
+
+2. Valgrind starts a l4re-kernel which starts
+   the guest-application.
+   Valgrind self is started by a l4re-kernel.
+---------------------------------------------
+
+    +----------------+
+    |                |
+    |     Client     |
+    |                |
+    +----------------+
+
+    +----------------+
+    |                |
+    |  l4re-kernel   |
+    |                |
+    +----------------+
+
+    +----------------+
+    |                |
+    |   Valgrind     |
+    |                |
+    +----------------+
+
+    +----------------+
+    |                |
+    |  l4re-kernel   |
+    |                |
+    +----------------+
+
+    Advantages:
+     * the l4re-kernel started by valgrind provides a ldso-backend for the
+       client
+     * we are able to check clients region mapper!
+
+    Disadvantages:
+     * the l4re-kernel must be relinked, because in the case
+       of Valgrind two l4re-kernels are running in one address space
+     * (one more region mapper)
+
+3. Valgrind starts a l4re-kernel which starts
+   the guest-application. Valgrind self starts
+   without the help of a l4re-kernel.
+----------------------------------------------
+
+    +----------------+
+    |                |
+    |     Client     |
+    |                |
+    +----------------+
+
+    +----------------+
+    |                |
+    |  l4re-kernel   |
+    |                |
+    +----------------+
+
+    +----------------+
+    |                |
+    |   Valgrind     |
+    |                |
+    +----------------+
+
+    Advantages:
+     * same as 2.
+     * eventually more flexibility
+
+    Disadvantages:
+     * Valgrind must be able to start without the help of
+       a l4re-kernel, this means:
+        - vg needs his own region mapper and pager
+

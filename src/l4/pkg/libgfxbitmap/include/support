@@ -1,0 +1,27 @@
+/* vim:set ft=cpp: */
+/**
+ * \file
+ * \brief  Terminal support functionality
+ *
+ * \date   2009
+ * \author Adam Lackorzynski <adam@os.inf.tu-dresden.de>
+ */
+/*
+ * (c) 2009 Author(s)
+ *     economic rights: Technische Universität Dresden (Germany)
+ * This file is part of TUD:OS and distributed under the terms of the
+ * GNU Lesser General Public License 2.1.
+ * Please see the COPYING-LGPL-2.1 file for details.
+ */
+#ifndef __LIBTERM__SUPPORT_H__
+#define __LIBTERM__SUPPORT_H__
+
+#include <l4/re/video/view>
+
+void
+libterm_init_colors(L4Re::Video::View::Info *fbi);
+
+int
+libterm_get_color(int mode, int color);
+
+#endif

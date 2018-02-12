@@ -1,0 +1,17 @@
+CROSS_COMPILE_arm64       = aarch64-linux-gnu-
+LD_EMULATION_CHOICE_arm64 = aarch64linux aarch64elf
+OFORMAT_arm64             = elf64-littleaarch64
+BFD_ARCH_arm64            = aarch64
+L4_KIP_ADDR_arm64        ?= 0xb0000000
+L4_STACK_ADDR_arm64      ?= 0xb0000000
+
+CARCHFLAGS_arm64_armv8    = -march=armv8-a
+
+CC_arm64          = $(CROSS_COMPILE)gcc
+CXX_arm64         = $(CROSS_COMPILE)g++
+FC_arm64          = $(CROSS_COMPILE)gfortran
+
+SYSTEMS_ABI    += arm64-l4f
+SYSTEMS_PLAIN  += arm64
+
+QEMU_ARCH_MAP_arm64       = qemu-system-aarch64

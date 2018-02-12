@@ -1,0 +1,168 @@
+// vi:ft=c
+/**
+\mainpage Overview
+
+Welcome to the documentation of the %L4 Runtime Environment, or %L4Re
+for short. There are two parts to this documentation: a user manual, which
+provides a birds eye view of %L4Re and its environment, and a reference
+section which documents the complete programming API.
+
+### User Manual #####
+
+1. \ref l4re_intro shortly explains the concept of microkernels and
+   introduces the basic terminology.
+2. \ref l4re_tutorial helps you getting started with setting up
+   the development environment and writing your own first %L4Re application.
+3. \ref l4re_concepts explains in detail the most important
+   programming concepts.
+4. \ref l4re_servers provides a quick overview over standard services running
+   on the %L4Re operating system.
+
+
+### Reference #####
+
+The second part provides the complete reference of all classes and functions
+of the %L4Re environment as well as a list of example code.
+
+*/
+
+/**
+\page l4re_intro Introduction
+
+The intention of this section is to provide a short overview about the
+L4Re environment. The general structure of a microkernel-based system will
+be introduced and the principal functionality of the servers in the basic
+environment outlined.
+
+\section fiasco_intro Fiasco.OC
+
+The Fiasco.OC microkernel is the lowest-level piece of software running in an
+L4-based system. The microkernel is the only program that runs in privileged
+processor mode. It does not include complex services such as program loading,
+device drivers, or file systems; those are implemented in user-level programs on
+top of it (a basic set of these services and abstractions is provided by the L4
+Runtime Environment).
+
+Fiasco.OC kernel services are implemented in kernel objects. Tasks hold
+references to kernel objects in their respective \em "object space", which is a
+kernel-protected table.
+These references are called \em capabilities. Fiasco system calls are function
+invocations on kernel objects through the corresponding capabilities. These
+can be thought of as function invocations on object references in an
+object-oriented programming environment.  Furthermore, if a task owns a
+capability, it may grant other tasks the same (or fewer) rights on this object
+by passing the capability from its own to the other task's object space.
+
+From a design perspective, capabilities are a concept that enables flexibility
+in the system structure. A thread that invokes an object through a capability
+does not need to care about where this object is implemented. In fact, it is
+possible to implement all objects either in the kernel or in a user-level
+server and replace one implementation with the other transparently for clients.
+
+\subsection l4re_concepts_fiasco_ipc Communication
+
+The basic communication mechanism in L4-based systems is called
+\em "Inter Process Communication (IPC)". It is always synchronous, i.e. both
+communication partners need to actively rendezvous for IPC. In addition to
+transmitting arbitrary data between threads, IPC is also used to resolve
+hardware exceptions, faults and for virtual memory management.
+
+\subsection l4re_concepts_fiasco_kobjects Kernel Objects
+
+The following list gives a short overview of the kernel objects provided by
+the Fiasco.OC microkernel:
+
+\li <b>Task</b> A task comprises a memory address space (represented by the
+task's page table), an object space (holding the kernel protected
+capabilities), and on x86 an IO-port address space.
+\li <b>Thread</b> A thread is bound to a task and executes code. Multiple
+threads can coexist in one task and are scheduled by the Fiasco scheduler.
+\li <b>Factory</b> A factory is used by applications to create new kernel
+objects.  Access to a factory is required to create any new kernel object.
+Factories can control and restrict object creation.
+\li <b>IPC Gate</b> An IPC gate is used to create a secure communication
+channel between different tasks. It embeds a label (kernel protected payload)
+that securely identifies the gate through which a message is received.
+The gate label is not visible to and cannot be altered by the sender.
+\li <b>IRQ</b> IRQ objects provide access to hardware interrupts. Additionally,
+programs can create new virtual interrupt objects and trigger them. This
+allows to implement a signaling mechanism. The receiver cannot decide whether
+the interrupt is a physical or virtual one.
+\li <b>Vcon</b> Provides access to the in-kernel debugging console (input and output).
+There is only one such object in the kernel and it is only available, if the
+kernel is built with debugging enabled. This object is typically interposed
+through a user-level service or without debugging in the kernel can be
+completely based on user-level services.
+\li <b>Scheduler</b> Implements scheduling policy and assignment of threads
+    to CPUs, including  CPU statistics.
+
+
+
+\section l4re_system_structure L4Re System Structure
+
+The system has a multi-tier architecture consisting of the
+following layers depicted in the figure below:
+
+\li <b>Microkernel</b> The microkernel is the component at the lowest level of
+the software stack. It is the only piece of software that is running in the
+privileged mode of the processor.
+
+\li <b>Tasks</b> Tasks are the basic containers (address spaces) in which system
+services and applications are executed. They run in the processor's deprivileged
+user mode.
+
+\image html l4re-basic.png "Basic Structure of an L4Re based system"
+\image latex l4re-basic.pdf "Basic Structure of an L4Re based system"
+
+In terms of functionality, the system is structured as follows:
+
+\li <b>Microkernel</b> The kernel provides primitives to execute programs in tasks,
+to enforce isolation among them, and to provide means of secure communication in
+order to let them cooperate. As the kernel is the most privileged, security-critical
+software component in the system, it is a general design goal to make it as small
+as possible in order to reduce its attack surface. It provides only a minimal set of
+mechanisms that are necessary to support applications.
+
+\li <b>Runtime Environment</b> The small kernel offers a concise set of interfaces,
+but these are not necessarily suited for building applications directly on top of
+it. The L4 Runtime Environment aims at providing more convenient abstractions for
+application development. It comprises low-level software components that interface
+directly with the microkernel. The root pager \em sigma0 and the root task \em Moe
+are the most basic components of the runtime environment. Other services (e.g., for
+device enumeration) use interfaces provided by them.
+
+\li \b Applications Applications run on top of the system and use services
+provided by the Runtime Environment -- or by other applications. There may be
+several types of applications in the system and even virtual machine monitors
+and device drivers are considered applications in the terminology used in this
+document. They are running alongside other applications on the system.
+
+Lending terminology from the distributed systems area, applications offering
+services to other applications are usually called \em servers, whereas
+applications using those services are named \em clients.  Being in both
+roles is also common, for instance, a file system server may be viewed as a
+server with respect to clients using the file system, while the server itself
+may also act as a client of a hard disk driver.
+
+\section main_l4re_sec L4 Runtime Environment (L4Re)
+
+The L4 Runtime Environment (L4Re) provides a basic set of services and
+abstractions, which are useful to implement and run user-level applications on
+top of the Fiasco.OC microkernel.
+
+L4Re consists of a set of libraries and servers. Libraries as well as server
+interfaces are completely object oriented. They implement prototype
+implementations for the classes defined by the L4Re specification.
+
+A minimal L4Re-based application needs 3 components to be booted beforehand:
+the Fiasco microkernel, the root pager (Sigma0), and the root task (Moe). The
+Sigma0 root pager initially owns all system resources, but is usually used
+only to resolve page faults for the Moe root task. Moe provides the essential
+services to normal user applications such as an initial program loader, a
+region-map service for virtual memory management, and a memory (data space)
+allocator.
+
+
+
+
+*/

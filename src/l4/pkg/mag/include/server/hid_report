@@ -1,0 +1,275 @@
+// vi:ft=cpp
+/*
+ * (c) 2011 Alexander Warg <warg@os.inf.tu-dresden.de>
+ *     economic rights: Technische Universität Dresden (Germany)
+ *
+ * This file is part of TUD:OS and distributed under the terms of the
+ * GNU General Public License 2.
+ * Please see the COPYING-GPL-2 file for details.
+ */
+
+#pragma once
+
+#include <l4/mag/server/valuator>
+
+namespace Mag_server {
+
+class Axis_info
+{
+public:
+  int value;
+  int min;
+  int max;
+  int fuzz;
+  int flat;
+  int resolution;
+  int delta;
+  int mode;
+};
+
+class Axis_info_vector
+{
+public:
+  Axis_info_vector() : _i(0), _size(0) {}
+  explicit Axis_info_vector(unsigned size)
+  : _i(new Axis_info*[size]), _size(size)
+  {
+    for (unsigned i = 0; i < _size; ++i)
+      _i[i] = 0;
+  }
+
+  ~Axis_info_vector()
+  {
+    if (!_i)
+      return;
+
+    for (unsigned i = 0; i < _size; ++i)
+      if (_i[i])
+	delete _i[i];
+
+    delete [] _i;
+  }
+
+
+  unsigned size() const { return _size; }
+  Axis_info const *get(unsigned idx) const
+  {
+    if (idx < _size)
+      return _i[idx];
+    return 0;
+  }
+
+  Axis_info *get(unsigned idx)
+  {
+    if (idx < _size )
+      return _i[idx];
+    return 0;
+  }
+
+  Axis_info *create(unsigned idx)
+  {
+    if (idx >= _size)
+      return 0;
+
+    if (_i[idx])
+      delete _i[idx];
+
+    _i[idx] = new Axis_info();
+    return _i[idx];
+  }
+
+  bool set(unsigned idx, Axis_info *info)
+  {
+    if (idx >= _size)
+      {
+	delete info;
+	return 0;
+      }
+
+    if (_i[idx])
+      delete _i[idx];
+
+    _i[idx] = info;
+    return true;
+  }
+
+private:
+  Axis_info **_i;
+  unsigned _size;
+
+  Axis_info_vector(Axis_info_vector const &);
+};
+
+class Hid_report
+{
+public:
+  struct Key_event
+  {
+    int code;
+    int value;
+  };
+
+  Hid_report(l4_umword_t device_id, unsigned rels, unsigned abss, unsigned mscs,
+             unsigned sws, unsigned mts);
+
+  ~Hid_report();
+
+  bool get(unsigned char type, unsigned code, int &val) const;
+  void set(unsigned char type, unsigned code, int val);
+
+  bool mt_get(unsigned id, unsigned code, int &val) const;
+
+  void mt_set(unsigned code, int val);
+  bool submit_mt();
+
+  Mag_server::Valuator<int> const *get_vals(unsigned char type) const;
+  Mag_server::Valuator<int> *get_vals(unsigned char type);
+  Mag_server::Valuator<int> const *get_mt_vals(unsigned id) const;
+
+  bool add_key(int code, int value);
+  Key_event const *get_key_event(unsigned idx) const;
+  Key_event const *find_key_event(int code) const;
+  void remove_key_event(int code);
+
+  void sync(long long time) { _time = time; }
+  long long time() const { return _time; }
+  void clear();
+  l4_umword_t device_id() const { return _device_id; }
+
+  Axis_info_vector const *abs_infos() const
+  { return _abs_info; }
+
+  Axis_info_vector *abs_infos()
+  { return _abs_info; }
+
+  void set_abs_info(Axis_info_vector *i)
+  { _abs_info = i; }
+
+private:
+  enum
+  {
+    Type_offset = 2,
+    Num_types   = 4,
+
+    Mt_val_offset = 0x2f,
+    Num_mt_vals   = 13,
+
+    Num_key_events = 5,
+  };
+
+  long long _time;
+  l4_umword_t const _device_id;
+
+  unsigned _kevs;
+  Key_event _kev[Num_key_events];
+
+  Valuator<int> _vals[Num_types];
+  unsigned _mts;
+  Valuator<int> *_mt;
+
+  Axis_info_vector *_abs_info;
+};
+
+struct Axis_xfrm_noop
+{
+  void operator () (unsigned, int &) const {}
+};
+
+
+template<typename SINK, typename XFRM>
+bool post_hid_report(Hid_report const *e, SINK &sink, XFRM const &xfrm_abs)
+{
+  bool events = false;
+  bool trigger = false;
+
+  typename SINK::Event ne;
+  ne.time = e->time();
+  ne.payload.stream_id = e->device_id();
+
+  ne.payload.type = 2;
+  Valuator<int> const *v = e->get_vals(2);
+  for (unsigned i = 0; v && i < v->size(); ++i)
+    {
+      Value<int> val = v->get(i);
+      if (!val.valid())
+	continue;
+
+      ne.payload.code = i;
+      ne.payload.value = val.val();
+
+      trigger |= sink.put(ne);
+      events = true;
+    }
+
+  v = e->get_vals(3);
+  ne.payload.type = 3;
+  for (unsigned i = 0; v && i < v->size(); ++i)
+    {
+      Value<int> val = v->get(i);
+      if (!val.valid())
+	continue;
+
+      ne.payload.code = i;
+      ne.payload.value = val.val();
+      xfrm_abs(i, ne.payload.value);
+      trigger |= sink.put(ne);
+      events = true;
+    }
+
+  ne.payload.type = 1;
+  for (unsigned i = 0;; ++i)
+    {
+      Hid_report::Key_event const *ke = e->get_key_event(i);
+      if (!ke)
+	break;
+
+      ne.payload.code = ke->code;
+      ne.payload.value = ke->value;
+      trigger |= sink.put(ne);
+      events = true;
+    }
+
+  for (unsigned mt = 0; mt < 10; ++mt)
+    {
+      Valuator<int> const *m = e->get_mt_vals(mt);
+      if (!m)
+	continue;
+
+      bool mt_ev = false;
+      ne.payload.type = 3;
+      unsigned mt_offset = m->offset();
+      for (unsigned i = 0; i < m->size(); ++i)
+	{
+	  Value<int> v = m->get(i + mt_offset);
+	  if (!v.valid())
+	    continue;
+
+	  ne.payload.code = i + mt_offset;
+	  ne.payload.value = v.val();
+	  xfrm_abs(i + mt_offset, ne.payload.value);
+	  trigger |= sink.put(ne);
+	  events = true;
+	  mt_ev = true;
+	}
+
+      if (mt_ev)
+	{
+	  ne.payload.type = 0;
+	  ne.payload.code = 2;
+	  ne.payload.value = 0;
+	  trigger |= sink.put(ne);
+	}
+    }
+
+  if (events)
+    {
+      ne.payload.type = 0;
+      ne.payload.code = 0;
+      ne.payload.value = 0;
+      trigger |= sink.put(ne);
+    }
+  return trigger;
+}
+
+
+}

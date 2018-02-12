@@ -1,0 +1,113 @@
+// vi:ft=cpp
+/*
+ * (c) 2010 Alexander Warg <warg@os.inf.tu-dresden.de>
+ *     economic rights: Technische Universität Dresden (Germany)
+ *
+ * This file is part of TUD:OS and distributed under the terms of the
+ * GNU General Public License 2.
+ * Please see the COPYING-GPL-2 file for details.
+ */
+#pragma once
+
+
+#include <l4/scout-gfx/document>
+#include <l4/scout-gfx/doc/block>
+#include <l4/scout-gfx/fader>
+#include <l4/scout-gfx/widget>
+
+namespace Scout_gfx {
+
+/**
+ * Document navigation bar
+ */
+class Icon;
+class Factory;
+
+class Navbar : public Parent_widget, public Fader
+{
+private:
+  class Linkicon_event_handler : public Event_handler
+  {
+  private:
+    Widget *_dst;
+    Navbar *_navbar;
+
+  public:
+    /**
+     * Constructor
+     */
+    Linkicon_event_handler(Navbar *nb) : _dst(0), _navbar(nb) {}
+
+    void destination(Widget *d) { _dst = d; }
+
+    /**
+     * Event handler interface
+     */
+    bool handle(Event const &ev)
+    {
+      if (ev.type != Event::PRESS || !_navbar)
+	return true;
+
+      Scout_gfx::Browser *b = _navbar->browser();
+      if (!b || !_dst)
+	return true;
+
+      _navbar->curr(0);
+      b->go_to(_dst);
+      _navbar->fade_to(100, 2);
+      return true;
+    }
+  };
+
+  Block *_next_title;
+  Block *_prev_title;
+
+  Linkicon_event_handler _next_anchor;
+  Linkicon_event_handler _prev_anchor;
+
+  Icon *_next_icon;
+  Icon *_prev_icon;
+
+  Style _style;
+
+public:
+
+  Browser *browser() const;
+
+  /**
+   * Constructor
+   */
+  Navbar(Factory *f, Style const *style);
+
+  /**
+   * Define link to next and previous chapter
+   */
+  void next_link(const char *title, Widget *dst);
+  void prev_link(const char *title, Widget *dst);
+
+  /**
+   * Element interface
+   */
+  void draw(Canvas *c, Point const &p);
+  Widget *find(Point const &p);
+
+  void append(Widget *c)
+  {
+    Parent_widget::append(c);
+    child_layout()->add_item(c);
+  }
+
+  void remove(Widget *c)
+  {
+    Parent_widget::remove(c);
+    child_layout()->remove_item(c);
+  }
+
+  /**
+   * Tick interface
+   */
+  int on_tick();
+};
+
+
+}

@@ -1,0 +1,395 @@
+<p>This file shall briefly describe the ways how to handle the snapshot.</p>
+
+<p>We would really like that you read all of the README before asking
+questions, although this file might be longer than you (and we) want.
+Thanks a lot in advance.</p>
+
+<h1>Host system requirements</h1>
+
+<p>The host system shall be a x86 32bit or 64bit based system with a recent
+Linux distribution installed and at least 2GB of free disk space.</p>
+
+<p>All necessary tools required by the build are available from the provided
+packages of the Linux distributions, including cross compilers. But
+there are also other cross compiler packages available (see below).
+You might want to run <code>make check_build_tools</code> in the src/l4
+directory to verify the common tools are installed.</p>
+
+<p>You are free to use any Linux distribution you like, or even BSDs or any of
+its derivatives. But then you should know the game. Especially tool
+versions should be recent, as installed on the listed distributions below.</p>
+
+<p>We are confident that the snapshot works on the following distributions:</p>
+
+<ul>
+<li>Debian 9 or later</li>
+<li>Ubuntu 16.10 or later</li>
+</ul>
+
+<h1>Cross Compilers</h1>
+
+<h2>Cross Compiling for ARM</h2>
+
+<p>For compiling software for the ARM targets on an x86 host a cross
+compiler is needed.</p>
+
+<p>For ARM:</p>
+
+<p>Two popular prebuilt cross compilers exist. You can also check
+http://elinux.org/ARMCompilers for more info:</p>
+
+<ul>
+<li><p>Linaro cross-compilers:</p>
+
+<p><a href="https://linaro.org/downloads">https://linaro.org/downloads</a></p>
+
+<p>Note that the Linaro cross compilers build for hard floating point, so
+builds with those compilers will only work on appropriate targets.
+This compiler will not work for ARMv5/ARM9 targets.</p></li>
+<li><p>Codesourcery / Mentor cross-compilers:
+See <a href="https://elinux.org/ARMCompilers">https://elinux.org/ARMCompilers</a> to
+get an arm-2014.05 version. Alternatively go via
+<a href="https://sourcery.mentor.com/GNUToolchain/">https://sourcery.mentor.com/GNUToolchain/</a>.</p></li>
+<li><p>Distributions:</p>
+
+<p>Linux distributions, such as Debian, also provide cross compilers.</p></li>
+<li><p>Alternatively:</p>
+
+<p>You have your own gcc cross compiler with at least version 4.7 installed
+that is known to be working.</p></li>
+</ul>
+
+<h2>Cross compiling for MIPS</h2>
+
+<p>For compiling software for MIPS on an x86 host a cross compiler is needed.</p>
+
+<p>Download cross compilers from:</p>
+
+<p><a href="https://www.mips.com/develop/tools/codescape-mips-sdk/download-codescape-mips-sdk-essentials/">https://www.mips.com/develop/tools/codescape-mips-sdk/download-codescape-mips-sdk-essentials/</a></p>
+
+<p>Note, when compiling for r2, use the "mti" variant.
+ When compiling for r6, use the "img" variant.</p>
+
+<p>Other cross compiler builds can also work. Any (positive + negative)
+ feedback welcome.</p>
+
+<h2>Using the Cross Compiler</h2>
+
+<p>Cross compilers are used via the common <code>CROSS_COMPILE</code> variable.
+<code>make setup</code> also asks for a <code>CROSS_COMPILE</code> prefix to be used for
+a specific build.</p>
+
+<h1>Building</h1>
+
+<p>In the upper most directory of the archive (the same directory where this
+README is located) contains a Makefile. To setup the snapshot issue</p>
+
+<pre><code>make setup
+</code></pre>
+
+<p>and to build it issue</p>
+
+<pre><code>make
+</code></pre>
+
+<p>in the snapshot directory. Add -j X as appropriate.</p>
+
+<h1>Directory layout</h1>
+
+<ul>
+<li><p><code>bin/</code>
+Configuration logics for this snapshot.</p></li>
+<li><p><code>doc/</code></p>
+
+<p><code>source/</code>
+ Contains documentation automatically generated from the documented
+ source code. Overview documentation is also included there.
+ l4re-doc-full.pdf and l4re-doc-base.pdf: PDF file of the generated code
+ html: HTML version of the documentation. Can be viewed in any recent
+       web browser.</p></li>
+<li><p><code>obj/</code>
+Generated object code will be placed under the obj directory.</p>
+
+<p><code>fiasco/</code>
+ Fiasco build directories.</p>
+
+<p><code>l4/</code>
+ L4Re build drectories.</p>
+
+<p><code>l4linux/</code>
+ L4Linux build directories.</p></li>
+<li><p><code>src/</code>
+Contains the source code:
+<code>kernel/fiasco</code>: Fiasco source
+<code>l4</code>:            L4Re source
+<code>l4linux</code>:       L4Linux</p></li>
+<li><p>files/
+Miscellaneous files.</p>
+
+<ul>
+<li><code>ramdisk-x86.rd</code>:    Ramdisks for (L4)Linux.</li>
+<li><code>ramdisk-arm.rd</code>:    Ramdisks for (L4)Linux.</li>
+<li><code>ramdisk-amd64.rd</code>:  Ramdisks for (L4)Linux.</li>
+</ul></li>
+</ul>
+
+<p>All object directories are built by default.</p>
+
+<h1>Serial Console</h1>
+
+<p>If you happen to use Windows as your workstation OS to connect to your
+target machine we recommend using PuTTY (free, open source tool, ask your
+favorite search engine) as a terminal emulator. Hyperterm is not
+recommended because it is basically unable to display all the output
+properly.</p>
+
+<p>On Linux hosts the situation is much more relaxed, minicom and PuTTY are
+known to work, as probably any other solution.</p>
+
+<h1>QEMU</h1>
+
+<p>To run the built system under QEMU, go to an appropriate
+<code>obj/l4</code>-directory of your choice, such as <code>obj/l4/x86</code>, and run:</p>
+
+<pre><code>make qemu
+</code></pre>
+
+<p>This will display a dialog menu to let you choose an entry to boot. For
+example, choose 'hello' and you should see the system starting and finally
+see "Hello World" scroll by periodically.</p>
+
+<h1>Configuring yourself</h1>
+
+<p>The <code>make setup</code> step configures predefined setups for both the
+L4Re microkernel (Fiasco) and the L4Re user-level software, and
+connects both together so the images for the target system can be
+built.</p>
+
+<p>Of course, you can also do this yourself for your specific targets.</p>
+
+<p>Generally, the microkernel is built for a very specific target, i.e. it is
+build for a SoC, such as ARM's Zedboard based on the Xilinx Zynq platform,
+or the MIPS Baikal-T.</p>
+
+<p>In contrast, L4Re is built for the architecture and possibly
+sub-architecture (CPU variant). Again referring to the Zedboard and
+Baikal-T, L4Re would be compiled for the ARMv7-A ARM CPU variant and
+MIPS32r2 variant respectively.</p>
+
+<h2>Configure the L4Re microkernel aka Fiasco </h2>
+
+<p>Within the snapshot layout build directories for Fiasco are created under
+<code>obj/fiasco</code>. To create a build directory, go to <code>src/kernel/fiasco</code> and do:</p>
+
+<pre><code>$ cd src/kernel/fiasco
+$ make B=../../../obj/fiasco/builddir
+Creating build directory "../../../obj/fiasco/builddir"...
+done.
+</code></pre>
+
+<p>This will have created a build directory, go there and configure it
+according to your requirements:</p>
+
+<pre><code>$ cd ../../../obj/fiasco/builddir
+$ make config
+</code></pre>
+
+<p><code>make config</code> will open up a configuration menu. Configure Fiasco as
+required. Finally save the configuration and build:</p>
+
+<pre><code>$ make -j4
+</code></pre>
+
+<p>When successful, this will create a file <code>fiasco</code> in the build directory.</p>
+
+<h2>Configure L4Re User-Level Infrastructure</h2>
+
+<p>Within the snapshot layout build directories for the L4Re user-level
+infrastructure are under <code>obj/l4</code>. To create a build directory, go to
+<code>src/l4</code> and do:</p>
+
+<pre><code>$ cd src/l4
+$ make B=../../obj/l4/builddir
+</code></pre>
+
+<p>This will have created a build directory, go there and configure
+it according to your requirements:</p>
+
+<pre><code>$ cd ../../obj/l4/builddir
+$ make config
+</code></pre>
+
+<p><code>make config</code> will open up a configuration menu. Configure as
+required. Finally save the configuration build:</p>
+
+<pre><code>$ make -j4
+</code></pre>
+
+<p>Building will compile all the components of L4Re, however, it will not build
+an image that you can load on the target.</p>
+
+<h2>Pulling it together</h2>
+
+<p>For creating images to load on the target, the image building step
+needs to know where all the files can be found to include in the image.
+The image contains all the executable program files of the setup to build,
+including the Fiasco kernel, but also other files that are necessary
+to run the setup, such as configuration files, ramdisks, or data files.</p>
+
+<p>The image building step is integrated in the l4re build system. All
+relevant configuration settings for building an image are
+taken from <code>src/l4/conf/Makeconf.boot</code>. A template is available
+as <code>src/l4/conf/Makeconf.boot.example</code>, and it is encouraged that you
+copy that file to <code>src/l4/conf/Makeconf.boot</code>.</p>
+
+<p>The most relevant variable in that file is <code>MODULE_SEARCH_PATH</code> which
+defines where the image building process shall look for files. This variable
+has absolute paths separated with either spaces or colons (':').
+For the examples to work, we need to add the path to the Fiasco
+build directory as you have chosen in the above building step.
+Change the line accordingly.</p>
+
+<p>When done, you can proceed to build an image. Go to the l4 build directory
+and create an image. You can create ELF, uimage and raw images, chose
+whichever one you need for your target's boot loader.</p>
+
+<pre><code>$ obj/l4/builddir
+$ make uimage PLATFORM_TYPE=rv_vexpress
+</code></pre>
+
+<p>This will present you a menu of selectable setups and will finally
+build the image. You can avoid some typing by using shortcuts:</p>
+
+<pre><code>$ make uimage E=hello PT=rv_vexpress
+</code></pre>
+
+<p>The built image can be found in the <code>images</code> sub-directory, e.g. as
+<code>images/bootstrap_hello.uimage</code>.</p>
+
+<p>Use that uimage file to load it on the target using u-boot.</p>
+
+<h2>Setup Configuration, and more</h2>
+
+<p>The configuration file to configure the contents of images and generally
+the entries to boot is</p>
+
+<pre><code>src/l4/conf/modules.list
+</code></pre>
+
+<p>It contains <code>entry</code> sections with modules for each entries listed.
+When using non-absolute paths, the image building will you the
+<code>MODULE_SEARCH_PATH</code> to find those files. You can also use absolute paths.</p>
+
+<p>The Makeconf.boot file is a <code>make</code> file, allowing for individual
+configuration according to your needs. You may use available variables such
+as <code>PLATFORM_TYPE</code>, <code>BUILD_ARCH</code>, and <code>QEMU_OPTIONS</code> to construct
+configurations as required by different targets and architectures.</p>
+
+<p>The Makeconf.boot file can also be stored in a build directory under the
+<code>conf/</code> sub-directory.</p>
+
+<h1>Adding your own code</h1>
+
+<p>Your own code should be placed outside the snapshot directory. This allows
+that the snapshot can be replaced with a more recent version without
+needing to take care about your own files and directories.</p>
+
+<p>Software components are usually put into so-called packages, and each
+package has a structure like this:</p>
+
+<pre><code>pkgname/
+        doc/               - Documentation for the package
+        include/           - Public headers for the package
+        lib/               - Library code
+          src/
+        server/            - Program code
+          src/
+</code></pre>
+
+<p>This is just a recommended structure, it is not required to be like that.
+What is built is defined in the Makefiles in each directory.</p>
+
+<p>A typical Makefile looks like this:</p>
+
+<pre><code>PKGDIR  ?= .
+L4DIR   ?= path/to/your/l4dir
+
+# Statements specific to the used role
+
+include $(L4DIR)/mk/&lt;role&gt;.mk
+</code></pre>
+
+<p>Role might be:
+* <code>subdir</code>:  Descent to further subdirectories
+* <code>lib</code>:     Build a library
+* <code>prog</code>:    Build a program
+* <code>include</code>: Process include files</p>
+
+<p>The directory <code>l4/mk/tmpl</code> contains a template package directory layout
+structure and shows how a package might look like. It also contains
+examples on what to do in the Makefiles.</p>
+
+<p>A very basic example might go like this:</p>
+
+<pre><code>$ mkdir /tmp/myfirstpkg
+$ cd /tmp/myfirstpkg
+$ editor Makefile
+$ cat Makefile
+PKGDIR  ?= .
+L4DIR   ?= /path/to/snapshot/src/l4
+
+TARGET          = myfirstprogram
+SRC_C           = main.c
+
+include $(L4DIR)/mk/prog.mk
+$ editor main.c
+$ cat main.c
+#include &lt;stdio.h&gt;
+
+int main(void)
+{
+  printf("Hello!\n");
+  return 0;
+}
+$ make O=/path/to/snapshot/obj/l4/arm-rv-arm9
+...
+$ ls /path/to/snapshot/obj/l4/arm-rv-arm9/bin/arm_rv/l4f/myfirstprogram
+/path/to/snapshot/obj/l4/arm-rv-arm9/bin/arm_rv/l4f/myfirstprogram
+$
+</code></pre>
+
+<h2>Tips and tricks</h2>
+
+<p>If you're just building for one build directory you can do the
+following to avoid the <code>O=...</code> argument on every make call.</p>
+
+<p>Put <code>O=/path/to/the/build-dir</code> into L4DIR/Makeconf.local</p>
+
+<p>Also, you can just issue 'make' in the build directories directly.</p>
+
+<h2>Setup for multiple packages</h2>
+
+<p>Create a directory structure like this:</p>
+
+<pre><code>dir/
+dir/pkg1
+dir/pkg2
+dir/pkg3
+</code></pre>
+
+<p>Put this Makefile into dir/Makefile:</p>
+
+<pre><code>PKGDIR  = .
+L4DIR   ?= /path/to/your/l4dir/l4
+
+TARGET = $(wildcard [a-zA-Z]*)
+
+include $(L4DIR)/mk/subdir.mk
+</code></pre>
+
+<p>This will build all sub packages from within this directory. Make sure
+to define L4DIR properly in every Makefile in the packages (or
+alternatively, include a file which defines it, but this file has to be
+absolute as well). 
+In the package directories you can have the normal Makefiles as in
+<code>l4/pkg/pkgname</code>.</p>

@@ -1,0 +1,63 @@
+l4util_u| 
+l4util_u| 
+l4util_u|      CUnit - A Unit testing framework for C - Version 2.1-0
+l4util_u|      http://cunit.sourceforge.net/
+l4util_u| 
+l4util_u| 
+l4util_u| Suite: L4Util bitops test
+l4util_u|   Test: test_basic_bitops ... passed
+l4util_u|   Test: test_find_bit ... passed
+l4util_u|   Test: test_and_set ... passed
+l4util_u|   Test: test_bit_scan ... passed
+l4util_u| Suite: L4Util atomic test
+l4util_u|   Test: test_cmpxchg32 ... passed
+l4util_u|   Test: test_cmpxchg32_res ... passed
+l4util_u|   Test: test_xchg32 ... passed
+l4util_u|   Test: test_cmpxchg64 ... passed
+l4util_u|   Test: test_add32 ... passed
+l4util_u|   Test: test_and32 ... passed
+l4util_u|   Test: test_sub32 ... passed
+l4util_u|   Test: test_or32 ... passed
+l4util_u|   Test: test_add32_res ... passed
+l4util_u|   Test: test_sub32_res ... passed
+l4util_u|   Test: test_and32_res ... passed
+l4util_u|   Test: test_or32_res ... passed
+l4util_u|   Test: test_atomic_inc32 ... passed
+l4util_u|   Test: test_atomic_dec32 ... passed
+l4util_u|   Test: test_atomic_inc32_res ... passed
+l4util_u|   Test: test_atomic_dec32_res ... passed
+l4util_u|   Test: test_cmpxchg8 ... passed
+l4util_u|   Test: test_cmpxchg16 ... passed
+l4util_u|   Test: test_cmpxchg8_res ... passed
+l4util_u|   Test: test_cmpxchg16_res ... passed
+l4util_u|   Test: test_xchg8 ... passed
+l4util_u|   Test: test_xchg16 ... passed
+l4util_u|   Test: test_add8 ... passed
+l4util_u|   Test: test_add16 ... passed
+l4util_u|   Test: test_sub8 ... passed
+l4util_u|   Test: test_sub16 ... passed
+l4util_u|   Test: test_and8 ... passed
+l4util_u|   Test: test_and16 ... passed
+l4util_u|   Test: test_or8 ... passed
+l4util_u|   Test: test_or16 ... passed
+l4util_u|   Test: test_add8_res ... passed
+l4util_u|   Test: test_add16_res ... passed
+l4util_u|   Test: test_sub8_res ... passed
+l4util_u|   Test: test_sub16_res ... passed
+l4util_u|   Test: test_and8_res ... passed
+l4util_u|   Test: test_and16_res ... passed
+l4util_u|   Test: test_or8_res ... passed
+l4util_u|   Test: test_or16_res ... passed
+l4util_u|   Test: test_atomic_inc8 ... passed
+l4util_u|   Test: test_atomic_inc16 ... passed
+l4util_u|   Test: test_atomic_dec8 ... passed
+l4util_u|   Test: test_atomic_dec16 ... passed
+l4util_u|   Test: test_atomic_inc8_res ... passed
+l4util_u|   Test: test_atomic_inc16_res ... passed
+l4util_u|   Test: test_atomic_dec8_res ... passed
+l4util_u|   Test: test_atomic_dec16_res ... passed
+l4util_u| 
+l4util_u| --Run Summary: Type      Total     Ran  Passed  Failed
+l4util_u|                suites        2       2     n/a       0
+l4util_u|                tests        50      50      50       0
+l4util_u|                asserts     489     489     489       0

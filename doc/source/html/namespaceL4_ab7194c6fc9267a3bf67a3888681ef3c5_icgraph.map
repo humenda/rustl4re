@@ -1,0 +1,6 @@
+<map id="L4::cap_cast" name="L4::cap_cast">
+<area shape="rect" id="node2" href="$classL4Re_1_1Cap__alloc.html#a0a1e264189083fa861cae9668454af28" title="Allocate a capability. " alt="" coords="155,5,315,32"/>
+<area shape="rect" id="node3" href="$classL4Re_1_1Util_1_1Counting__cap__alloc.html#a4f4222a51bf36d9f597a3417170e52a6" title="Allocate a new capability slot. " alt="" coords="163,57,307,98"/>
+<area shape="rect" id="node4" href="$classL4_1_1Ipc__svr_1_1Server__iface.html#ac44e716be4e47dab6b68cc91801fc7b8" title="Get given receive buffer as typed capability. " alt="" coords="165,122,304,163"/>
+<area shape="rect" id="node5" href="$classL4virtio_1_1Svr_1_1Block__dev.html#a9a96e928470518780132b45397e8ad35" title="Attach device to an object registry. " alt="" coords="167,187,302,229"/>
+</map>

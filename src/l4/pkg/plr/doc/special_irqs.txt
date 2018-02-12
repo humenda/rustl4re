@@ -1,0 +1,24 @@
+=================================================
+         Romain Special Interrupt Values
+=================================================
+
+Applications can issue "magic interrupts" to trigger features in the Romain
+master process. These interrupts are used to implement debugging features. They
+are triggered by issuing an x86 INT instruction with a respective parameter.
+
+
+
+INT 0x41 -- NOOP
+----------------
+
+The noop syscall does nothing but trigger an exception visible to the master.
+The intention is to use this syscall to trigger state comparison at arbitrary
+points in time.
+
+
+INT 0x42 -- Enable Logging
+--------------------------
+
+Turn on full logging in the master. This can also be configured in the INI
+file, but sometimes you want to run your program up to a certain point before
+triggering full output.

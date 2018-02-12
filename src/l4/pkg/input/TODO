@@ -1,0 +1,8 @@
+- other devices (for now only PS/2 mouse and keyboards are supported)
+  - USB stub
+  - serial mice
+- dynamic event lists (means: no static buffers
+  and memcpy)
+  BUT: one can use callback mode
+- dox
+- jiffies thread is not necessary in L4IO mode

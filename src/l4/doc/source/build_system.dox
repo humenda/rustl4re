@@ -1,0 +1,482 @@
+// vi:ft=c
+/**
+
+\page l4re_build_system L4Re Build System
+
+L4Re uses a custom make-based build system, often simply referred to as *BID*.
+This section explains how to use BID when writing applications and libraries
+for L4Re.
+
+
+\section l4re_build_system_using Building L4Re
+
+Setting up the Build Directory
+------------------------------
+
+L4Re must be built out-of-source. Therefore the first mandatory step is
+creating and populating a build directory. From the root of the
+L4Re source tree run
+
+    make B=<builddir>
+
+Other targets that can be executed in the source directory are
+
+\par update
+Update the source directory from svn. Only makes sense when you have
+downloaded L4Re from the official subversion repository.
+
+\par help
+Show a short help with the most important targets.
+
+
+Invoking Make
+-------------
+
+Once the build directory is set up, BID make can be invoked in one of two ways:
+
+1. Go to the build directory and invoke make without special options.
+
+2. Go to a source directory with a BID make file and invoke
+   `make O=<builddir> ...`.
+
+The default target builds the source (as you would expect),
+other targets that are available in build mode are
+
+\par cleanfast
+Quickly cleans the build directory by removing all subdirectories that
+contain generated files. The configuration will remain untouched.
+
+\par clean
+Remove generated files. Slower than `make cleanfast` but can be used
+on selected packages. Use `S=...` to select the target package.
+
+
+In addition to these targets, there are a number of targets to
+generate images which are explained elsewhere.
+
+
+\section l4re_build_system_writing Writing BID Make Files
+
+The BID build system exports different roles that define what should
+be done in the subdirectory. So a BID make file essentially consists
+of defining the role and a number of role-dependent make
+variables. The basic layout should look like this:
+
+~~~
+PKGDIR  ?= <path to package's root directory>  # e.g., '.' or '..'
+L4DIR   ?= <path to L4Re source directory>     # e.g. '$(PKGDIR)/../..'
+
+<various definitions>
+
+include $(L4DIR)/mk/<role>.mk
+~~~
+
+`PKGDIR` in the first line defines the root directory of the current
+package. `L4DIR` in the next line must be pointed to the root of the
+L4Re source tree the package should be built against. After this
+custom variable definitions for the role follow. In the final line
+of the file, the make file with the role-specific rules must be sourced.
+
+The following roles are currently defined:
+
+ -                             project.mk - Sub-project Role
+ -                             subdir.mk - Directory Role
+ - \subpage bid_role_prog     "prog.mk - Application Role"
+ -                             lib.mk - Library Role
+ - \subpage bid_role_include  "include.mk - Header File Role"
+ -                             doc.mk - Documentation Role
+ - \subpage bid_role_test     "test.mk - Test Application Role"
+ -                             idl.mk - IDL File Role (currently unused)
+ -                             runux.mk - Tests in FiascoUX Role
+
+BID-global Variables
+--------------------
+
+This section lists variables that configure how the BID build system
+behaves. They are applicable for all roles.
+
+Variable | Description
+---------|----------------------
+CC       | C compiler for target
+CXX      | C++ compiler for target
+HOST_CC  | C compiler for host
+HOST_CXX | C++ compiler for host
+*/
+
+/** \page bid_role_prog prog.mk - Application Role
+
+The prog role is used to build executable programs.
+
+General Configuration Variables
+-------------------------------
+
+The following variables can only be set globally for the Makefile:
+
+\par `MODE`
+
+Kind of target to build for. The following values are possible:
+
+ - `static` - build a statically linked binary (default)
+ - `shared` - build a dynamically linked binary
+ - `l4linux` - build a binary for running on L4Linux on the target platform
+ - `host` - build for host system
+ - `targetsys` - build a binary for the target platform with the compiler's
+                 default settings
+
+\par `SYSTEMS`
+
+List of architectures the target can be built for. The entries must be
+space-separated entries either naming an architecture (e.g. amd64) or
+an architecture and ABI (e.g, arm-l4f). When not defined, the target
+will be built for all possible platforms.
+
+\par `TARGET`
+
+Name or names of the binaries to compile. This variable may also be
+postfixed with a specific architecture.
+
+\par `SRC_CC_IS_CXX11`
+
+C++ standard to use. Default is `c++0x`.
+
+Target-specific Configuration Variables
+---------------------------------------
+
+The following variables may either be used with or without a description
+suffix. Without suffix they will be used for all operations. With a
+specific description their use is restricted to a subset.
+These specifications include a target file and
+the architecture, both optional but in this order, separated by
+underscores. The specific variables will be used in addition to the
+more general ones.
+
+\par `SRC_C` / `SRC_CC` / `SRC_F` / `SRC_S`
+
+.c, .cc, .f90, .S source files.
+
+\par `REQUIRES_LIBS`
+
+List of libraries the binary depends on. This works only with libraries
+that export a pkg_config configuration file. Automatically adds any required
+include and link options.
+
+\par `DEPENDS_PKGS`
+
+List of packages this binary depends on. If one these packages is missing
+then building of the binary will be skipped.
+
+\par `CPPFLAGS` / `CFLAGS` / `CXXFLAGS` / `FFLAGS` / `ASFLAGS`
+
+Options for the C preprocessor, C compiler, C++ compiler, Fortran compiler
+and assembler. When used with suffix, the referred element is the source file,
+not the target file.
+
+\par `LDFLAGS`
+
+Options for the linker ld.
+
+\par `LIBS`
+
+Additional libraries to link against (with -l).
+
+\par `PRIVATE_LIBDIR`
+
+Additional directories to search for libraries.
+
+\par `CRT0` / `CRTN`
+
+(expert use only) Files containing custom startup and finish code.
+
+\par `LDSCRIPT`
+
+(expert use only) Custom link script to use.
+
+*/
+
+/** \page bid_role_include include.mk - Header File Role
+
+The header file role is responsible for installing header file at the
+appropriate location. The following variables can be used for customizing
+the process:
+
+\par `INCSRC_DIR`
+
+Source directory where the headers can be found. Default is the directory
+where the Makefile resides.
+
+\par `TARGET`
+
+List of header files to install. If left undefined, then `INCSRC_DIR` will
+be scanned for files with suffix `.h` or `.i`.
+
+\par `EXTRA_TARGET`
+
+When TARGET is undefined, then add these files to the headers found by
+scanning the source directory. Has no effect if `TARGET` has been defined.
+
+\par `CONTRIB_HEADERS`
+
+When set, the headers will be installed in
+`${BUILDDIR}/include/contrib/${PKGNAME}`
+rather than `${BUILDDIR}/include/l4/${PKGNAME}`.
+
+\par `INSTALL_INC_PREFIX`
+
+Base directory where to install the headers. Overwrites `CONTRIB_HEADERS`.
+The headers will then be found under
+`${BUILDDIR}/include/${INSTALL_INC_PREFIX}`.
+
+\par `PC_FILENAME`
+
+When set, a pkg_config configuration file is created with the given name.
+
+*/
+
+/** \page bid_role_test test.mk - Test Application Role
+
+The test role is very similar to the application role, it also builds an
+executable binary. The difference is that is also builds for each target
+a test script that executes the test target either on the host (MODE=host)
+or a target platform (currently only qemu).
+
+The role accepts all make variables that are accepted by the
+application role. The only difference
+is that the `TARGET` variable is not required. If it is missing, the
+source directory will be scanned for source files that fit the pattern
+`test_*.c[c]` and create one target for each of them.
+
+\note It is possible to still use SRC_C[C] when targets are determined
+      automatically. In that case the specified sources will be used
+      *in addition* to the main `test_*.c[c]` source.
+
+In addition to the variables above, there are a number of variables that
+control how the test is executed. All these variables may be used as
+a global variable that applies to all test or, if the target name is
+added as a suffix, set for a specific target only.
+
+\par `TEST_TARGET`
+Name of binary containing the test (default: same as `TARGET`).
+
+\par `TARGET_$(ARCH)`
+When TARGET is undefined, these targets are added to the list of targets for
+the specified architecture. For all targets `SRC_C[C]` files must be
+defined separately.
+
+\par `TEST_EXPECTED`
+File containing expected output.
+By default the variable is empty, which means the test binary
+is expected to produce TAP test output, that can be directly
+processed.
+
+\par `TEST_EXPECTED_REPEAT`
+Number of times the expected output should be repeated, by default 1.
+When set to 0 then output is expected to repeat forever. This is particularly
+useful to make sure that stress tests that are meant to run in an endless
+loop are still alive. Note that such endless tests can only be run by
+directly executing the test script. They will be skipped when run in a
+test harness like `prove`.
+
+\par `TEST_TIMEOUT`
+Non-standard timeout after which the test run is aborted
+(useful for tests involving sleep).
+
+\par `NED_CFG`
+LUA configuration file for startup to give to Ned
+
+\par `REQUIRED_MODULES`
+Additional modules needed to run the test.
+
+\par `QEMU_ARGS`
+Additional parameters to supply to QEMU.
+
+\par `MOE_ARGS`
+
+Additional parameters to supply to moe.
+
+\par `KERNEL_CONF`
+Features the Fiasco kernel must have been compiled with.
+A space-separated list of config options as used by
+Kconfig. `run_test` looks for a `globalconfig.out` file
+in the same directory as the kernel and checks that all
+options are enabled. If not, the test is skipped.
+Has only an effect if the `globalconfig.out` file is present.
+
+\par `L4LINUX_CONF`
+Features the L4Linux kernel must have been compiled with.
+Similar to `KERNEL_CONF` but checks for a `.config` file
+in the directory of the L4Linux kernel.
+
+\par `TEST_SETUP`
+Command to execute before the test is run.
+The test will only be executed if the command returns 0.
+If the exit code is 2, the test is marked as skipped
+with the reason provided in the final line of stdout.
+
+\par `TEST_LOGFILE`
+Append output of test execution to the given file unless
+TEST_WORKDIR is given.
+
+\par `TEST_WORKDIR`
+Create logs, temp and other files below the given directory. That
+directory is taken as base dir for more automatically created subdir
+levels using the current test path, in order to guarantee conflict-free
+usage when running many different tests with a common workdir. When
+TEST_WORKDIR is provided then TEST_LOGFILE is ignored as it is
+organized below workdir.
+
+In addition to compiled tests, it is also possible to create tests
+where the test binary or script comes from a different source. These
+tests must be listed in `EXTRA_TARGET` and for each target a
+custom `TEST_TARGET` must be provided.
+
+Running Tests
+-------------
+
+The make role creates a test script which can be found in
+`<builddir>/test/t/<arch>/<api>`. It is possible to organise
+the tests further in subdirectories below by specifying a
+TEST_GROUP.
+
+To be able to execute the test, a minimal test environment needs
+to be set up by exporting the following environment variables:
+
+\par `KERNEL_<arch>`, `KERNEL`
+Fiasco kernel binary to use. The test runner is able to check if the
+kernel has all features necessary for the test and skip tests accordingly.
+In order for this to work, the `globalconfig.out` config file from the
+build directory needs to be available in the same directory as the
+kernel.
+
+\par `L4LX_KERNEL_<arch>`, `L4_LX_KERNEL`
+L4Linux binary to use. This is only required to run tests in
+`mode=l4linux`. If no L4Linux kernel is set then these tests
+will simply be skipped.
+The test runner is also able to check if the kernel has all features
+compiled in that are required to run the test successfully (see make
+variable `L4LINUX_CONF` above). For this to work, the `.config` configuration
+file from the build directory needs to be available in the same
+directory as the kernel.
+
+\par `LINUX_RAMDISK_<arch>`, `LINUX_RAMDISK`
+Ramdisk to mount as root in L4Linux. This is only required to run tests in
+`mode=l4linux`. If not supplied, L4Linux tests will be skipped.
+The ramdisk must be set up to start the test directly after the
+initial startup is finished. The name of the test binary is supplied
+via the kernel command line option `l4re_testprog`. The `tool/test`
+directory contains an example script `launch-l4linux-test`. which can
+be copied onto the ramdisk and started by the init script.
+
+In addition to these variables, the following BID variables can be
+overwritten at runtime: `PT` (for the plaform type) and `TEST_TIMEOUT`.
+You may also supply `QEMU_ARGS` and `MOE_ARGS` which will be appended
+to the parameters specified in the BID test make file.
+
+Once the environment is set up, the tests can be run either by simply
+executing all of them from the build directory with
+
+    make test
+
+or executing them directly, like
+
+    test/t/amd64_amdfam10/l4f/l4re-core/moe/test_namespace.t
+
+or running one or more tests through the test harness
+[prove](http://perldoc.perl.org/prove.html), like
+
+    prove test/t/amd64_amdfam10/l4f/l4re-core/moe/test_namespace.t
+    prove -r test/t/amd64_amdfam10/l4f/l4re-core/
+    prove -rv test/t/amd64_amdfam10/l4f/l4re-core/
+
+Running Tests in External Programs
+----------------------------------
+
+You can hand-over test execution to an external program by setting the
+environment variable `EXTERNAL_TEST_STARTER` to the full path of that
+program:
+
+    export EXTERNAL_TEST_STARTER=/path/to/external/test-starter
+    make test
+
+\par `EXTERNAL_TEST_STARTER`
+
+This variable is evaluated by `tool/bin/run_test` (the backend behind
+`make test`) and contains the full path to the tool which actually
+starts the test instead of the test itself.
+
+The `EXTERNAL_TEST_STARTER` can be any program instead of the default
+execution via `make qemu E=maketest`. Its output is taken by
+`run_test` as the test output.
+
+Usually it is just a bridge to prepare the test execution, e.g., it
+could create the test as image and start that image via a simulator.
+
+
+### Running Tests in a Simulator
+
+Based on above mechanism there is a dedicated external test starter
+`tool/bin/teststarter-image-telnet.pl` shipped in BID which assumes an
+image to be started with another program which provides test execution
+output on a network port.
+
+This can be used to execute tests in a simulator, like this:
+
+    export EXTERNAL_TEST_STARTER=$L4RE_SRC/tool/bin/teststarter-image-telnet.pl
+    export SIMULATOR_START=/path/to/configured/simulator-exe
+    make test
+
+After building the image and starting the simulator it contacts the
+simulator via a network port (sometimes called "telnet" port) to
+pass-through its execution output as its own output so it gets
+captured by `run_test` as usual.
+
+The following variables control `teststarter-image-telnet.pl`:
+
+\par `SIMULATOR_START`
+This points to the full path of the program that actually starts the
+prepared test image. Most often this is the frontend script of your
+simulator environment which is pre-configured so that it actually
+works in the way that `teststarter-image-telnet.pl` expects from the
+following settings.
+
+\par `SIMULATOR_IMAGETYPE`
+The image type to be generated via `make $SIMULATOR_IMAGETYPE
+E=maketest`. Default is `elfimage`.
+
+\par `SIMULATOR_HOST`
+The simulator will be contacted via socket on that host to read its
+output. Default is `localhost`.
+
+\par `SIMULATOR_PORT`
+The simulator will be contacted via socket on that port to read its
+output. Default is `11111`.
+
+\par `SIMULATOR_START_SLEEPTIME`
+After starting the simulator it waits that many seconds before reading
+from the port. Default is `1` (second).
+
+
+Debugging Tests
+---------------
+
+The test script is only a thin wrapper that sets up the test
+environment as it was defined in the make file and then executes
+two scripts: `tapper-wrapper` and `run_test`.
+
+The main work horse of the two is `tool/bin/run_test`. It collects
+the necessary files and starts qemu to execute the test. This script
+is always required.
+
+There is then a second script wrapped around the test runner:
+`tool/bin/tapper-wrapper`. This tool inspects the output of the test
+runner and reformats it, so that it can be read by tools like `prove`.
+If the test produces tap output, then the script scans for this output
+and filters away all the debug output. If `TEST_EXPECTED` was defined,
+then the script scans the output for the expected lines and prints a
+suitable TAP message with success or failure. It also makes sure that
+qemu is killed as soon as the test is finished.
+
+There are a number of command-line parameters that allow to quickly
+change test parameters for debugging purposes. Run the test with
+'--help' for more information about available parameters.
+
+*/

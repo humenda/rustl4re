@@ -1,0 +1,3 @@
+provides: libsupc++
+requires: libstdc++-headers libc libpthread
+maintainer: warg@os.inf.tu-dresden.de

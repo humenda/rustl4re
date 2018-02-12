@@ -1,0 +1,5 @@
+<map id="cxx::Bitmap_base::scan_zero" name="cxx::Bitmap_base::scan_zero">
+<area shape="rect" id="node2" href="$classcxx_1_1Bitmap.html#acd38b76598f35a29aa8fc0d1dc6accd3" title="Create a bitmap with BITS bits. " alt="" coords="285,5,426,32"/>
+<area shape="rect" id="node3" href="$classcxx_1_1Bitmap__base.html#a6d3c655690f5e2a57967fb35e1ebdd28" title="Get the lvalue for the bit at index bit. " alt="" coords="256,56,455,83"/>
+<area shape="rect" id="node4" href="$classcxx_1_1Bitmap.html#a5eca163c43ec6bc8a5e05b4671801789" title="Scan for the first zero bit. " alt="" coords="273,107,437,133"/>
+</map>

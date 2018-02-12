@@ -1,0 +1,11 @@
+
+import <l4/sys/types.h>
+import <l4/dm_generic/types.h>
+#include <l4/log/log.idl>
+
+interface logcon : log
+{
+    int get_buffer([in]  l4_threadid_t dm_id,
+                   [out] l4dm_dataspace_t *ds, 
+                   [out] l4_size_t *size);
+};

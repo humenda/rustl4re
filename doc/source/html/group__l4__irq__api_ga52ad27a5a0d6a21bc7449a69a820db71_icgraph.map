@@ -1,0 +1,4 @@
+<map id="l4_irq_detach_u" name="l4_irq_detach_u">
+<area shape="rect" id="node2" href="$classL4_1_1Irq.html#a022dcb4101ba8205547c095cbc7e34a5" title="Detach from this interrupt. " alt="" coords="176,5,287,32"/>
+<area shape="rect" id="node3" href="$group__l4__irq__api.html#ga1d9b0812f3bc01d6d5ff7010df231e56" title="Detach from an interrupt source. " alt="" coords="177,56,285,83"/>
+</map>

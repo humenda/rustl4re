@@ -1,0 +1,10 @@
+<map id="cxx::Bitmap_base::word_index" name="cxx::Bitmap_base::word_index">
+<area shape="rect" id="node2" href="$classcxx_1_1Bitmap__base.html#a90b85625fab909f4bfa3cad35ccfba77" title="Set the value of bit bit to on. " alt="" coords="246,5,397,32"/>
+<area shape="rect" id="node4" href="$classcxx_1_1Bitmap__base.html#a141862ab924ef2580d1f73d7f55e7e8d" title="Clear bit bit. " alt="" coords="227,56,416,83"/>
+<area shape="rect" id="node5" href="$classcxx_1_1Bitmap__base.html#a1d6b445c937da45a056416e90643288e" title="Scan for the first zero bit. " alt="" coords="220,107,423,133"/>
+<area shape="rect" id="node9" href="$classcxx_1_1Bitmap__base.html#a67b5fac835cd7e13de70e191e487d3c5" title="Set bit bit. " alt="" coords="233,157,410,184"/>
+<area shape="rect" id="node3" href="$classcxx_1_1Bitmap__base.html#a15db5e4d5366a13cb5a49aeb357635a7" title="Get the bit at index bit. " alt="" coords="471,5,669,32"/>
+<area shape="rect" id="node6" href="$classcxx_1_1Bitmap.html#acd38b76598f35a29aa8fc0d1dc6accd3" title="Create a bitmap with BITS bits. " alt="" coords="499,56,641,83"/>
+<area shape="rect" id="node7" href="$classcxx_1_1Bitmap__base.html#a6d3c655690f5e2a57967fb35e1ebdd28" title="Get the lvalue for the bit at index bit. " alt="" coords="471,107,669,133"/>
+<area shape="rect" id="node8" href="$classcxx_1_1Bitmap.html#a5eca163c43ec6bc8a5e05b4671801789" title="Scan for the first zero bit. " alt="" coords="488,157,652,184"/>
+</map>

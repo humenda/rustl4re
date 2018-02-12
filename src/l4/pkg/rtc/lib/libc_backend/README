@@ -1,0 +1,5 @@
+This backend provides a time backend. It is currently based on the TSC,
+but could easily be changed to KIP time or another time source.
+
+Currently, this backend does not provide the 'realtime' but just the
+system's uptime.

@@ -1,0 +1,4 @@
+<map id="L4vbus::Pci_host_bridge::cfg_read" name="L4vbus::Pci_host_bridge::cfg_read">
+<area shape="rect" id="node2" href="$classL4vbus_1_1Device.html#a86e2a0b4eb5abb5ce6443690c6e2361f" title="Access the Vbus capability of the underlying virtual bus. " alt="" coords="227,5,400,32"/>
+<area shape="rect" id="node3" href="$group__l4vbus__pci__module.html#gab256a616cebc75bebfc13785cda1a4ab" title="Read from the vPCI configuration space using the PCI root bridge. " alt="" coords="238,56,389,83"/>
+</map>

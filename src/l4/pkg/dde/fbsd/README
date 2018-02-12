@@ -1,0 +1,83 @@
+
+                dde_fbsd: Device Driver Environment for FreeBSD
+
+                              Thomas Friebel
+
+
+Directory contents
+##################
+
+The sources are split into two worlds. Files of the first, bsd, are compiled
+with FreeBSD headers. Files of the second, dde, are compiled with L4 headers.
+This scheme is needed due to interferences between the two header worlds.
+Such are different definitions of string handling functions or of
+va_list/va_start etc. The interface between the two worlds is called the
+dde_gate. Most of it is just an encapsulation of the l4env primitives such as
+LOG, mutex, semaphore or of the higher level services like generic_io.
+
+Makefile.inc
+============
+
+include
+=======
+Header files for using dde_fbsd.
+  
+lib/include/bsd
+===============
+Header files included by FreeBSD code.
+
+  directory   | description
+ ---------------------------------------------------------
+  ./contrib   | original from FreeBSD
+  ./modified  | modified from FreeBSD
+  ./src       | private, to support dde implementation
+  ./generated | automatically generated during build time
+  ./options   | configuration options (#defines)
+  
+lib/include/dde_gate
+====================
+Interface between bsd and dde world.
+
+lib/include/dde_intern
+======================
+Private headers for dde implementation.
+
+lib/common
+==========
+Library providing common FreeBSD functionality to FreeBSD device drivers.
+
+  dir  | sub-dir     | description
+ ------------------------------------------------------------------------------------
+ ./bsd |             | dde sources to be compiled with FreeBDS (and gate) headers
+       | ./contrib   | original from FreeBSD
+       | ./modified  | modified from FreeBSD
+       | ./generated | automatically generated during build time
+       | ./dummies   | functions with no implementation (empty body; return NULL)
+       | ./src       | functionality written from scratch or too far away from
+       |             | the FreeBSD implementation for being in the modified category
+       |             | and helper functions
+-------------------------------------------------------------------------------------
+ ./dde |             | dde sources to be compiled with L4 (and gate) headers;
+       |             | implementation the dde_gate interface; helper functions
+
+lib/ata
+=======
+FreeBSD ATA(-PI) bus, disk, cdrom driver and dependencies as a library
+accessible via a FreeBSD-independent interface.
+
+  directory  | description
+ -------------------------------------------------------------------------
+  ./contrib  | original FreeBSD ATA(-PI) bus/disk driver and dependencies
+  ./modified | modified FreeBSD ATA(-PI) bus/disk driver and dependencies
+  ./src      | implementation of the DAD interface and helper functions
+
+:DAD:   DDE ATA driver
+
+examples/l4ata
+==============
+Server providing ATA(-PI) access for the BDDF.
+
+examples/tests
+==============
+Tests for the various DDE components.
+

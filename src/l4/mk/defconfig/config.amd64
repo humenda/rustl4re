@@ -1,0 +1,2 @@
+CONFIG_BUILD_ARCH_amd64=y
+# CONFIG_BID_GCC_OMIT_FP is not set

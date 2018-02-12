@@ -1,0 +1,46 @@
+  This is DDELinux 2.6.29
+
+Directory structure
+###################
+
+'contrib/'
+==========
+
+This directory tree holds unmodified Linux sources. The files residing here
+are sourced by Makefiles in 'examples' and 'lib'. All unmodified C headers are
+also kept here.
+
+
+'include/'
+==========
+
+Currently reimplemented and modified C headers as well as the DDELinux 2.6 API
+definition are kept in this directory tree.
+
+Include stuff works as following. First, we install all Linux headers from
+contrib/include to the build directory. Thereafter, we pull in our
+modifications by installing all header files from include/ to the appropriate
+include paths, thereby overwriting the original versions. 
+
+
+'lib/src/arch/l4'
+=================
+
+Contains reimplementations of Linux functions that are implemented differently
+in our environment or that are mapped to DDEKit calls. There are no Linux
+functions included here.
+
+
+'lib/src/<linux subdir name>'
+=============================
+
+When we import functions from Linux instead of reimplementing them, we copy
+the whole Linux source file containing this function to this location. We then
+modify the file according to our needs, mostly by wrapping unneeded parts with
+'#ifndef DDE_LINUX .. #endif' blocks.
+
+
+'examples/'
+==========
+
+Here reside test code and example drivers.

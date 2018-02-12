@@ -1,0 +1,4 @@
+<map id="L4::Thread::ex_regs" name="L4::Thread::ex_regs">
+<area shape="rect" id="node2" href="$classL4_1_1Kobject.html#a314161cb755de6fd0c50da0a757eb4c7" title="Return capability selector. " alt="" coords="231,5,350,32"/>
+<area shape="rect" id="node3" href="$group__l4__thread__api.html#ga5e191cd9b1cbc5d0ac9166fb2bdd5a18" title="Exchange basic thread registers and return previous values. " alt="" coords="200,56,381,83"/>
+</map>

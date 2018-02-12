@@ -1,0 +1,5 @@
+L4Env slab allocator
+
+This package contains a simple slab memory allocator for L4Env
+applications. For further documenation see the reference manual in
+slab/doc.

@@ -1,0 +1,6 @@
+<map id="cxx::H_list_t&lt; T &gt;" name="cxx::H_list_t&lt; T &gt;">
+<area shape="rect" id="node2" href="$classcxx_1_1H__list.html" title="{cxx::H_list\&lt; T, Bits\l::Basic_list_policy\&lt;\l T, H_list_item_t\&lt; T \&gt; \&gt; \&gt;\n||+ H_list()\l+ H_list()\l+ add()\l+ push_front()\l+ pop_front()\l+ insert()\l+ iter()\l+ in_list()\l+ insert_after()\l+ insert_before()\l+ replace()\l+ remove()\l+ erase()\l}" alt="" coords="71,711,251,993"/>
+<area shape="rect" id="node3" href="$classcxx_1_1Bits_1_1Basic__list.html" title="{cxx::Bits::Basic_list\l\&lt; Bits::Basic_list_policy\l\&lt; T, H_list_item_t\&lt; T \&gt; \&gt; \&gt;\n|# _f\l|+ Basic_list()\l+ Basic_list()\l+ empty()\l+ front()\l+ clear()\l+ begin()\l+ begin()\l+ end()\l+ end()\l+ iter()\l# __get_internal()\l# __iter()\l}" alt="" coords="5,351,193,619"/>
+<area shape="rect" id="node4" href="$classcxx_1_1Bits_1_1Basic__list.html" title="Internal: Common functions for all head&#45;based list implementations. " alt="" coords="137,5,275,259"/>
+<area shape="rect" id="node5" href="$classcxx_1_1H__list.html" title="General double&#45;linked list of unspecified cxx::H_list_item elements. " alt="" coords="217,358,392,611"/>
+</map>

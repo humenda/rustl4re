@@ -1,0 +1,86 @@
+// vi:ft=cpp
+/*
+ * \brief   User event representation
+ * \date    2005-10-24
+ * \author  Norman Feske <norman.feske@genode-labs.com>
+ */
+
+/*
+ * Copyright (C) 2005-2009
+ * Genode Labs, Feske & Helmuth Systementwicklung GbR
+ *
+ * This file is part of the Genode OS framework, which is distributed
+ * under the terms of the GNU General Public License version 2.
+ */
+
+#pragma once
+
+#include <l4/mag-gfx/geometry>
+#include <l4/re/event_enums.h>
+
+namespace Scout_gfx {
+
+using Mag_gfx::Point;
+
+/**
+ * Event structure
+ *
+ * This event structure covers timer events as
+ * well as user input events.
+ */
+class Event
+{
+public:
+
+  /**
+   * For key-codes see L4Re::event_enums.h
+   */
+
+  enum Ev_type
+  {
+    UNDEFINED = 0,
+    MOTION    = 1,   /* mouse moved         */
+    PRESS     = 2,   /* button/key pressed  */
+    RELEASE   = 3,   /* button/key released */
+    TIMER     = 4,   /* timer event         */
+    QUIT      = 5,   /* quit application    */
+    REFRESH   = 6,   /* refresh screen      */
+    WHEEL     = 7,   /* mouse wheel         */
+  };
+
+  Ev_type  type;
+  Point    m;          /* mouse position */
+  int      wx, wy;     /* wheel          */
+  int      code;       /* key code       */
+  int      key_cnt;
+
+  /**
+   * Assign new event information to event structure
+   */
+  inline void assign(Ev_type new_type, Point const &m, int new_code)
+  {
+    type = new_type;
+    this->m   = m;
+    wx   = 0;
+    wy   = 0;
+    code = new_code;
+  }
+};
+
+
+/**
+ * Event handler
+ */
+class Event_handler
+{
+public:
+
+  virtual ~Event_handler() { }
+
+  /**
+   * Handle event
+   */
+  virtual bool handle(Event const &e) = 0;
+};
+
+} //namespace Scout_gfx

@@ -1,0 +1,1007 @@
+// vi:ft=cpp
+/*
+ * (c) 2014 Alexander Warg <warg@os.inf.tu-dresden.de>
+ *
+ * This file is part of TUD:OS and distributed under the terms of the
+ * GNU General Public License 2.
+ * Please see the COPYING-GPL-2 file for details.
+ *
+ * As a special exception, you may use this file as part of a free software
+ * library without restriction.  Specifically, if other files instantiate
+ * templates or use macros or inline functions from this file, or you compile
+ * this file and link it with other files to produce an executable, this
+ * file does not by itself cause the resulting executable to be covered by
+ * the GNU General Public License.  This exception does not however
+ * invalidate any other reasons why the executable file might be covered by
+ * the GNU General Public License.
+ */
+#pragma once
+
+#include <limits.h>
+
+#include <l4/re/dataspace>
+#include <l4/re/env>
+#include <l4/re/error_helper>
+#include <l4/re/rm>
+#include <l4/re/util/cap_alloc>
+#include <l4/re/util/unique_cap>
+
+#include <l4/sys/types.h>
+#include <l4/re/util/meta>
+
+#include <l4/cxx/bitfield>
+#include <l4/cxx/utils>
+#include <l4/cxx/unique_ptr>
+
+#include <l4/sys/cxx/ipc_legacy>
+
+#include "../l4virtio"
+#include "virtio"
+
+/**
+ * \ingroup l4virtio_transport
+ */
+namespace L4virtio {
+namespace Svr {
+
+/**
+ * \brief Abstraction for L4-Virtio device config memory.
+ *
+ * Virtio defines a device configuration mechanism, L4-Virtio implements this
+ * mechanism based on shared memory a set_status() and a config_queue() call.
+ * This class provides an abstraction for L4-Virtio host implementations to
+ * establish such a shared memory data space and providing the necessary
+ * contents and access functions.
+ */
+class Dev_config
+{
+public:
+  typedef Dev_status Status;
+  typedef Dev_features Features;
+
+private:
+  typedef L4Re::Rm::Unique_region< l4virtio_config_hdr_t*> Cfg_region;
+  typedef L4Re::Util::Unique_cap<L4Re::Dataspace> Cfg_cap;
+
+  l4_uint32_t _vendor, _device, _qoffset, _nqueues;
+  l4_uint32_t _host_features[sizeof(l4virtio_config_hdr_t::dev_features_map)
+                             / sizeof(l4_uint32_t)];
+  Cfg_cap _ds;
+  Cfg_region _config;
+
+  Status _status; // status shadow, can be trusted by the device model
+
+  static l4_uint32_t align(l4_uint32_t x)
+  { return (x + 0xfU) & ~0xfU; }
+
+protected:
+  void volatile *get_priv_config() const
+  {
+    return l4virtio_device_config(_config.get());
+  }
+
+public:
+
+  /**
+   * \brief Setup/Create a L4-Virtio config data space.
+   * \param vendor      The vendor ID to store in config header.
+   * \param device      The device ID to store in config header.
+   * \param cfg_size    The size of the device-specific config data in bytes.
+   * \param num_queues  The number of queues provided by the device.
+   *
+   * This constructor allocates a data space used for L4-virtio config attaches
+   * the data space to the local address space and writes the initial contents
+   * to the config header.
+   */
+  Dev_config(l4_uint32_t vendor, l4_uint32_t device,
+             unsigned cfg_size, l4_uint32_t num_queues = 0)
+  : _vendor(vendor), _device(device),
+    _qoffset(0x100 + align(cfg_size)),
+    _nqueues(num_queues)
+  {
+    using L4Re::Dataspace;
+    using L4Re::chkcap;
+    using L4Re::chksys;
+
+    //if (_cfg_offset + align(cfg_size) >= L4_PAGESIZE)
+      // hm what to do
+
+    if (sizeof(l4virtio_config_queue_t) * _nqueues + _qoffset > L4_PAGESIZE)
+      {
+        // too many queues does not fit into our page
+        _qoffset = 0;
+        _nqueues = 0;
+      }
+
+    typedef L4Re::Util::Unique_cap<L4Re::Dataspace> Cfg_cap;
+    Cfg_cap cfg = chkcap(L4Re::Util::make_unique_cap<Dataspace>());
+    chksys(L4Re::Env::env()->mem_alloc()->alloc(L4_PAGESIZE, cfg.get()));
+    chksys(L4Re::Env::env()->rm()->attach(&_config, L4_PAGESIZE,
+                                          L4Re::Rm::Search_addr,
+                                          L4::Ipc::make_cap_rw(cfg.get())));
+    _ds = cxx::move(cfg);
+    _config->generation = 0;
+    memset(_config->driver_features_map, 0, sizeof (_config->driver_features_map));
+    memset(_host_features, 0, sizeof(_host_features));
+    _host_features[1] = 1; // virtio 1
+    reset_hdr();
+  }
+
+  void set_host_feature(unsigned feature)
+  { l4virtio_set_feature(_host_features, feature); }
+
+  void clear_host_feature(unsigned feature)
+  { l4virtio_clear_feature(_host_features, feature); }
+
+  bool get_host_feature(unsigned feature)
+  { return l4virtio_get_feature(_host_features, feature); }
+
+  l4_uint32_t &host_features(unsigned idx)
+  { return _host_features[idx]; }
+
+  l4_uint32_t host_features(unsigned idx) const
+  { return _host_features[idx]; }
+
+  /**
+   * Return a specific set of guest features.
+   *
+   * \param idx  Index into the guest features array.
+   *
+   * \retval  The selected set of guest features.
+   *
+   * This function returns a specific 32bit set of features enabled by the
+   * guest/driver. `idx` is the index in the guest features array, resp. the 32
+   * bit set to return.
+   */
+  l4_uint32_t guest_features(unsigned idx) const
+  { return _config->driver_features_map[idx]; }
+
+  /**
+   * \brief Get current device status (trusted).
+   * \return Current device status register (trusted).
+   *
+   * The status returned by this function is value stored internally and cannot
+   * be written by the guest (i.e., the value can be taken as trusted.)
+   */
+  Status status() const { return _status; }
+
+  /**
+   * Get the value from the `cmd` register.
+   *
+   * Note, the most significant eight bits are the command (0 is nothing to
+   * do). The upper eight bit are reset to zero after the command was handled.
+   */
+  l4_uint32_t get_cmd() const
+  {
+    return hdr()->cmd;
+  }
+
+  /**
+   * Reset the `cmd` register after execution of a command.
+   *
+   * This function resets the `cmd` register in order for the client to
+   * detect that the command was executed by the device.
+   */
+  void reset_cmd()
+  {
+    const_cast<l4_uint32_t volatile &>(hdr()->cmd) = 0;
+  }
+
+  /**
+   * \brief Set device status register.
+   * \param status  The new value for the device status register.
+   *
+   * This function sets the internal status register and also the status
+   * register in the shared memory to \a status.
+   */
+  void set_status(Status status)
+  {
+    _status = status;
+    const_cast<l4_uint32_t volatile &>(hdr()->status) = status.raw;
+  }
+
+  /**
+   * \brief Set device status failed bit.
+   *
+   * This function sets the internal status register and also the status
+   * register in the shared memory to \a status.
+   */
+  void set_failed()
+  {
+    _status.failed() = 1;
+    const_cast<l4_uint32_t volatile &>(hdr()->status) = _status.raw;
+  }
+
+  /**
+   * \brief Setup new queue configuration.
+   * \param num_queues  The number of queues provided by the device.
+   */
+  bool change_queue_config(l4_uint32_t num_queues)
+  {
+    if (sizeof(l4virtio_config_queue_t) * num_queues + _qoffset > L4_PAGESIZE)
+      // too many queues does not fit into our page
+      return false;
+
+    _nqueues = num_queues;
+    reset_hdr(true);
+    return true;
+  }
+
+  /**
+   * \brief Get queue read-only config data for queue with the given \a index.
+   * \param index  The index of the queue.
+   * \return Read-only pointer to the config of the queue with the given
+   *         \a index, or NULL if \a index is out of range.
+   */
+  l4virtio_config_queue_t volatile const *qconfig(unsigned index) const
+  {
+    if (L4_UNLIKELY(_qoffset < sizeof (l4virtio_config_hdr_t)))
+      return 0;
+
+    if (L4_UNLIKELY(index >= _nqueues))
+      return 0;
+
+    return reinterpret_cast<l4virtio_config_queue_t const *>
+      (reinterpret_cast<char *>(_config.get()) + _qoffset) + index;
+  }
+
+  /**
+   * \brief Reset the config header to the initial contents.
+   */
+  void reset_hdr(bool inc_generation = false) const
+  {
+    _config->magic = L4VIRTIO_MAGIC;
+    _config->version = 2;
+    _config->device = _device;
+    _config->vendor = _vendor;
+    _config->status = 0;
+    _config->irq_status = 0;
+    _config->num_queues = _nqueues;
+    _config->queues_offset = _qoffset;
+
+    memcpy(_config->dev_features_map, _host_features,
+           sizeof(_config->dev_features_map));
+    wmb();
+    if (inc_generation)
+      ++_config->generation;
+
+  }
+
+  /**
+   * \brief Reset queue config for the given queue.
+   * \param index    The index of the queue to reset.
+   * \param num_max  The maximum number of descriptor supported by this queue.
+   * \param inc_generation The config generation will be incremented when
+   *                       this is true.
+   * \return true on success, or false when \a index is out of range.
+   */
+  bool reset_queue(unsigned index, unsigned num_max,
+                   bool inc_generation = false) const
+  {
+    l4virtio_config_queue_t volatile *qc;
+    // this function is allowed to write to the device config
+    qc = const_cast<l4virtio_config_queue_t volatile *>(qconfig(index));
+    if (L4_UNLIKELY(qc == 0))
+      return false;
+
+    qc->num_max = num_max;
+    qc->num = 0;
+    qc->ready = 0;
+    wmb();
+    if (inc_generation)
+      ++_config->generation;
+
+    return true;
+  }
+
+  /**
+   * \brief Get a read-only pointer to the config header.
+   * \return Read-only pointer to the shared config header.
+   */
+  l4virtio_config_hdr_t const volatile *hdr() const
+  { return _config.get(); }
+
+  /**
+   * \brief Get data-space capability for the shared config data space.
+   * \return Capability for the shared config data space.
+   */
+  L4::Cap<L4Re::Dataspace> ds() const { return _ds.get(); }
+};
+
+
+template<typename PRIV_CONFIG>
+class Dev_config_t : public Dev_config
+{
+public:
+  /// Type for device private configuration space
+  typedef PRIV_CONFIG Priv_config;
+
+  /**
+   * \brief Setup/Create a L4-Virtio config data space.
+   * \param vendor      The vendor ID to store in config header.
+   * \param device      The device ID to store in config header.
+   * \param num_queues  The number of queues provided by the device.
+   *
+   * This constructor allocates a data space used for L4-virtio config attaches
+   * the data space to the local address space and writes the initial contents
+   * to the config header.
+   */
+  Dev_config_t(l4_uint32_t vendor, l4_uint32_t device,
+               l4_uint32_t num_queues = 0)
+  : Dev_config(vendor, device, sizeof(PRIV_CONFIG), num_queues)
+  {}
+
+  /**
+   * \brief Access the device private config structure.
+   * \return Pointer to the device private config structure within the shared
+   *         configuration space.
+   *
+   * You have to be very careful in reading and checking the contents of this
+   * data structure because it is prone to race conditions and arbitrary
+   * modifications by the guest.
+   */
+  Priv_config volatile *priv_config() const
+  {
+    return static_cast<Priv_config volatile *>(get_priv_config());
+  }
+
+};
+
+struct No_custom_data {};
+
+/**
+ * Region of driver memory, that shall be managed locally.
+ *
+ * \tparam DATA Class defining additional information
+ */
+template <typename DATA>
+class Driver_mem_region_t : public DATA
+{
+public:
+  struct Flags
+  {
+    l4_uint32_t raw; ///< raw flags value
+    CXX_BITFIELD_MEMBER(0, 0, rw, raw); ///< read-write flag
+  };
+
+private:
+  /// type for storing a data-space capability internally
+  typedef L4Re::Util::Unique_cap<L4Re::Dataspace> Ds_cap;
+
+  l4_uint64_t _drv_base; ///< base address used by the driver
+  l4_uint64_t _trans_offset; ///< offset for fast translation
+  l4_umword_t _size;     ///< size of the region in bytes
+  Flags       _flags;    ///< flags attached to this region
+
+  Ds_cap      _ds;       ///< data space capability backing this region
+  l4_addr_t   _ds_offset;
+
+  /// local mapping of the region
+  L4Re::Rm::Unique_region<l4_addr_t> _local_base;
+
+  template<typename T>
+  T _local(l4_uint64_t addr) const
+  {
+    return (T)(addr - _trans_offset);
+  }
+
+public:
+  /// Make default empty memroy region
+  Driver_mem_region_t() : _size(0) {}
+
+  /**
+   * \brief Make a local memory region for the given driver values.
+   * \param drv_base  Base address of the memory region used by the driver.
+   * \param size      Size of the memory region.
+   * \param offset    Offset within the data space that is mapped to \a
+   *                  drv_base within the driver.
+   * \param ds        Data space capability backing the memory.
+   *
+   * This constructor attaches the region of given data space to the
+   * local address space and stores the corresponding data for later reference.
+   */
+  Driver_mem_region_t(l4_uint64_t drv_base, l4_umword_t size,
+                      l4_addr_t offset, Ds_cap &&ds)
+  : _drv_base(l4_trunc_page(drv_base)), _size(0),
+    _ds_offset(l4_trunc_page(offset))
+  {
+    using L4Re::chksys;
+    using L4Re::Env;
+
+    L4Re::Dataspace::Stats ds_info = L4Re::Dataspace::Stats();
+    // Sometimes we work with dataspaces that do not implement all dataspace
+    // methods and return an error instead. An example of such a dataspace is
+    // io's Vi::System_bus. We detect this case when the info method returns
+    // -L4_ENOSYS and simply assume the dataspace is good for us.
+    long err = ds->info(&ds_info);
+    if (err >= 0)
+      {
+        l4_addr_t ds_size = l4_round_page(ds_info.size);
+
+        if (ds_size < L4_PAGESIZE)
+          chksys(-L4_EINVAL, "DS too small");
+
+        if (_ds_offset >= ds_size)
+          chksys(-L4_ERANGE, "offset larger than DS size");
+
+        size = l4_round_page(size);
+        if (size > ds_size)
+          chksys(-L4_EINVAL, "size larger than DS size");
+
+        if (_ds_offset > ds_size - size)
+          chksys(-L4_EINVAL, "invalid offset or size");
+
+        // overflow check
+        if ((ULLONG_MAX - size) < _drv_base)
+          chksys(-L4_EINVAL, "invalid size");
+
+        _flags.rw() = ds_info.flags & L4Re::Dataspace::Map_rw;
+      }
+    else if (err == -L4_ENOSYS)
+      {
+        _flags.rw() = true;
+      }
+    else
+      {
+        chksys(err, "getting data-space infos");
+      }
+
+    // use a big alignment to save PT/TLB entries and kernel memory resources!
+    chksys(Env::env()->rm()->attach(&_local_base, size,
+                                    L4Re::Rm::Search_addr | (_flags.rw() ? 0 : L4Re::Rm::Read_only),
+                                    L4::Ipc::make_cap(ds.get(), _flags.rw()
+                                                                ? L4_CAP_FPAGE_RW
+                                                                : L4_CAP_FPAGE_RO),
+                                    _ds_offset, L4_SUPERPAGESHIFT));
+
+    _size = size;
+    _ds = cxx::move(ds);
+    _trans_offset = _drv_base - _local_base.get();
+  }
+
+  /// \return True if the region is writable, false else.
+  bool is_writable() const { return _flags.rw(); }
+
+  /// \return The flags for this region.
+  Flags flags() const { return _flags; }
+
+  /// \return True if the region is empty (size == 0), false else.
+  bool empty() const
+  { return _size == 0; }
+
+  /// \return The base address used by the driver.
+  l4_uint64_t drv_base() const { return _drv_base; }
+
+  /// \return The local base address.
+  void *local_base() const { return (void*)_local_base.get(); }
+
+  /// \return The size of the region in bytes.
+  l4_umword_t size() const { return _size; }
+
+  /// \return The offset within the data space.
+  l4_addr_t ds_offset() const { return _ds_offset; }
+
+  /// \return The data space capability for this region.
+  L4::Cap<L4Re::Dataspace> ds() const { return _ds.get(); }
+
+  /**
+   * \brief Test if the given driver address range is within this region.
+   * \param base  The driver base address.
+   * \param size  The size of the region to lookup.
+   * \return true if the given driver address region is contained in
+   *         this region, false else.
+   */
+  bool contains(l4_uint64_t base, l4_umword_t size) const
+  {
+    if (base < _drv_base)
+      return false;
+
+    if (base > _drv_base + _size - 1)
+      return false;
+
+    if (size > _size)
+      return false;
+
+    if (base - _drv_base > _size - size)
+      return false;
+
+    return true;
+  }
+
+  /**
+   * \brief Get the local address for driver address \a p.
+   * \param p  Driver address to translate.
+   * \pre \a p \em must be contained in this region.
+   * \return Local address for the given driver address \a p.
+   */
+  template<typename T>
+  T *local(Ptr<T> p) const
+  { return _local<T*>(p.get()); }
+};
+
+typedef Driver_mem_region_t<No_custom_data> Driver_mem_region;
+
+/**
+ * List of driver memory regions assigned to a single L4-VIRTIO transport
+ * instance.
+ *
+ * \note The regions added to this list \em must never overlap.
+ */
+template <typename DATA>
+class Driver_mem_list_t
+{
+public:
+  typedef Driver_mem_region_t<DATA> Mem_region;
+
+private:
+  cxx::unique_ptr<Mem_region[]> _l;
+  unsigned _max;
+  unsigned _free;
+
+public:
+  /// type for storing a data-space capability internally
+  typedef L4Re::Util::Unique_cap<L4Re::Dataspace> Ds_cap;
+
+  /// Make an empty, zero capacity list.
+  Driver_mem_list_t() : _max(0), _free(0) {}
+
+  /**
+   * Make a fresh list with capacity \a max.
+   * \param max  The capacity of this vector.
+   */
+  void init(unsigned max)
+  {
+    _l = cxx::make_unique<Driver_mem_region_t<DATA>[]>(max);
+    _max = max;
+    _free = 0;
+  }
+
+  /// \return True if the remaining capacity is 0.
+  bool full() const
+  { return _free == _max; }
+
+  /**
+   * \brief Add a new region to the list.
+   * \param drv_base  Driver base address of the region.
+   * \param size      Size of the region in bytes.
+   * \param offset    Offset within the data space attached to drv_base.
+   * \param ds        Data space backing the driver memory.
+   * \return A pointer to the new region.
+   */
+  Mem_region const *add(l4_uint64_t drv_base, l4_umword_t size,
+                        l4_addr_t offset, Ds_cap &&ds)
+  {
+    if (full())
+      L4Re::chksys(-L4_ENOMEM);
+
+    _l[_free++] = Mem_region(drv_base, size, offset, cxx::move(ds));
+    return &_l[_free - 1];
+  }
+
+  /**
+   * \brief Remove the given region from the list.
+   * \param r  The region to remove (result from add(), or find()).
+   */
+  void remove(Mem_region const *r)
+  {
+    if (r < &_l[0] || r >= &_l[_free])
+      L4Re::chksys(-L4_ERANGE);
+
+    unsigned idx = r - &_l[0];
+
+    for (unsigned i = idx + 1; i < _free - 1; ++i)
+      _l[i] = cxx::move(_l[i + 1]);
+
+    _l[--_free] = Mem_region();
+  }
+
+  /**
+   * \brief Find memory region containing the given driver address region.
+   * \param base  Driver base address.
+   * \param size  Size of the region.
+   * \return Pointer to the region containing the given region,
+   *         NULL if none is found.
+   */
+  Mem_region *find(l4_uint64_t base, l4_umword_t size) const
+  {
+    return _find(base, size);
+  }
+
+  /**
+   * Default implementation for loading an indirect descriptor.
+   *
+   * \param      desc   The descriptor to load
+   * \param      p      The request processor calling us
+   * \param[out] table  Shall be set to the loaded descriptor table
+   *
+   * \throws Bad_descriptor  The descriptor address could not be translated.
+   */
+  void load_desc(Virtqueue::Desc const &desc, Request_processor const *p,
+                 Virtqueue::Desc const **table) const
+  {
+    Mem_region const *r = find(desc.addr.get(), desc.len);
+    if (L4_UNLIKELY(!r))
+      throw Bad_descriptor(p, Bad_descriptor::Bad_address);
+
+    *table = static_cast<Virtqueue::Desc const *>(r->local(desc.addr));
+  }
+
+  /**
+   * Default implementation returning the Driver_mem_region
+   *
+   * \param      desc  The descriptor to load
+   * \param      p     The request processor calling us
+   * \param[out] data  Shall be set to a pointer to the Driver_mem_region
+   *                   that covers the descriptor.
+   *
+   * \throws Bad_descriptor  The descriptor address could not be translated.
+   */
+  void load_desc(Virtqueue::Desc const &desc, Request_processor const *p,
+                 Mem_region const **data) const
+  {
+    Mem_region const *r = find(desc.addr.get(), desc.len);
+    if (L4_UNLIKELY(!r))
+      throw Bad_descriptor(p, Bad_descriptor::Bad_address);
+
+    *data = r;
+  }
+
+  /**
+   * Default implementation returning generic information.
+   *
+   * \tparam     ARG   Abstract argument type used with
+   *                   Request_processor::start() and Request_processor::next()
+   *                   to deliver the result of loading a descriptor. This type
+   *                   must provide a constructor taking three arguments: (1)
+   *                   pointer to a Driver_mem_region, (2) the Virtqueue::Desc
+   *                   descriptor, and (3) a pointer to the calling
+   *                   Request_processor.
+   * \param      desc  The descriptor to load
+   * \param      p     The request processor calling us
+   * \param[out] data  Shall be assigned to ARG(mem, desc, p)
+   *
+   * \throws Bad_descriptor  The descriptor address could not be translated.
+   */
+  template<typename ARG>
+  void load_desc(Virtqueue::Desc const &desc, Request_processor const *p,
+                 ARG *data) const
+  {
+    Mem_region *r = find(desc.addr.get(), desc.len);
+    if (L4_UNLIKELY(!r))
+      throw Bad_descriptor(p, Bad_descriptor::Bad_address);
+
+    *data = ARG(r, desc, p);
+  }
+
+private:
+  Mem_region *_find(l4_uint64_t base, l4_umword_t size) const
+  {
+    for (unsigned i = 0; i < _free; ++i)
+      if (_l[i].contains(base, size))
+        return &_l[i];
+    return 0;
+  }
+
+
+};
+
+typedef Driver_mem_list_t<No_custom_data> Driver_mem_list;
+
+/**
+ * \brief Server-side L4-VIRTIO device stub.
+ */
+template<typename DATA>
+class Device_t
+{
+public:
+  typedef Driver_mem_list_t<DATA> Mem_list;
+
+protected:
+  Mem_list _mem_info; ///< Memory region list
+
+private:
+  Dev_config *_device_config; ///< Device configuration space
+
+public:
+  L4_RPC_LEGACY_DISPATCH(L4virtio::Device);
+  template<typename IOS> int virtio_dispatch(unsigned r, IOS &ios)
+  { return dispatch(r, ios); }
+
+  /// reset callback, called for doing a device reset
+  virtual void reset() = 0;
+
+  /// callback for checking if the queues at DRIVER_OK transition
+  virtual bool check_queues() = 0;
+
+  /// callback for client queue-config request
+  virtual int reconfig_queue(unsigned idx) = 0;
+
+  /// callback for registering a single guest IRQ for all queues
+  virtual void register_single_driver_irq() = 0;
+
+  /// callback to gather the device notification IRQ
+  virtual L4::Cap<L4::Irq> device_notify_irq() const = 0;
+
+  virtual L4::Ipc_svr::Server_iface *server_iface() const = 0;
+
+  /**
+   * \brief Make a device for the given config.
+   */
+  Device_t(Dev_config *dev_config)
+  : _device_config(dev_config)
+  {}
+
+  /**
+   * \brief Get the memory region list used for this device.
+   */
+  Mem_list const *mem_info() const
+  { return &_mem_info; };
+
+  long op_set_status(L4virtio::Device::Rights, unsigned status)
+  { return _set_status(status); }
+
+  long op_config_queue(L4virtio::Device::Rights, unsigned queue)
+  {
+    Dev_config::Status status = _device_config->status();
+    if (status.failed())
+      return -L4_EIO;
+
+    if (!status.acked() || !status.driver())
+      return -L4_EIO;
+
+    return reconfig_queue(queue);
+  }
+
+  long op_register_ds(L4virtio::Device::Rights,
+                      L4::Ipc::Snd_fpage ds_cap_fp, l4_uint64_t ds_base,
+                      l4_umword_t offset, l4_umword_t sz)
+  {
+    printf("Registering dataspace from 0x%llx with %lu KiB, offset 0x%lx\n",
+           ds_base, sz >> 10, offset);
+
+    _check_n_init_shm(ds_cap_fp, ds_base, sz, offset);
+
+    return 0;
+  }
+
+  long op_register_iface(L4virtio::Device::Rights,
+                         L4::Ipc::Snd_fpage irq_cap_fp,
+                         L4::Ipc::Cap<L4::Triggerable> &host_irq,
+                         L4::Ipc::Cap<L4Re::Dataspace> &config_ds)
+  {
+    if (!irq_cap_fp.cap_received())
+      return -L4_EINVAL;
+
+    register_single_driver_irq();
+
+    printf("register client: host IRQ: %lx config DS: %lx\n",
+           device_notify_irq().cap(), _device_config->ds().cap());
+
+    host_irq = L4::Ipc::make_cap(device_notify_irq(), L4_CAP_FPAGE_RO);
+    config_ds = L4::Ipc::make_cap(_device_config->ds(), L4_CAP_FPAGE_RW);
+    return 0;
+  }
+
+  /**
+   * \brief Trigger reset for the configuration space for queue \a idx.
+   * \param idx      The queue index to reset.
+   * \param num_max  Maximum number of entries in this queue.
+   * \param inc_generation The config generation will be incremented when
+   *                       this is true.
+   *
+   * This function resets the driver-readable configuration space for the
+   * queue with the given index. The queue configuration is reset to all 0,
+   * name num_max to the given value.
+   */
+  void reset_queue_config(unsigned idx, unsigned num_max,
+                          bool inc_generation = false)
+  {
+    _device_config->reset_queue(idx, num_max, inc_generation);
+  }
+
+  /**
+   * \brief Initialize the memory region list to the given maximum.
+   * \param num  Maximum number of memory regions that can be managed.
+   */
+  void init_mem_info(unsigned num)
+  {
+    _mem_info.init(num);
+  }
+
+  /**
+   * \brief Transition device into failed state.
+   * \note Callers should trigger a guest config IRQ
+   *       after calling this function.
+   *
+   * This function does a full reset, (calls reset()) and sets the
+   * failed bit in the device status register.
+   */
+  void device_error()
+  {
+    reset();
+    _device_config->set_failed();
+  }
+
+  /**
+   * \brief Enable/disable the specified queue.
+   * \param q        Pointer to the ring that represents the
+   *                 virtqueue internally.
+   * \param qn       Index of the queue.
+   * \param num_max  Maximum number of supported entries in this queue.
+   * \return true for success.
+   * *
+   * This function calculates the parameters of the virtqueue from the
+   * clients configuration space values, checks the accessibility of the
+   * queue data structures and initializes \a q to ready state when all
+   * checks succeeded.
+   */
+  bool setup_queue(Virtqueue *q, unsigned qn, unsigned num_max)
+  {
+    l4virtio_config_queue_t volatile const *qc;
+    qc = _device_config->qconfig(qn);
+
+    if (!qc->ready)
+      {
+        q->disable();
+        return true;
+      }
+
+    // read to local variables before check
+    l4_uint32_t num   = qc->num;
+    l4_uint64_t desc  = qc->desc_addr;
+    l4_uint64_t avail = qc->avail_addr;
+    l4_uint64_t used  = qc->used_addr;
+
+    if (0)
+      printf("%p: setup queue: num=0x%x max_num=0x%x desc=0x%llx avail=0x%llx used=0x%llx\n",
+             this, num, num_max, desc, avail, used);
+
+    if (!num || num > num_max)
+      return false;
+
+    // num must be power of two
+    if (num & (num - 1))
+      return false;
+
+    if (desc & 0xf)
+      return false;
+
+    if (avail & 0x1)
+      return false;
+
+    if (used & 0x3)
+      return false;
+
+    auto const *desc_info = _mem_info.find(desc, Virtqueue::desc_size(num));
+    if (L4_UNLIKELY(!desc_info))
+      return false;
+
+    auto const *avail_info = _mem_info.find(avail, Virtqueue::avail_size(num));
+    if (L4_UNLIKELY(!avail_info))
+      return false;
+
+    auto const *used_info = _mem_info.find(used, Virtqueue::used_size(num));
+    if (L4_UNLIKELY(!used_info || !used_info->is_writable()))
+      return false;
+
+    printf("shm=[%llx-%llx] local=[%lx-%lx] desc=[%llx-%llx] (%p-%p)\n",
+           desc_info->drv_base(), desc_info->drv_base() + desc_info->size() - 1,
+           (unsigned long)desc_info->local_base(),
+           (unsigned long)desc_info->local_base() + desc_info->size() - 1,
+           desc, desc + Virtqueue::desc_size(num),
+           desc_info->local(Ptr<char>(desc)),
+           desc_info->local(Ptr<char>(desc)) + Virtqueue::desc_size(num));
+
+    printf("shm=[%llx-%llx] local=[%lx-%lx] avail=[%llx-%llx] (%p-%p)\n",
+           avail_info->drv_base(), avail_info->drv_base() + avail_info->size() - 1,
+           (unsigned long)avail_info->local_base(),
+           (unsigned long)avail_info->local_base() + avail_info->size() - 1,
+           avail, avail + Virtqueue::avail_size(num),
+           avail_info->local(Ptr<char>(avail)),
+           avail_info->local(Ptr<char>(avail)) + Virtqueue::avail_size(num));
+
+    printf("shm=[%llx-%llx] local=[%lx-%lx] used=[%llx-%llx] (%p-%p)\n",
+           used_info->drv_base(), used_info->drv_base() + used_info->size() - 1,
+           (unsigned long)used_info->local_base(),
+           (unsigned long)used_info->local_base() + used_info->size() - 1,
+           used, used + Virtqueue::used_size(num),
+           used_info->local(Ptr<char>(used)),
+           used_info->local(Ptr<char>(used)) + Virtqueue::used_size(num));
+
+    q->setup(num, desc_info->local(Ptr<void>(desc)),
+             avail_info->local(Ptr<void>(avail)),
+             used_info->local(Ptr<void>(used)));
+    return true;
+  }
+
+  void check_n_init_shm(L4Re::Util::Unique_cap<L4Re::Dataspace> &&shm,
+                        l4_uint64_t base, l4_umword_t size, l4_addr_t offset)
+  {
+    if (_mem_info.full())
+      L4Re::chksys(-L4_ENOMEM);
+
+    auto const *i = _mem_info.add(base, size, offset, cxx::move(shm));
+    printf("PORT[%p]: DMA guest [%llx-%llx]  local [%lx-%lx]  offset %lx\n",
+           this, i->drv_base(), i->drv_base() + i->size() - 1,
+           (unsigned long)i->local_base(),
+           (unsigned long)i->local_base() + i->size() - 1,
+           i->ds_offset());
+  }
+
+  /**
+   * Check for a value in the `cmd` register and handle a write.
+   *
+   * This function checks for a value in the `cmd` register and executes
+   * the command if there is any, or returns false if there was no command.
+   *
+   * Execution of the command is signaled by a zero in the `cmd` register.
+   */
+  bool handle_mem_cmd_write()
+  {
+    l4_uint32_t cmd = _device_config->get_cmd();
+    if (L4_LIKELY(!(cmd & L4VIRTIO_CMD_MASK)))
+      return false;
+
+    switch (cmd & L4VIRTIO_CMD_MASK)
+      {
+      case L4VIRTIO_CMD_SET_STATUS:
+        _set_status(cmd & ~L4VIRTIO_CMD_MASK);
+        break;
+
+      case L4VIRTIO_CMD_CFG_QUEUE:
+        reconfig_queue(cmd & ~L4VIRTIO_CMD_MASK);
+        break;
+
+      default:
+        // unknown command
+        break;
+      }
+
+    _device_config->reset_cmd();
+
+    return true;
+  }
+
+private:
+  void _check_n_init_shm(L4::Ipc::Snd_fpage shm_cap_fp,
+                         l4_uint64_t base, l4_umword_t size, l4_addr_t offset)
+  {
+    if (!shm_cap_fp.cap_received())
+      L4Re::chksys(-L4_EINVAL);
+
+    L4Re::Util::Unique_cap<L4Re::Dataspace> ds(
+        L4Re::chkcap(server_iface()->template rcv_cap<L4Re::Dataspace>(0)));
+    L4Re::chksys(server_iface()->realloc_rcv_cap(0));
+
+    check_n_init_shm(cxx::move(ds), base, size, offset);
+  }
+
+  int _set_status(unsigned _status)
+  {
+    Dev_config::Status status(_status);
+
+    if (_status == 0)
+      {
+        printf("Resetting device\n");
+        reset();
+      }
+
+    // do nothing if 'failed' is set
+    if (status.failed())
+      return 0;
+
+    if (status.running() && !check_queues())
+      status.failed() = 1;
+
+    _device_config->set_status(status);
+    return 0;
+  }
+
+};
+
+typedef Device_t<No_custom_data> Device;
+
+} // namespace Svr
+
+}
+

@@ -1,0 +1,3 @@
+provides: expat2
+requires: libc
+maintainer: adam@os.inf.tu-dresden.de

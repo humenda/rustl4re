@@ -1,0 +1,14 @@
+<map id="L4::Types::Bool&lt; V &gt;" name="L4::Types::Bool&lt; V &gt;">
+<area shape="rect" id="node2" href="$structL4_1_1Types_1_1Bool.html" title="{L4::Types::Bool\&lt; Typeid\l::Iface_conflict\&lt; I::type,\l L::type \&gt;::value\|\|Iface\l_conflict\&lt; I, LIST... \&gt;::value \&gt;\n||}" alt="" coords="5,226,204,347"/>
+<area shape="rect" id="node3" href="$structL4_1_1Types_1_1Bool.html" title="{L4::Types::Bool\&lt; Typeid\l::Conflict\&lt; L1::type,\l L2::type \&gt;::value\|\|Conflict\l\&lt; L1, LIST... \&gt;::value\|\|Conflict\l\&lt; L2, LIST... \&gt;::value \&gt;\n||}" alt="" coords="227,219,427,355"/>
+<area shape="rect" id="node4" href="$structL4_1_1Types_1_1Bool.html" title="{L4::Types::Bool\&lt; _\l_Iface_conflict\&lt; I,\l I2 \&gt;::value\|\|_Iface\l_conflict\&lt; I, LIST::type\l \&gt;::value \&gt;\n||}" alt="" coords="451,219,611,355"/>
+<area shape="rect" id="node5" href="$structL4_1_1Types_1_1Bool.html" title="{L4::Types::Bool\&lt; I1\l::Proto !=PROTO_EMPTY\l &amp;&amp;I1::Proto==I2::Proto \&gt;\n||}" alt="" coords="636,233,821,340"/>
+<area shape="rect" id="node6" href="$structL4_1_1Types_1_1Bool.html" title="{L4::Types::Bool\&lt; Iface\l_conflict\&lt; I, L2::type\l \&gt;::value\|\|_Conflict\&lt; L1\l::type, L2::type \&gt;::value \&gt;\n||}" alt="" coords="845,226,1020,347"/>
+<area shape="rect" id="node7" href="$structL4_1_1Types_1_1Bool.html" title="{L4::Types::Bool\&lt; false \&gt;\n||}" alt="" coords="1045,248,1215,325"/>
+<area shape="rect" id="node10" href="$structL4_1_1Types_1_1Bool.html" title="{L4::Types::Bool\&lt; true \&gt;\n||}" alt="" coords="1239,248,1405,325"/>
+<area shape="rect" id="node8" href="$structL4_1_1Types_1_1False.html" title="False meta value. " alt="" coords="1069,404,1191,481"/>
+<area shape="rect" id="node9" href="$structL4_1_1Types_1_1Same.html" title="Compare two data types for equality. " alt="" coords="1043,538,1217,615"/>
+<area shape="rect" id="node11" href="$structL4_1_1Types_1_1True.html" title="True meta value. " alt="" coords="1263,404,1381,481"/>
+<area shape="rect" id="node12" href="$structL4_1_1Ipc_1_1Msg_1_1Is__valid__rpc__type.html" title="{L4::Ipc::Msg::Is_valid\l_rpc_type\&lt; A *\&gt;\n||}" alt="" coords="1247,685,1397,777"/>
+<area shape="rect" id="node13" href="$structL4_1_1Ipc_1_1Msg_1_1Is__valid__rpc__type.html" title="Type trait defining a valid RPC parameter type. " alt="" coords="1321,531,1472,623"/>
+</map>

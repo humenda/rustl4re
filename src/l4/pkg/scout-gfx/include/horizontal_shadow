@@ -1,0 +1,94 @@
+// vi:ft=cpp
+/*
+ * (c) 2010 Alexander Warg <warg@os.inf.tu-dresden.de>
+ *     economic rights: Technische Universität Dresden (Germany)
+ *
+ * This file is part of TUD:OS and distributed under the terms of the
+ * GNU General Public License 2.
+ * Please see the COPYING-GPL-2 file for details.
+ */
+#pragma once
+
+#include <l4/mag-gfx/canvas>
+#include <l4/scout-gfx/widget>
+
+namespace Scout_gfx { namespace Pt {
+
+template <typename PT>
+class Horizontal_shadow : public Widget
+{
+private:
+  int const _intensity;
+  int const _h;
+
+public:
+
+  explicit Horizontal_shadow(int height, int intensity)
+  : _intensity(intensity), _h(height)
+  { _size = Area(0, height); }
+
+  /**
+   * Element interface
+   */
+  void draw(Canvas *c, Point const &p);
+  Widget *find(Point const &) { return 0; }
+
+  Area min_size() const { return Area(0, _h); }
+  Area preferred_size() const { return Area(0, _h); }
+  Area max_size() const { return Area(Area::Max_w, _h); }
+  bool empty() const { return false; }
+  Orientations expanding() const { return Horizontal; }
+  Rect geometry() const { return Rect(_pos, _size); }
+  void set_geometry(Rect const &s)
+  {
+    Area x = s.area().max(min_size()).max(min_size());
+    _pos = s.p1(); _size = x;
+  }
+
+};
+
+
+/***********************
+ ** Horizontal shadow **
+ ***********************/
+
+template <typename PT>
+void Horizontal_shadow<PT>::draw(Canvas *c, Point const &_p)
+{
+  typedef typename PT::Pixel Pixel;
+  typedef typename PT::Color Color;
+
+  char *addr = (char *)c->buffer();
+
+  if (!addr)
+    return;
+
+  Rect clip = c->clip();
+  Rect cr = (Rect(_size) + _p) & clip;
+
+  if (!cr.valid())
+    return;
+
+  int curr_a = _intensity;
+  int step   = _size.h() ? (curr_a/_size.h()) : 0;
+
+  int bpl = c->bytes_per_line();
+
+  addr += bpl * cr.y1() + cr.x1() * sizeof(Pixel);
+
+  Color shadow_color(0,0,0);
+
+  int h = cr.h();
+  for (int j = 0; j < h; j++, addr += bpl)
+    {
+      Pixel *d = reinterpret_cast<Pixel*>(addr);
+      int w = cr.w();
+
+      for (int i = 0; i < w; i++, d++)
+	*d = PT::mix(*d, shadow_color, curr_a);
+
+      curr_a -= step;
+    }
+}
+
+}}

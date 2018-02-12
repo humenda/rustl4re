@@ -1,0 +1,285 @@
+#!/usr/bin/python
+
+# Timur (*T*est*I*ng *M*achinari*U*m for *R*omain)
+#
+# (c) 2011-2013 Björn Döbel <doebel@os.inf.tu-dresden.de>,
+#     economic rights: Technische Universität Dresden (Germany)
+#
+#  This file is part of TUD:OS and distributed under the terms of the
+#  GNU General Public License 2.
+#  Please see the COPYING-GPL-2 file for details.
+
+import os, sys, sre
+import subprocess       # launching qemu
+import tempfile         # temporary output
+import shlex            # proper splitting for qemu parameters
+import time             # sleep
+import filecmp          # comparing files
+import argparse         # cmd line arguments
+
+# XXX: config file
+globalDirs = [ "/home/doebel/src/tudos/src/build/bin/x86_586/l4f",
+               "/home/doebel/src/tudos/src/build/bin/x86_586/",
+               "/home/doebel/src/tudos/src/kernel/fiasco/build",
+               "/home/doebel/src/tudos/src/l4/conf",
+             ]
+globalQemu      = "qemu-system-i386"
+globalFiascoOpt = "-serial_esc -jdb_cmd=JS"
+globalModules   = ["sigma0"]
+
+
+def usage():
+    print "  timur <path>"
+    print
+    print "    Runs all tests defined in subdirectories of <path>"
+
+
+class FileFinder:
+    """
+    Maintain a set of directories and allow searching those dirs
+    for a given file name.
+    """
+    def __init__(self, directories):
+        self.dirs = directories
+
+    def find(self, name):
+        """
+        Find the given file name in the set of dirs.
+        """
+        for d in self.dirs:
+            try:
+                f = file(d+"/"+name)
+                f.close()
+                return d + "/" + name
+            except:
+                continue
+
+
+class TempFile:
+    """
+    Wrapper for a temporary file
+    """
+    def __init__(self):
+        self.f = tempfile.NamedTemporaryFile()
+        self.name = self.f.name
+
+    def __repr__(self):
+        return "file:%s" % self.f.name
+
+    def readlines(self):
+        return self.f.readlines()
+
+
+class StdioFile:
+    """
+    Class that behaves like a tempfile w.r.t. having a name property.
+    This class is passed to the command line generator when we want a
+    printable command line (e.g., one that you can copy & run from your shell)
+    """
+    def __init__(self):
+        self.name = "stdio"
+
+    def __repr__(self):
+        return "stdio"
+
+
+class TestRunner:
+    def waitForTermination(self, test):
+        # monitor outfile for expected final line
+        while True:
+            f = test.tmpOut
+            l = f.readlines()
+            if len(l) > 1 and l[-1].startswith("Return reboots"):
+                break
+            sys.stderr.write(".")
+            time.sleep(1)
+
+        sys.stderr.write(" ")
+
+
+    def adaptOutfile(self, test, filename=None):
+        """
+        Adapt the test output file to the expected format
+
+        Some output (e.g. bootstrap's) may differ between runs and
+        we want to ignore this. Therefore, we remove all output from
+        the test that comes before MOE's bootup message.
+
+        For simplicity, we generate a new file here that contains
+        the reduced output and is then used for comparison with the
+        expected output.
+        """
+
+        f1 = file(test.tmpOut.name)
+        if not filename:
+            f2 = tempfile.NamedTemporaryFile()
+        else:
+            f2 = file(filename, "w")
+
+        do_output = False  # tracks if a line should go to the new tmpfile
+
+        for l in f1.readlines():
+            if l.startswith("MOE: cmdline: "):
+                do_output = True
+            if do_output:
+                f2.write(l)
+
+        f1.close()
+        f2.flush() # makes sure that everything is written back before
+                   # we compare with the expected output
+        test.tmpOut = f2
+
+
+    def __init__(self, test):
+        # start the test in the background
+        pid = subprocess.Popen(shlex.split(test.commandLine()),
+                               stdout = file("/dev/null"),
+                               stderr = file("/dev/null"))
+
+        self.waitForTermination(test)
+
+        # SIGTERMinate the qemu process
+        pid.terminate()
+
+
+    def compare(self, test):
+        """
+        Evaluate test results by comparing output with expect file.
+        """
+        try:
+            expectFile = test.fullpath([f for f in test.caseFiles if sre.match(".*\.expect", f)][0])
+        except IndexError:
+            print "No .expect file found in %s. (Generate one with -e.)" % test.root
+            sys.exit(1)
+
+        if filecmp.cmp(expectFile, test.tmpOut.name):
+            print "OK"
+        else:
+            print "\033[31;1mFAIL\033[0m"
+            print "Output mismatch between %s and %s" % (expectFile, test.tmpOut.name)
+            subprocess.call(["diff", "-rub", expectFile, test.tmpOut.name])
+
+
+class TestCase:
+    """
+    Representation of a single test case.
+    """
+    def get_modules(self):
+        """
+        Extract the list of modules for this setup from the .boot file
+        we stored in self.bootFile.
+        """
+        try:
+            f = file(self.bootFile)
+        except:
+            "Could not open %s for reading" % self.bootFile
+            sys.exit(1)
+
+        lines = [l.strip() for l in f.readlines()]
+        for l in lines:
+            v = l.split()
+            if v[0] == "roottask":
+                self.roottask = v[1:]
+            elif v[0] == "module":
+                self.modules += [v[1]]
+
+
+    def commandLine(self):
+        """
+        Generate the Qemu command line to launch this setup.
+        """
+        cmd = globalQemu + " -kernel " + self.finder.find("bootstrap")
+        cmd += " -append \"bootstrap -modaddr 0x01100000\" -initrd \""
+        cmd += self.fiasco + " " + globalFiascoOpt
+
+        for m in globalModules:
+            cmd += ","
+            cmd += self.finder.find(m)
+
+        cmd += "," + self.finder.find(self.roottask[0]) + " "
+        cmd += " ".join(self.roottask[1:])
+
+        for m in self.modules:
+            cmd += ","
+            cmd += self.finder.find(m)
+        cmd += "\""
+
+        cmd += " -serial %s" % self.tmpOut
+        cmd += " -no-reboot"
+
+        return cmd
+
+
+    def fullpath(self, filename):
+        return self.root + "/" + filename
+
+
+    def __init__(self, rootDir):
+        print "\033[32mTest case: \033[0m", os.path.basename(rootDir)
+        self.root      = rootDir
+        self.finder    = FileFinder([rootDir] + globalDirs)
+        self.caseFiles = os.listdir(rootDir)
+        self.modules   = []
+        self.fiasco    = self.finder.find("fiasco")
+        self.tmpOut    = TempFile()
+
+        try:
+            self.bootFile  = self.fullpath([f for f in self.caseFiles if sre.match(".*\.boot", f)][0])
+        except IndexError:
+            print "No .boot file found in %s." % rootDir
+            sys.exit(1)
+
+        self.get_modules()
+
+
+def argsCheck(args):
+    try:
+        rootDir = args.rootDir
+        if not os.path.isdir(rootDir):
+            raise ValueError("Not a directory: %s" % rootDir)
+    except Exception as e:
+        print "[\033[31m%s\033[0m]\n" % e
+        sys.exit(1)
+
+
+def run():
+    parser = argparse.ArgumentParser("./timur", epilog="Only one of the options {-c, -e, -t} can be run at a time.")
+    parser.add_argument("-d", "--directory", action="store", dest="rootDir",
+                        help="Directory containing test descriptions", required=True)
+    parser.add_argument("-c", "--cmdline", action="store_true", dest="cmdline",
+                        help="Print the command line that would be used to launch Qemu")
+    parser.add_argument("-e", "--expect",  action="store_true", dest="expect",
+                        help="Generate expected output")
+    parser.add_argument("-t", "--test",    action="store_true", dest="test",
+                        help="Run tests")
+
+    args = parser.parse_args()
+    argsCheck(args)
+
+    rootDir = args.rootDir # valid, because we'd have aborted otherwise
+
+    if args.cmdline:
+        for f in [d for d in os.listdir(rootDir) if os.path.isdir(rootDir+"/"+d) and d != ".svn" ]:
+            tc = TestCase(rootDir+"/"+f)
+            tc.tmpOut=StdioFile() # for the cmdline it is useful to print to stdio
+            print tc.commandLine()
+
+    elif args.expect:
+        for f in [d for d in os.listdir(rootDir) if os.path.isdir(rootDir+"/"+d) and d != ".svn" ]:
+            tc = TestCase(rootDir+"/"+f)
+            tr = TestRunner(tc)
+            fname = rootDir + "/" + f + "/"
+            fname += "%s.expect" % f
+            tr.adaptOutfile(tc, fname)
+            print
+
+    elif args.test:
+        for f in [d for d in os.listdir(rootDir) if os.path.isdir(rootDir+"/"+d) and d != ".svn" ]:
+            tc = TestCase(rootDir+"/"+f)
+            tr = TestRunner(tc)
+            tr.adaptOutfile(tc)
+            tr.compare(tc)
+
+
+if __name__ == "__main__":
+    run()

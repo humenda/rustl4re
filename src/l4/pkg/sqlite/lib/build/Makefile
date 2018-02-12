@@ -1,0 +1,17 @@
+PKGDIR ?= ../..
+L4DIR  ?= $(PKGDIR)/../..
+
+TARGET         = libsqlite3.a libsqlite3.so
+SRC_C          = sqlite3.c
+REQUIRES_LIBS  = libdl libpthread
+CONTRIB_INCDIR = sqlite
+
+vpath %.c $(PKGDIR)/lib/contrib
+
+DEFINES = -DSQLITE_THREADSAFE=1 -DHAVE_LOCALTIME_R=1 -DHAVE_GMTIME_R=1 \
+          -DHAVE_USLEEP=1 -DHAVE_UNISTD_H=1 -DHAVE_STDINT_H=1 \
+	  -DHAVE_STRING_H=1 -DHAVE_MEMORY_H=1 -DHAVE_STRINGS_H=1 \
+	  -DHAVE_INTTYPES_H=1 -DHAVE_STDLIB_H=1 -DHAVE_SYS_TYPES_H=1 \
+	  -DSTDC_HEADERS=1 -D_FILE_OFFSET_BITS=64 
+
+include $(L4DIR)/mk/lib.mk

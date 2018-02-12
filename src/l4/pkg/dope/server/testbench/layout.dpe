@@ -1,0 +1,18 @@
+#
+# Bug found my Martin:
+# The window's size was not correctly updated
+# after the s_b0 was added to the Grid.
+# It occured when I changed wid_do_layout.
+#
+win = new Window()
+g1 = new Grid()
+win.set(-content g1 -x 5 -y 400)
+win.open()
+g_cont = new Grid()
+g1.place(g_cont, -column 1 -row 2)
+temp = new Label()
+temp.set(-text "0:                 rt_mon_hist_demo")
+g_cont.place(temp, -column 1 -row 1)
+s_b0 = new Button()
+s_b0.set(-text Show)
+g_cont.place(s_b0, -column 2 -row 1)

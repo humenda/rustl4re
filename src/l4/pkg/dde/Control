@@ -1,0 +1,3 @@
+provides: dde-linux26 dde-linux26_net dde-linux26_block dde-linux26_char ddekit
+requires: l4sys log l4util libc slab libio libirq slab stdlibs l4re_c libl4re-vfs
+Maintainer: doebel@os.inf.tu-dresden.de

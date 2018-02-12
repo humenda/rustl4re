@@ -1,0 +1,31 @@
+diff --git a/src/kern/ia32/thread-ia32.cpp b/src/kern/ia32/thread-ia32.cpp
+index d6fb000..7be482b 100644
+--- a/src/kern/ia32/thread-ia32.cpp
++++ b/src/kern/ia32/thread-ia32.cpp
+@@ -196,6 +197,26 @@ Thread::handle_slow_trap(Trap_state *ts)
+ 	  ts->_err    = 0;
+         }
+ 
++      if (ts->_trapno == 6)
++        {
++	  LOG_MSG_3VAL(current(), "UD2", dbg_id(), ts->ip(), 0);
++	  ts->ip(ts->ip()+2);
++	  //Sched_context::rq.current().invalidate_sched();
++	  switch_sched(sched(), &Sched_context::rq.current());
++	  schedule();
++	  goto success;
++        }
++
++      if (ts->_trapno == 13 && ts->_err == 530 /* INT 0x42 */)
++        {
++	  /*printf("Replica %lx bailout @ %lx\n", dbg_id(), ts->ip());*/
++	  ts->_trapno = 3;
++	  ts->ip(ts->ip()+2);
++	  if (int42_handler && int42_handler(ts))
++	    goto success;
++	  goto generic_debug;
++        }
++
+       if (send_exception(ts))
+ 	goto success;
+     }

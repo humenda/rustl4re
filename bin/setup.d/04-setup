@@ -1,0 +1,831 @@
+#! /bin/bash
+
+# This scripts sets up a snapshot on the target build machine.
+# TODO: Add question for compiler location :(
+
+# TODO: do export CROSS_COMPILE before setting up the obj-dirs, so that we
+# get the right prefix
+# TODO: delete beagleboard and other omap
+# TODO: Use CROSS_COMPILE from environement as default (in case it is
+# already set)
+
+set -e
+
+# check we're in the right directory
+if [ ! -d src/l4 -o ! -d src/kernel/fiasco ]; then
+  echo "Call setup as ./$(basename $0) in the right directory"
+  exit 1
+fi
+
+if [ -n "$SYSTEM" ]; then
+  echo "SYSTEM environment variable set, not good"
+  exit 1
+fi
+
+CC=${CC:-${CROSS_COMPILE}gcc}
+CXX=${CXX:-${CROSS_COMPILE}g++}
+LD=${LD:-${CROSS_COMPILE}ld}
+
+add_to_config()
+{
+  echo "$@" >> obj/.config
+}
+
+write_config()
+{
+  # write out config, fresh version
+  mkdir -p obj
+  echo '# snapshot build configuration' > obj/.config
+
+  for c in CONF_DO_X86_32 \
+           CONF_DO_UX \
+           CONF_DO_AMD64 \
+           CONF_DO_ARM \
+	   CONF_DO_ARM_RV_ARM9 \
+           CONF_DO_ARM_RV_CA \
+	   CONF_DO_ARM_OMAP_BB \
+           CONF_DO_ARM_OMAP_PANDA \
+           CONF_DO_ARM64 \
+           CONF_DO_MIPS32R2 \
+           CONF_DO_MIPS32R6 \
+           CONF_DO_MIPS64R2 \
+           CONF_DO_MIPS64R6 \
+           CONF_FAILED_ARM \
+           CONF_FAILED_ARM64 \
+	   CONF_FAILED_UX \
+	   CONF_FAILED_AMD64 \
+	   CONF_FAILED_MIPS32R2 \
+	   CONF_FAILED_MIPS32R6 \
+	   CONF_FAILED_MIPS64R2 \
+	   CONF_FAILED_MIPS64R6 \
+	   CROSS_COMPILE_ARM \
+	   CROSS_COMPILE_ARM64 \
+           CROSS_COMPILE_MIPS32R2 \
+           CROSS_COMPILE_MIPS32R6 \
+           CROSS_COMPILE_MIPS64R2 \
+           CROSS_COMPILE_MIPS64R6 \
+  ; do
+    local v=$(eval echo \$$c)
+    [ -n "$v" ] && add_to_config $c="$v"
+  done
+
+  return 0
+}
+
+do_clean()
+{
+  # same as in Makefile
+  rm -rf obj
+}
+
+do_config()
+{
+  if command -v dialog; then
+
+    tmpfile=`tempfile 2>/dev/null` || tmpfile=/tmp/test$$
+    trap "rm -f $tmpfile" 0 1 2 5 15
+
+    dialog \
+      --visit-items \
+      --begin 2 10 \
+	--infobox \
+	 "The list of choices represents a popular set of target platforms.  Many more are available." \
+	 5 60 \
+      --and-widget --begin 9 10 \
+	--checklist "Select Targets to build:" 12 60 6 \
+	 x86-32    "ia32"                                      off \
+	 amd64     "amd64/x86_64 "                             off \
+	 arm       "ARM (platform selection follows)"          off \
+	 arm64     "ARM64 / AARCH64"                           off \
+	 mips      "MIPS"                                      off \
+	 2> $tmpfile
+
+	 #UX-32     "  add Fiasco-UX-32 (selects x86-32)"       off
+
+    result=$(cat $tmpfile)
+
+    if [ -z "$result" ]; then
+      echo
+      echo "ERROR: You did not select any platform."
+      echo "ERROR: Please do so by running 'make setup' again."
+      echo
+      exit 1
+    fi
+
+
+    for e in $result; do
+      # fixup for older dialogs
+      [ "${e#\"}" = "$e" ] && e="\"$e\""
+      case "$e" in
+	\"x86-32\") CONF_DO_X86_32=1 ;;
+	\"UX-32\") CONF_DO_UX=1; CONF_DO_X86_32=1 ;;
+	\"amd64\") CONF_DO_AMD64=1 ;;
+	\"mips\") CONF_DO_MIPS=1 ;;
+	\"arm\") CONF_DO_ARM=1 ;;
+	\"arm64\") CONF_DO_ARM64=1 ;;
+      esac
+    done
+
+    if [ -n "$CONF_DO_ARM" ]; then
+      dialog \
+	--visit-items \
+	--begin 2 10 \
+	  --infobox \
+	   "The list of choices represents a popular set of target platforms. Many more are available." \
+	   5 60 \
+	--and-widget --begin 9 10 \
+	  --checklist "Select ARM Targets to build:" 11 60 4 \
+	   arm-rv-arm9    "Realview (ARM9)"     off \
+	   arm-rv-ca      "Realview (Cortex-A)" off \
+	   arm-omap-bb    "Beagleboard"         off \
+	   arm-omap-panda "Pandaboard"          off \
+	   2> $tmpfile
+
+      result=$(cat $tmpfile)
+
+      for e in $result; do
+	# fixup for older dialogs
+	[ "${e#\"}" = "$e" ] && e="\"$e\""
+	case "$e" in
+	  \"arm-rv-arm9\")     CONF_DO_ARM_RV_ARM9=1 ;;
+	  \"arm-rv-ca\")       CONF_DO_ARM_RV_CA=1 ;;
+	  \"arm-omap-bb\")     CONF_DO_ARM_OMAP_BB=1 ;;
+	  \"arm-omap-panda\")  CONF_DO_ARM_OMAP_PANDA=1 ;;
+	esac
+      done
+    fi
+
+    if [ -n "$CONF_DO_MIPS" ]; then
+      dialog \
+	--begin 2 10 \
+	  --infobox \
+	   "Please choose which MIPS little-endian variant to build." \
+	   5 60 \
+	--and-widget --begin 9 10 \
+	  --checklist "Select MIPS variant to build:" 11 60 4 \
+	   mips32r2    "MIPS32r2" off \
+	   mips32r6    "MIPS32r6" off \
+	   mips64r2    "MIPS64r2" off \
+	   mips64r6    "MIPS64r6" off \
+	   2> $tmpfile
+
+      result=$(cat $tmpfile)
+      for e in $result; do
+	[ "${e#\"}" = "$e" ] && e="\"$e\""
+	case "$e" in
+	  \"mips32r2\") CONF_DO_MIPS32R2=1 ;;
+	  \"mips32r6\") CONF_DO_MIPS32R6=1 ;;
+	  \"mips64r2\") CONF_DO_MIPS64R2=1 ;;
+	  \"mips64r6\") CONF_DO_MIPS64R6=1 ;;
+	esac
+      done
+    fi
+
+    # query cross compiler prefix
+    if [ -n "$CONF_DO_ARM" ]; then
+      dialog --no-mouse --visit-items \
+	--inputbox "ARM cross compiler prefix (CROSS_COMPILE)" 8 70 "arm-linux-gnueabihf-" \
+	2> $tmpfile
+      CROSS_COMPILE_ARM=$(cat $tmpfile)
+    fi
+
+    if [ -n "$CONF_DO_ARM64" ]; then
+      dialog --no-mouse --visit-items \
+	--inputbox "AARCH64 cross compiler prefix (CROSS_COMPILE)" 8 70 "aarch64-linux-gnu-" \
+	2> $tmpfile
+      CROSS_COMPILE_ARM64=$(cat $tmpfile)
+    fi
+
+    if [ -n "$CONF_DO_MIPS32R2" ]; then
+      dialog --no-mouse --visit-items \
+	--inputbox "MIPS el-32r2 cross compiler prefix (CROSS_COMPILE)" 8 70 "mips-linux-" \
+	2> $tmpfile
+      CROSS_COMPILE_MIPS32R2=$(cat $tmpfile)
+    fi
+    if [ -n "$CONF_DO_MIPS32R6" ]; then
+      dialog --no-mouse --visit-items \
+	--inputbox "MIPS el-32r6 cross compiler prefix (CROSS_COMPILE)" 8 70 "mips-linux-" \
+	2> $tmpfile
+      CROSS_COMPILE_MIPS32R6=$(cat $tmpfile)
+    fi
+
+    if [ -n "$CONF_DO_MIPS64R2" ]; then
+      dialog --no-mouse --visit-items \
+	--inputbox "MIPS el-64r2 cross compiler prefix (CROSS_COMPILE)" 8 70 "mips-linux-" \
+	2> $tmpfile
+      CROSS_COMPILE_MIPS64R2=$(cat $tmpfile)
+    fi
+    if [ -n "$CONF_DO_MIPS64R6" ]; then
+      dialog --no-mouse --visit-items \
+	--inputbox "MIPS el-64r6 cross compiler prefix (CROSS_COMPILE)" 8 70 "mips-linux-" \
+	2> $tmpfile
+      CROSS_COMPILE_MIPS64R6=$(cat $tmpfile)
+    fi
+
+  else
+
+    echo "'dialog' program not found,"
+    echo "press ENTER to continue and just build for x86-64"
+    echo "abort with Ctrl-C, install dialog and issue 'make setup' again."
+    read 
+
+    CONF_DO_AMD64=1
+  fi
+
+  write_config
+  return 0;
+}
+
+###########################################################
+
+load_config()
+{
+  if [ ! -e obj/.config ]; then
+    echo "Configuration missing, not configured?!"
+    exit 1
+  fi
+
+  . obj/.config
+}
+
+redo_config()
+{
+  if [ -n "$CONF_FAILED_ARM" ]; then
+    unset CONF_DO_ARM
+    add_to_config "unset CONF_DO_ARM"
+    unset CONF_DO_ARM_RV_ARM9
+    unset CONF_DO_ARM_RV_CA
+    unset CONF_DO_ARM_OMAP_BB
+    unset CONF_DO_ARM_OMAP_PANDA
+  fi
+
+  if [ -n "$CONF_FAILED_UX" ]; then
+    unset CONF_DO_UX
+    add_to_config "unset CONF_DO_UX"
+  fi
+
+  if [ -n "$CONF_FAILED_AMD64" ]; then
+    unset CONF_DO_AMD64
+    add_to_config "unset CONF_DO_AMD64"
+  fi
+
+  if [ -n "$CONF_FAILED_MIPS32R2" ]; then
+    unset CONF_DO_MIPS32R2
+    add_to_config "unset CONF_DO_MIPS32R2"
+  fi
+
+  if [ -n "$CONF_FAILED_MIPS32R6" ]; then
+    unset CONF_DO_MIPS32R6
+    add_to_config "unset CONF_DO_MIPS32R6"
+  fi
+
+  if [ -n "$CONF_FAILED_MIPS64R2" ]; then
+    unset CONF_DO_MIPS64R2
+    add_to_config "unset CONF_DO_MIPS64R2"
+  fi
+
+  if [ -n "$CONF_FAILED_MIPS64R6" ]; then
+    unset CONF_DO_MIPS64R6
+    add_to_config "unset CONF_DO_MIPS64R6"
+  fi
+}
+
+check_cc()
+{
+  if [ -n "$1" ]; then
+    if echo 'int main(void) { return 0; }' | $1 $2 -c -x c - -o /dev/null; then
+      return 0
+    fi
+  else
+    echo "Invalid compiler command given"
+  fi
+  return 1
+}
+
+check_eabi_gcc()
+{
+  # probably half-hearted approach but well
+  [ -z "$1" ] && return 1
+  $1 -E -dD -x c /dev/null | grep -qw __ARM_EABI__
+}
+
+check_tool()
+{
+  command -v $1 > /dev/null
+  if ! command -v $1 > /dev/null;  then
+    return 1
+  fi
+
+  case "$1" in
+    *gcc|*g++)
+      check_cc "$1" "$2"
+      return $?
+    ;;
+    make|*ld)
+      $1 -v > /dev/null 2>&1
+      return $?
+    ;;
+    *cpp|*nm)
+      $1 --help > /dev/null 2>&1
+      return $?
+    ;;
+    gawk)
+      $1 --help > /dev/null 2>&1
+      return $?
+    ;;
+    perl)
+      $1 -V > /dev/null 2>&1
+      return $?
+    ;;
+    doxygen)
+      doxygen | grep "Doxygen ver" > /dev/null 2>&1
+      return $?
+    ;;
+    qemu-system-arm)
+      $1 -h > /dev/null 2>&1
+      return $?
+    ;;
+    pkg-config)
+      $1 --help > /dev/null 2>&1
+      return $?
+    ;;
+    *)
+      echo "Unknown tool $1"
+      return 1
+    ;;
+  esac
+}
+
+exchange_kconfig_choice()
+{
+  kconfigfile=$1
+  disablesym=$2
+  enablesym=$3
+
+  perl -p -i \
+       -e "s/$disablesym=y/# $disablesym is not set/; s/# $enablesym is not set/$enablesym=y/" \
+       $kconfigfile
+}
+
+switch_to_kconfig_setup_arm()
+{
+  exchange_kconfig_choice $1 CONFIG_PLATFORM_TYPE_rv $2
+  exchange_kconfig_choice $1 CONFIG_CPU_ARM_ARMV5TE $3
+}
+
+add_std_qemu_options()
+{
+  mem=$2
+  [ -z "$mem" ] && mem=256
+  echo "QEMU_OPTIONS += -m $mem -serial stdio" >> $1
+  if [ -n "$REMOTE" ]; then
+    echo "QEMU_OPTIONS += -vnc :4" >> $1
+  fi
+}
+
+add_nonx86_qemu_options()
+{
+  if [ -z "$REMOTE" ]; then
+    echo "QEMU_OPTIONS += -vnc :4" >> $1
+  fi
+}
+
+check_cross_tools()
+{
+  name=$1
+  confvar=$2
+  confvarfailed=$3
+  cross_compile=$4
+
+  if [ -n "$confvar" ]; then
+    echo "Checking for needed cross programs and tools for $name"
+    tools_needed="${cross_compile}gcc ${cross_compile}cpp ${cross_compile}nm ${cross_compile}g++ ${cross_compile}ld"
+    unset failed
+    for t in $tools_needed; do
+      result="ok"
+      if ! check_tool $t; then
+        result="Not found or FAILED, disabling $name builds"
+        eval $confvarfailed=1
+	failed=1
+      fi
+      printf "%15s ... %s\n" $t "$result"
+      if [ -n "$failed" ]; then
+	break
+      fi
+    done
+  fi
+}
+
+check_tools()
+{
+# Generic tools
+  echo "Checking for needed programs and tools"
+  tools_needed="make ${CC} ${CXX} ld gawk perl pkg-config"
+  for t in $tools_needed; do
+    result="ok"
+    if ! check_tool $t; then
+      result="NOT DETECTED"
+      command_missing="$command_missing $t"
+    fi
+    printf "%15s ... %s\n" $t "$result"
+  done
+  echo
+  if [ -n "$command_missing" ]; then
+    echo "Some command is missing on your system."
+    echo "Please install it before continuing with 'make setup':"
+    echo "   $command_missing"
+    do_clean
+    exit 1
+  fi
+
+  if [ -n "$CONF_DO_AMD64" ]; then
+    if ! check_tool ${CC} -m64; then
+      echo "AMD64 build disabled as ${CC} does not support 64bit targets"
+      CONF_FAILED_AMD64=1
+    fi
+  fi
+
+  check_cross_tools "ARM"      "$CONF_DO_ARM"      CONF_FAILED_ARM      "$CROSS_COMPILE_ARM"
+  check_cross_tools "ARM64"    "$CONF_DO_ARM64"    CONF_FAILED_ARM64    "$CROSS_COMPILE_ARM64"
+  check_cross_tools "MIPS32r2" "$CONF_DO_MIPS32R2" CONF_FAILED_MIPS32R2 "$CROSS_COMPILE_MIPS32R2"
+  check_cross_tools "MIPS32r6" "$CONF_DO_MIPS32R6" CONF_FAILED_MIPS32R6 "$CROSS_COMPILE_MIPS32R6"
+  check_cross_tools "MIPS64r2" "$CONF_DO_MIPS64R2" CONF_FAILED_MIPS64R2 "$CROSS_COMPILE_MIPS64R2"
+  check_cross_tools "MIPS64r6" "$CONF_DO_MIPS64R6" CONF_FAILED_MIPS64R6 "$CROSS_COMPILE_MIPS64R6"
+
+  if [ -n "$CONF_DO_UX" ]; then
+    echo "Checking some specific Fiasco-UX build thing on 64bit platforms"
+    if ! echo "#include <sys/cdefs.h>" | ${CC} -m32 -x c -c -o /dev/null - > /dev/null 2>&1; then
+      result="Failed, disabling Fiasco-UX builds"
+      CONF_FAILED_UX=1
+    else
+      result="ok"
+    fi
+    printf "%15s ... %s\n" "UX build" "$result"
+  fi
+  echo
+
+# Optional tools
+  echo "Checking optional programs and tools"
+  tools_optional="doxygen"
+  [ "$CONF_DO_ARM" ] && tools_needed="$tools_needed qemu-system-arm"
+  for t in $tools_optional; do
+    result="ok"
+    if ! check_tool $t; then
+      result="NOT DETECTED but optional"
+      command_missing="$command_missing $t"
+    fi
+    printf "%15s ... %s\n" $t "$result"
+  done
+  echo
+  if [ -n "$command_missing" ]; then
+    echo "Some optional command is missing on your system, don't worry."
+    echo "   $command_missing"
+    echo
+  fi
+}
+
+do_setup()
+{
+  echo CONF_DO_ARM64=$CONF_DO_ARM64
+  [ "$CONF_DO_X86_32" ] && fiasco_configs="$fiasco_configs ia32-1"
+  [ "$CONF_DO_X86_32" -a "$CONF_DO_UX" ] && fiasco_configs="$fiasco_configs ux-1"
+  [ "$CONF_DO_ARM64" ] && fiasco_configs="$fiasco_configs arm64-mp-vexpress"
+  [ "$CONF_DO_AMD64" ] && fiasco_configs="$fiasco_configs amd64-1"
+  [ "$CONF_DO_ARM_RV_ARM9" ] && fiasco_configs="$fiasco_configs arm-v6-mp-pb arm-rv-1"
+  [ "$CONF_DO_ARM_RV_CA" ] && fiasco_configs="$fiasco_configs arm-a9-mp-vexpress-1"
+  [ "$CONF_DO_ARM_OMAP_BB" ] && fiasco_configs="$fiasco_configs arm-omap3evm"
+  [ "$CONF_DO_ARM_OMAP_PANDA" ] && fiasco_configs="$fiasco_configs arm-omap4-panda"
+  [ "$CONF_DO_MIPS32R2" ] && fiasco_configs="$fiasco_configs mips-baikal-mp mips-malta-mp"
+  [ "$CONF_DO_MIPS32R6" ] && fiasco_configs="$fiasco_configs mips-malta-32r6-mp"
+  [ "$CONF_DO_MIPS64R2" ] && fiasco_configs="$fiasco_configs mips-malta-64r2-mp"
+  [ "$CONF_DO_MIPS64R6" ] && fiasco_configs="$fiasco_configs mips-malta-64r6-mp mips-boston-64r6-mp"
+
+  declare -A fiascodirs
+  fiascodirs[ia32-1]="ia32"
+  fiascodirs[ux-1]="ux"
+  fiascodirs[amd64-1]="amd64"
+  fiascodirs[arm64-mp-vexpress]="arm64-mp-vexpress"
+  fiascodirs[arm-v6-mp-pb]="arm-mp-rv-pb11mp"
+  fiascodirs[arm-rv-1]="arm-up-rv-9"
+  fiascodirs[arm-a9-mp-vexpress-1]="arm-mp-rv-a9-vexpress"
+  fiascodirs[arm-omap3evm]="arm-beagleboard"
+  fiascodirs[arm-omap4-panda]="arm-pandaboard"
+  fiascodirs[mips-malta-mp]="mips32-malta"
+  fiascodirs[mips-baikal-mp]="mips32-baikal-mp"
+  fiascodirs[mips-malta-32r6-mp]="mips-malta-32r6-mp"
+  fiascodirs[mips-malta-64r2-mp]="mips64r2-malta"
+  fiascodirs[mips-boston-64r6-mp]="mips-boston-64r6-mp"
+  fiascodirs[mips-malta-64r6-mp]="mips-malta-64r6-mp"
+
+  declare -A fiascocrosscomp
+  fiascocrosscomp[ia32-1]=$CROSS_COMPILE_X86_32
+  fiascocrosscomp[ux-1]=$CROSS_COMPILE_X86_32
+  fiascocrosscomp[amd64-1]=$CROSS_COMPILE_AMD64
+  fiascocrosscomp[arm64-mp-vexpress]=$CROSS_COMPILE_ARM64
+  fiascocrosscomp[arm-v6-mp-pb]=$CROSS_COMPILE_ARM
+  fiascocrosscomp[arm-rv-1]=$CROSS_COMPILE_ARM
+  fiascocrosscomp[arm-a9-mp-vexpress-1]=$CROSS_COMPILE_ARM
+  fiascocrosscomp[arm-omap3evm]=$CROSS_COMPILE_ARM
+  fiascocrosscomp[arm-omap4-panda]=$CROSS_COMPILE_ARM
+  fiascocrosscomp[mips-malta-mp]=$CROSS_COMPILE_MIPS32R2
+  fiascocrosscomp[mips-baikal-mp]=$CROSS_COMPILE_MIPS32R2
+  fiascocrosscomp[mips-malta-32r6-mp]=$CROSS_COMPILE_MIPS32R6
+  fiascocrosscomp[mips-malta-64r2-mp]=$CROSS_COMPILE_MIPS64R2
+  fiascocrosscomp[mips-boston-64r6-mp]=$CROSS_COMPILE_MIPS64R6
+  fiascocrosscomp[mips-malta-64r6-mp]=$CROSS_COMPILE_MIPS64R6
+
+  echo "Creating build directories..."
+
+  mkdir -p obj/fiasco
+  mkdir -p obj/l4
+  mkdir -p obj/l4linux
+
+  [ -e src/l4linux ] && l4lx_avail=1
+
+  # Fiasco build dirs
+  for b in $fiasco_configs; do
+    echo ${fiascodirs[$b]} "->" $b
+    if [ -z "${fiascodirs[$b]}" ]; then
+      echo "Internal error: No directory given for config '$b'"
+      exit 1
+    fi
+    (cd src/kernel/fiasco && make B=../../../obj/fiasco/${fiascodirs[$b]} T=$b)
+    echo CROSS_COMPILE=${fiascocrosscomp[$b]} >> obj/fiasco/${fiascodirs[$b]}/Makeconf.local
+  done
+
+  # some config tweaking
+  if [ "$CONF_DO_ARM_OMAP_BB" ]; then
+    # beagleboard is nearly omap3evm so we do not have an own config
+    perl -n -i -e 'print unless /CONFIG_PF_OMAP3_/' obj/fiasco/arm-beagleboard/globalconfig.out
+    echo "# CONFIG_PF_OMAP3_OMAP35XEVM is not set" >> obj/fiasco/arm-beagleboard/globalconfig.out
+    echo "# CONFIG_PF_OMAP3_AM33XX is not set" >> obj/fiasco/arm-beagleboard/globalconfig.out
+    echo "CONFIG_PF_OMAP3_BEAGLEBOARD=y"    >> obj/fiasco/arm-beagleboard/globalconfig.out
+  fi
+  if [ "$CONF_DO_MIPS32R2" ]; then
+    echo '# CONFIG_MP is not set' >> obj/fiasco/mips32-malta/globalconfig.out
+  fi
+
+  for b in $fiasco_configs; do
+    make -j5 -C obj/fiasco/${fiascodirs[$b]} olddefconfig
+  done
+
+
+
+  # L4Re build dirs with default configs
+  [ "$CONF_DO_X86_32" ] \
+    && make -C src/l4 DROPSCONF_DEFCONFIG=mk/defconfig/config.x86 B=../../obj/l4/x86
+
+  [ "$CONF_DO_AMD64" ] \
+    && make -C src/l4 DROPSCONF_DEFCONFIG=mk/defconfig/config.amd64 B=../../obj/l4/amd64
+
+  if [ "$CONF_DO_ARM_RV_ARM9" ]; then
+    make -C src/l4 CROSS_COMPILE=$CROSS_COMPILE_ARM DROPSCONF_DEFCONFIG=mk/defconfig/config.arm-rv B=../../obj/l4/arm-arm9
+    ARM_L4_DIR_FOR_LX_UP=obj/l4/arm-arm9
+    echo CROSS_COMPILE=$CROSS_COMPILE_ARM >> obj/l4/arm-arm9/Makeconf.local
+  fi
+  if [ "$CONF_DO_ARM_RV_CA" ]; then
+    make -C src/l4 CROSS_COMPILE=$CROSS_COMPILE_ARM DROPSCONF_DEFCONFIG=mk/defconfig/config.arm-rv B=../../obj/l4/arm-ca
+    #echo 'RAM_BASE:=0x60000000' > obj/l4/arm-ca/Makeconf.ram_base
+    switch_to_kconfig_setup_arm obj/l4/arm-ca/.kconfig \
+                                CONFIG_CPU_ARM_ARMV7A CONFIG_PLATFORM_TYPE_rv_vexpress
+    make -C obj/l4/arm-ca CROSS_COMPILE=$CROSS_COMPILE_ARM oldconfig
+    ARM_L4_DIR_FOR_LX_MP=obj/l4/arm-ca
+    echo CROSS_COMPILE=$CROSS_COMPILE_ARM >> obj/l4/arm-ca/Makeconf.local
+  fi
+  if [ "$CONF_DO_ARM_OMAP_BB" ]; then
+    make -C src/l4 CROSS_COMPILE=$CROSS_COMPILE_ARM DROPSCONF_DEFCONFIG=mk/defconfig/config.arm-rv B=../../obj/l4/arm-beagleboard
+    switch_to_kconfig_setup_arm obj/l4/arm-beagleboard/.kconfig \
+                                CONFIG_CPU_ARM_ARMV7A CONFIG_PLATFORM_TYPE_beagleboard
+    make -C obj/l4/arm-beagleboard CROSS_COMPILE=$CROSS_COMPILE_ARM oldconfig
+    if [ -z "$ARM_L4_DIR_FOR_LX_UP" ]; then
+      ARM_L4_DIR_FOR_LX_UP=obj/l4/arm-beagleboard
+    fi
+    echo CROSS_COMPILE=$CROSS_COMPILE_ARM >> obj/l4/arm-beagleboard/Makeconf.local
+  fi
+  if [ "$CONF_DO_ARM_OMAP_PANDA" ]; then
+    make -C src/l4 CROSS_COMPILE=$CROSS_COMPILE_ARM DROPSCONF_DEFCONFIG=mk/defconfig/config.arm-rv B=../../obj/l4/arm-pandaboard
+    switch_to_kconfig_setup_arm obj/l4/arm-pandaboard/.kconfig \
+                                CONFIG_CPU_ARM_ARMV7A CONFIG_PLATFORM_TYPE_pandaboard
+    make -C obj/l4/arm-pandaboard CROSS_COMPILE=$CROSS_COMPILE_ARM oldconfig
+    if [ -z "$ARM_L4_DIR_FOR_LX_UP" ]; then
+      ARM_L4_DIR_FOR_LX_UP=obj/l4/arm-pandaboard
+    fi
+    echo CROSS_COMPILE=$CROSS_COMPILE_ARM >> obj/l4/arm-pandaboard/Makeconf.local
+  fi
+
+  if [ "$CONF_DO_ARM64" ]; then
+    make -C src/l4 CROSS_COMPILE=$CROSS_COMPILE_ARM64 DROPSCONF_DEFCONFIG=mk/defconfig/config.arm64-rv-v8a B=../../obj/l4/arm64
+  fi
+
+  if [ "$CONF_DO_MIPS32R2" ]; then
+    cp src/l4/mk/defconfig/config.mips .tmp1
+    echo CONFIG_PLATFORM_TYPE_malta=y >> .tmp1
+    echo CONFIG_CPU_MIPS_32R2=y >> .tmp1
+    make -C src/l4 DROPSCONF_DEFCONFIG=../../.tmp1 \
+      CROSS_COMPILE=$CROSS_COMPILE_MIPS32R2 B=../../obj/l4/mips32r2
+    rm .tmp1
+    echo CROSS_COMPILE=$CROSS_COMPILE_MIPS32R2 >> obj/l4/mips32r2/Makeconf.local
+  fi
+  if [ "$CONF_DO_MIPS32R6" ]; then
+    cp src/l4/mk/defconfig/config.mips .tmp1
+    echo CONFIG_PLATFORM_TYPE_malta=y >> .tmp1
+    echo CONFIG_CPU_MIPS_32R6=y >> .tmp1
+    make -C src/l4 DROPSCONF_DEFCONFIG=../../.tmp1 \
+      CROSS_COMPILE=$CROSS_COMPILE_MIPS32R6 B=../../obj/l4/mips32r6
+    rm .tmp1
+    echo CROSS_COMPILE=$CROSS_COMPILE_MIPS32R6 >> obj/l4/mips32r6/Makeconf.local
+  fi
+  if [ "$CONF_DO_MIPS64R2" ]; then
+    cp src/l4/mk/defconfig/config.mips .tmp1
+    echo CONFIG_PLATFORM_TYPE_malta=y >> .tmp1
+    echo CONFIG_CPU_MIPS_64R2=y >> .tmp1
+    make -C src/l4 DROPSCONF_DEFCONFIG=../../.tmp1 \
+      CROSS_COMPILE=$CROSS_COMPILE_MIPS64R2 B=../../obj/l4/mips64r2
+    rm .tmp1
+    echo CROSS_COMPILE=$CROSS_COMPILE_MIPS64R2 >> obj/l4/mips64r2/Makeconf.local
+  fi
+  if [ "$CONF_DO_MIPS64R6" ]; then
+    cp src/l4/mk/defconfig/config.mips .tmp1
+    echo CONFIG_PLATFORM_TYPE_boston=y >> .tmp1
+    echo CONFIG_CPU_MIPS_64R6=y >> .tmp1
+    make -C src/l4 DROPSCONF_DEFCONFIG=../../.tmp1 \
+      CROSS_COMPILE=$CROSS_COMPILE_MIPS64R6 B=../../obj/l4/mips64r6
+    rm .tmp1
+    echo CROSS_COMPILE=$CROSS_COMPILE_MIPS64R6 >> obj/l4/mips64r6/Makeconf.local
+  fi
+
+
+  # L4Linux build setup
+  if [ "$CONF_DO_X86_32" -a -n "$l4lx_avail" ]; then
+    mkdir -p obj/l4linux/ux
+    ( cd src/l4linux && make O=../../obj/l4linux/ux x86_32-ux_defconfig )
+    perl -p -i -e 's@^(CONFIG_L4_OBJ_TREE=").*@$1'"$(cd obj/l4/x86 && pwd)"'"@' \
+       obj/l4linux/ux/.config
+  fi
+
+  if [ "$CONF_DO_AMD64" -a -n "$l4lx_avail" ]; then
+    mkdir -p obj/l4linux/amd64
+    ( cd src/l4linux && make O=../../obj/l4linux/amd64 x86_64_defconfig )
+    perl -p -i -e 's@^(CONFIG_L4_OBJ_TREE=").*@$1'"$(cd obj/l4/amd64 && pwd)"'"@' \
+       obj/l4linux/amd64/.config
+  fi
+
+  [ -z "$ARM_L4_DIR_FOR_LX_UP" ] && ARM_L4_DIR_FOR_LX_UP=$ARM_L4_DIR_FOR_LX_MP
+
+  if [ -n "$ARM_L4_DIR_FOR_LX_UP" -a -n "$l4lx_avail" ]; then
+
+    mkdir -p obj/l4linux/arm-up
+    ( cd src/l4linux && make L4ARCH=arm CROSS_COMPILE=$CROSS_COMPILE_ARM O=../../obj/l4linux/arm-up arm_defconfig )
+    perl -p -i -e 's@^(CONFIG_L4_OBJ_TREE=").*@$1'"$(cd $ARM_L4_DIR_FOR_LX_UP && pwd)"'"@' \
+       obj/l4linux/arm-up/.config
+    perl -p -i -e 's@^(CONFIG_CROSS_COMPILE)=""$@$1="'$CROSS_COMPILE_ARM'"@' \
+       obj/l4linux/arm-up/.config
+
+    if [ "$ARM_L4_DIR_FOR_LX_MP" ]; then
+      mkdir -p obj/l4linux/arm-mp
+      ( cd src/l4linux && make L4ARCH=arm CROSS_COMPILE=$CROSS_COMPILE_ARM O=../../obj/l4linux/arm-mp arm-mp_defconfig )
+      perl -p -i -e 's@^(CONFIG_L4_OBJ_TREE=").*@$1'"$(cd $ARM_L4_DIR_FOR_LX_MP && pwd)"'"@' \
+	 obj/l4linux/arm-mp/.config
+      perl -p -i -e 's@^(CONFIG_CROSS_COMPILE)=""$@$1="'$CROSS_COMPILE_ARM'"@' \
+	 obj/l4linux/arm-mp/.config
+    fi
+
+    if ! check_eabi_gcc ${CROSS_COMPILE_ARM}gcc; then
+      echo "WARNING: L4Linux has been disabled due to a detected old OABI compiler"
+      echo "WARNING: Please update your compiler to an EABI version"
+      add_to_config SKIP_L4LINUX_ARM_BUILD=1
+    fi
+  fi
+
+  common_paths=$(pwd)/files:$(pwd)/files/cfg:$(pwd)/src/l4/conf:$(pwd)/src/l4/conf/examples
+
+  if [ "$CONF_DO_X86_32" ]; then
+    mkdir -p obj/l4/x86/conf
+    cat<<EOF >> obj/l4/x86/conf/Makeconf.boot
+MODULE_SEARCH_PATH=$(pwd)/obj/fiasco/ia32:$(pwd)/obj/l4linux/ux:$common_paths
+EOF
+    add_std_qemu_options obj/l4/x86/conf/Makeconf.boot
+  fi
+
+  if [ "$CONF_DO_AMD64" ]; then
+    mkdir -p obj/l4/amd64/conf
+    cat<<EOF >> obj/l4/amd64/conf/Makeconf.boot
+MODULE_SEARCH_PATH=$(pwd)/obj/fiasco/amd64:$(pwd)/obj/l4linux/amd64:$common_paths
+EOF
+    add_std_qemu_options obj/l4/amd64/conf/Makeconf.boot
+  fi
+
+  
+  if [ "$CONF_DO_ARM_RV_ARM9" ]; then
+    mkdir -p obj/l4/arm-arm9/conf
+    cat<<EOF >> obj/l4/arm-arm9/conf/Makeconf.boot
+MODULE_SEARCH_PATH=$(pwd)/obj/fiasco/arm-up-rv-9:$(pwd)/obj/l4linux/arm-up:$common_paths
+QEMU_OPTIONS += -M realview-eb
+EOF
+    add_std_qemu_options obj/l4/arm-arm9/conf/Makeconf.boot
+    add_nonx86_qemu_options obj/l4/arm-arm9/conf/Makeconf.boot
+  fi
+  if [ "$CONF_DO_ARM_RV_CA" ]; then
+    mkdir -p obj/l4/arm-ca/conf
+    cat<<EOF >> obj/l4/arm-ca/conf/Makeconf.boot
+MODULE_SEARCH_PATH=$(pwd)/obj/fiasco/arm-mp-rv-a9-vexpress:$(pwd)/obj/l4linux/arm-mp:$common_paths
+QEMU_OPTIONS += -M vexpress-a9 -cpu cortex-a9 -smp 2
+EOF
+    add_std_qemu_options obj/l4/arm-ca/conf/Makeconf.boot
+    add_nonx86_qemu_options obj/l4/arm-ca/conf/Makeconf.boot
+    echo "PLATFORM_TYPE := rv_vexpress" >> obj/l4/arm-ca/conf/Makeconf.boot
+  fi
+  if [ "$CONF_DO_ARM_OMAP_BB" ]; then
+    mkdir -p obj/l4/arm-beagleboard/conf
+    cat<<EOF >> obj/l4/arm-beagleboard/conf/Makeconf.boot
+MODULE_SEARCH_PATH=$(pwd)/obj/fiasco/arm-beagleboard:$(pwd)/obj/l4linux/arm-up:$common_paths
+EOF
+    add_std_qemu_options obj/l4/arm-beagleboard/conf/Makeconf.boot
+    add_nonx86_qemu_options obj/l4/arm-beagleboard/conf/Makeconf.boot
+  fi
+  if [ "$CONF_DO_ARM_OMAP_PANDA" ]; then
+    mkdir -p obj/l4/arm-pandaboard/conf
+    cat<<EOF >> obj/l4/arm-pandaboard/conf/Makeconf.boot
+MODULE_SEARCH_PATH=$(pwd)/obj/fiasco/arm-pandaboard:$(pwd)/obj/l4linux/arm-up:$common_paths
+EOF
+    add_std_qemu_options obj/l4/arm-pandaboard/conf/Makeconf.boot
+    add_nonx86_qemu_options obj/l4/arm-pandaboard/conf/Makeconf.boot
+  fi
+
+  if [ "$CONF_DO_ARM64" ]; then
+    mkdir -p obj/l4/arm64/conf
+    cat<<EOF >> obj/l4/arm64/conf/Makeconf.boot
+MODULE_SEARCH_PATH=$(pwd)/obj/fiasco/arm64-mp-vexpress:$common_paths
+QEMU_OPTIONS += -M vexpress-a15 -m 512 -cpu cortex-a57
+EOF
+    add_std_qemu_options obj/l4/arm64/conf/Makeconf.boot
+    add_nonx86_qemu_options obj/l4/arm64/conf/Makeconf.boot
+  fi
+
+  if [ "$CONF_DO_MIPS32R2" ]; then
+    mkdir -p obj/l4/mips32r2/conf
+    cat<<EOF >> obj/l4/mips32r2/conf/Makeconf.boot
+#MODULE_SEARCH_PATH=$(pwd)/obj/fiasco/mips32-baikal-mp:$common_paths
+MODULE_SEARCH_PATH=$(pwd)/obj/fiasco/mips32-malta:$common_paths
+QEMU_OPTIONS += -M malta
+EOF
+    add_std_qemu_options obj/l4/mips32r2/conf/Makeconf.boot
+    add_nonx86_qemu_options obj/l4/mips32r2/conf/Makeconf.boot
+  fi
+
+  if [ "$CONF_DO_MIPS32R6" ]; then
+    mkdir -p obj/l4/mips32r6/conf
+    cat<<EOF >> obj/l4/mips32r6/conf/Makeconf.boot
+MODULE_SEARCH_PATH=$(pwd)/obj/fiasco/mips32-...:$common_paths
+QEMU_OPTIONS += -M malta
+EOF
+    add_std_qemu_options obj/l4/mips32r6/conf/Makeconf.boot
+    add_nonx86_qemu_options obj/l4/mips32r2/conf/Makeconf.boot
+  fi
+
+  if [ "$CONF_DO_MIPS64R2" ]; then
+    mkdir -p obj/l4/mips64r2/conf
+    cat<<EOF >> obj/l4/mips64r2/conf/Makeconf.boot
+MODULE_SEARCH_PATH=$(pwd)/obj/fiasco/mips-malta-64r2-mp:$common_paths
+QEMU_OPTIONS += -M malta
+EOF
+    add_std_qemu_options obj/l4/mips64r2/conf/Makeconf.boot
+    add_nonx86_qemu_options obj/l4/mips64r2/conf/Makeconf.boot
+  fi
+
+  if [ "$CONF_DO_MIPS64R6" ]; then
+    mkdir -p obj/l4/mips64r6/conf
+    cat<<EOF >> obj/l4/mips64r6/conf/Makeconf.boot
+MODULE_SEARCH_PATH=$(pwd)/obj/fiasco/mips-boston-64r6-mp:$common_paths
+QEMU_OPTIONS    += -M boston
+QEMU_KERNEL_TYPE = itb
+EOF
+    add_std_qemu_options obj/l4/mips64r6/conf/Makeconf.boot 1024
+    add_nonx86_qemu_options obj/l4/mips64r6/conf/Makeconf.boot
+  fi
+}
+
+link_files()
+{
+  (cd files/cfg && ln -sf ../../src/l4/pkg/io/io/config/x86-legacy.devs)
+}
+
+
+case "$1" in
+  config)
+     do_config
+     ;;
+  setup)
+     load_config
+     check_tools
+     link_files
+     redo_config
+     do_setup
+     ;;
+  *)
+     echo "Call $0 [config|setup]"
+     exit 1
+     ;;
+esac
+
+exit 0

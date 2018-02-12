@@ -1,0 +1,248 @@
+// vi:ft=cpp
+/*
+ * \brief   Scrollbar interface
+ * \date    2005-10-24
+ * \author  Norman Feske <norman.feske@genode-labs.com>
+ */
+
+/*
+ * Copyright (C) 2005-2009
+ * Genode Labs, Feske & Helmuth Systementwicklung GbR
+ *
+ * This file is part of the Genode OS framework, which is distributed
+ * under the terms of the GNU General Public License version 2.
+ */
+
+
+#pragma once
+
+#include <l4/scout-gfx/widget>
+#include <l4/scout-gfx/fade_icon>
+
+namespace Scout_gfx {
+
+class Factory;
+
+class Scrollbar_listener
+{
+public:
+
+  virtual ~Scrollbar_listener() { }
+
+  /**
+   * Handle change of view position
+   */
+  virtual void handle_scroll(int view_pos) = 0;
+};
+
+
+class Scrollbar : public Parent_widget
+{
+public:
+
+  enum
+  {
+    Sb_elem_w = 32,        /* scrollbar element width  */
+    Sb_elem_h = 32,        /* scrollbar element height */
+  };
+
+private:
+  class Arrow_event_handler : public Event_handler, public Tick
+  {
+  private:
+
+    /**
+     * Constants
+     */
+    enum { Max_speed = 16*256 };
+
+    Scrollbar *_sb;
+    Icon *_icon;
+    unsigned char const *_rgba;
+    int _direction;
+    int _curr_speed;
+    int _dst_speed;
+    int _view_pos;
+    int _accel;
+
+  public:
+    /**
+     * Constructor
+     */
+    Arrow_event_handler(Scrollbar *sb, Icon *icon, int direction,
+                        unsigned char const *rgba)
+    : _sb(sb), _icon(icon), _rgba(rgba), _direction(direction), _accel(1)
+    {}
+
+    /**
+     * Event handler interface
+     */
+    bool handle(Event const &ev);
+
+    /**
+     * Tick interface
+     */
+    int on_tick();
+  };
+
+
+  class Slider_event_handler : public Event_handler
+  {
+  private:
+    Scrollbar *_sb;
+    Icon *_icon;
+    unsigned char const *_rgba;
+    int _om, _cm;
+    int _op;
+
+  public:
+    /**
+     * Constructor
+     */
+    Slider_event_handler(Scrollbar *sb, Icon *icon, unsigned char const *rgba)
+    : _sb(sb), _icon(icon), _rgba(rgba)
+    {}
+
+    /**
+     * Event handler interface
+     */
+    bool handle(Event const &ev);
+  };
+
+  Icon *_uparrow;
+  Icon *_dnarrow;
+  Icon *_slider;
+  int _real_size;   /* size of content            */
+  int _view_size;   /* size of viewport           */
+  int _view_pos;    /* viewport position          */
+  Scrollbar_listener *_listener;    /* listener for scroll events */
+  int _visibility;
+
+  Orientation _orientation;
+
+  Arrow_event_handler _uph, _dnh;
+  Slider_event_handler _slh;
+
+  /**
+   * Utilities
+   */
+  inline int _visible() { return _real_size > _view_size; }
+  void refresh_slider_geometry();
+
+public:
+
+  /**
+   * Constructor
+   */
+  explicit Scrollbar(Factory *f, Orientation o = Vertical);
+
+  Orientation orientation() const { return _orientation; }
+  Area min_size() const;
+  Area preferred_size() const;
+  Area max_size() const;
+
+  Orientations expanding() const { return _orientation; }
+  bool empty() const { return false; }
+
+  void set_geometry(Rect const &r);
+  Rect geometry() const { return Rect(_pos, _size); }
+
+  void visibility(bool new_visibility);
+  bool visible() const { return _visibility; }
+
+  /**
+   * Accessor functions
+   */
+  int real_size() const { return _real_size; }
+  int view_size() const { return _view_size; }
+  int view_pos() const { return _view_pos;  }
+  int slider_pos() const;
+  int slider_size() const;
+
+  /**
+   * Set slider to specified position
+   */
+  void slider_pos(int);
+
+  /**
+   * Define scrollbar properties
+   */
+  void view(int real_size, int view_size, int view_pos);
+
+  /**
+   * Define listener to scroll events
+   */
+  void listener(Scrollbar_listener *listener) { _listener = listener; }
+
+  /**
+   * Notify listener about view port change
+   */
+  void notify_listener() const;
+
+  /**
+   * Element interface
+   */
+  Widget *find(Point const &p);
+};
+
+
+inline int Scrollbar::slider_size() const
+{
+  if (_orientation == Vertical)
+    return std::max<int>(Sb_elem_h, ((_size.h() - Sb_elem_h*2)*_view_size)/_real_size);
+  else
+    return std::max<int>(Sb_elem_w, ((_size.w() - Sb_elem_w*2)*_view_size)/_real_size);
+
+}
+
+inline
+int Scrollbar::slider_pos() const
+{
+  int real_range   = _real_size - _view_size;
+  int slider_range;
+  if (_orientation == Vertical)
+    slider_range = _size.h() - Sb_elem_h*2 - slider_size();
+  else
+    slider_range = _size.w() - Sb_elem_w*2 - slider_size();
+
+  int pos = real_range ? (slider_range*_view_pos)/real_range : 0;
+
+  return pos + ((_orientation == Vertical) ? Sb_elem_h : Sb_elem_w);
+}
+
+inline
+void Scrollbar::view(int real_size, int view_size, int view_pos)
+{
+  _real_size = real_size;
+  _view_size = std::min(view_size, real_size);
+  _view_pos  = std::max(0, std::min(view_pos,  _real_size - _view_size));
+
+//  size(_size);
+//  geometry(_pos);
+}
+
+inline
+void Scrollbar::notify_listener() const
+{
+  if (_listener)
+    _listener->handle_scroll(_view_pos);
+}
+
+
+/***********************
+ ** Element interface **
+ ***********************/
+
+
+inline
+Widget *
+Scrollbar::find(Point const &p)
+{
+  if (_visibility)
+    return Parent_widget::find(p);
+
+  return 0;
+}
+
+
+}

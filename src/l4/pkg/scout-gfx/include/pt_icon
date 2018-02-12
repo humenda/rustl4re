@@ -1,0 +1,615 @@
+// vi:ft=cpp
+/*
+ * (c) 2010 Alexander Warg <warg@os.inf.tu-dresden.de>
+ *     economic rights: Technische Universität Dresden (Germany)
+ *
+ * This file is part of TUD:OS and distributed under the terms of the
+ * GNU General Public License 2.
+ * Please see the COPYING-GPL-2 file for details.
+ */
+#pragma once
+
+#include <l4/scout-gfx/icon>
+#include <l4/mag-gfx/canvas>
+
+#include <cstring>
+
+namespace Scout_gfx { namespace Pt {
+
+template <typename PT>
+class Icon : public Scout_gfx::Icon
+{
+private:
+  class Icon_data
+  {
+  public:
+    typedef typename PT::Pixel Pixel;
+
+  private:
+    Pixel *_p;
+    unsigned char *_a;
+
+    void const *_src_id;
+    mutable int _ref_cnt;
+    mutable Icon_data const *_n;
+
+    static Icon_data const *_f;
+
+  public:
+    static Icon_data const *find(void const *src_id)
+    {
+      Icon_data const *x = _f;
+      while (x)
+	{
+	  if (x->_src_id == src_id)
+	    return x;
+
+	  x = x->_n;
+	}
+
+      return 0;
+    }
+
+    int ref_cnt() const { return _ref_cnt; }
+    int put() const { return --_ref_cnt; }
+    void get() const { ++_ref_cnt; }
+    void const *src_id() const { return _src_id; }
+
+
+    Icon_data(void const *src_id, Area const &size)
+    : _src_id(src_id), _n(_f)
+    {
+      unsigned long s = size.pixels() * (sizeof(Pixel) + 1);
+      // printf("create icon data %p for %p (%lu bytes)\n", this, src_id, s);
+      unsigned char *b = (unsigned char*)malloc(s);
+      if (!b)
+	return;
+
+      _p = reinterpret_cast<Pixel*>(b);
+      _a = b + size.pixels() * sizeof(Pixel);
+
+      _f = this;
+      memset(b, 0, s);
+    }
+
+    ~Icon_data()
+    {
+      // printf("release icon data: %p for %p\n", this, _src_id);
+      Icon_data const **x = &_f;
+      while (*x)
+	{
+	  if (*x == this)
+	    {
+	      *x = _n;
+	      break;
+	    }
+	  x = &(*x)->_n;
+	}
+      free(_p);
+    }
+
+    Pixel const *pixel() const { return _p; }
+    Pixel *pixel() { return _p; }
+
+    unsigned char const *alpha() const { return _a; }
+    unsigned char *alpha() { return _a; }
+  };
+
+  typedef typename PT::Pixel Pixel;
+
+  Area _s;
+  Icon_data const *_d;
+
+public:
+
+  /**
+   * Constructor
+   */
+  Icon();
+
+  void set_geometry(Rect const &s)
+  {
+    _pos = s.p1();
+    _size = _s.max(s.area());
+  }
+
+  /**
+   * Define new icon pixels from rgba buffer
+   *
+   * \param vshift  vertical shift of pixels
+   * \param shadow  shadow divisor, low value -> dark shadow
+   *                special case zero -> no shadow
+   *
+   * The buffer must contains W*H pixels. Each pixels consists
+   * of four bytes, red, green, blue, and alpha.
+   */
+  void rgba(void const *src, Area const &size, int vshift = 0, int shadow = 4);
+
+  /**
+   * Define icon to be a glow of an rgba image
+   *
+   * \param src  source rgba image to extract the glow's shape from
+   * \param c    glow color
+   */
+  void glow(unsigned char const *src, Area const &size, Mag_gfx::Rgba32::Color c);
+
+
+  /**
+   * Element interface
+   */
+  void draw(Canvas *c, Point const &p);
+  Widget *find(Point const &);
+};
+
+
+/**********
+ ** Icon **
+ **********/
+
+template <typename PT>
+Icon<PT>::Icon() : _d(0)
+{}
+
+
+template <typename PT>
+void
+Icon<PT>::rgba(void const *_src, Area const &size, int vshift, int shadow)
+{
+  using Mag_gfx::Rgba32;
+  using Mag_gfx::color_conv;
+
+  typedef typename PT::Pixel Pixel;
+  typedef typename PT::Color Color;
+
+  if (_d && _d->put() == 0)
+    delete const_cast<Icon_data*>(_d);
+
+  _size = size.max(_size);
+
+  char const *id = (char const *)_src + vshift * 10 + shadow;
+  // printf("icon from rgba[%dx%d]: %p %d %d -> %p\n", size.w(), size.h(), _src, vshift, shadow, id);
+  _s = size;
+  if (Icon_data const *d = Icon_data::find(id))
+    {
+      d->get();
+      _d = d;
+      return;
+    }
+
+  Icon_data *n = new Icon_data(id, size);
+  Pixel *_pixel = n->pixel();
+  unsigned char *_alpha = n->alpha();
+  
+  if (shadow == 0)
+    vshift = 0;
+
+  Rgba32::Pixel const *src = reinterpret_cast<Rgba32::Pixel const *>(_src);
+  src += _s.w() * vshift;
+  /* convert rgba values to pixel type and alpha channel */
+  for (int j = (_s.h() - vshift) * _s.w();
+       j > 0;
+       --j, ++src, ++_alpha, ++_pixel)
+    {
+      Rgba32::Color s = *src;
+      *_pixel = color_conv<Color>(s);
+      *_alpha = s.a();
+    }
+
+  n->get();
+  _d = n;
+
+  /* handle special case of no shadow */
+  if (shadow == 0)
+    return;
+
+  _pixel = n->pixel() + 3 * _s.w();
+  _alpha = n->alpha() + 3 * _s.w();
+  /* generate shadow shape from blurred alpha channel */
+  /* apply shadow to pixels */
+  Color shcol(0, 0, 0);
+  src = reinterpret_cast<Rgba32::Pixel const *>(_src);
+  for (int j = 0; j < _s.h() - 5; j++, src+=3, _pixel += 3, _alpha += 3)
+    for (int i = 0; i < _s.w() - 3; i++)
+      {
+	int v = 0;
+	for (int k = 0; k < 3; k++)
+	  for (int l = 0; l < 3; l++)
+	    v += Rgba32::Color(src[(k * _s.w()) + l]).a();
+
+	++src;
+	v >>= shadow;
+	*_pixel = PT::mix(shcol, *_pixel, *_alpha);
+	*_alpha = std::min(255, *_alpha + v);
+	++_pixel;
+	++_alpha;
+      }
+}
+
+namespace {
+
+static inline
+void
+blur(unsigned char *src, unsigned char *dst, int w, int h)
+{
+  const int kernel = 3;
+  int scale  = (kernel*2 + 1)*(kernel*2 + 1);
+
+  scale = (scale*210)>>8;
+  for (int j = kernel; j < h - kernel; j++)
+    for (int i = kernel; i < w - kernel; i++)
+      {
+	int v = 0;
+	for (int k = -kernel; k <= kernel; k++)
+	  for (int l = -kernel; l <= kernel; l++)
+	    v += src[w*(j + k) + (i + l)];
+
+	dst[w*j + i] = std::min(v/scale, 255);
+      }
+}
+
+/**
+ * Copy pixel with alpha
+ */
+template <typename PT>
+static inline
+void
+transfer_pixel(PT const *src, int src_a, int alpha, PT *dst)
+{
+  if (src_a)
+    {
+      int a = (src_a * alpha)>>8;
+      if (a) *dst = PT::Traits::mix(*dst, *src, a);
+    }
+}
+
+
+/*
+ * An Icon has the following layout:
+ *
+ *  P1---+--------+----+
+ *  | cs |   hs   | cs |   top row
+ *  +----P2-------+----+
+ *  |    |        |    |
+ *  | vs |        | vs |   mid row
+ *  |    |        |    |
+ *  +----+--------P3---+
+ *  | cs |   hs   | cs |   low row
+ *  +------------------P4
+ *
+ * cs ... corner slice
+ * hs ... horizontal slice
+ * vs ... vertical slice
+ */
+
+
+/**
+ * Draw corner slice
+ */
+template <typename PT>
+static
+void
+draw_cslice(PT const *src, unsigned char const *src_a,
+            int src_pitch, int alpha,
+            char *dst, int dst_pitch, int w, int h)
+{
+  for (int j = 0; j < h; j++)
+    {
+
+      PT const      *s  = src;
+      unsigned char const *sa = src_a;
+      PT            *d  = reinterpret_cast<PT*>(dst);
+
+      for (int i = 0; i < w; i++, s++, sa++, d++)
+	transfer_pixel(s, *sa, alpha, d);
+
+      src += src_pitch;
+      src_a += src_pitch;
+      dst += dst_pitch;
+    }
+}
+
+
+/**
+ * Draw horizontal slice
+ */
+template <typename PT>
+static
+void
+draw_hslice(PT const *src, unsigned char const *src_a,
+            int src_pitch, int alpha,
+            char *dst, int dst_pitch, int w, int h)
+{
+  for (int j = 0; j < h; j++)
+    {
+      PT const *s = src;
+      int sa = *src_a;
+      PT  *d =  reinterpret_cast<PT*>(dst);
+
+      for (int i = 0; i < w; i++, d++)
+	transfer_pixel(s, sa, alpha, d);
+
+      src += src_pitch;
+      src_a += src_pitch;
+      dst += dst_pitch;
+    }
+}
+
+
+/**
+	for (int j = 0; j < h; j++) {
+
+		PT   s = *src;
+		int sa = *src_a;
+		PT  *d =  dst;
+
+		for (int i = 0; i < w; i++, d++)
+			transfer_pixel(s, sa, alpha, d);
+
+		src += src_pitch, src_a += src_pitch, dst += dst_pitch;
+	}
+ * Draw vertical slice
+ */
+template <typename PT>
+static
+void
+draw_vslice(PT const *src, unsigned char const *src_a,
+            int, int alpha,
+            char *dst, int dst_pitch, int w, int h)
+{
+  for (int i = 0; i < w; i++)
+    {
+
+      PT const *s = src;
+      int sa = *src_a;
+      char *d =  dst;
+
+      for (int j = 0; j < h; j++, d += dst_pitch)
+	transfer_pixel(s, sa, alpha, reinterpret_cast<PT*>(d));
+
+      src += 1;
+      src_a += 1;
+      dst += sizeof(PT);
+    }
+}
+
+
+/**
+ * Draw center slice
+ */
+template <typename PT>
+static
+void
+draw_center(PT const *src, unsigned char const *src_a,
+            int, int alpha,
+            char *dst, int dst_pitch, int w, int h)
+{
+  PT const *s = src;
+  int sa = *src_a;
+
+  for (int j = 0; j < h; j++, dst += dst_pitch)
+    {
+
+      PT  *d =  reinterpret_cast<PT*>(dst);
+
+      for (int i = 0; i < w; i++, d++)
+	transfer_pixel(s, sa, alpha, d);
+    }
+}
+
+
+/**
+ * Clip rectangle against clipping region
+ *
+ * The out parameters are the resulting x/y offsets and the
+ * visible width and height.
+ *
+ * \return  1 if rectangle intersects with clipping region,
+ *          0 otherwise
+ */
+static inline
+int
+clip(int px1, int py1, int px2, int py2,
+     Rect const &c,
+     int *out_x, int *out_y, int *out_w, int *out_h)
+{
+  /* determine intersection of rectangle and clipping region */
+  int x1 = std::max(px1, c.x1());
+  int y1 = std::max(py1, c.y1());
+  int x2 = std::min(px2, c.x2());
+  int y2 = std::min(py2, c.y2());
+
+  *out_w = x2 - x1 + 1;
+  *out_h = y2 - y1 + 1;
+  *out_x = x1 - px1;
+  *out_y = y1 - py1;
+
+  return (*out_w > 0) && (*out_h > 0);
+}
+
+} // end of internal stuff
+
+template <typename PT>
+void
+Icon<PT>::glow(unsigned char const *_src, Area const &size,
+               Mag_gfx::Rgba32::Color c)
+{
+  using Mag_gfx::Rgba32;
+  using Mag_gfx::color_conv;
+
+  typedef typename PT::Color MColor;
+
+  if (_d && _d->put() == 0)
+    delete const_cast<Icon_data*>(_d);
+
+  char const *id = (char const *)_src -10;
+  _s = size;
+  if (Icon_data const *d = Icon_data::find(id))
+    {
+      d->get();
+      _d = d;
+      return;
+    }
+
+  Icon_data *n = new Icon_data(id, size);
+  Pixel *_pixel = n->pixel();
+  unsigned char *_alpha = n->alpha();
+
+  n->get();
+  _d = n;
+
+  Rgba32::Pixel const *src = reinterpret_cast<Rgba32::Pixel const*>(_src);
+  /* extract shape from alpha channel of rgba source image */
+  for (int j = 0; j < _s.pixels(); j++, ++src)
+    *(_alpha++) = Rgba32::Color(*src).a();
+
+  unsigned char *_b = (unsigned char *)malloc(_s.pixels());
+  _alpha = n->alpha();
+  for (int i = 0; i < 2; i++)
+    {
+      blur(_alpha, _b, _s.w(), _s.h());
+      blur(_b, _alpha, _s.w(), _s.h());
+    }
+
+  free(_b);
+
+  /* assign pixels and alpha */
+  MColor s = color_conv<MColor>(c);
+  for (int j = 0; j < _s.pixels(); j++)
+    _pixel[j] = s;
+}
+
+
+template <typename PT>
+void
+Icon<PT>::draw(Canvas *c, Point const &p)
+{
+  typedef typename PT::Pixel Pixel;
+
+  if (!_d)
+    return;
+
+  Pixel const *const _pixel = _d->pixel();
+  unsigned char const *const _alpha = _d->alpha();
+
+  char *addr = (char *)c->buffer();
+
+  if (!addr || (_icon_alpha == 0))
+    return;
+
+  Rect const cl = c->clip();
+  int const bpl = c->bytes_per_line();
+
+  /* determine point positions */
+  Point const p1 = p;
+  Point const p4 = p1 + Point(_size.w(), _size.h());
+  Point const p2 = p1 + Point(_s.w() / 2, _s.h() / 2);
+  Point const p3 = p2.max(p4 - Point(_s.w() / 2, _s.h() / 2));
+
+  const int tx1 = 0;
+  const int ty1 = 0;
+  const int tx4 = _s.w();
+  const int ty4 = _s.h();
+  const int tx2 = _s.w()/2;
+  const int ty2 = _s.h()/2;
+  const int tx3 = std::max(tx4 - _s.w()/2, tx2);
+  const int ty3 = std::max(ty4 - _s.h()/2, ty2);
+
+  Pixel const *src   = _pixel + _s.w()*ty1;
+  unsigned char const *src_a = _alpha + _s.w()*ty1;
+  int dx, dy, w, h;
+
+  /*
+   * top row
+   */
+
+  if (clip(p1.x(), p1.y(), p2.x() - 1, p2.y() - 1, cl, &dx, &dy, &w, &h))
+    draw_cslice(src + tx1 + dy*_s.w() + dx, src_a + tx1 + dy*_s.w() + dx, _s.w(), _icon_alpha,
+	addr + (p1.y() + dy)*bpl + (p1.x() + dx) * sizeof(Pixel), bpl, w, h);
+
+  if (clip(p2.x(), p1.y(), p3.x() - 1, p2.y() - 1, cl, &dx, &dy, &w, &h))
+    draw_hslice(src + tx2 + dy*_s.w(), src_a + tx2 + dy*_s.w(), _s.w(), _icon_alpha,
+	addr + (p1.y() + dy)*bpl + (p2.x() + dx) * sizeof(Pixel), bpl, w, h);
+
+  if (clip(p3.x(), p1.y(), p4.x() - 1, p2.y() - 1, cl, &dx, &dy, &w, &h))
+    draw_cslice(src + tx3 + dy*_s.w() + dx, src_a + tx3 + dy*_s.w() + dx, _s.w(), _icon_alpha,
+	addr + (p1.y() + dy)*bpl + (p3.x() + dx) * sizeof(Pixel), bpl, w, h);
+
+  /*
+   * mid row
+   */
+
+  src   = _pixel + _s.w()*ty2;
+  src_a = _alpha + _s.w()*ty2;
+
+  if (clip(p1.x(), p2.y(), p2.x() - 1, p3.y() - 1, cl, &dx, &dy, &w, &h))
+    draw_vslice(src + tx1 + dx, src_a + tx1 + dx, _s.w(), _icon_alpha,
+	addr + (p2.y() + dy)*bpl + (p1.x() + dx) * sizeof(Pixel), bpl, w, h);
+
+  if (clip(p2.x(), p2.y(), p3.x() - 1, p3.y() - 1, cl, &dx, &dy, &w, &h))
+    draw_center(src + tx2, src_a + tx2, _s.w(), _icon_alpha,
+	addr + (p2.y() + dy)*bpl + (p2.x() + dx) * sizeof(Pixel), bpl, w, h);
+
+  if (clip(p3.x(), p2.y(), p4.x() - 1, p3.y() - 1, cl, &dx, &dy, &w, &h))
+    draw_vslice(src + tx3 + dx, src_a + tx3 + dx, _s.w(), _icon_alpha,
+	addr + (p2.y() + dy)*bpl + (p3.x() + dx) * sizeof(Pixel), bpl, w, h);
+
+  /*
+   * low row
+   */
+
+  src   = _pixel + _s.w()*ty3;
+  src_a = _alpha + _s.w()*ty3;
+
+  if (clip(p1.x(), p3.y(), p2.x() - 1, p4.y() - 1, cl, &dx, &dy, &w, &h))
+    draw_cslice(src + tx1 + dy*_s.w() + dx, src_a + tx1 + dy*_s.w() + dx, _s.w(), _icon_alpha,
+	addr + (p3.y() + dy)*bpl + (p1.x() + dx) * sizeof(Pixel), bpl, w, h);
+
+  if (clip(p2.x(), p3.y(), p3.x() - 1, p4.y() - 1, cl, &dx, &dy, &w, &h))
+    draw_hslice(src + tx2 + dy*_s.w(), src_a + tx2 + dy*_s.w(), _s.w(), _icon_alpha,
+	addr + (p3.y() + dy)*bpl + (p2.x() + dx) * sizeof(Pixel), bpl, w, h);
+
+  if (clip(p3.x(), p3.y(), p4.x() - 1, p4.y() - 1, cl, &dx, &dy, &w, &h))
+    draw_cslice(src + tx3 + dy*_s.w() + dx, src_a + tx3 + dy*_s.w() + dx, _s.w(), _icon_alpha,
+	addr + (p3.y() + dy)*bpl + (p3.x() + dx) * sizeof(Pixel), bpl, w, h);
+}
+
+
+template <typename PT>
+Widget *
+Icon<PT>::find(Point const &p)
+{
+  if (!Widget::find(p) || !_d)
+    return 0;
+
+  unsigned char const *_alpha = _d->alpha();
+
+  Point n = p - _pos;
+  // FIXME: also support horizontally scaled icons
+  /* check icon boundaries (the height is flexible) */
+  if (!Rect(_size).contains(n))
+    return 0;
+
+  int x, y;
+  if (n.x() <= _s.w() / 2)
+    x = n.x();
+  else if (n.x() > _size.w() - _s.w() / 2)
+    x = n.x() - _size.w() + _s.w();
+  else
+    x = _s.w()/2;
+
+
+  if (n.y() <= _s.h() / 2)
+    y = n.y();
+  else if (n.y() > _size.h() - _s.h() / 2)
+    y = n.y() - _size.h() + _s.h();
+  else
+    y = _s.h() / 2;
+
+  return _alpha[y * _s.w() + x] ? this : 0;
+}
+
+template <typename PT>
+typename Icon<PT>::Icon_data const *Icon<PT>::Icon_data::_f;
+
+
+}}

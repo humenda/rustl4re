@@ -1,0 +1,5 @@
+<map id="L4Re::Debug_obj" name="L4Re::Debug_obj">
+<area shape="rect" id="node2" href="$classL4_1_1Kobject__t.html" title="{L4::Kobject_t\&lt; Debug\l_obj, L4::Kobject, L4RE\l_PROTO_DEBUG \&gt;\n||# c()\l# __check_protocols__()\l}" alt="" coords="64,189,243,311"/>
+<area shape="rect" id="node3" href="$classL4_1_1Kobject.html" title="Base class for all kinds of kernel objects and remote objects, referenced by capabilities. " alt="" coords="5,13,117,105"/>
+<area shape="rect" id="node4" href="$classL4_1_1Kobject__t.html" title="Helper class to create an L4Re interface class that is derived from a single base class..." alt="" coords="141,5,352,112"/>
+</map>

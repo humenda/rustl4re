@@ -1,0 +1,13 @@
+# (c) Steffen Liebergeld <steffen.liebergeld@kernkonzept.com>
+# Licensed under the terms of the GNU General Public License 2.
+# See file COPYING-GPL-2 for details.
+#
+# Config for loading the ex_map_irq example
+
+entry ex_map_irq
+roottask moe rom/ex_map_irq.cfg
+module ned
+module l4re
+module ex_map_irq.cfg
+module ex_map_irq_server
+module ex_map_irq_client

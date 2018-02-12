@@ -1,0 +1,4 @@
+<map id="l4_icu_unbind" name="l4_icu_unbind">
+<area shape="rect" id="node2" href="$group__l4__icu__api.html#gae74204b8f2101e176add646ec2958182" title="Remove binding of an interrupt line from the interrupt controller object. " alt="" coords="160,5,283,32"/>
+<area shape="rect" id="node3" href="$group__l4__utcb__api.html#gadc099b4a59e1d99638c72c11a8c8b644" title="Get the UTCB address. " alt="" coords="188,56,255,83"/>
+</map>

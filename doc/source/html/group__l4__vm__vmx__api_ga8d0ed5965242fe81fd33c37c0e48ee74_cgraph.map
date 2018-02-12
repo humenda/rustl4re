@@ -1,0 +1,6 @@
+<map id="l4_vm_vmx_write" name="l4_vm_vmx_write">
+<area shape="rect" id="node2" href="$group__l4__vm__vmx__api.html#gae32bd0cc1cf4a980f43ff1c0a6405c18" title="Write to a 16bit VMCS field. " alt="" coords="186,5,341,32"/>
+<area shape="rect" id="node3" href="$group__l4__vm__vmx__api.html#ga334d673fbbbae474a5d15f97eb584e67" title="Write to a 32bit VMCS field. " alt="" coords="186,56,341,83"/>
+<area shape="rect" id="node4" href="$group__l4__vm__vmx__api.html#ga95fe266751c622d7e7f142b87236028e" title="Write to a 64bit VMCS field. " alt="" coords="186,107,341,133"/>
+<area shape="rect" id="node5" href="$group__l4__vm__vmx__api.html#ga02df2cccd7e75a57359e4f562079e1d6" title="Write to a natural width VMCS field. " alt="" coords="184,157,343,184"/>
+</map>

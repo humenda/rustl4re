@@ -1,0 +1,8 @@
+<map id="cxx::max" name="cxx::max">
+<area shape="rect" id="node2" href="$classcxx_1_1List__alloc.html#a6add9811cb611b9a1e7ee21c92809131" title="Allocate a memory block of min &lt;= size &lt;=max. " alt="" coords="128,5,305,32"/>
+<area shape="rect" id="node3" href="$classcxx_1_1List__alloc.html#a1fdfc49fafa608f60c191916629b61a4" title="Initializes an empty list allocator. " alt="" coords="353,23,489,65"/>
+<area shape="rect" id="node4" href="$structL4virtio_1_1Svr_1_1Data__buffer.html#a0ae0d4405b3a3ae5aa554b3adece0138" title="Copy contents from this buffer to the destination buffer. " alt="" coords="151,107,282,149"/>
+<area shape="rect" id="node5" href="$classL4_1_1Scheduler.html#af890a68842a65a05293ff844fa11043f" title="Get scheduler information. " alt="" coords="149,173,285,200"/>
+<area shape="rect" id="node6" href="$classL4virtio_1_1Svr_1_1Driver__mem__list__t.html#a8b6a1e1abadf68d73ceb813ac4cbc703" title="Make a fresh list with capacity max. " alt="" coords="135,224,298,280"/>
+<area shape="rect" id="node7" href="$classL4_1_1Type__info_1_1Demand.html#a861457733ac26b5aea5a31ac2387b183" title="get the combined demand of this and rhs " alt="" coords="133,305,300,346"/>
+</map>

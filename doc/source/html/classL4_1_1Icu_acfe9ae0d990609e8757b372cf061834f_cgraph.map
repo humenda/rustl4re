@@ -1,0 +1,5 @@
+<map id="L4::Icu::mask" name="L4::Icu::mask">
+<area shape="rect" id="node2" href="$classL4_1_1Kobject.html#a314161cb755de6fd0c50da0a757eb4c7" title="Return capability selector. " alt="" coords="167,5,285,32"/>
+<area shape="rect" id="node3" href="$group__l4__icu__api.html#gad1fc6f5aef910ca6b9b3a6c9d0f3b345" title="Mask an IRQ line. " alt="" coords="169,56,283,83"/>
+<area shape="rect" id="node4" href="$classL4_1_1Irq__eoi.html#ae1d9638d709cc2ec608e945196dfaf7a" title="Acknowledge the given interrupt line. " alt="" coords="155,107,297,133"/>
+</map>

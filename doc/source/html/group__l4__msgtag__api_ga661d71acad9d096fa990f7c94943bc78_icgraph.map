@@ -1,0 +1,18 @@
+<map id="l4_msgtag" name="l4_msgtag">
+<area shape="rect" id="node2" href="$structl4__msgtag__t.html#a26b13889368ed62ec4c85682e29c0dd4" title="Test if flags indicate an error. " alt="" coords="147,132,313,159"/>
+<area shape="rect" id="node8" href="$classL4_1_1Server.html#ac0965dc536f1df5dfe0be1b224feab89" title="The server loop. " alt="" coords="368,208,543,235"/>
+<area shape="rect" id="node9" href="$group__l4__irq__api.html#ga180cfaf342ce9ff484a6aa7c276e1597" title="Trigger. " alt="" coords="169,259,291,285"/>
+<area shape="rect" id="node13" href="$x86_2l4f_2l4_2util_2port__io_8h.html#a38a37fdbed4dd2dca75ce192d506a2d4" title="Map a range of I/O ports. " alt="" coords="165,309,295,336"/>
+<area shape="rect" id="node14" href="$classL4_1_1Thread.html#a61ecf8a06d2b4996ebb67180b1d5d35c" title="Apply sender modifiction rules. " alt="" coords="161,361,299,402"/>
+<area shape="rect" id="node16" href="$structL4_1_1Ipc__svr_1_1Exc__dispatch.html#a551ccfbe372009fa7319689dedfc4ded" title="Dispatch the call via Direct_dispatch&lt;R&gt;() and handle exceptions. " alt="" coords="140,426,320,467"/>
+<area shape="rect" id="node17" href="$classL4_1_1Ipc_1_1Ostream.html#aef4ef51d0dbf137e37e854237e498dd7" title="Return utcb pointer. " alt="" coords="153,492,307,519"/>
+<area shape="rect" id="node3" href="$namespaceL4.html#aba0849c4b92afdccbe110489e18dadbd" title="Throw an L4 IPC error as exception. " alt="" coords="368,5,543,32"/>
+<area shape="rect" id="node5" href="$namespaceL4Re.html#ae0dd5d25abdc1d195edd8ab6b744334c" title="Generate C++ exception on error. " alt="" coords="403,56,508,83"/>
+<area shape="rect" id="node6" href="$namespaceL4Re.html#ae21329b88c6ffc4917048e8d9564ea99" title="Test a message tag for IPC errors. " alt="" coords="404,107,507,133"/>
+<area shape="rect" id="node7" href="$classL4_1_1Server.html#a4333dc750dee494087ee92ab058718a1" title="Internal implementation for reply and wait. " alt="" coords="369,157,541,184"/>
+<area shape="rect" id="node4" href="$namespaceL4.html#a54f8da0e02ff2496f1ad935e38ab17c4" title="Throw an L4 IPC error as exception. " alt="" coords="591,5,765,32"/>
+<area shape="rect" id="node10" href="$group__l4__irq__api.html#gab24e0fc21a207fd566ece1e6fafbac48" title="Trigger an IRQ. " alt="" coords="402,259,509,285"/>
+<area shape="rect" id="node11" href="$structL4_1_1Triggerable.html#adf91901c4e2bd784c687e102a8469c45" title="Trigger. " alt="" coords="374,309,537,336"/>
+<area shape="rect" id="node12" href="$structL4_1_1Semaphore.html#aa13181d7e43470c833a76f430b0c547c" title="Semaphore up operation (wrapper for trigger()). " alt="" coords="609,309,747,336"/>
+<area shape="rect" id="node15" href="$classL4Re_1_1Util_1_1Object__registry.html#aeeea59583ffddfef4e7c1c3e6eed41b6" title="Remove a server object from the handler list. " alt="" coords="369,361,541,402"/>
+</map>

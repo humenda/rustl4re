@@ -1,0 +1,6 @@
+<map id="L4::Ipc::Istream::wait" name="L4::Ipc::Istream::wait">
+<area shape="rect" id="node2" href="$group__l4__ipc__api.html#ga3a8617092651c67f9ef1670b53fce66c" title="Wait for a message from a specific source. " alt="" coords="227,5,341,32"/>
+<area shape="rect" id="node4" href="$group__l4__ipc__api.html#gade81ef7ed9cb9e08bec716e640eabe04" title="Wait for an incoming message from any possible sender. " alt="" coords="238,56,330,83"/>
+<area shape="rect" id="node5" href="$classL4_1_1Ipc_1_1Istream.html#a48ea27ded0dd456360bf98c6cb262218" title="Wait for a message from the specified sender. " alt="" coords="200,107,368,133"/>
+<area shape="rect" id="node3" href="$group__l4__ipc__api.html#ga0e7e5b18d784b1d3439ea6e5b4bea4e2" title="Generic L4 object invocation. " alt="" coords="416,31,475,57"/>
+</map>

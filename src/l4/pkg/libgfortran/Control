@@ -1,0 +1,4 @@
+provides: libgfortran
+requires: libc libstdc++ libc_support_misc libc_be_sig libquadmath
+          libbacktrace
+Maintainer: adam@os.inf.tu-dresden.de

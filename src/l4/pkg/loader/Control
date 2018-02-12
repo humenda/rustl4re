@@ -1,0 +1,2 @@
+requires: libloader stdlibs libkproxy
+maintainer: adam@os.inf.tu-dresden.de warg@os.inf.tu-dresden.de

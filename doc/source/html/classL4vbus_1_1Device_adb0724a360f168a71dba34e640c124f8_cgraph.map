@@ -1,0 +1,3 @@
+<map id="L4vbus::Device::is_compatible" name="L4vbus::Device::is_compatible">
+<area shape="rect" id="node2" href="$group__l4vbus__module.html#gada51cecbba0d25a6d05e810b737f3df5" title="Check if the given device has a compatibility ID (CID) or HID that matches cid. " alt="" coords="184,13,339,39"/>
+</map>

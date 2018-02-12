@@ -1,0 +1,5 @@
+<map id="x86/l4/util/bitops_arch.h" name="x86/l4/util/bitops_arch.h">
+<area shape="rect" id="node2" href="$bitops_8h.html" title="bit manipulation functions " alt="" coords="68,95,175,121"/>
+<area shape="rect" id="node3" href="$util_2alloc_8h.html" title="Allocator using a bit&#45;array. " alt="" coords="5,169,104,196"/>
+<area shape="rect" id="node4" href="$splitlog2_8h.html" title="Split a range in log2 aligned and size&#45;aligned chunks. " alt="" coords="129,169,250,196"/>
+</map>

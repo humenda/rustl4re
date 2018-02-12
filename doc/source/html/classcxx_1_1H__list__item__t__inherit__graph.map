@@ -1,0 +1,6 @@
+<map id="cxx::H_list_item_t&lt; ELEM_TYPE &gt;" name="cxx::H_list_item_t&lt; ELEM_TYPE &gt;">
+<area shape="rect" id="node2" href="$classL4_1_1Ipc__svr_1_1Timeout.html" title="Callback interface for Timeout_queue. " alt="" coords="5,175,152,311"/>
+<area shape="rect" id="node3" href="$classcxx_1_1H__list__item__t.html" title="{cxx::H_list_item_t\l\&lt; Weak_ref_base \&gt;\n||+ H_list_item_t()\l+ ~H_list_item_t()\l}" alt="" coords="177,189,322,296"/>
+<area shape="rect" id="node4" href="$classcxx_1_1Weak__ref__base.html" title="Generic (base) weak reference to some object. " alt="" coords="175,360,323,467"/>
+<area shape="rect" id="node5" href="$classcxx_1_1Weak__ref.html" title="Typed weak reference to an object of type T. " alt="" coords="178,516,321,711"/>
+</map>

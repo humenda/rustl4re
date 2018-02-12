@@ -1,0 +1,4 @@
+<map id="l4_busy_wait_us" name="l4_busy_wait_us">
+<area shape="rect" id="node2" href="$group__l4util__tsc.html#ga8aee7e04f45212bea302d72e1496262b" title="Convert nano seconds into CPU ticks. " alt="" coords="177,5,280,32"/>
+<area shape="rect" id="node3" href="$group__l4util__tsc.html#ga560ae83d3afe878e0aaf8a95b987f923" title="Read current value of CPU&#45;internal time stamp counter. " alt="" coords="193,56,265,83"/>
+</map>

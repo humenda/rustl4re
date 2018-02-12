@@ -1,0 +1,9 @@
+<map id="l4/shmc/shmc.h" name="l4/shmc/shmc.h">
+<area shape="rect" id="node3" href="$l4_2sys_2types_8h.html" title="Common L4 ABI Data Types. " alt="" coords="417,80,524,107"/>
+<area shape="rect" id="node9" href="$err_8h.html" title="Error codes. " alt="" coords="5,155,96,181"/>
+<area shape="rect" id="node4" href="$l4_2sys_2l4int_8h.html" title="Fixed sized integer types, generic version. " alt="" coords="496,229,595,256"/>
+<area shape="rect" id="node5" href="$compiler_8h.html" title="L4 compiler related defines. " alt="" coords="201,229,327,256"/>
+<area shape="rect" id="node6" href="$l4_2sys_2consts_8h.html" title="Common constants. " alt="" coords="339,155,453,181"/>
+<area shape="rect" id="node7" href="$____l4__fpage_8h_source.html" title="l4/sys/__l4_fpage.h" alt="" coords="171,155,315,181"/>
+<area shape="rect" id="node8" href="$____timeout_8h_source.html" title="l4/sys/__timeout.h" alt="" coords="478,155,613,181"/>
+</map>

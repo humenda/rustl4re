@@ -1,0 +1,10 @@
+<map id="l4/sys/ipc.h" name="l4/sys/ipc.h">
+<area shape="rect" id="node2" href="$l4_2sys_2types_8h.html" title="Common L4 ABI Data Types. " alt="" coords="314,155,421,181"/>
+<area shape="rect" id="node9" href="$l4_2sys_2utcb_8h.html" title="UTCB definitions. " alt="" coords="318,80,417,107"/>
+<area shape="rect" id="node10" href="$err_8h.html" title="Error codes. " alt="" coords="642,155,733,181"/>
+<area shape="rect" id="node3" href="$l4_2sys_2l4int_8h.html" title="Fixed sized integer types, generic version. " alt="" coords="96,304,194,331"/>
+<area shape="rect" id="node4" href="$compiler_8h.html" title="L4 compiler related defines. " alt="" coords="516,304,643,331"/>
+<area shape="rect" id="node6" href="$l4_2sys_2consts_8h.html" title="Common constants. " alt="" coords="234,229,349,256"/>
+<area shape="rect" id="node7" href="$____l4__fpage_8h_source.html" title="l4/sys/__l4_fpage.h" alt="" coords="373,229,517,256"/>
+<area shape="rect" id="node8" href="$____timeout_8h_source.html" title="l4/sys/__timeout.h" alt="" coords="24,229,159,256"/>
+</map>

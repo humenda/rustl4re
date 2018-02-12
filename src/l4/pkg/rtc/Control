@@ -1,0 +1,3 @@
+provides: rtc rtc_libc_be
+requires: stdlibs libio cxx_libc_io cxx_io libstdc++ lxfuxlibc
+Maintainer: maintainer@kernkonzept.com

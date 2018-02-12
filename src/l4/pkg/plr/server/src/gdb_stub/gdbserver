@@ -1,0 +1,155 @@
+// vim: ft=cpp
+
+/*
+ * gdb_stub/gdbserver --
+ *
+ *     Definition of the GDB server stub
+ *
+ * (c) 2011-2013 Björn Döbel <doebel@os.inf.tu-dresden.de>,
+ *     economic rights: Technische Universität Dresden (Germany)
+ * This file is part of TUD:OS and distributed under the terms of the
+ * GNU General Public License 2.
+ * Please see the COPYING-GPL-2 file for details.
+ */
+
+#pragma once
+
+#include "../app"
+#include "../fault_observers"
+#include "connection"
+
+namespace Romain {
+
+	enum GDBRegisters {
+		ax, cx, dx, bx,
+		sp, bp, si, di,
+		ip, flags, nuffin,
+		ss, ds, es, fs, gs,
+	};
+
+	enum GDBSpecialCommands {
+		NoCmd,
+		GDBInterrupt = 3,
+		GDBAck = '+',
+		GDBRetry = '-',
+		GDBCmdStart = '$',
+	};
+
+
+	class GDBServerObserver : public Observer
+	{
+		DECLARE_OBSERVER("gdb");
+
+		private:
+
+		Connection *_con;
+		// XXX: platform_thread?
+		pthread_t  _thread;              // the pthread we use for receiving
+
+		bool       _connected;           // flag if we have a connection yet
+		bool       _ack_mode;            // are we in ack mode?
+		bool       _await_ack;           // expecting and ack?
+		char     * _bufptr;              // pointer to last cmd found in packetbuf
+		char       _inbuf[1024];         // buffer for incoming packet data
+		char       _outbuf[1024];        // buffer for outgoing packet data
+		char       _last_cmd[64];        // last command (in case we need to retry)
+
+		L4vcpu::Vcpu       _saved_vcpu;     // saved VCPU TODO: per-thread
+		//l4_utcb_t          saved_utcb;    // saved UTCB TODO: per-thread
+		Romain::App_model const * _app_model;  // saved APP model
+		Romain::App_thread      * _notifyThread; // last thread that entered the debugger
+
+		// XXX: platform_signal_type ?
+		sem_t     _app_wait_signal;    // sem to be polled by notify() until gdb sends C or S
+		sem_t     _gdb_wait_signal;    // sem to be polled by gdb until app finished exec of S
+
+		bool      _want_halt;          // do we want to halt our threads?
+		bool      _singlestep;         // single-stepping mode?
+
+		public:
+		GDBServerObserver(Connection* con);
+
+		virtual ~GDBServerObserver();
+
+		void notify_and_wait(sem_t *toSend, sem_t *toWait)
+		{
+			int r = sem_post(toSend);
+			_check(r != 0, "sem_post");
+			r = sem_wait(toWait);
+			_check(r != 0, "sem_wait");
+		}
+
+
+		void notify_connect()
+		{
+			_connected = true;
+			notify_and_wait(&_app_wait_signal, &_gdb_wait_signal);
+		}
+
+
+		char *buffer() const { return (char * const)_inbuf; }
+		unsigned maxbuffer() const { return 1024; }
+		Connection * connection() const { return _con; }
+
+		void disconnect()
+		{
+			_con->disconnect();
+			_ack_mode = true;
+			memset(_inbuf, 0, sizeof(_inbuf));
+			memset(_outbuf, 0, sizeof(_outbuf));
+		}
+
+		/*
+		 * VCPU store/restore
+		 *
+		 * XXX: Udo optimization: only copy the stuff that has been changed instead
+		 *      of everything, because most commands will not ever modify the UTCB?
+		 */
+		void save_vcpu(Romain::App_thread *t)
+		{
+			_notifyThread = t;
+			memcpy(&_saved_vcpu, t->vcpu(), sizeof(*t->vcpu()));
+			//memcpy(&saved_utcb, t->vcpu_utcb(), sizeof(*t->vcpu_utcb()));
+		}
+
+		void restore_vcpu(Romain::App_thread *t)
+		{
+			memcpy(t->vcpu(), &_saved_vcpu, sizeof(*t->vcpu()));
+			//memcpy(t->vcpu_utcb(), &saved_utcb, sizeof(*t->vcpu_utcb()));
+		}
+
+
+		/*
+		 * Determine which signal to return to a waiting gdb client
+		 */
+		void signal_return(Romain::App_thread *t = 0);
+
+		/*
+		 * Generic command handlers
+		 */
+		int handle_cmd();
+		bool next_cmd();
+
+		/*
+		 * Packet handling functions
+		 */
+		bool checksum_cmd(char const *, char const **);
+		void append_checksum(char *ptr);
+
+		/*
+		 * Command implementations
+		 */
+		void gdb_continue(char const* cmd, bool withSignal);
+		void gdb_get_registers(char const * const);
+		void gdb_select_thread(char const * const cmd);
+		void gdb_dump_mem(char const * const cmd);
+		void gdb_query(char const * const query);
+		void gdb_settings(char const * const cmd);
+		void gdb_step(char const* cmd, bool withSignal);
+		void gdb_breakpoint(char const* cmd);
+		void gdb_write_mem(char const* cmd, bool binaryData);
+		void gdb_read_register(char const* cmd);
+		void gdb_write_register(char const *cmd);
+
+	};
+}

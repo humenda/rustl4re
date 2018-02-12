@@ -1,0 +1,8 @@
+<map id="L4virtio::Svr::Dev_config::hdr" name="L4virtio::Svr::Dev_config::hdr">
+<area shape="rect" id="node2" href="$classL4virtio_1_1Svr_1_1Dev__config.html#a64313e8e41c209f12bd104442751753d" title="Get the value from the cmd register. " alt="" coords="186,5,314,47"/>
+<area shape="rect" id="node4" href="$classL4virtio_1_1Svr_1_1Dev__config.html#a988f5859320f66b6479d338c5b15660f" title="Reset the cmd register after execution of a command. " alt="" coords="180,71,320,112"/>
+<area shape="rect" id="node5" href="$classL4virtio_1_1Svr_1_1Dev__config.html#a174d852ecb39140c6399af6dffe5efb1" title="Set device status failed bit. " alt="" coords="183,201,317,243"/>
+<area shape="rect" id="node7" href="$classL4virtio_1_1Svr_1_1Dev__config.html#a01556f856334cea1ab98ef40559a5ead" title="Set device status register. " alt="" coords="181,136,319,177"/>
+<area shape="rect" id="node3" href="$classL4virtio_1_1Svr_1_1Device__t.html#a460f5dc2b32e33a616eb822ffd2f88f0" title="Check for a value in the cmd register and handle a write. " alt="" coords="387,63,547,119"/>
+<area shape="rect" id="node6" href="$classL4virtio_1_1Svr_1_1Device__t.html#a29f780ecb04509d8b72f4a155b073c74" title="Transition device into failed state. " alt="" coords="368,201,565,243"/>
+</map>

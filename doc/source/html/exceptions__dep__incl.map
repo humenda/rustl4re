@@ -1,0 +1,12 @@
+<map id="l4/cxx/exceptions" name="l4/cxx/exceptions">
+<area shape="rect" id="node2" href="$error__helper.html" title="Error helper. " alt="" coords="33,80,167,107"/>
+<area shape="rect" id="node6" href="$virtqueue_source.html" title="l4/l4virtio/virtqueue" alt="" coords="191,80,329,107"/>
+<area shape="rect" id="node8" href="$object__registry_source.html" title="l4/re/util/object_registry" alt="" coords="354,80,521,107"/>
+<area shape="rect" id="node9" href="$ipc__helper.html" title="IPC helper. " alt="" coords="545,80,673,107"/>
+<area shape="rect" id="node10" href="$cxx_2ipc__server.html" title="IPC server loop. " alt="" coords="697,80,825,107"/>
+<area shape="rect" id="node11" href="$std__exc__io.html" title="Base exceptions std stream operator. " alt="" coords="849,80,980,107"/>
+<area shape="rect" id="node3" href="$server_2l4virtio_source.html" title="l4/l4virtio/server\l/l4virtio" alt="" coords="63,244,185,285"/>
+<area shape="rect" id="node5" href="$mem__alloc__impl_8h.html" title="Memory allocator client stub implementation. " alt="" coords="25,155,175,196"/>
+<area shape="rect" id="node4" href="$virtio-block_source.html" title="l4/l4virtio/server\l/virtio&#45;block" alt="" coords="63,333,185,375"/>
+<area shape="rect" id="node7" href="$virtio_source.html" title="l4/l4virtio/server\l/virtio" alt="" coords="200,155,323,196"/>
+</map>

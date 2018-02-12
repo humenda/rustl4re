@@ -1,0 +1,4 @@
+<map id="l4_irq_mux_chain_u" name="l4_irq_mux_chain_u">
+<area shape="rect" id="node2" href="$structL4_1_1Irq__mux.html#ab1a64e5c210eac48b4600ef2fb85b967" title="Attach an IRQ to this multiplexer. " alt="" coords="200,5,335,32"/>
+<area shape="rect" id="node3" href="$group__l4__irq__api.html#ga3176fd8767eeabcf521356c6f1b21ac4" title="Chain an IRQ to another master IRQ source. " alt="" coords="201,56,333,83"/>
+</map>

@@ -1,0 +1,6 @@
+<map id="l4_ipc_call" name="l4_ipc_call">
+<area shape="rect" id="node2" href="$classL4_1_1Ipc_1_1Iostream.html#a18ac55dddefc29f84d47935dbc86b7ca" title="Do an IPC call using the message in the output stream and receiving to the input stream. " alt="" coords="141,5,292,32"/>
+<area shape="rect" id="node3" href="$x86_2l4f_2l4_2util_2port__io_8h.html#a38a37fdbed4dd2dca75ce192d506a2d4" title="Map a range of I/O ports. " alt="" coords="152,56,281,83"/>
+<area shape="rect" id="node4" href="$classL4_1_1Thread.html#a61ecf8a06d2b4996ebb67180b1d5d35c" title="Apply sender modifiction rules. " alt="" coords="148,107,285,149"/>
+<area shape="rect" id="node5" href="$classL4Re_1_1Util_1_1Object__registry.html#aeeea59583ffddfef4e7c1c3e6eed41b6" title="Remove a server object from the handler list. " alt="" coords="340,107,512,149"/>
+</map>

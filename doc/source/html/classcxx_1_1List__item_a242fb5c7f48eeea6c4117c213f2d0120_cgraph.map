@@ -1,0 +1,8 @@
+<map id="cxx::List_item::remove" name="cxx::List_item::remove">
+<area shape="rect" id="node2" href="$classcxx_1_1List__item.html#a64e565bf454750127d9779971ad63c42" title="Get next item. " alt="" coords="213,5,343,47"/>
+<area shape="rect" id="node3" href="$classcxx_1_1List__item.html#a80002d2f3f1c89620335ef36b3d7080d" title="Get previous item. " alt="" coords="213,71,343,112"/>
+<area shape="rect" id="node4" href="$classcxx_1_1List__item.html#a9ae69aab6422e2456924b9bf40b0700d" title="Append item to a list. " alt="" coords="625,166,804,193"/>
+<area shape="rect" id="node5" href="$classcxx_1_1List__item.html#ad965060436a10864e9d31e7fb3e42b84" title="Prepend item to a list. " alt="" coords="644,232,785,273"/>
+<area shape="rect" id="node6" href="$classcxx_1_1List__item_1_1Iter.html#a0ef357e10b4f813b7289fbe689688f6e" title="Remove item pointed to by iterator, and return pointer to element. " alt="" coords="212,188,344,229"/>
+<area shape="rect" id="node7" href="$classcxx_1_1List__item.html#a3881b562fd2ed8708a96112fe2057f47" title="Remove this item from the list. " alt="" coords="392,195,577,222"/>
+</map>

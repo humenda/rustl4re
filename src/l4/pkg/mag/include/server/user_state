@@ -1,0 +1,113 @@
+// vi:ft=cpp
+/*
+ * (c) 2010 Alexander Warg <warg@os.inf.tu-dresden.de>
+ *     economic rights: Technische Universität Dresden (Germany)
+ *
+ * This file is part of TUD:OS and distributed under the terms of the
+ * GNU General Public License 2.
+ * Please see the COPYING-GPL-2 file for details.
+ */
+#pragma once
+
+#include <l4/mag-gfx/geometry>
+#include <l4/mag/server/view_stack>
+
+#include <l4/re/video/view>
+#include <l4/re/event>
+#include <l4/mag/server/hid_report>
+
+struct lua_State;
+struct luaL_Reg;
+
+namespace Mag_server {
+
+using namespace Mag_gfx;
+
+class User_state;
+
+class View_proxy
+{
+private:
+  friend class User_state;
+
+  View_proxy(View_proxy const &);
+  void operator = (View_proxy const &);
+
+  View *_v;
+  View_proxy **_pn;
+  View_proxy *_n;
+
+public:
+  explicit View_proxy(User_state *ust);
+
+  ~View_proxy()
+  {
+    *_pn = _n;
+    _n->_pn = _pn;
+  }
+
+  View *view() const { return _v; }
+  void view(View *v) { _v = v; }
+  void forget(View *v) { if (_v == v) _v = 0; }
+};
+
+
+class User_state
+{
+public:
+  friend class View_proxy;
+
+private:
+  View_stack *_vstack;
+  Point _mouse_pos;
+  View *_keyboard_focus;
+  View_proxy *_view_proxies;
+  View *_mouse_cursor;
+
+  lua_State *_l;
+
+public:
+  static char const *const _class;
+  static luaL_Reg const _ops[];
+
+  User_state(lua_State *lua, View_stack *_vstack, View *cursor);
+  virtual ~User_state();
+
+  void forget_view(View *v);
+
+  View_stack *vstack() { return _vstack; }
+  View_stack const *vstack() const { return _vstack; }
+
+  void set_mode(Mode::Mode_flag m, bool on = true)
+  { vstack()->set_mode(m, on); }
+
+  void toggle_mode(Mode::Mode_flag m)
+  { vstack()->toggle_mode(m); }
+
+  bool set_focus(View *v);
+  View *kbd_focus() const { return _keyboard_focus; }
+
+  typedef L4Re::Event_buffer::Event Event;
+  typedef L4Re::Event_stream_info Input_info;
+  typedef L4Re::Event_absinfo Input_absinfo;
+
+  void set_pointer(int x, int y, bool hide);
+  void move_pointer(int x, int y)
+  { set_pointer(_mouse_pos.x() + x, _mouse_pos.y() + y, false); }
+  Point const &mouse_pos() const { return _mouse_pos; }
+
+  int get_input_stream_info_for_id(l4_umword_t id, Input_info *info) const;
+  int get_input_axis_info(l4_umword_t id, unsigned naxes, unsigned const *axis,
+                          Input_absinfo *info, unsigned char *ax_mode) const;
+};
+
+inline
+View_proxy::View_proxy(User_state *ust)
+: _v(0), _pn(&ust->_view_proxies), _n(ust->_view_proxies)
+{
+  ust->_view_proxies = this;
+  if (_n)
+    _n->_pn = &_n;
+}
+
+}

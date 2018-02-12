@@ -1,0 +1,4 @@
+<map id="cxx::Base_slab_static&lt; Obj_size, Slab_size, Max_free, Alloc &gt;" name="cxx::Base_slab_static&lt; Obj_size, Slab_size, Max_free, Alloc &gt;">
+<area shape="rect" id="node2" href="$classcxx_1_1Base__slab__static.html" title="{cxx::Base_slab_static\l\&lt; sizeof(Type), Slab\l_size, Max_free, Alloc \&gt;\n||+ alloc()\l+ free()\l+ total_objects()\l+ free_objects()\l}" alt="" coords="5,233,176,384"/>
+<area shape="rect" id="node3" href="$classcxx_1_1Slab__static.html" title="Merged slab allocator (allocators for objects of the same size are merged together). " alt="" coords="9,433,173,540"/>
+</map>

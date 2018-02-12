@@ -1,0 +1,79 @@
+-- vi:ft=lua
+--
+-- (c) 2008-2009 Technische Universität Dresden
+-- This file is part of TUD:OS and distributed under the terms of the
+-- GNU General Public License 2.
+-- Please see the COPYING-GPL-2 file for details.
+
+-- multi-core EB (PB11MP)
+
+local Hw = Io.Hw
+local Res = Io.Res
+
+Io.hw_add_devices(function()
+
+  CTRL = Hw.Device(function()
+    Property.hid = "System Control";
+    compatible = {"arm,sysctl"};
+    Resource.regs = Res.mmio(0x10000000, 0x10000fff);
+  end);
+
+  LCD = Hw.Device(function()
+    Property.hid = "AMBA PL110";
+    compatible = {"arm,pl111","arm,primecell"};
+    Resource.regs = Res.mmio(0x10020000, 0x10020fff);
+    Resource.irq = Res.irq(55);
+  end);
+
+  KBD = Hw.Device(function()
+    Property.hid = "AMBA KMI Kbd";
+    compatible = {"arm,pl050","arm,primecell"};
+    Resource.irq = Res.irq(39);
+    Resource.regs = Res.mmio(0x10006000, 0x10006fff);
+  end);
+
+  MOUSE = Hw.Device(function()
+    Property.hid = "AMBA KMI mou";
+    compatible = {"arm,pl050","arm,primecell"};
+    Resource.regs = Res.mmio(0x10007000, 0x10007fff);
+    Resource.irq = Res.irq(40);
+  end);
+
+  GPIO0 = Hw.Device(function()
+    Property.hid = "AMBA PL061 dev0";
+    compatible = {"arm,pl061", "arm,primecell"};
+    Resource.regs = Res.mmio(0x10013000, 0x10013fff);
+    Resource.irq = Res.irq(6);
+  end);
+
+  GPIO1 = Hw.Device(function()
+    Property.hid = "AMBA PL061 dev1";
+    compatible = {"arm,pl061", "arm,primecell"};
+    Resource.regs = Res.mmio(0x10014000, 0x10014fff);
+    Resource.irq = Res.irq(7);
+  end);
+
+  COMPACTFLASH = Hw.Device(function()
+    Property.hid = "compactflash"; -- FIXME: should be "XXX flash" or something
+    Resource.mem0 = Res.mmio(0x18000000, 0x180000ff);
+    Resource.mem1 = Res.mmio(0x18000100, 0x180003ff);
+  end);
+
+  AACI = Hw.Device(function()
+    Property.hid = "aaci";
+    compatible = {"arm,pl041", "arm,primecell"};
+    Resource.regs = Res.mmio(0x10004000, 0x10004fff);
+    Resource.irq = Res.irq(32);
+  end);
+
+  NIC = Hw.Device(function()
+    Property.hid = "smsc911x";
+    Resource.regs = Res.mmio(0x4e000000, 0x4e000fff);
+    Resource.irq = Res.irq(41);
+  end);
+
+  MEM1 = Hw.Device(function()
+    Property.hid = "foomem";
+    Resource.mmio = Io.Mmio_data_space(0x10000, 0);
+  end);
+end)

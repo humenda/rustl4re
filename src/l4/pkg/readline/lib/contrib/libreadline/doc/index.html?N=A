@@ -1,0 +1,23 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+ <HEAD>
+  <TITLE>Index of /pub/OpenBSD/src/gnu/lib/libreadline/doc</TITLE>
+ </HEAD>
+ <BODY>
+<H1>Index of /pub/OpenBSD/src/gnu/lib/libreadline/doc</H1>
+<PRE><IMG SRC="/icons/blank.gif" ALT="     "> <A HREF="?N=D">Name</A>                    <A HREF="?M=A">Last modified</A>       <A HREF="?S=A">Size</A>  <A HREF="?D=A">Description</A>
+<HR>
+<IMG SRC="/icons/back.gif" ALT="[DIR]"> <A HREF="/pub/OpenBSD/src/gnu/lib/libreadline/">Parent Directory</A>        23-Mar-2004 17:11      -  
+<IMG SRC="/icons/text.gif" ALT="[TXT]"> <A HREF="Makefile">Makefile</A>                28-Apr-2003 20:53     1k  
+<IMG SRC="/icons/text.gif" ALT="[TXT]"> <A HREF="Makefile.in">Makefile.in</A>             18-Mar-2001 00:00     5k  
+<IMG SRC="/icons/unknown.gif" ALT="[   ]"> <A HREF="hist.texinfo">hist.texinfo</A>            27-Aug-2001 00:00     4k  
+<IMG SRC="/icons/unknown.gif" ALT="[   ]"> <A HREF="hstech.texinfo">hstech.texinfo</A>          05-Feb-2003 16:36    18k  
+<IMG SRC="/icons/unknown.gif" ALT="[   ]"> <A HREF="hsuser.texinfo">hsuser.texinfo</A>          18-Mar-2001 00:00    15k  
+<IMG SRC="/icons/unknown.gif" ALT="[   ]"> <A HREF="manvers.texinfo">manvers.texinfo</A>         18-Mar-2001 00:00     1k  
+<IMG SRC="/icons/text.gif" ALT="[TXT]"> <A HREF="readline.3">readline.3</A>              07-Jul-2003 20:50    33k  
+<IMG SRC="/icons/unknown.gif" ALT="[   ]"> <A HREF="rlman.texinfo">rlman.texinfo</A>           18-Mar-2001 00:00     4k  
+<IMG SRC="/icons/unknown.gif" ALT="[   ]"> <A HREF="rltech.texinfo">rltech.texinfo</A>          28-Apr-2003 20:53    60k  
+<IMG SRC="/icons/unknown.gif" ALT="[   ]"> <A HREF="rluser.texinfo">rluser.texinfo</A>          05-Feb-2003 16:36    56k  
+<IMG SRC="/icons/unknown.gif" ALT="[   ]"> <A HREF="rluserman.texinfo">rluserman.texinfo</A>       18-Mar-2001 00:00     3k  
+</PRE><HR>
+</BODY></HTML>

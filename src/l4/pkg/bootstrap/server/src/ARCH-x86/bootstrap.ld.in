@@ -1,0 +1,140 @@
+
+#include "ldscript.inc"
+
+ENTRY(_start)
+
+PHDRS {
+  data PT_LOAD;
+#ifdef IMAGE_MODE
+  mods PT_LOAD;
+#endif
+}
+
+SECTIONS
+{
+#ifdef ARCH_amd64
+  . = LINKADDR + SIZEOF_HEADERS;
+#else
+  . = LINKADDR;
+#endif
+  PROVIDE (ImageBase = LINKADDR);
+  .hash : { *(.hash) } : data    /* this MUST come first! */
+  /* Merge .text, .rodata, and .data in one segment to save space */
+
+  /* provide at least 1K space for PE header in case of EFI */
+  /* NOTE: the .hash section is not used for EFI, so we declare
+   *       this as free space for PE too
+   */
+  /* FXIME: should make this depending on EFI */
+  . = (. < (0x400 + LINKADDR)) ? (LINKADDR + 0x400) : .;
+
+  .text :
+  {
+    *(.init)
+    KEEP(*(.multiboot2))
+    *(.text .text.* .gnu.linkonce.t*)
+
+    *(.rodata*)
+  } : data
+
+  .dynsym   : { *(.dynsym) } : data
+  .dynstr   : { *(.dynstr) } : data
+  .reloc    : { *(.reloc) } : data
+  .rel.dyn :
+  {
+    *(.rel.*) *(.rel.module_info)
+  } : data
+
+  .data :
+  {
+    . = ALIGN(8);
+    *(.data)
+    *(.data.*)
+    *(.plt)
+    *(.got.plt)
+    *(.got)
+
+    CTORS
+    PLATFORMS
+
+  } : data
+
+  .data.module_info :
+  {
+    . = ALIGN(16);
+    _module_info_start = .;
+    KEEP(*(.module_info .module_info.*))
+    _module_info_end = .;
+  } : data
+
+  .dynamic  : { *(.dynamic) } : data
+  .rela.dyn :
+  {
+    *(.rela.init)
+    *(.rela.text .rela.text.* .rela.gnu.linkonce.t.*)
+    *(.rela.fini)
+    *(.rela.rodata .rela.rodata.* .rela.gnu.linkonce.r.*)
+    *(.rela.data .rela.data.* .rela.gnu.linkonce.d.*)
+    *(.rela.tdata .rela.tdata.* .rela.gnu.linkonce.td.*)
+    *(.rela.tbss .rela.tbss.* .rela.gnu.linkonce.tb.*)
+    *(.rela.ctors)
+    *(.rela.dtors)
+    *(.rela.got)
+    *(.rela.bss .rela.bss.* .rela.gnu.linkonce.b.*)
+    *(.rela.ldata .rela.ldata.* .rela.gnu.linkonce.l.*)
+    *(.rela.lbss .rela.lbss.* .rela.gnu.linkonce.lb.*)
+    *(.rela.lrodata .rela.lrodata.* .rela.gnu.linkonce.lr.*)
+    *(.rela.ifunc)
+    *(.rela.module*)
+    *(.rela.init_array)
+  } : data
+  .rela.plt :
+  {
+    *(.rela.plt)
+    *(.rela.iplt)
+  } : data
+
+  _edata  =  .;
+  PROVIDE (edata = .);
+  . = ALIGN(4096);
+  __bss_start = .;
+  .bss :
+  {
+   *(.bss)
+   *(.bss.*)
+   *(COMMON)
+   *(.dynbss)
+   *(.bss_memmap)
+  } : data
+  _end = . ;
+  PROVIDE (end = .);
+  . = ALIGN(4096);
+
+/* Only move modules to modaddr if bootstrap is being loaded by an elf
+ * loader, and we do not need to copy images around at runtime (e.g. with
+ * compression) */
+#ifdef IMAGE_MODE
+#if defined(PLACE_MODULES_AT_MODADDR) && !defined(SINGLE_SECTION)
+  . = RAM_BASE + MODADDR;
+#endif
+  _module_data_start = .;
+  .module_data : {
+    *(EXCLUDE_FILE (*mod00.bin *mod01.bin *mod02.bin) .module_data)
+    *(.module_data)
+  } : mods
+  _module_data_end = .;
+#endif
+
+  /DISCARD/ : {
+    *(.rela.reloc)
+    *(.note.GNU-stack)
+    *(.jcr)
+    *(.interp)
+    *(.comment)
+    *(.note)
+    *(.eh_frame)
+    *(.stab)
+    *(.stabstr)
+    *(.fini)
+  }
+}

@@ -1,0 +1,5 @@
+<map id="Signals" name="Signals">
+<area shape="rect" id="node1" href="$group__api__l4shm.html" title="L4SHM provides a shared memory infrastructure that establishes a shared memory area between multiple ..." alt="" coords="5,31,176,57"/>
+<area shape="rect" id="node2" href="$group__api__l4shmc__signal__cons.html" title="Consumer" alt="" coords="340,5,427,32"/>
+<area shape="rect" id="node4" href="$group__api__l4shmc__signal__prod.html" title="Producer" alt="" coords="344,56,423,83"/>
+</map>

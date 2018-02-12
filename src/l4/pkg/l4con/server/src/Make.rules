@@ -1,0 +1,32 @@
+# vim:set ft=make:
+
+TARGET		= con
+
+REQUIRES_LIBS      += libio input libirq libgfxbitmap l4util l4re_c-util
+REQUIRES_LIBS_x86   = x86emu_int10 lxfuxlibc
+REQUIRES_LIBS_amd64 = x86emu_int10
+REQUIRES_LIBS_arm   = libdrivers-lcd libdrivers-generic
+REQUIRES_LIBS_arm64 = libdrivers-lcd libdrivers-generic
+REQUIRES_LIBS_mips  = libdrivers-lcd libdrivers-generic
+REQUIRES_LIBS_ppc32 = libdrivers-lcd libdrivers-generic
+REQUIRES_LIBS_sparc = libdrivers-lcd libdrivers-generic
+PRIVATE_INCDIR	= $(SRC_DIR)
+LIBS	       += -L$(OBJ_DIR)/con_yuv2rgb/OBJ-$(ARCH)_$(CPU) \
+		  -L$(OBJ_DIR)/con_hw/OBJ-$(SYSTEM) \
+		  -lcon_yuv2rgb $(LIBS_$(ARCH)) -lcon_hw
+SRC_C		= main.c pslim.c ev.c vc.c gmode.c gmode-arch.c
+SRC_CC          = server.cc
+CPPFLAGS	+= -DDEBUG
+
+all::
+
+A-x86   = x86
+A-amd64 = x86
+A-arm   = arm
+A-arm64 = arm
+A-ppc32 = arm
+A-sparc = arm
+A-mips  = arm
+A       = $(A-$(ARCH))
+
+vpath %.c $(SRC_DIR)/ARCH-$(A)

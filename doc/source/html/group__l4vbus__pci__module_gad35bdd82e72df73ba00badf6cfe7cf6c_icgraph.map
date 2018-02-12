@@ -1,0 +1,3 @@
+<map id="l4vbus_pci_irq_enable" name="l4vbus_pci_irq_enable">
+<area shape="rect" id="node2" href="$classL4vbus_1_1Pci__host__bridge.html#a4f405f52b078609d885e5331922447f1" title="Enable PCI interrupt for a specific device using the PCI root bridge. " alt="" coords="215,5,388,47"/>
+</map>

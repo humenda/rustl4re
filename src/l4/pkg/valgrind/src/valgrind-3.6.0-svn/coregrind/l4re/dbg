@@ -1,0 +1,43 @@
+// vim: ft=cpp et
+
+/*
+ * This file is part of the Valgrind port to L4Re.
+ *
+ * (c) 2009-2010 Aaron Pohle <apohle@os.inf.tu-dresden.de>,
+ *               Bjoern Doebel <doebel@os.inf.tu-dresden.de>
+ *     economic rights: Technische Universitaet Dresden (Germany)
+ */
+
+namespace Vcap
+{
+//----- HOLY CRAP ---
+//
+// We do NOT derive from L4Re::Util::Dbg, because it uses std::cout ...
+//
+// additinally, we do NOT really want this here. However, region_mapping_svr
+// demands a Dbg type template parameter from all its users...
+class Dbg
+{
+    public:
+        enum Lvl {
+            Warn,
+            Server,
+        };
+
+    int printf(char const *fmt, ...) const
+        __attribute__((format(printf,2,3)))
+    {
+     //   VG_(debugLog)(3, "vcap", "PRINTF\n");
+#if 0
+        va_list v;
+        va_start(v, fmt);
+        VG_(vprintf)(fmt, v);
+        va_end(v);
+#endif
+        return 0;
+    }
+
+    explicit Dbg(unsigned long mask, char const *lvl = 0) {}
+};
+//---- END HOLY CRAP ---
+}

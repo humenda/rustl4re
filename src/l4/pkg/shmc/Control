@@ -1,0 +1,3 @@
+provides: shmc shmc_ringbuf
+requires: l4re_c
+Maintainer: adam@os.inf.tu-dresden.de

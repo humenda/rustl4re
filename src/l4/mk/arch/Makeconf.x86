@@ -1,0 +1,41 @@
+LD_EMULATION_CHOICE_x86   = elf_i386
+OFORMAT_x86               = elf32-i386
+BFD_ARCH_x86              = i386
+L4_KIP_ADDR_x86          ?= 0xaffff000
+L4_STACK_ADDR_x86        ?= 0xb0000000
+
+CARCHFLAGS_x86_586        = -march=i586
+CARCHFLAGS_x86_pentium    = -march=i586
+CARCHFLAGS_x86_pentiummmx = -march=pentium-mmx
+CARCHFLAGS_x86_pentiumpro = -march=pentiumpro
+CARCHFLAGS_x86_686        = -march=i686
+CARCHFLAGS_x86_pentium2   = -march=pentium2
+CARCHFLAGS_x86_pentium3   = -march=pentium3
+CARCHFLAGS_x86_pentiumm   = -march=pentium-m
+CARCHFLAGS_x86_pentium4   = -march=pentium4
+CARCHFLAGS_x86_prescott   = -march=prescott
+CARCHFLAGS_x86_nocona     = -march=nocona
+CARCHFLAGS_x86_core2      = -march=core2
+CARCHFLAGS_x86_K6         = -march=k6
+CARCHFLAGS_x86_K7         = -march=athlon
+CARCHFLAGS_x86_athlon4    = -march=athlon-4
+CARCHFLAGS_x86_K8         = -march=k8
+CARCHFLAGS_x86_opteron    = -march=opteron
+
+IDL_SYSTEMS     += x86-l4f
+CCXX_FLAGS_x86  += -m32
+
+CC_x86          = $(CROSS_COMPILE)gcc
+CXX_x86         = $(CROSS_COMPILE)g++
+FC_x86          = $(CROSS_COMPILE)gfortran
+
+SYSTEMS_ABI    += x86-l4f
+SYSTEMS_PLAIN  += x86
+
+GCCNOFPU_x86_f  = $(call checkcc,-mno-mmx) $(call checkcc,-mno-3dnow) \
+                  $(call checkcc,-mno-sse) $(call checkcc,-mno-sse2)  \
+                  $(call checkcc,-mno-sse3) $(call checkcc,-mno-sse4) \
+                  $(call checkcc,-mno-sse4a)
+
+QEMU_ARCH_MAP_x86     = $(strip $(shell if qemu-system-i386 -version > /dev/null; then echo qemu-system-i386; else echo qemu; fi))
+

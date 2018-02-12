@@ -1,0 +1,11 @@
+<map id="L4virtio::Virtqueue" name="L4virtio::Virtqueue">
+<area shape="rect" id="node2" href="$classL4virtio_1_1Virtqueue_1_1Desc.html" title="Descriptor in the descriptor table. " alt="" coords="168,505,301,612"/>
+<area shape="rect" id="node3" href="$structL4virtio_1_1Virtqueue_1_1Desc_1_1Flags.html" title="Type for descriptor flags. " alt="" coords="5,204,139,443"/>
+<area shape="rect" id="node4" href="$classL4virtio_1_1Ptr.html" title="{L4virtio::Ptr\&lt; void \&gt;\n||+ Ptr()\l+ Ptr()\l+ Ptr()\l+ get()\l+ is_valid()\l}" alt="" coords="163,255,306,391"/>
+<area shape="rect" id="node5" href="$classL4virtio_1_1Ptr.html" title="Pointer used in virtio descriptors. " alt="" coords="172,5,297,141"/>
+<area shape="rect" id="node6" href="$classL4virtio_1_1Virtqueue_1_1Used.html" title="Used ring. " alt="" coords="409,513,543,605"/>
+<area shape="rect" id="node7" href="$structL4virtio_1_1Virtqueue_1_1Used_1_1Flags.html" title="flags for the used ring. " alt="" coords="331,248,464,399"/>
+<area shape="rect" id="node8" href="$structL4virtio_1_1Virtqueue_1_1Used__elem.html" title="Type of an element of the used ring. " alt="" coords="488,263,621,384"/>
+<area shape="rect" id="node9" href="$classL4virtio_1_1Virtqueue_1_1Avail.html" title="Type of available ring, this is read&#45;only for the host. " alt="" coords="607,505,740,612"/>
+<area shape="rect" id="node10" href="$structL4virtio_1_1Virtqueue_1_1Avail_1_1Flags.html" title="Flags of the available ring. " alt="" coords="645,248,779,399"/>
+</map>

@@ -1,0 +1,40 @@
+# -*- makefile -*-
+# vim:se ft=make:
+
+exception.o: $(TCBOFFSET)
+phys_mem.o: $(TCBOFFSET)
+
+# Add future prerequisites somewhere among the list of libraries.
+# You really should not have to add anything in the $(LD) line.
+
+#TODO: strip 
+#boot_img.o: bootstrap.o $(LIBUART) $(CXXLIB) $(MINILIBC) $(LIBK) boot_libc_glue.o 
+#	$(LINK_MESSAGE)
+#	$(VERBOSE)$(LD) -m $(LD_EMULATION) -o $@_x.o -q \
+#	  -T $(srcdir)/kern/ppc32/bootstrap.ld  $^
+#	$(VERBOSE)$(OBJCOPY) -G _boot_start $@_x.o $@
+#	$(VERBOSE)$(RM) $@_x.o
+
+-include .kernel.ppc32.lds.d
+
+$(KERNEL).debug: kernel.ppc32.lds $(CRT0) $(OBJ_KERNEL) $(LIBK) $(LIBDISASM) libdrivers.a $(ABI) $(LIBUART) $(CXXLIB) $(MINILIBC) libgluedriverslibc.a 
+	$(LINK_MESSAGE)
+	$(VERBOSE)$(LD) $(LDFLAGS) -m $(LD_EMULATION) -N -T $< -o $@ $(filter-out $<,$+) $(LIBGCC)
+	$(call ADD_CONFIGFILE,$@)
+
+# Remove '$(RM) fiasco.image' after a transition period -- Added late 2016
+$(KERNEL): $(KERNEL).debug
+	$(LINK_MESSAGE)
+	$(VERBOSE)$(STRIP) $< -o $@
+	$(VERBOSE)$(OBJCOPY) --add-gnu-debuglink=$< $@
+	$(VERBOSE)chmod 755 $@
+	$(VERBOSE)$(RM) fiasco.image
+
+Symbols: $(KERNEL).debug
+	$(COMP_MESSAGE)
+	$(VERBOSE)$(NM) $(KERNEL).debug | c++filt | sort > $@.new
+	$(VERBOSE)mv $@.new $@
+	$(VERBOSE)chmod 644 $@
+
+
+clean-KERNEL:

@@ -1,0 +1,5 @@
+<map id="L4::Irq_mux::chain" name="L4::Irq_mux::chain">
+<area shape="rect" id="node2" href="$classL4_1_1Cap__base.html#a6181bad79c41cdbf5c030877b94e25bf" title="Return capability selector. " alt="" coords="193,5,330,32"/>
+<area shape="rect" id="node3" href="$classL4_1_1Kobject.html#a314161cb755de6fd0c50da0a757eb4c7" title="Return capability selector. " alt="" coords="202,56,321,83"/>
+<area shape="rect" id="node4" href="$group__l4__irq__api.html#ga0bfe3132479962ae237087568fc2c94f" title="Attach an IRQ to this multiplexer. " alt="" coords="188,107,335,133"/>
+</map>

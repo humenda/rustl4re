@@ -1,0 +1,141 @@
+#! /usr/bin/perl -w
+#
+# (c) 2011 Technische Universität Dresden
+# This file is part of TUD:OS and distributed under the terms of the
+# GNU General Public License 2.
+# Please see the COPYING-GPL-2 file for details.
+#
+# Adam Lackorzynski <adam@os.inf.tu-dresden.de>
+#
+
+use strict;
+
+BEGIN { unshift @INC, $ENV{L4DIR}.'/tool/lib'
+           if $ENV{L4DIR} && -d $ENV{L4DIR}.'/tool/lib/L4';}
+
+use L4::ModList;
+use L4::Grub;
+use File::Temp qw/tempdir/;
+use File::Basename qw/basename/;
+
+my $qemu         = $ENV{QEMU}         || 'qemu';
+my $module_path  = $ENV{SEARCHPATH}   || ".";
+my %opts         = L4::Grub::parse_gengrub_args();
+my $qemu_options = $ENV{QEMU_OPTIONS} || "";
+my $image_file   = $ENV{IMAGE_FILE};
+my $modulesfile  = shift;
+my $targetdir    = shift;
+my $unzip_tmp    = tempdir(CLEANUP => 1); 
+
+unless (defined $targetdir) {
+  print "usage: $0 MODULESFILE TARGETDIR entry1 [entry2] ...\n";
+  exit(1);
+}
+
+system("mkdir -p \"$targetdir\"");
+
+open(GRUB1, ">$targetdir/menu.lst")
+  || die "Cannot create '$targetdir/menu.lst': $!!";
+
+open(GRUB2, ">$targetdir/grub.cfg")
+  || die "Cannot create '$targetdir/grub.cfg': $!!";
+
+open(QEMU, ">$targetdir/run_qemu")
+  || die "Cannot create '$targetdir/run_qemu': $!!";
+
+delete $opts{timeout}
+  if @ARGV > 1 and defined $opts{timeout} and $opts{timeout} == 0;
+
+print GRUB1 L4::Grub::grub1_config_prolog(%opts);
+print GRUB2 L4::Grub::grub2_config_prolog(%opts);
+print QEMU "#! /bin/sh\n".
+           "if [ -z \"\$1\" ]; then\n".
+           "  echo Usage: \$0 entry\n".
+           "  echo\n".
+           "  echo Available entries: ".join(", ", @ARGV)."\n".
+           "  exit 1\n".
+           "fi\n".
+           "entry=\$1\n".
+           "shift\n".
+           "\n".
+           "case \"\$entry\" in\n";
+
+$qemu =~ s@.*/@@;
+
+my %files;
+
+sub qemu_get_file($$)
+{
+  my $command = shift;
+  my $cmdline = shift;
+
+  my $fp = L4::ModList::get_file_uncompressed_or_die($command, $module_path,
+                                                     $unzip_tmp);
+
+  $fp = (reverse split(/\/+/, $fp))[0];
+
+  $cmdline =~ s/^\S+\s*//;
+  $cmdline =~ s/,/,,/g;
+  $fp.' '.$cmdline;
+}
+
+my $x86_based = ($ENV{ARCH} eq 'x86' or $ENV{ARCH} eq 'amd64') ? 1 : 0;
+
+foreach my $entryname (@ARGV)
+  {
+    print "Processing entry '$entryname'\n";
+    my %entry = L4::ModList::get_module_entry($modulesfile, $entryname);
+    print GRUB1 L4::ModList::generate_grub1_entry($opts{grubentrytitle} || $entryname,
+                                                  $opts{grubpathprefix},
+                                                  %entry), "\n";
+    print GRUB2 L4::ModList::generate_grub2_entry($opts{grubentrytitle} || $entryname,
+                                                  $opts{grubpathprefix},
+                                                  %entry);
+
+    my @mods = @{$entry{mods}};
+
+    my $initrd = join(',', map { qemu_get_file($_->{command}, $_->{cmdline}) } @mods);
+
+    my $kernel_w_path;
+    my $initrd_arg = '';
+    if ($x86_based) {
+      $kernel_w_path = L4::ModList::search_file_or_die($entry{bootstrap}{command}, $module_path);
+      $initrd_arg = "                  -initrd \"$initrd\" \\\n";
+    } else {
+      die "Need to specify IMAGE_FILE environment variable for non-x86 use."
+        unless defined $image_file;
+      print STDERR "$image_file\n";
+      $kernel_w_path = $image_file;
+    }
+    (my $kernel = $kernel_w_path) =~ s@.*/@@;
+
+    print QEMU
+      "     $entryname) $qemu -kernel $kernel \\\n".
+      "                  -append \"$entry{bootstrap}{cmdline}\" \\\n".
+      $initrd_arg.
+      "                  $qemu_options \"\$@\";;\n";
+
+    foreach (@mods) {
+      (my $f = $_->{cmdline}) =~ s/^(\S+).*/$1/;
+      $files{$_->{command}} = basename($f);
+    }
+    if (!$x86_based) {
+      delete $files{bootstrap};
+      $files{$kernel_w_path} = 1;
+    }
+  }
+
+L4::ModList::copy_file_uncompressed_or_die($_, $module_path,
+                                           $targetdir, $files{$_})
+  foreach keys %files;
+
+print QEMU "  *) echo \"Give entry:\"\n";
+print QEMU map { "     echo \"   $_\"\n" } @ARGV;
+print QEMU "     exit 1;;\n";
+print QEMU "esac\n";
+
+close GRUB1;
+close GRUB2;
+close QEMU;
+
+chmod 0755, "$targetdir/run_qemu";

@@ -1,0 +1,8 @@
+
+git checkout <acpica commit>
+git subtree split -P source --annotate="(source)"
+git checkout private/master
+git subtree merge -P lib-acpi/src/acpica <revision from split>
+
+git commit: f8d496aa61789ce853ef230ce554dd40982e9047 -> (source)cec0b9a561750410c93d21d49c224eb9d80be058
+git commit: 711a8c19d3c646fdc069c38912d9037c7fa5e718 -> (source)45dde767d5ee4e97fa7b20d1f6df81d90f594f86

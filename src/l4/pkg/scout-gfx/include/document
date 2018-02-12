@@ -1,0 +1,124 @@
+// vi:ft=cpp
+/*
+ * (c) 2010 Alexander Warg <warg@os.inf.tu-dresden.de>
+ *     economic rights: Technische Universität Dresden (Germany)
+ *
+ * This file is part of TUD:OS and distributed under the terms of the
+ * GNU General Public License 2.
+ * Please see the COPYING-GPL-2 file for details.
+ */
+#pragma once
+
+#include <l4/scout-gfx/layout_item>
+#include <l4/scout-gfx/widget>
+#include <l4/mag-gfx/geometry>
+
+namespace Scout_gfx {
+
+/**
+ * Document
+ */
+class Chapter;
+class Document : public Parent_widget
+{
+public:
+
+  Chapter    *toc;     /* table of contents */
+  const char *title;   /* document title    */
+
+  /**
+   * Constructor
+   */
+  Document();
+  void append(Widget *e);
+  void remove(Widget *e);
+  Parent_widget *chapter() { return this; }
+};
+
+
+/**
+ * Chapter
+ */
+class Chapter : public Document { };
+
+/**
+ * Horizontally centered content
+ */
+class Center : public Parent_widget
+{
+  Orientation _orientation;
+public:
+
+  /**
+   * Constructor
+   */
+  explicit Center(Widget *content = 0, Orientation orientation = Vert);
+
+  /**
+   * Element interface
+   */
+//  void format_fixed_width(int w);
+
+  void append(Widget *c);
+  void remove(Widget *c);
+
+  ~Center() {}
+};
+
+/**
+ * Spacer
+ *
+ * A spacer is a place holder that consumes some screen space. It is used for
+ * tweaking the layout of the document.
+ */
+class Spacer : public Widget
+{
+public:
+
+  /**
+   * Constructor
+   */
+  Spacer(int w, int h)
+  { _size = Area(w, h); }
+
+  Area min_size() const { return _size; }
+  Area preferred_size() const { return _size; }
+  Area max_size() const { return _size; }
+  bool empty() const { return false; }
+  Orientations expanding() const { return 0; }
+  Rect geometry() const { return Rect(_pos, _size); }
+  void set_geometry(Rect const &s) { _pos = s.p1(); }
+
+  void draw(Canvas*, Point const &) {}
+};
+
+class Anchor : public Spacer
+{
+public:
+  Anchor() : Spacer(0, 0) {}
+  ~Anchor() {}
+
+  static Document *chapter(Widget *w)
+  {
+    if (Document *d = dynamic_cast<Document *>(w))
+      return d;
+
+    for (; w; w = w->parent())
+      if (Chapter *c = dynamic_cast<Chapter *>(w))
+        return c;
+
+    return 0;
+  }
+};
+
+class Browser
+{
+public:
+  virtual void go_to(Widget *a, int add_history = 1) = 0;
+  virtual ~Browser() {}
+
+};
+
+
+
+}

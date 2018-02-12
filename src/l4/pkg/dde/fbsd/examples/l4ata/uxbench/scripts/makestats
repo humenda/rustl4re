@@ -1,0 +1,73 @@
+#!/usr/bin/perl
+
+use English '-no_match_vars';
+use constant BLOCKSIZE => 512;
+
+$filename = $ARGV[0];
+
+unless ($filename) {
+	die("give file name to process as first parameter!");
+}
+
+printf("# processing file %s\n", $filename);
+
+open(INFILE, $filename) or die "Can't open $filename: $!";
+
+while ($line = <INFILE>) {
+	next if ($line =~ /^#/);
+
+	my ($dummy, $blocks, $cpu, $real, $requests) = split /[\t ]+/, $line;
+	
+#	printf("# %8d\t%8.3f\t%8.3f\n", $blocks, $cpu, $real);
+	$data{$blocks}{count}++;
+	$data{$blocks}{sumcpu}  += $cpu;
+	$data{$blocks}{sumreal} += $real;
+	$data{$blocks}{requests} =  $requests;
+}
+
+# calculate the mean of throughput and cpu usage
+foreach $blocks (sort{$a <=> $b}(keys(%data))) {
+	$count    = $data{$blocks}{count};
+	$sumcpu   = $data{$blocks}{sumcpu};
+	$sumreal  = $data{$blocks}{sumreal};
+	$requests = $data{$blocks}{requests};
+
+	$tp_mn    = $data{$blocks}{tp_mn}  = $requests*$blocks*BLOCKSIZE*$count/$sumreal/1024/1024;
+	$use_mn   = $data{$blocks}{use_mn} = $sumcpu/$sumreal*100;
+}
+
+# calculate the sum of the square differences of throughput-mean(throughput)
+# calculate the sum of the square differences of cpu_usage -mean(cpu_usage )
+seek(INFILE, 0, SEEK_SET);
+while ($line = <INFILE>) {
+	next if ($line =~ /^#/);
+
+	my ($dummy, $blocks, $cpu, $real, $requests) = split /[\t ]+/, $line;
+
+	$tp_mn   = $data{$blocks}{tp_mn};
+	$use_mn  = $data{$blocks}{use_mn};
+
+	$data{$blocks}{tp_ssd}  += ($requests*$blocks*BLOCKSIZE/$real/1024/1024 - $tp_mn)**2;
+	$data{$blocks}{use_ssd} += ($cpu/$real*100 - $use_mn)**2;
+}
+
+# print aggregated values with mean and standard deviation
+printf("# %8s\t%8s\t%8s\t%8s\t%8s\n", "blocks", "tp_mn", "tp_sd", "use_mn", "use_sd");
+foreach $blocks (sort{$a <=> $b}(keys(%data))) {
+	$count   = $data{$blocks}{count};
+	$sumcpu  = $data{$blocks}{sumcpu};
+	$sumreal = $data{$blocks}{sumreal};
+	$tp_mn   = $data{$blocks}{tp_mn};
+	$use_mn  = $data{$blocks}{use_mn};
+	$tp_ssd  = $data{$blocks}{tp_ssd};
+	$use_ssd = $data{$blocks}{use_ssd};
+
+	$tp_sd  = sqrt($tp_ssd/$count);
+	$use_sd = sqrt($use_ssd/$count);
+
+	if (! $blocks) { printf("#"); }
+	printf("  %8d\t%8.3f\t%8.3f\t%8.3f\t%8.3f\n", $blocks, $tp_mn, $tp_sd, $use_mn, $use_sd);
+}
+
+close INFILE;
+

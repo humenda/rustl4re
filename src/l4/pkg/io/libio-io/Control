@@ -1,0 +1,3 @@
+provides: libio-io
+requires: libio-vbus l4re
+maintainer: warg@os.inf.tu-dresden.de

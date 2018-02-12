@@ -1,0 +1,3 @@
+provides: lxfuxlibc libl4revfs-fs-fuxfs
+requires: l4sys libc l4util libl4re-vfs
+Maintainer: adam@os.inf.tu-dresden.de

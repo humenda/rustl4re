@@ -1,0 +1,16 @@
+<map id="l4/re/log" name="l4/re/log">
+<area shape="rect" id="node2" href="$env.html" title="Environment interface. " alt="" coords="700,80,777,107"/>
+<area shape="rect" id="node3" href="$vcpu_source.html" title="l4/vcpu/vcpu" alt="" coords="5,162,104,189"/>
+<area shape="rect" id="node4" href="$server_2l4virtio_source.html" title="l4/l4virtio/server\l/l4virtio" alt="" coords="128,155,251,196"/>
+<area shape="rect" id="node6" href="$env__ns_source.html" title="l4/re/util/env_ns" alt="" coords="275,162,397,189"/>
+<area shape="rect" id="node8" href="$ro__file__impl_8h_source.html" title="l4/l4re_vfs/impl/ro\l_file_impl.h" alt="" coords="421,155,555,196"/>
+<area shape="rect" id="node9" href="$vcon__stream__impl_8h_source.html" title="l4/l4re_vfs/impl/vcon\l_stream_impl.h" alt="" coords="579,155,730,196"/>
+<area shape="rect" id="node10" href="$vfs__impl_8h_source.html" title="l4/l4re_vfs/impl/vfs\l_impl.h" alt="" coords="755,155,893,196"/>
+<area shape="rect" id="node11" href="$util_2event.html" title="l4/re/util/event" alt="" coords="918,162,1029,189"/>
+<area shape="rect" id="node12" href="$icu__svr_source.html" title="l4/re/util/icu_svr" alt="" coords="1053,162,1171,189"/>
+<area shape="rect" id="node14" href="$kumem__alloc.html" title="Kumem allocator helper. " alt="" coords="1195,162,1351,189"/>
+<area shape="rect" id="node15" href="$object__registry_source.html" title="l4/re/util/object_registry" alt="" coords="1375,162,1542,189"/>
+<area shape="rect" id="node5" href="$virtio-block_source.html" title="l4/l4virtio/server\l/virtio&#45;block" alt="" coords="125,244,248,285"/>
+<area shape="rect" id="node7" href="$ns__fs__impl_8h_source.html" title="l4/l4re_vfs/impl/ns\l_fs_impl.h" alt="" coords="273,244,407,285"/>
+<area shape="rect" id="node13" href="$event__svr_source.html" title="l4/re/util/event_svr" alt="" coords="1043,251,1181,278"/>
+</map>

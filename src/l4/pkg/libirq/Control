@@ -1,0 +1,3 @@
+provides: libirq
+requires: l4re libc libio libpthread
+maintainer: adam@os.inf.tu-dresden.de

@@ -1,0 +1,4 @@
+<map id="Graphical Class Hierarchy" name="Graphical Class Hierarchy">
+<area shape="rect" id="node1" href="$structL4_1_1Ipc__svr_1_1Direct__dispatch.html" title="Direct disptach helper, for forwarding dispatch calls a registry R. " alt="" coords="5,5,139,47"/>
+<area shape="rect" id="node2" href="$structL4_1_1Ipc__svr_1_1Exc__dispatch.html" title="Dispatch helper wrapping try {} catch {} around the dispatch call. " alt="" coords="187,5,367,47"/>
+</map>

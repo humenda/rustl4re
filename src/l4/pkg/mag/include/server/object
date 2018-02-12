@@ -1,0 +1,84 @@
+// vi:ft=cpp
+/*
+ * (c) 2010 Alexander Warg <warg@os.inf.tu-dresden.de>
+ *     economic rights: Technische Universität Dresden (Germany)
+ *
+ * This file is part of TUD:OS and distributed under the terms of the
+ * GNU General Public License 2.
+ * Please see the COPYING-GPL-2 file for details.
+ */
+#pragma once
+
+#include <l4/sys/cxx/ipc_epiface>
+#include <l4/cxx/ref_ptr>
+#include <l4/cxx/hlist>
+#include <l4/re/util/object_registry>
+
+#include <cassert>
+
+namespace Mag_server {
+
+class Object_gc;
+
+class Object : public L4::Epiface, public cxx::H_list_item
+{
+private:
+  friend class Object_gc;
+  template< typename T >
+  friend class Gc_ref_count;
+
+  mutable int _ref_cnt;
+
+  void enqueue(cxx::H_list<Object> *q)
+  {
+    q->add(this);
+  }
+
+public:
+  Object() : _ref_cnt(0)
+  {}
+
+  void add_ref() const throw() { ++_ref_cnt; }
+  int remove_ref() const throw() { return --_ref_cnt; }
+
+  virtual void destroy() = 0;
+  virtual ~Object() = 0;
+};
+
+inline Object::~Object() {}
+
+
+
+class Registry : protected L4Re::Util::Object_registry
+{
+public:
+  Registry(L4::Ipc_svr::Server_iface *sif)
+  : L4Re::Util::Object_registry(sif)
+  {}
+
+  L4::Cap<void> register_obj(cxx::Ref_ptr<Object> o)
+  {
+    L4::Cap<void> r = L4Re::Util::Object_registry::register_obj(o.ptr());
+
+    if (r)
+      add_gc_obj(o.release());
+
+    return r;
+  }
+
+  L4::Cap<void> register_obj(cxx::Ref_ptr<Object> o, char const *name)
+  {
+    L4::Cap<void> r = L4Re::Util::Object_registry::register_obj(o.ptr(), name);
+
+    if (r)
+      add_gc_obj(o.release());
+
+    return r;
+  }
+
+  virtual void add_gc_obj(Object *o) = 0;
+
+  using L4Re::Util::Object_registry::dispatch;
+};
+
+}

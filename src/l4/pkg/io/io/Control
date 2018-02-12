@@ -1,0 +1,2 @@
+requires: acpica libc libstdc++ l4sys libio-io libsigma0 stdlibs lua++
+maintainer: warg@os.inf.tu-dresden.de

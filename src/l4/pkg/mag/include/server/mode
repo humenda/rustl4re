@@ -1,0 +1,50 @@
+// vi:ft=cpp
+/*
+ * (c) 2010 Alexander Warg <warg@os.inf.tu-dresden.de>
+ *     economic rights: Technische Universität Dresden (Germany)
+ *
+ * This file is part of TUD:OS and distributed under the terms of the
+ * GNU General Public License 2.
+ * Please see the COPYING-GPL-2 file for details.
+ */
+#pragma once
+
+namespace Mag_server {
+
+class Mode
+{
+
+private:
+  unsigned char _m;
+
+public:
+  enum Mode_flag
+  {
+    Flat  = 0,
+    X_ray = 1,
+    Kill  = 2
+  };
+
+  Mode() : _m(Flat) {}
+  explicit Mode(unsigned char m) : _m(m) {}
+  Mode(Mode_flag m) : _m(m) {}
+
+  void toggle(Mode_flag m)
+  {
+    _m ^= m;
+  }
+
+  void set(Mode_flag m, bool on = true)
+  {
+    if (!on)
+      _m &= ~m;
+    else
+      _m |= m;
+  }
+
+  bool xray() const { return _m & X_ray; }
+  bool kill() const { return _m & Kill; }
+  bool flat() const { return _m == Flat; }
+
+};
+}

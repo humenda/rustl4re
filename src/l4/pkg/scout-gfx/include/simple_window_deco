@@ -1,0 +1,22 @@
+// vi:ft=cpp
+
+#pragma once
+
+#include <l4/scout-gfx/window>
+
+namespace Scout_gfx {
+
+class Factory;
+
+class Simple_window_deco_policy : public Window::Deco_policy
+{
+private:
+  Factory *_f;
+
+public:
+  Simple_window_deco_policy(Factory *factory) : _f(factory) {}
+  Widget *create_deco(Window *) const;
+  void set_deco_mode(Window::Mode mode, Widget *deco, Insets *insets);
+};
+
+}

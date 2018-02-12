@@ -1,0 +1,381 @@
+// vi:ft=cpp
+/*
+ * (c) 2010 Alexander Warg <warg@os.inf.tu-dresden.de>
+ *     economic rights: Technische Universität Dresden (Germany)
+ *
+ * This file is part of TUD:OS and distributed under the terms of the
+ * GNU General Public License 2.
+ * Please see the COPYING-GPL-2 file for details.
+ */
+#pragma once
+
+#include <l4/mag-gfx/canvas>
+#include <l4/mag-gfx/clip_guard>
+#include <l4/mag-gfx/font>
+
+#include <l4/cxx/observer>
+
+#include <l4/re/event_enums.h>
+
+namespace Mag_server {
+
+template< typename C >
+class Menu : private cxx::Observer
+{
+private:
+  typedef C Content;
+  typedef typename C::Value_type Item;
+  typedef typename C::Iterator Iterator;
+  typedef typename C::Const_iterator Const_iterator;
+
+  View *_view;
+  Core_api const *_core;
+
+  Content const *_content;
+  Const_iterator _current;
+
+  Area _size;
+  Area _cell;
+  int _height;
+  int _offset;
+  bool _scroll;
+  int _speed;
+
+  Font const *_font() const { return _core->label_font(); }
+  View_stack *_vstack() const { return _core->user_state()->vstack(); }
+
+public:
+  int scroll_button_height() const { return 15; }
+  int item_sep() const { return 2; }
+  int menu_border() const { return 4; }
+  int min_width() const { return 180; }
+
+  Menu(Core_api const *core, View *view, Content const *content)
+  : _view(view), _core(core), _content(content), _current(content->end()),
+    _cell(min_width(), _font()->str_h("X") + 2 * item_sep()), _height(0),
+    _offset(0), _scroll(false), _speed(0)
+  {}
+
+  Area calc_geometry(Area const &size);
+  Const_iterator find(Point const &pos, Rect *cell, int *y);
+  bool find(Const_iterator const &x, Rect *cell, int *y);
+
+  void draw(Canvas *canvas, Point const &pos) const;
+  Const_iterator handle_event(Hid_report *e, Point const &mouse);
+
+  void scroll(int dist)
+  {
+    int h = _size.h() - 2 * scroll_button_height();
+    _offset = std::max(0, std::min(_height - h, _offset + dist));
+  }
+
+  void optimize_offset(int current_pos)
+  {
+    if (!_scroll)
+      {
+	_offset = 0;
+	return;
+      }
+
+    /* usable height */
+    int h = _size.h() - 2 * scroll_button_height();
+    int o_min = std::max(current_pos + _cell.h() - h, 0);
+    int o_max = std::min(current_pos, _height - h);
+
+    if (_offset <= o_max && _offset >= o_min)
+      return;
+
+    if (_offset > o_max)
+      _offset = o_max;
+
+    if (_offset < o_min)
+      _offset = o_min;
+  }
+
+private:
+  template< typename F >
+  Const_iterator _find(Rect const &_bb, F const &f) const;
+
+  struct Find_for_pos
+  {
+    Point pos;
+    Rect *cell;
+    int *offs;
+
+    Find_for_pos(Point const &p, Rect *cell, int *offs)
+    : pos(p), cell(cell), offs(offs) {}
+
+    bool valid(Rect const &bb) const { return bb.contains(pos); }
+    bool operator () (Const_iterator const &, Rect const &bb, int y) const
+    {
+      if (!bb.contains(pos))
+	return false;
+
+      *cell = bb;
+      *offs = y;
+      return true;
+    }
+  };
+
+  struct Find_item
+  {
+    Const_iterator item;
+    Rect *cell;
+    int *offs;
+
+    Find_item(Const_iterator const &item, Rect *cell, int *offs)
+    : item(item), cell(cell), offs(offs) {}
+
+    bool valid(Rect const &) const { return true; }
+    bool operator () (Const_iterator const &e, Rect const &bb, int y) const
+    {
+      if (e != item)
+	return false;
+
+      *offs = y;
+      *cell = bb;
+      return true;
+    }
+  };
+
+
+  struct Draw_item
+  {
+  private:
+    Draw_item(Draw_item const &);
+
+  public:
+    Canvas *canvas;
+    Menu const *menu;
+    mutable Clip_guard g;
+
+    Draw_item(Menu const *m, Canvas *c) : canvas(c), menu(m) {}
+    bool valid(Rect const &bb) const
+    {
+      g.init(canvas, bb);
+      return canvas->clip_valid();
+    }
+
+    bool operator () (Const_iterator const &e, Rect br, int) const
+    {
+      Rgb32::Color lcol = e->ignore() ? Rgb32::Color(255, 200, 0) : Rgb32::White;
+      Rgb32::Color bcol = e == menu->_current ? Rgb32::Color(99, 120, 180) : Rgb32::Color(99, 99, 88);
+      canvas->draw_box(br, bcol);
+      br = br.offset(menu->menu_border(), menu->item_sep(), -menu->menu_border(), -menu->item_sep());
+      Clip_guard g(canvas, br);
+      canvas->draw_string(br.p1(), menu->_font(), lcol, e->label());
+      return false;
+    }
+  };
+
+  // handle timer ticks
+  void notify();
+};
+
+template<typename C>
+Area
+Menu<C>::calc_geometry(Area const &max_size)
+{
+  Area fs(min_width(), 0); //2 * menu_border());
+  bool cf = _current == _content->end();
+  int cp = 0;
+  for (Const_iterator e = _content->begin(); e != _content->end(); ++e)
+    {
+      int w = _font()->str_w(e->label()) + 2 * menu_border();
+      if (w > fs.w())
+	fs.w(w);
+
+      if (_current == e)
+	{
+	  cp = fs.h();
+	  cf = true;
+	}
+
+      fs.h(fs.h() + _cell.h());
+    }
+
+  /* the current item is gone so select none */
+  if (!cf)
+    _current = _content->end();
+
+  _height = fs.h();
+  if (fs.h() > max_size.h())
+    {
+      fs.h(max_size.h());
+      _scroll = true;
+    }
+  else
+    _scroll = false;
+
+  if (_current != _content->end())
+    optimize_offset(cp);
+
+  if (fs.w() > max_size.w())
+    fs.w(max_size.w());
+
+  _cell.w(fs.w());
+
+  _size = fs;
+  return fs;
+}
+
+template< typename C >
+template< typename F >
+typename Menu<C>::Const_iterator
+Menu<C>::_find(Rect const &_bb, F const &f) const
+{
+  Rect bb = _bb;
+  if (_scroll)
+    bb = _bb.offset(0, scroll_button_height(), 0, -scroll_button_height());
+
+  if (!f.valid(bb))
+    return _content->end();
+
+  int y = 0;
+
+  for (Const_iterator e = _content->begin(); e != _content->end(); ++e)
+    {
+      int ny = y + _cell.h();
+
+      if (y - _offset > bb.h())
+	break;
+
+      if (ny >= _offset)
+	{
+	  Rect br(Point(bb.x1(), bb.y1() + y - _offset), _cell);
+	  if (f(e, br, y))
+	    return e;
+	}
+      y = ny;
+    }
+  return _content->end();
+}
+
+
+template< typename C >
+typename Menu<C>::Const_iterator
+Menu<C>::find(Point const &pos, Rect *cell, int *y)
+{ return _find(Rect(Point(), _size), Find_for_pos(pos, cell, y)); }
+
+template< typename C >
+bool
+Menu<C>::find(Const_iterator const &x, Rect *cell, int *y)
+{ return _find(Rect(Point(), _size), Find_item(x, cell, y)) != _content->end(); }
+
+template< typename C >
+void
+Menu<C>::draw(Canvas *canvas, Point const &pos) const
+{
+  using Mag_gfx::Clip_guard;
+
+  Rect bb(pos, _size);
+  Clip_guard g(canvas, bb);
+
+  if (!canvas->clip_valid())
+    return;
+
+  if (_scroll)
+    {
+      Rect s(pos, Area(_size.w(), scroll_button_height()));
+      canvas->draw_box(s, Rgb32::Color(99, 99, 88)); //, 220));
+      s = s + Point(0, _size.h() - scroll_button_height());
+      canvas->draw_box(s, Rgb32::Color(99, 99, 88)); //, 220));
+    }
+
+  // Hm, make g++ 4.2 happy, that tries to call the copy ctor
+  // in the case of directly using a temporary
+  Draw_item di(this, canvas);
+  _find(bb, di);
+}
+
+template< typename C >
+typename Menu<C>::Const_iterator
+Menu<C>::handle_event(Hid_report *e, Point const &mouse)
+{
+  Valuator<int> const *abs = e->get_vals(3);
+  if (abs && abs->get(0).valid())
+    {
+      if (_scroll)
+	{
+	  int const sbh = scroll_button_height();
+	  int speed;
+          if ((speed = sbh - mouse.y()) > 0)
+	    {
+	      _speed = -speed;
+	      if (!cxx::H_list<Observer>::in_list(this))
+		_core->get_ticks(this);
+	    }
+	  else if ((speed = sbh - (_size.h() - mouse.y())) > 0)
+	    {
+	      _speed = speed;
+	      if (!cxx::H_list<Observer>::in_list(this))
+		_core->get_ticks(this);
+	    }
+	  else
+	    {
+	      cxx::H_list<Observer>::remove(this);
+	      _speed = 0;
+	    }
+
+	  if (speed > 0)
+	    return _content->end();
+	}
+      Rect nr;
+      int ny;
+      Const_iterator s = find(mouse, &nr, &ny);
+      if (_current != s)
+	{
+	  Rect cr;
+	  int cy;
+	  bool refresh_cr = false;
+	  if (_current != _content->end() && find(_current, &cr, &cy))
+	    refresh_cr = true;
+
+	  _current = s;
+
+	  int old_offs = _offset;
+
+	  if (_current != _content->end())
+	    optimize_offset(ny);
+
+	  if (old_offs != _offset)
+	    _vstack()->refresh_view(_view, 0, *_view);
+	  else
+	    {
+	      if (refresh_cr)
+		_vstack()->refresh_view(_view, 0, cr + _view->p1());
+
+	      if (s != _content->end())
+		_vstack()->refresh_view(_view, 0, nr + _view->p1());
+	    }
+	}
+    }
+
+  Hid_report::Key_event const *btn_left = e->find_key_event(L4RE_BTN_LEFT);
+  if (btn_left && btn_left->value == 0)
+    {
+      Rect nr;
+      int ny;
+      return find(mouse, &nr, &ny);
+    }
+
+  return _content->end();
+}
+
+template< typename C >
+void
+Menu<C>::notify()
+{
+  if (!_speed)
+    cxx::H_list<Observer>::remove(this);
+
+  int old = _offset;
+  scroll(_speed);
+  if (old != _offset)
+    _vstack()->refresh_view(_view, 0, *_view);
+  else
+    cxx::H_list<Observer>::remove(this);
+}
+
+
+}

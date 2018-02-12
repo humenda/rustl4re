@@ -1,0 +1,34 @@
+<map id="L4::Kobject::cap" name="L4::Kobject::cap">
+<area shape="rect" id="node2" href="$classL4_1_1Irq.html#a639504ec59299d5cc32f3e42f007317d" title="Attach a thread to this interrupt. " alt="" coords="220,5,327,32"/>
+<area shape="rect" id="node3" href="$classL4_1_1Icu.html#a998aaa8314b29b44aac4e3b59d7abfa0" title="Bind an interrupt line of an interrupt controller to an interrupt object. " alt="" coords="226,56,321,83"/>
+<area shape="rect" id="node5" href="$structL4_1_1Irq__mux.html#ab1a64e5c210eac48b4600ef2fb85b967" title="Attach an IRQ to this multiplexer. " alt="" coords="206,107,341,133"/>
+<area shape="rect" id="node6" href="$classL4_1_1Factory.html#aba420df79d1a464ddbd037e19455d602" title="Generic create call to the factory. " alt="" coords="205,157,342,184"/>
+<area shape="rect" id="node9" href="$classL4_1_1Factory.html#a054dfa162b61fe26ebcace7e97cca432" title="Create a new factory. " alt="" coords="205,209,342,250"/>
+<area shape="rect" id="node10" href="$classL4_1_1Factory.html#a3bcb94f03ca9bad5821f575d5048025d" title="Create a new IPC gate. " alt="" coords="187,275,360,301"/>
+<area shape="rect" id="node11" href="$classL4_1_1Factory.html#a741b67e7d11d552f3c17eccfd0d3bf88" title="Create a new IRQ. " alt="" coords="193,325,354,352"/>
+<area shape="rect" id="node12" href="$classL4_1_1Factory.html#a6a11dcf739826de26881e699bd8d53a3" title="Create a new task. " alt="" coords="188,376,359,403"/>
+<area shape="rect" id="node13" href="$classL4_1_1Factory.html#a684b3479c8829c7b3ec1d0ef074afb5c" title="Create a new thread. " alt="" coords="205,427,342,469"/>
+<area shape="rect" id="node14" href="$classL4_1_1Factory.html#a8ef0c4da0c26fd8d847f1c35e324eb69" title="Create a new virtual machine. " alt="" coords="192,493,355,520"/>
+<area shape="rect" id="node15" href="$classL4_1_1Irq.html#a022dcb4101ba8205547c095cbc7e34a5" title="Detach from this interrupt. " alt="" coords="218,544,329,571"/>
+<area shape="rect" id="node16" href="$structL4_1_1Semaphore.html#a9dde3ffc2c6bd56f4760c195da505db1" title="Semaphore down operation. " alt="" coords="195,595,352,621"/>
+<area shape="rect" id="node17" href="$classL4_1_1Thread.html#a77620ee9d438492867073654a705738d" title="Exchange basic thread registers. " alt="" coords="200,645,347,672"/>
+<area shape="rect" id="node18" href="$classL4_1_1Vcon.html#aa454b098bbf63ac18c59e044200c3e9a" title="Get attributes of this virtual console. " alt="" coords="208,696,339,723"/>
+<area shape="rect" id="node19" href="$classL4_1_1Icu.html#a21945937443dd5425d6372f02906c46c" title="Get information about the capabilities of the ICU. " alt="" coords="228,747,319,773"/>
+<area shape="rect" id="node20" href="$classL4_1_1Icu.html#acfe9ae0d990609e8757b372cf061834f" title="Mask an IRQ line. " alt="" coords="223,797,324,824"/>
+<area shape="rect" id="node21" href="$classL4_1_1Thread.html#a61ecf8a06d2b4996ebb67180b1d5d35c" title="Apply sender modifiction rules. " alt="" coords="205,849,342,890"/>
+<area shape="rect" id="node23" href="$classL4_1_1Vcon.html#aa3376a1e0a39edbfc95102c613492dd4" title="Read data from this virtual console. " alt="" coords="218,915,329,941"/>
+<area shape="rect" id="node24" href="$classL4_1_1Irq.html#a2b5cd8b070f23c8331dfac7903062ea5" title="Unmask and wait for this IRQ. " alt="" coords="217,965,330,992"/>
+<area shape="rect" id="node25" href="$classL4_1_1Vcon.html#a7f3af2e912eddfae6b0fd8505beec77f" title="Send data to this virtual console. " alt="" coords="217,1016,330,1043"/>
+<area shape="rect" id="node26" href="$classL4_1_1Vcon.html#a3f49fc477f851177920b05743c113e98" title="Set the attributes of this virtual console. " alt="" coords="208,1067,339,1093"/>
+<area shape="rect" id="node27" href="$classL4_1_1Icu.html#ab2d78ee6c906239bde95f669a10405de" title="Set interrupt mode. " alt="" coords="208,1117,339,1144"/>
+<area shape="rect" id="node28" href="$structL4_1_1Triggerable.html#adf91901c4e2bd784c687e102a8469c45" title="Trigger. " alt="" coords="192,1168,355,1195"/>
+<area shape="rect" id="node30" href="$classL4_1_1Icu.html#a47be3c88b707afd0fc55475261f6164d" title="Remove binding of an interrupt line from the interrupt controller object. " alt="" coords="219,1219,328,1245"/>
+<area shape="rect" id="node31" href="$classL4_1_1Thread.html#af88410084b23685f43bb1ce5070428cd" title="Enable or disable the vCPU feature for the thread. " alt="" coords="185,1269,361,1296"/>
+<area shape="rect" id="node32" href="$classL4_1_1Thread.html#a32bb06d5ee3d08a69d6a2f2b37f80cdc" title="Enable or disable the extended vCPU feature for the thread. " alt="" coords="172,1320,375,1347"/>
+<area shape="rect" id="node33" href="$classL4_1_1Vcon.html#acb9a53b77487d644212030c27d642f1e" title="Write data to this virtual console. " alt="" coords="217,1371,329,1397"/>
+<area shape="rect" id="node4" href="$classL4Re_1_1Util_1_1Event__t.html#a6052908f83d35a7bb1ba9371cbfc9834" title="Initialise an event object. " alt="" coords="441,49,577,90"/>
+<area shape="rect" id="node7" href="$classL4Re_1_1Mem__alloc.html#a5efd62a11914794181a76c3864a8d154" title="Allocate anonymous memory. " alt="" coords="426,136,591,163"/>
+<area shape="rect" id="node8" href="$classL4_1_1Factory.html#a8cfadde24eb8ebd8efe8d2c2d827ffda" title="Create call for typed capabilities. " alt="" coords="440,187,577,213"/>
+<area shape="rect" id="node22" href="$classL4Re_1_1Util_1_1Object__registry.html#aeeea59583ffddfef4e7c1c3e6eed41b6" title="Remove a server object from the handler list. " alt="" coords="423,849,595,890"/>
+<area shape="rect" id="node29" href="$structL4_1_1Semaphore.html#aa13181d7e43470c833a76f430b0c547c" title="Semaphore up operation (wrapper for trigger()). " alt="" coords="439,1168,578,1195"/>
+</map>

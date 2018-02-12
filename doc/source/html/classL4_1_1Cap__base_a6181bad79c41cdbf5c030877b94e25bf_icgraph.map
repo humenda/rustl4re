@@ -1,0 +1,32 @@
+<map id="L4::Cap_base::cap" name="L4::Cap_base::cap">
+<area shape="rect" id="node2" href="$classL4Re_1_1Util_1_1Cap__alloc__base.html#a1f778e439544f9118287ade4e055ce1c" title="Allocate a capability slot. " alt="" coords="209,5,359,47"/>
+<area shape="rect" id="node3" href="$classL4vbus_1_1Vbus.html#a15085069054edbb9b221154e25db52b2" title="Assign an L4Re::Dma_space to a DMA domain. " alt="" coords="209,71,359,112"/>
+<area shape="rect" id="node4" href="$classL4_1_1Icu.html#a998aaa8314b29b44aac4e3b59d7abfa0" title="Bind an interrupt line of an interrupt controller to an interrupt object. " alt="" coords="237,137,331,163"/>
+<area shape="rect" id="node6" href="$namespaceL4.html#ab7194c6fc9267a3bf67a3888681ef3c5" title="static_cast for capabilities. " alt="" coords="233,187,335,214"/>
+<area shape="rect" id="node11" href="$namespaceL4.html#abe4e47e48f3ea558077cef7f7dee7ac0" title="reinterpret_cast for capabilities. " alt="" coords="197,238,371,265"/>
+<area shape="rect" id="node13" href="$structL4_1_1Irq__mux.html#ab1a64e5c210eac48b4600ef2fb85b967" title="Attach an IRQ to this multiplexer. " alt="" coords="217,289,351,315"/>
+<area shape="rect" id="node14" href="$classL4Re_1_1Util_1_1Smart__count__cap.html#a5886f75acada6cddee1b8c3192476b93" title="Copy operation for L4::Smart_cap (increment ref count). " alt="" coords="201,340,367,381"/>
+<area shape="rect" id="node15" href="$classL4Re_1_1Smart__count__cap.html#a4f5fee6c54e153aba5b2cf33e4c5c5ec" title="Copy operation for L4::Smart_cap (increment ref count). " alt="" coords="198,405,370,447"/>
+<area shape="rect" id="node16" href="$classL4_1_1Factory.html#a054dfa162b61fe26ebcace7e97cca432" title="Create a new factory. " alt="" coords="215,471,353,512"/>
+<area shape="rect" id="node17" href="$classL4_1_1Factory.html#a3bcb94f03ca9bad5821f575d5048025d" title="Create a new IPC gate. " alt="" coords="197,537,371,563"/>
+<area shape="rect" id="node18" href="$classL4_1_1Factory.html#a741b67e7d11d552f3c17eccfd0d3bf88" title="Create a new IRQ. " alt="" coords="203,587,365,614"/>
+<area shape="rect" id="node19" href="$classL4_1_1Factory.html#a6a11dcf739826de26881e699bd8d53a3" title="Create a new task. " alt="" coords="199,638,369,665"/>
+<area shape="rect" id="node20" href="$classL4_1_1Factory.html#a684b3479c8829c7b3ec1d0ef074afb5c" title="Create a new thread. " alt="" coords="215,689,353,731"/>
+<area shape="rect" id="node21" href="$classL4_1_1Factory.html#a8ef0c4da0c26fd8d847f1c35e324eb69" title="Create a new virtual machine. " alt="" coords="203,755,365,782"/>
+<area shape="rect" id="node22" href="$classL4Re_1_1Util_1_1Smart__cap__auto.html#a4dfba4f2c4731689f1a53992c83371a6" title="Free operation for L4::Smart_cap. " alt="" coords="206,807,362,848"/>
+<area shape="rect" id="node23" href="$classL4_1_1Invalid__capability.html#a35f938fc07c4ded041b39278dab38058" title="Create an Invalid_obejct exception for the Object o. " alt="" coords="209,872,359,913"/>
+<area shape="rect" id="node24" href="$classL4virtio_1_1Svr_1_1Device__t.html#a3fa20bf911056f0d03c8274982b1e167" title="Get the memory region list used for this device. " alt="" coords="195,937,373,979"/>
+<area shape="rect" id="node25" href="$classL4_1_1Smart__cap.html#ab1ecc4883e0d324cc86bab7950fa0cf2" title="Member access of a T. " alt="" coords="192,1003,376,1030"/>
+<area shape="rect" id="node26" href="$classL4_1_1Cap.html#a580ae207f1a9a54c3a2ffd93fa3f4eef" title="Member access of a T. " alt="" coords="205,1055,363,1096"/>
+<area shape="rect" id="node27" href="$classL4Re_1_1Util_1_1Event__buffer__consumer__t.html#a4ed22b41ce4c7e6b93efae878b1415ef" title="Continuously wait for events and process them. " alt="" coords="201,1120,367,1161"/>
+<area shape="rect" id="node28" href="$classL4_1_1Ipc__svr_1_1Server__iface.html#abf34a40926c8929fc3ada150a7a6f491" title="Get receive cap with the given index as generic (void) type. " alt="" coords="215,1185,353,1227"/>
+<area shape="rect" id="node29" href="$classL4_1_1Smart__cap.html#a6fcfb4a0cf84bc795f6bcfe7557dbf6d" title="Internal constructor, use to generate a capability from a this pointer. " alt="" coords="191,1251,377,1278"/>
+<area shape="rect" id="node30" href="$classL4_1_1Icu.html#a47be3c88b707afd0fc55475261f6164d" title="Remove binding of an interrupt line from the interrupt controller object. " alt="" coords="229,1302,339,1329"/>
+<area shape="rect" id="node31" href="$classL4vbus_1_1Icu.html#a836655616e1572d6e5453a566c6d6372" title="Request the L4::Icu capability for this Vbus ICU. " alt="" coords="224,1353,344,1379"/>
+<area shape="rect" id="node5" href="$classL4Re_1_1Util_1_1Event__t.html#a6052908f83d35a7bb1ba9371cbfc9834" title="Initialise an event object. " alt="" coords="438,31,574,72"/>
+<area shape="rect" id="node7" href="$classL4Re_1_1Cap__alloc.html#a0a1e264189083fa861cae9668454af28" title="Allocate a capability. " alt="" coords="426,97,586,123"/>
+<area shape="rect" id="node8" href="$classL4Re_1_1Util_1_1Counting__cap__alloc.html#a4f4222a51bf36d9f597a3417170e52a6" title="Allocate a new capability slot. " alt="" coords="434,148,578,189"/>
+<area shape="rect" id="node9" href="$classL4_1_1Ipc__svr_1_1Server__iface.html#ac44e716be4e47dab6b68cc91801fc7b8" title="Get given receive buffer as typed capability. " alt="" coords="437,213,575,255"/>
+<area shape="rect" id="node10" href="$classL4virtio_1_1Svr_1_1Block__dev.html#a9a96e928470518780132b45397e8ad35" title="Attach device to an object registry. " alt="" coords="439,279,573,320"/>
+<area shape="rect" id="node12" href="$namespaceL4.html#aaf3caa50a8aaf94af516141d878b009f" title="dynamic_cast for capabilities. " alt="" coords="425,345,587,371"/>
+</map>

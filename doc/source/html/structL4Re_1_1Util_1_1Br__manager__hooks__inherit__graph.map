@@ -1,0 +1,7 @@
+<map id="L4Re::Util::Br_manager_hooks" name="L4Re::Util::Br_manager_hooks">
+<area shape="rect" id="node2" href="$structL4_1_1Ipc__svr_1_1Ignore__errors.html" title="Mix in for LOOP_HOOKS to ignore IPC errors. " alt="" coords="5,314,143,406"/>
+<area shape="rect" id="node3" href="$structL4_1_1Ipc__svr_1_1Default__timeout.html" title="Mix in for LOOP_HOOKS to use a 0 send and a infinite receive timeout. " alt="" coords="167,314,307,406"/>
+<area shape="rect" id="node4" href="$structL4_1_1Ipc__svr_1_1Compound__reply.html" title="Mix in for LOOP_HOOKS to always use compound reply and wait. " alt="" coords="331,314,495,406"/>
+<area shape="rect" id="node5" href="$classL4Re_1_1Util_1_1Br__manager.html" title="Buffer&#45;register (BR) manager for L4::Server. " alt="" coords="519,263,695,457"/>
+<area shape="rect" id="node6" href="$classL4_1_1Ipc__svr_1_1Server__iface.html" title="Interface for server&#45;loop related functions. " alt="" coords="519,5,695,215"/>
+</map>

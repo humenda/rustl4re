@@ -1,0 +1,3 @@
+<map id="L4virtio::Virtqueue::Avail::Flags::no_irq" name="L4virtio::Virtqueue::Avail::Flags::no_irq">
+<area shape="rect" id="node2" href="$classL4virtio_1_1Virtqueue.html#a2aa2efa2e5f6ee73423ec9beab40232a" title="Get the no IRQ flag of this queue. " alt="" coords="197,5,331,47"/>
+</map>

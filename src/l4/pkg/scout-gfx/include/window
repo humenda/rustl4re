@@ -1,0 +1,90 @@
+// vi:ft=cpp
+
+#pragma once
+
+#include <l4/scout-gfx/basic_window>
+
+namespace Scout_gfx {
+
+class Window : public Basic_window
+{
+public:
+  enum Mode
+  {
+    Normal,
+    Maximized,
+    Minimized,
+    Fullscreen
+  };
+
+
+  class Deco_policy
+  {
+  public:
+    struct Insets { Area tl, br; };
+
+    virtual Widget *create_deco(Window *) const = 0;
+    virtual void set_deco_mode(Mode mode, Widget *deco, Insets *insets) = 0;
+  };
+
+private:
+  Rect _normal_pos;
+
+  Parent_widget _content;
+  Widget *_deco;
+  Deco_policy::Insets *_insets;
+  Deco_policy *_deco_policy;
+
+protected:
+  // hide those functions, use content_pane()->... instead
+  using Basic_window::set_child_layout;
+  using Basic_window::child_layout;
+
+public:
+  Window(Deco_policy *deco_policy, View *v, Area const &max_size);
+
+//  Widget *handle_event(Event const &e);
+
+  virtual void set_window_mode(Mode mode);
+
+  Parent_widget *content_pane() { return &_content; }
+  Deco_policy::Insets const &insets() const { return *_insets; }
+
+
+  void set_geometry(Rect const &g)
+  {
+    Basic_window::set_geometry(g);
+    _deco->set_geometry(Rect(geometry().area()));
+  }
+
+  void append(Widget *w) { _content.append(w); }
+  void remove(Widget *w) { _content.remove(w); }
+  void forget(Widget *w) { _content.forget(w); }
+
+  Area preferred_size() const
+  { return Basic_window::child_layout()->preferred_size(); }
+
+  Area min_size() const
+  { return _min_sz.max(Basic_window::child_layout()->min_size()); }
+
+  Area max_size() const
+  { return Basic_window::max_size().min(Basic_window::child_layout()->max_size()); }
+
+  Orientations expanding() const
+  { return Basic_window::child_layout()->expanding(); }
+
+  bool empty() const
+  { return false; }
+
+  bool has_height_for_width() const
+  { return Basic_window::child_layout()->has_height_for_width(); }
+
+  int height_for_width(int w) const
+  { return Basic_window::child_layout()->height_for_width(w); }
+
+  int min_height_for_width(int w) const
+  { return Basic_window::child_layout()->min_height_for_width(w); }
+
+};
+
+}

@@ -1,0 +1,102 @@
+/**
+
+\page l4re_tutorial Tutorial
+
+This tutorial assumes that the reader is familiar with the basic %L4 concepts
+that were discussed in the \ref l4re_intro section and has
+a working knowledge of C++.
+
+Here you can find the first steps to boot a very simple setup.  The setup
+consists of the following components:
+\li Fiasco.OC --- Microkernel
+\li Sigma0 --- Root Pager
+\li Moe --- Root Task
+\li Ned --- Init Process
+\li hello --- Hello World Application
+
+The guide assumes that you already compiled the base components and describes
+how to generate an ISO image, with GRUB 1 or GRUB 2 as a boot loader, that
+can for example be booted within QEMU.
+
+First you need a \c modules.list file that contains an entry for the scenario.
+
+\code
+modaddr  0x002000000
+
+entry hello
+  kernel   fiasco -serial_esc
+  roottask moe rom/hello.cfg
+  module   l4re
+  module   ned
+  module   hello.cfg
+  module   hello
+\endcode
+
+This file describes all the binaries and scripts to put into the ISO image,
+and also describes the GRUB \c menu.lst contents.  What you need to do is to
+set the \c make variable \c MODULE_SEARCH_PATH to contain the path to your
+Fiasco.OC build directory and the directory containing your \c hello.cfg
+script.
+
+The \c hello.cfg script should look like the following. A ready to use
+version can be found in l4/conf/examples.
+
+\code
+local L4 = require("L4");
+L4.default_loader:start({}, "rom/hello");
+\endcode
+
+The first line of this script ensures that the \c L4 package is available
+for the script. The second line uses the default loader object defined in that
+package and starts the binary \c rom/hello.
+\note All modules defined in \c modules.list are available as data spaces
+(L4Re::Dataspace) and registered in a name space (L4Re::Namespace). This
+name space is in turn available as 'rom' to the init process
+(\ref l4re_servers_ned "Ned").
+
+
+Now you can go to your L4Re build directory and run the following command.
+\note The example assumes that you have created the \c modules.list and \c
+      hello.cfg files in the /tmp directory. Adapt if you created them
+      somewhere else.
+
+\code
+make grub1iso E=hello MODULES_LIST=/tmp/modules.list MODULE_SEARCH_PATH=/tmp:<path_to_fiasco_builddir>
+\endcode
+
+Or as an alternative use GRUB 2:
+
+\code
+make grub2iso E=hello MODULES_LIST=/tmp/modules.list MODULE_SEARCH_PATH=/tmp:<path_to_fiasco_builddir>
+\endcode
+
+Now you should be able to boot the image in QEMU by running:
+
+\code
+qemu-system-i386 -cdrom images/hello.iso -serial stdio
+\endcode
+
+If you press `<ESC>` in the terminal that shows you the serial output you
+enter the Fiasco.OC kernel debugger... Have fun.
+
+
+\section customizations Customizations
+
+A basic set of bootable entries can be found in \c l4/conf/modules.list. This file
+is the default for any image creation as shown above. It is recommended that
+local modification regarding image creation are done in
+\c conf/Makeconf.boot. Initially you may copy \c Makeconf.boot.example to
+\c Makeconf.boot. You can overwrite \c MODULES_LIST to set your own
+modules-list file. Set \c MODULE_SEARCH_PATH to your setup according to the
+examples given in the file.
+When configured a \c make call is reduced to:
+
+\code
+make grub2iso E=hello
+\endcode
+
+
+All other local configuration can be done in a
+\c Makeconf.local file located in the \c l4 directory.
+
+*/

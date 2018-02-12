@@ -1,0 +1,163 @@
+// vim: ft=cpp
+#pragma once
+
+/*
+ * fault_observer --
+ *
+ *    Definition of the generic fault handling class as well as
+ *    specific sub-classes.
+ *
+ * (c) 2011-2013 Björn Döbel <doebel@os.inf.tu-dresden.de>,
+ *     economic rights: Technische Universität Dresden (Germany)
+ * This file is part of TUD:OS and distributed under the terms of the
+ * GNU General Public License 2.
+ * Please see the COPYING-GPL-2 file for details.
+ */
+
+#include "app"
+#include "log"
+#include "exceptions"
+//#include "emulation"
+#include <l4/sys/kdebug.h>
+
+namespace Romain
+{
+	class App_model;
+	class App_instance;
+	class App_thread;
+	struct Thread_group;
+
+/* Make this a macro because every sub-class will have to define
+ * these two virtual functions.
+ */
+#define DECLARE_OBSERVER(_name_) \
+		public: \
+			virtual void startup_notify(Romain::App_instance *i, \
+			                            Romain::App_thread *t, \
+			                            Romain::Thread_group *tg, \
+			                            Romain::App_model *a); \
+			virtual ObserverReturnVal notify(Romain::App_instance *i, \
+			                                 Romain::App_thread *t, \
+			                                 Romain::Thread_group *tg, \
+			                                 Romain::App_model *a); \
+			virtual char const * name() const { return _name_; } \
+			virtual void status() const;
+
+
+#define DEFINE_EMPTY_STARTUP(name) \
+	void Romain::name::startup_notify(Romain::App_instance*, Romain::App_thread*, \
+	                                  Romain::Thread_group*, Romain::App_model*) { }
+
+	/*
+	 * Generic observer class.
+	 */
+	class Observer
+	{
+		public:
+
+			/*
+			 * Return values for the observers' notify() functions.
+			 */
+			enum ObserverReturnVal {
+				Invalid,
+				/*
+				 * A fault handler has "Finished" handling the fault,
+				 * if it modified the VCPU/UTCB state in a way that
+				 * allows returning to the replica and other handlers
+				 * may not touch this state anymore.
+				 */
+				Finished,
+
+				/* The story of Finished_{wait,step,wakeup}
+				 * ==============================================
+				 * 
+				 * The fault injection handler needs a mechanism that allows
+				 * it to inject a fault into one replica while all other replicas
+				 * don't do anything and simply wait until the injection (including
+				 * potential further faults) has been completed.
+				 */
+
+				/*
+				 * tl;dr: Tell redundancy handler that execution has been
+				 *        completed and that the replica should wait for an
+				 *        explicit wakeup before resuming.
+				 */
+				Finished_wait,
+				/*
+				 * tl;dr: Execution completed. You are now the only replica
+				 *        to continue.
+				 */
+				Finished_step,
+				/*
+				 * tl;dr: Tell redundancy handler that execution has been
+				 *        completed and it should now also wake up all other
+				 *        replicas that have been stopped by 'Finished_wait'
+				 *        calls.
+				 */
+				Finished_wakeup,
+
+				/*
+				 * Handling produced the same result as 'Finished'.
+				 *
+				 * In contrast to the 'Finished' result, this result
+				 * may be applied to replicas by simply copying UTCB
+				 * and VCPU state to all of them.
+				 */
+				Replicatable,
+				/*
+				 * The fault was handled. However, VCPU/UTCB were not
+				 * modified and other observers can be invoked before
+				 * resuming the replica.
+				 */
+				Continue,
+				/*
+				 * This handler could not handle the fault and
+				 * ignored it.
+				 */
+				Ignored,
+			};
+
+			/*
+			 * This function is called once the observed instance has
+			 * completed startup.
+			 */
+			virtual void startup_notify(Romain::App_instance *i = 0,
+			                            Romain::App_thread *t = 0,
+			                            Romain::Thread_group *tg = 0,
+			                            Romain::App_model *a = 0) = 0;
+
+			/*
+			 * This function is called whenever an observed instance
+			 * causes a fault.
+			 */
+			virtual ObserverReturnVal notify(Romain::App_instance *i = 0,
+			                                 Romain::App_thread *t = 0,
+			                                 Romain::Thread_group *tg = 0,
+			                                 Romain::App_model *a = 0) = 0;
+
+			/*
+			 * Check if we came to this point through a
+			 * debug interrupt.
+			 */
+			static bool entry_reason_is_int3(L4vcpu::Vcpu* vcpu,
+			                                 Romain::App_instance *i,
+			                                 Romain::App_model *am);
+
+
+			virtual char const * name() const = 0;
+			virtual void status() const = 0;
+
+			/*
+			 * Determine if this fault was caused by an INT1 trap.
+			 */
+			static bool entry_reason_is_int1(L4vcpu::Vcpu *vcpu)
+			{ return vcpu->r()->trapno == 1; }
+	};
+
+
+	class ObserverFactory
+	{
+		public:
+			static Observer* CreateObserver(char const*);
+	};
+}

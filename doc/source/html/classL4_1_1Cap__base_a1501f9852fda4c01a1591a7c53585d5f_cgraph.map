@@ -1,0 +1,6 @@
+<map id="L4::Cap_base::copy" name="L4::Cap_base::copy">
+<area shape="rect" id="node2" href="$classL4_1_1Cap__base.html#ab394291024e0e7ad887ece81efb3074e" title="Return flex&#45;page for the capability. " alt="" coords="203,5,353,32"/>
+<area shape="rect" id="node4" href="$classL4_1_1Cap__base.html#a316c26926eef4b54dc6c7afa13bae5f9" title="Test whether the capability is a valid capability index (i.e., not L4_INVALID_CAP). " alt="" coords="197,56,359,83"/>
+<area shape="rect" id="node5" href="$group__l4__task__api.html#ga0a883fb598c3320922f0560263da35e6" title="Map resources available in the source task to a destination task. " alt="" coords="227,107,329,133"/>
+<area shape="rect" id="node3" href="$group__l4__fpage__api.html#ga3eaf59757a63812044e2b3a1cdf09d54" title="Create a kernel&#45;object flex page. " alt="" coords="407,5,509,32"/>
+</map>

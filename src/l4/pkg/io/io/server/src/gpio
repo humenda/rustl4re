@@ -1,0 +1,177 @@
+// vi:ft=cpp
+
+#pragma once
+
+#include "debug.h"
+#include "hw_device.h"
+#include "resource.h"
+#include <l4/vbus/vbus_gpio.h>
+
+class Io_irq_pin;
+
+namespace Hw {
+
+class Gpio_chip
+{
+public:
+  /// Modes used for setup()
+  enum Fix_mode
+  {
+    Input  = L4VBUS_GPIO_SETUP_INPUT,  ///< Configure as input pin
+    Output = L4VBUS_GPIO_SETUP_OUTPUT, ///< Configure as output pin
+    Irq    = L4VBUS_GPIO_SETUP_IRQ,    ///< Configure as IRQ source
+  };
+
+  /// Modes used for pull up / pull down (config_pull())
+  enum Pull_mode
+  {
+    Pull_none  = L4VBUS_GPIO_PIN_PULL_NONE,  ///< No pull up or pull down resistors
+    Pull_up    = L4VBUS_GPIO_PIN_PULL_UP,    ///< Enable pull up resistor
+    Pull_down  = L4VBUS_GPIO_PIN_PULL_DOWN,  ///< Enable pull down resistor
+  };
+
+  virtual void request(unsigned pin) = 0;
+  virtual void free(unsigned pin) = 0;
+
+  /**
+   * \brief Request number of pins from GPIO chip
+   * \return Number of pins of this GPIO chip
+   */
+  virtual unsigned nr_pins() const = 0;
+
+  /**
+   * \brief Generic (platform independent) setup for a pin.
+   * \param pin the pin number to configure.
+   * \param mode the mode for the pin (see Fix_mode).
+   * \param value the value if the pin is configured as output.
+   */
+  virtual void setup(unsigned pin, unsigned mode, int value = 0) = 0;
+
+  /**
+   * \brief Generic (platform independet) function to set a pin's pull up/down mode
+   * \param pin The pin number to configure.
+   * \param mode The pull up/down mode (see Pull_mode).
+   */
+  virtual void config_pull(unsigned pin, unsigned mode) = 0;
+
+  /**
+   * \brief Set platform specific pad configuration.
+   * \param pin the pin to configure.
+   * \param func a platform specific sub-function of a pad to be configured
+   * \param value a platform specific value for the given sub-function.
+   */
+  virtual void config_pad(unsigned pin, unsigned func, unsigned value) = 0;
+
+  /**
+   * \brief Get Platform specific pad configuration.
+   * \param pin the pin to configure.
+   * \param func a platform specific sub-function of a pad to be configured
+   * \retparam value a platform specific value for the given sub-function.
+   */
+  virtual void config_get(unsigned pin, unsigned func, unsigned *value) = 0;
+
+  /**
+   * \brief Get the value of the given pin (generic API).
+   * \param pin the pin to read the value from.
+   */
+  virtual int get(unsigned pin) = 0;
+
+  /**
+   * \brief Set the value of the given pin (generic API).
+   * \pre The pin has to be configured as output before using this function,
+   *      otherwise this call will be ignored.
+   * \param pin the pin to write the value to.
+   * \param value the value to program for output (0 or 1).
+   */
+  virtual void set(unsigned pin, int value) = 0;
+
+  /**
+   * \brief Enable the pin to function as an IRQ and return the IRQ number
+   *        that will be triggered.
+   * \param pin the pin to configure as IRQ.
+   */
+  virtual Io_irq_pin *get_irq(unsigned pin) = 0;
+
+  struct Pin_slice
+  {
+    unsigned offset;
+    unsigned mask;
+  };
+
+  /**
+   * \brief Setup multiple pins (generic API)
+   * \param mask the pins to actually set up.
+   * \param mode the mode for the pins (see Fix_mode).
+   * \param outvalue the value if configured as output.
+   */
+  virtual void multi_setup(Pin_slice const &mask, unsigned mode, unsigned outvalue = 0) = 0;
+
+  /**
+   * \brief Configure multiple pads at once (platform specific API).
+   * \param mask the pads to configure.
+   * \param func the platform-specific sub-function to configure.
+   * \param value the platform-specific value to set for the sub-function.
+   * \see config_pad()
+   */
+  virtual void multi_config_pad(Pin_slice const &mask, unsigned func, unsigned value) = 0;
+
+  /**
+   * \brief Set the value for multiple output pins at once.
+   * \param mask the pins that shall actually be set to the given values.
+   * \param data the bit-wise value for each pin to set (according to mask).
+   */
+  virtual void multi_set(Pin_slice const &mask, unsigned data) = 0;
+
+  /**
+   * \brief Get the value for all pins at once.
+   */
+  virtual unsigned multi_get(unsigned offset) = 0;
+
+
+  void output(unsigned pin, int value)
+  { setup(pin, Output, value); }
+
+  void input(unsigned pin)
+  { setup(pin, Input); }
+
+  void multi_output(Pin_slice const &mask, unsigned data)
+  { multi_setup(mask, mask.mask, data); }
+
+  void multi_input(Pin_slice const &mask)
+  { multi_setup(mask, ~mask.mask); }
+};
+
+class Gpio_device :
+  public Gpio_chip,
+  public Hw::Device
+{
+};
+
+}
+
+class Gpio_resource : public Resource
+{
+public:
+  explicit Gpio_resource(Hw::Device *dev, unsigned start, unsigned end)
+  : Resource(Gpio_res | F_relative, start, end),
+    _hw(dynamic_cast<Hw::Gpio_device*>(dev))
+  {
+    if (!_hw)
+      {
+        d_printf(DBG_ERR,
+                 "ERROR: GPIO: failed to assign GPIO-device (%p: %s) to resource\n",
+                 dev, dev ? dev->name() : "");
+        throw("ERROR: GPIO: failed to assign GPIO-device to resource");
+      }
+  }
+
+  void dump(int indent) const;
+
+  Hw::Gpio_device *provider() const { return _hw; }
+
+private:
+  Gpio_resource(Gpio_resource const &);
+  void operator = (Gpio_resource const &);
+
+  Hw::Gpio_device *_hw;
+};

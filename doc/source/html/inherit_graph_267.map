@@ -1,0 +1,5 @@
+<map id="Graphical Class Hierarchy" name="Graphical Class Hierarchy">
+<area shape="rect" id="node1" href="$classL4virtio_1_1Virtqueue.html" title="Low&#45;level Virtqueue. " alt="" coords="5,31,139,57"/>
+<area shape="rect" id="node2" href="$classL4virtio_1_1Driver_1_1Virtqueue.html" title="Driver&#45;side implementation of a Virtqueue. " alt="" coords="187,5,364,32"/>
+<area shape="rect" id="node3" href="$classL4virtio_1_1Svr_1_1Virtqueue.html" title="Virtqueue implementation for the device. " alt="" coords="195,56,355,83"/>
+</map>

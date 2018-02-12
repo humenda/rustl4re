@@ -1,0 +1,181 @@
+// vi:ft=c
+/**
+ * \page io Io, the Io Server
+ *
+ * The Io server handles all platform devices and resources such as I/O
+ * memory, ports (on x86) and interrupts, and grants access to those to
+ * clients.
+ *
+ * Upon startup Io discovers all platform devices using available means on
+ * the system, e.g. on x86 the PCI bus is scanned and the ACPI subsystem
+ * initialised. Available I/O resource can also be configured via
+ * configuration scripts.
+ *
+ * Io's configuration consists of two parts:
+ *  - the description of the real hardware
+ *  - the description of virtual buses
+ *
+ * Both descriptions represent a hierarchical (tree) structure of device nodes.
+ * Where each device has a set of resources attached to it. And a device that
+ * has child devices can be considered a bus.
+ *
+ * Hardware Description
+ * --------------------
+ *
+ * The hardware description represents the devices that are available on the
+ * particular platform including their resource descriptions, such as MMIO
+ * regions, IO-Port regions, IRQs, bus numbers etc.
+ *
+ * The root of the hardware devices is formed by a system bus device
+ * (accessible in the configuration via Io.system_bus()).
+ * As mentioned before, platforms that support methods for device discovery may
+ * populate the hardware description automatically, for example from ACPI. On
+ * platforms that do not have support for such methods you have to specify the
+ * hardware description by hand. A simple example for this is
+ * <tt>x86-legacy.devs</tt>.
+ *
+ * Virtual Bus Description
+ * -----------------------
+ *
+ * Each Io server client is provided with its own virtual bus which
+ * it can iterate to find devices. A virtual PCI bus may be a part
+ * of this virtual bus.
+ *
+ * \image html io-overview.png "IO Service Architecture Overview"
+ * \image latex io-overview.pdf "IO Service Architecture Overview"
+ *
+ * The Io server must be configured to create virtual buses for its
+ * clients.
+ *
+ * This is done with at least one configuration file
+ * specifying static resources as well as virtual buses for clients. The
+ * configuration may be split across several configuration files passed
+ * to Io through the command line.
+ *
+ * To allow clients access to a available devices, a virtual system bus needs
+ * to be created that lists the devices and their resources that should be
+ * available to that client. The names of the buses correspond to the
+ * capabilities given to Io in its launch configuration.
+ *
+ * A very simple configuration for Io could look like this:
+ *
+ * \include io/doc/example.io
+ *
+ * Each device supports a 'compatible' property. It is a list of compatibility
+ * strings. A client matches itself against one (or multiple) compatibility IDs
+ * and configures itself accordingly. All other device members are handled
+ * according to their type. If the type is a resource (Io.Res) it is added as a
+ * named resource. Note that resource names are truncated to 4 letters and are
+ * stored in the ID field of a l4vbus_resource_t. If the type is a device it is
+ * added as a child device to the current one. All other types are treated as a
+ * device property which can be used to configure a device driver. Right now,
+ * device properties are internal to Io only.
+ *
+ * Matching and Assigning PCI Devices
+ * ----------------------------------
+ * Assigning clients PCI devices could look like this:
+ *
+ * \include io/doc/example_pci.io
+ *
+ * The "PCI/" is followed by a bus-specific ID string. The format of the PCI ID
+ * string may be one of the following:
+ * - PCI/CC_cc
+ * - PCI/CC_ccss
+ * - PCI/CC_ccsspp
+ * - PCI/VEN_vvvv
+ * - PCI/DEV_dddd
+ * - PCI/SUBSYS_ssssssss
+ * - PCI/REV_rr
+ * - PCI/ADR_xxxx:xx:xx.x
+ *
+ * Where:
+ * - `cc` is the hexadecimal representation of the class code byte
+ * - `ss` is the hexadecimal representation of the subclass code byte
+ * - `pp` is the hexadecimal representation of the programming interface byte
+ * - `vvvv` is the hexadecimal representation of the vendor ID
+ * - `dddd` is the hexadecimal representation of the device ID
+ * - `ssssssss` is the hexadecimal representation of the subsystem ID
+ * - `rr` is the hexadecimal representation of the revision byte
+ * - `xxxx:xx:xx.x` is the bus address in PCI nomenclature
+ *
+ * As a special extension Io supports replacing the ID string with a
+ * human-readable common PCI class name. The following table gives an overview
+ * of the names known to Io and their respective PCI class and subclass.
+ *
+ * Common Name          | Description                        | PCI ID string
+ * ---------------------|------------------------------------|--------------
+ * storage              | Mass storage controller            | CC_01
+ * scsi                 | SCSI storage controller            | CC_0100
+ * ide                  | IDE interface                      | CC_0101
+ * floppy               | Floppy disk controller             | CC_0102
+ * raid                 | RAID bus controller                | CC_0104
+ * ata                  | ATA controller                     | CC_0105
+ * sata                 | SATA controller                    | CC_0106
+ * sas                  | Serial attached SCSI controller    | CC_0107
+ * nvm                  | Non-volatile memory controller     | CC_0108
+ * - | - | -
+ * network              | Network controller                 | CC_02
+ * ethernet             | Ethernet controller                | CC_0200
+ * token_ring           | Token ring network controller      | CC_0201
+ * fddi                 | FDDI network controller            | CC_0202
+ * atm                  | ATM network controller             | CC_0203
+ * isdn                 | ISDN controller                    | CC_0204
+ * picmg                | PICMG controller                   | CC_0206
+ * net_infiniband       | Infiniband controller              | CC_0207
+ * fabric               | Fabric controller                  | CC_0208
+ * network_nw           | Network controller e.g. Wifi       | CC_0280
+ * - | - | -
+ * display              | Display controller                 | CC_03
+ * vga                  | VGA compatible controller          | CC_0300
+ * xga                  | XGA compatible controller          | CC_0301
+ * - | - | -
+ * media                | Multimedia controller              | CC_04
+ * mm_video             | Multimedia video controller        | CC_0400
+ * mm_audio             | Multimedia audio controller        | CC_0401
+ * telephony            | Computer telephony device          | CC_0402
+ * audio                | Audio device                       | CC_0403
+ * - | - | -
+ * bridge               | Bridge                             | CC_06
+ * br_host              | Host bridge                        | CC_0600
+ * br_isa               | ISA bridge                         | CC_0601
+ * br_eisa              | EISA bridge                        | CC_0602
+ * br_microchannel      | MicroChannel bridge                | CC_0603
+ * br_pci               | PCI bridge                         | CC_0604
+ * br_pcmcia            | PCMCIA bridge                      | CC_0605
+ * br_nubus             | NuBus bridge                       | CC_0606
+ * br_cardbus           | CardBus bridge                     | CC_0607
+ * br_raceway           | RACEway bridge                     | CC_0608
+ * br_semi_pci          | Semi-transparent PCI-to-PCI bridge | CC_0609
+ * br_infiniband_to_pci | InfiniBand to PCI host bridge      | CC_060a
+ * - | - | -
+ * com                  | Communication controller           | CC_07
+ * com_serial           | Serial controller                  | CC_0700
+ * com_parallel         | Parallel controller                | CC_0701
+ * com_multiport_ser    | Multiport serial controller        | CC_0702
+ * com_modem            | Modem                              | CC_0703
+ * com_gpib             | GPIB controller                    | CC_0704
+ * com_smart_card       | Smart card controller              | CC_0705
+ * - | - | -
+ * serial_bus           | Serial bus controller              | CC_0c
+ * firewire             | FireWire (IEEE 1394)               | CC_0c00
+ * access_bus           | ACCESS bus                         | CC_0c01
+ * ssa                  | SSA                                | CC_0c02
+ * usb                  | USB controller                     | CC_0c03
+ * fibre_channel        | Fibre channel                      | CC_0c04
+ * smbus                | SMBus                              | CC_0c05
+ * bus_infiniband       | InfiniBand                         | CC_0c06
+ * ipmi_smic            | IPMI SMIC interface                | CC_0c07
+ * sercos               | SERCOS interface                   | CC_0c08
+ * canbus               | CAN bus                            | CC_0c09
+ * - | - | -
+ * wireless             | Wireless controller                | CC_0d
+ * bluetooth            | Bluetooth                          | CC_0d11
+ * w_8021a              | 802.1a controller                  | CC_0d20
+ * w_8021b              | 802.1b controller                  | CC_0d21
+ *
+ * ### Strong Matching of PCI Devices ###
+ * If more specific matching of PCI devices is required it is possible to
+ * concatenate multiple ID strings using `&`. An example where a specific
+ * device from a specific vendor at a fixed bus address is matched would use
+ * the string `PCI/VEN_vvvv&DEV_dddd&ADR_xxxx:xx:xx.x`.
+ */

@@ -1,0 +1,339 @@
+// vi:ft=cpp
+/*
+ * (c) 2011 Adam Lackorzynski <adam@os.inf.tu-dresden.de>
+ *     economic rights: Technische Universität Dresden (Germany)
+ *
+ * This file is part of TUD:OS and distributed under the terms of the
+ * GNU General Public License 2.
+ * Please see the COPYING-GPL-2 file for details.
+ */
+#pragma once
+
+#include <l4/vbus/vbus.h>
+#include <l4/vbus/vbus_pm.h>
+#include <l4/sys/icu>
+
+#include <l4/re/dataspace>
+#include <l4/re/dma_space>
+#include <l4/re/event>
+#include <l4/re/inhibitor>
+
+/**
+ * \defgroup api_l4re_vbus Vbus API
+ * \ingroup api_l4re
+ * C++ interface of the Vbus API.
+ *
+ * The virtual bus (Vbus) is a hierarchical (tree) structure of device nodes
+ * where each device has a set of resources attached to it. Each virtual bus
+ * provides an Icu (\ref l4_icu_api) for interrupt handling.
+ *
+ * The Vbus interface allows a client to find and query devices present on his
+ * virtual bus. After obtaining a device handle for a specific device the
+ * client can enumerate its resources.
+ *
+ * \includefile{l4/vbus/vbus}
+ *
+ * Refer to \ref l4vbus_module for the C API.
+ */
+namespace L4vbus {
+
+class Vbus;
+
+/**
+ * \ingroup api_l4re_vbus
+ * Power-management API mixin.
+ */
+template<typename DEC>
+class Pm
+{
+private:
+  DEC const *self() const { return static_cast<DEC const *>(this); }
+  DEC *self() { return static_cast<DEC *>(this); }
+public:
+  /**
+   * Suspend the module.
+   */
+  int pm_suspend() const
+  { return l4vbus_pm_suspend(self()->bus_cap().cap(), self()->dev_handle()); }
+
+  /**
+   * Resume the module.
+   */
+  int pm_resume() const
+  { return l4vbus_pm_resume(self()->bus_cap().cap(), self()->dev_handle()); }
+};
+
+
+/**
+ * \ingroup api_l4re_vbus
+ * Device on a L4vbus::Vbus
+ */
+class Device : public Pm<Device>
+{
+public:
+  Device() : _dev(L4VBUS_NULL) {}
+
+  Device(L4::Cap<Vbus> bus, l4vbus_device_handle_t dev)
+  : _bus(bus), _dev(dev) {}
+
+  /**
+   * Access the Vbus capability of the underlying virtual bus.
+   * \return the capability to the underlying Vbus.
+   */
+  L4::Cap<Vbus> bus_cap() const { return _bus; }
+
+  /**
+   * Access the device handle of this device.
+   * \return the device handle for this device.
+   *
+   * The device handle is used to directly address the device on its virtual
+   * bus.
+   */
+  l4vbus_device_handle_t dev_handle() const { return _dev; }
+
+
+  /**
+   * Find a device by the human interface identifier (HID).
+   *
+   * This function searches the vbus for a device with the given HID and
+   * returns a handle to the first matching device. The HID usually conforms to
+   * an ACPI HID or a Linux device tree compatible identifier.
+   *
+   * It is possible to have multiple devices with the same HID on a vbus. In
+   * order to find all matching devices this function has to be called
+   * repeatedly with `child` pointing to the device found in the previous
+   * iteration. The iteration starts at `child` that might be any device node
+   * in the tree.
+   *
+   * \param[in, out] child    Handle of the device from where in the device
+   *                          tree the search should start. To start searching
+   *                          from the beginning `child` must be initialized
+   *                          using the default (#L4VBUS_NULL). If a matching
+   *                          device is found its handle is returned through
+   *                          this parameter.
+   * \param          hid      HID of the device
+   * \param          depth    Maximum depth for the recursive lookup
+   * \param[out]     devinfo  Device information structure (might be NULL)
+   *
+   * \retval >= 0        A device with the given HID was found.
+   * \retval -L4_ENOENT  No device with the given HID could be found on
+   *                     the vbus.
+   * \retval -L4_EINVAL  Invalid or no HID provided.
+   * \retval -L4_ENODEV  Function called on a non-existing device.
+   */
+  int device_by_hid(Device *child, char const *hid,
+                    int depth = L4VBUS_MAX_DEPTH,
+                    l4vbus_device_t *devinfo = 0) const
+  {
+    child->_bus = _bus;
+    return l4vbus_get_device_by_hid(_bus.cap(), _dev, &child->_dev, hid,
+                                    depth, devinfo);
+  }
+
+  /**
+   * Find next child following `child`.
+   *
+   * \param[in, out] child    Handle of the device that precedes the device
+   *                          that shall be found. To start from the beginning
+   *                          `child` must be initialized using the default
+   *                          (#L4VBUS_NULL).
+   * \param      depth        Depth to look for
+   * \param[out] devinfo      device information (might be NULL)
+   *
+   * \return 0 on success, else failure
+   */
+  int next_device(Device *child, int depth = L4VBUS_MAX_DEPTH,
+                  l4vbus_device_t *devinfo = 0) const
+  {
+    child->_bus = _bus;
+    return l4vbus_get_next_device(_bus.cap(), _dev, &child->_dev, depth,
+                                  devinfo);
+  }
+
+  /**
+   * Obtain detailed information about a Vbus device.
+   *
+   * \param[out] devinfo  Information structure which contains details about
+   *                      the device. The pointer might be NULL after a
+   *                      successfull call.
+   *
+   * \retval 0           Success.
+   * \retval -L4_ENODEV  No device with the given device handle `dev` could be
+   *                     found.
+   */
+  int device(l4vbus_device_t *devinfo) const
+  { return l4vbus_get_device(_bus.cap(), _dev, devinfo); }
+
+  /**
+   * Obtain the resource description of an individual device resource.
+   *
+   * \param      res_idx  Index of the resource for which the resource
+   *                      description should be returned. The total number of
+   *                      resources for a device is available in the
+   *                      l4vbus_device_t structure that is returned by
+   *                      L4vbus::Device::device_by_hid() and
+   *                      L4vbus::Device::next_device().
+   * \param[out] res      Descriptor of the resource.
+   *
+   * This function returns the resource descriptor of an individual device
+   * resource selected by the `res_idx` parameter.
+   *
+   * \retval 0           Success.
+   * \retval -L4_ENOENT  Invalid resource index `res_idx`.
+   */
+  int get_resource(int res_idx, l4vbus_resource_t *res) const
+  {
+    return l4vbus_get_resource(_bus.cap(), _dev, res_idx, res);
+  }
+
+  /**
+   * Check if the given device has a compatibility ID (CID) or HID that
+   *        matches \a cid.
+   *
+   * \param  cid  the compatibility ID to test
+   * \return 1 when the given ID (\a cid) matches this device,
+   *         0 when the given ID does not match,
+   *         <0 on error.
+   */
+  int is_compatible(char const *cid) const
+  { return l4vbus_is_compatible(_bus.cap(), _dev, cid); }
+
+  /**
+   * Test if two devices are the same Vbus device.
+   * \return true if the two devices are the same, false else.
+   */
+  bool operator == (Device const &o) const
+  {
+    return _bus == o._bus && _dev == o._dev;
+  }
+
+  /**
+   * Test if two devices are not the same.
+   * \return true if the two devices are different, false else.
+   */
+  bool operator != (Device const &o) const
+  {
+    return _bus != o._bus || _dev != o._dev;
+  }
+
+protected:
+  L4::Cap<Vbus> _bus;          /*!< The Vbus capability (where this device is
+                                    located on). */
+  l4vbus_device_handle_t _dev; ///< The device handle for this device.
+};
+
+/**
+ * \ingroup api_l4re_vbus
+ * Vbus Interrupt controller API.
+ *
+ * Allows to access the underlying L4::Icu capability managing IRQs for
+ * the L4vbus::Vbus.
+ *
+ * \see L4::Icu
+ */
+class Icu : public Device
+{
+public:
+  /**
+   * Request the L4::Icu capability for this Vbus ICU.
+   */
+  int vicu(L4::Cap<L4::Icu> icu) const
+  {
+    return l4vbus_vicu_get_cap(_bus.cap(), _dev, icu.cap());
+  }
+};
+
+/**
+ * The virtual bus (Vbus) interface.
+ *
+ * \ingroup api_l4re_vbus
+ *
+ * \see \link api_l4re_vbus L4Re Vbus API \endlink
+ */
+class Vbus : public L4::Kobject_3t<Vbus, L4Re::Dataspace, L4Re::Inhibitor, L4Re::Event>
+{
+public:
+
+  /**
+   * Request the given resource from the bus.
+   * \param res The resource that shall be requested from the bus.
+   * \param flags The flags for the request.
+   * \return >=0 on success, <0 on error.
+   */
+  int request_resource(l4vbus_resource_t *res, int flags = 0) const
+  {
+    return l4vbus_request_resource(cap(), res, flags);
+  }
+
+  /**
+   * Release the given resource from the bus.
+   * \param res The resource that shall be requested from the bus.
+   * \return >=0 on success, <0 on error.
+   */
+  int release_resource(l4vbus_resource_t *res) const
+  {
+    return l4vbus_release_resource(cap(), res);
+  }
+
+  /**
+   * Get the root device of the device tree of this bus.
+   * \return A Vbus device representing the root of the device tree.
+   */
+  Device root() const
+  {
+    return Device(L4::Cap<Vbus>(cap()), L4VBUS_ROOT_BUS);
+  }
+
+  /**
+   * Assign an L4Re::Dma_space to a DMA domain.
+   * \param domain_id  DMA domain ID (resource address of DMA domain found on
+   *                   the vBUS). If the value is ~0U the DMA space of the whole
+   *                   vBUS is used.
+   * \param flags      A combination of #L4vbus_dma_domain_assign_flags.
+   * \param dma_space  The DMA space capability to bind or unbind, this must
+   *                   be an L4Re::Dma_space
+   *
+   * \retval 0           Operation completed successfully.
+   * \retval -L4_ENOENT  The vbus does not support a global DMA domain or no DMA
+   *                     domain could be found.
+   * \retval -L4_EINVAL  Invalid argument used.
+   * \retval -L4_EBUSY   DMA domain is already active, this means another DMA
+   *                     space is already assigned.
+   */
+  int assign_dma_domain(unsigned domain_id, unsigned flags,
+                        L4::Cap<L4Re::Dma_space> dma_space) const
+  {
+    flags |= L4VBUS_DMAD_L4RE_DMA_SPACE;
+    flags &= ~L4VBUS_DMAD_KERNEL_DMA_SPACE;
+    return l4vbus_assign_dma_domain(cap(), domain_id, flags, dma_space.cap());
+  }
+
+  /**
+   * Assign a kernel DMA space to a DMA domain.
+   * \param domain_id  DMA domain ID (resource address of DMA domain found on
+   *                   the vBUS). If the value is ~0U the DMA space of the whole
+   *                   vBUS is used.
+   * \param flags      A combination of #L4vbus_dma_domain_assign_flags.
+   * \param dma_space  The DMA space capability to bind or unbind, this must be
+   *                   a kernel DMA space (L4::Task created with
+   *                   L4_PROTO_DMA_SPACE)
+   *
+   * \retval 0           Operation completed successfully.
+   * \retval -L4_ENOENT  The vbus does not support a global DMA domain or no DMA
+   *                     domain could be found.
+   * \retval -L4_EINVAL  Invalid argument used.
+   * \retval -L4_EBUSY   DMA domain is already active, this means another DMA
+   *                     space is already assigned.
+   */
+  int assign_dma_domain(unsigned domain_id, unsigned flags,
+                        L4::Cap<L4::Task> dma_space) const
+  {
+    flags |= L4VBUS_DMAD_KERNEL_DMA_SPACE;
+    flags &= ~L4VBUS_DMAD_L4RE_DMA_SPACE;
+    return l4vbus_assign_dma_domain(cap(), domain_id, flags, dma_space.cap());
+  }
+
+  typedef L4::Typeid::Raw_ipc<Vbus> Rpcs;
+};
+
+} // namespace L4vbus

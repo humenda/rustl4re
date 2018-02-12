@@ -1,0 +1,50 @@
+# vim:set ft=make:
+PKGDIR  ?= ../..
+L4DIR   ?= $(PKGDIR)/../..
+
+EFI_ARCH-x86   = ia32
+EFI_ARCH-amd64 = x86_64
+EFI_ARCH       = $(EFI_ARCH-$(ARCH))
+EFILDSCRIPT    = elf_$(EFI_ARCH)_efi.lds
+INSTALL_TARGET = libefi.a libgnuefi.a crt0-efi-$(EFI_ARCH).o crt0-gnuefi.o $(EFILDSCRIPT)
+CONTRIB_INCDIR = gnu-efi gnu-efi/$(EFI_ARCH)
+PC_LIBS        = -lefi -lgnuefi
+PC_EXTRA       = Link_Start= %:search(crt0-gnuefi.o %(libdir))
+
+ARCH3264       = $(filter -m64 -m32,$(CCXX_FLAGS))
+
+all:: $(INSTALL_TARGET)
+
+libefi.a: FORCE
+	$(VERBOSE)$(MKDIR) lib
+	$(VERBOSE) CFLAGS="-Wno-unused-but-set-variable -Wno-int-to-pointer-cast" $(MAKE) -C lib -f $(SRC_DIR)/../contrib/lib/Makefile \
+	                  ARCH3264=$(ARCH3264) ARCH=$(EFI_ARCH) \
+			  SRCDIR=$(SRC_DIR)/../contrib/lib ARCH=$(EFI_ARCH)
+	$(VERBOSE)$(LN) -sf lib/$@
+
+gnuefi/libgnuefi.a: FORCE
+	$(VERBOSE)$(MKDIR) gnuefi
+	$(VERBOSE) CFLAGS="-Wno-unused-but-set-variable -Wno-int-to-pointer-cast" $(MAKE) -C gnuefi -f $(SRC_DIR)/../contrib/gnuefi/Makefile \
+	                  ARCH3264=$(ARCH3264) ARCH=$(EFI_ARCH) \
+	                  SRCDIR=$(SRC_DIR)/../contrib/gnuefi ARCH=$(EFI_ARCH)
+
+libgnuefi.a: gnuefi/libgnuefi.a
+	$(VERBOSE)$(LN) -sf gnuefi/$@
+
+crt0-efi-$(EFI_ARCH).o: gnuefi/libgnuefi.a
+	$(VERBOSE)$(LN) -sf gnuefi/crt0-efi-$(EFI_ARCH).o
+
+crt0-gnuefi.o: gnuefi/libgnuefi.a
+	$(VERBOSE)$(LN) -sf gnuefi/crt0-efi-$(EFI_ARCH).o crt0-gnuefi.o
+
+$(EFILDSCRIPT):
+	$(VERBOSE)$(LN) -sf $(SRC_DIR)/../contrib/gnuefi/$(EFILDSCRIPT)
+
+clean::
+	$(VERBOSE)rm -f $(OBJ_BASE)/lib/$(SYSTEM)/libefi.a
+	$(VERBOSE)rm -f $(OBJ_BASE)/lib/$(SYSTEM)/libgnuefi.a
+	$(VERBOSE)rm -f $(OBJ_BASE)/lib/$(SYSTEM)/crt0-efi-$(EFI_ARCH).o
+	$(VERBOSE)rm -f $(OBJ_BASE)/lib/$(SYSTEM)/crt0-gnuefi.o
+	$(VERBOSE)rm -f $(OBJ_BASE)/lib/$(SYSTEM)/$(EFILDSCRIPT)
+	$(VERBOSE)rm -f $(foreach a,$(OBJ_DIR)/OBJ-$(SYSTEM)/,$(INSTALL_TARGET))
+	$(VERBOSE)rm -rf $(OBJ_DIR)/OBJ-$(SYSTEM)/lib $(OBJ_DIR)/OBJ-$(SYSTEM)/gnuefi

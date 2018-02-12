@@ -1,0 +1,22 @@
+/*
+ * \brief   IDL interface to VScreen widget server
+ * \date    2002-11-25
+ * \author  Norman Feske <nf2@inf.tu-dresden.de>
+ */
+
+/*
+ * Copyright (C) 2002-2003  Norman Feske  <nf2@os.inf.tu-dresden.de>
+ * Technische Universitaet Dresden, Operating Systems Research Group
+ *
+ * This file is part of the DOpE package, which is distributed under
+ * the  terms  of the  GNU General Public Licence 2.  Please see the
+ * COPYING file for details.
+ */
+
+interface dope_vscr {
+	
+		/** wait for vertical synchronisation */
+		void waitsync();
+		void refresh([in] int x,[in] int y,[in] int w,[in] int h);
+};
+

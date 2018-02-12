@@ -1,0 +1,45 @@
+# vi:ft=make
+
+TARGET		= libscout-gfx.a libscout-gfx.so
+SRC_CC		= tick.cc png_image.cc \
+		  user_state.cc scrollbar.cc layout.cc layout_item.cc \
+		  layout_engine.cc box_layout.cc stack_layout.cc \
+		  scroll_pane.cc document.cc widget.cc fonts.cc \
+		  doc/block.cc \
+		  doc/link.cc \
+		  doc/item.cc \
+		  doc/navbar.cc \
+		  doc/token.cc \
+		  doc/verbatim.cc \
+		  loadbar.cc \
+		  redraw_manager.cc \
+		  grid_layout.cc \
+		  basic_window.cc \
+		  window.cc \
+		  simple_window_deco.cc
+
+SRC_DATA =  vera16.tff \
+            verai16.tff \
+	    vera18.tff \
+	    vera20.tff \
+	    vera24.tff \
+	    verabi10.tff \
+	    mono16.tff
+
+SRC_RGBA  =   uparrow.rgba \
+            downarrow.rgba \
+            leftarrow.rgba \
+           rightarrow.rgba \
+               slider.rgba \
+             nav_next.rgba \
+             nav_prev.rgba \
+	      loadbar.rgba \
+	       redbar.rgba \
+	     whitebar.rgba \
+	        sizer.rgba
+
+SRC_DATA += $(SRC_RGBA)
+SRC_DATA := $(addprefix data/,$(SRC_DATA))
+
+REQUIRES_LIBS := mag-gfx libpng libstdc++
+

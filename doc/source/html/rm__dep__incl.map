@@ -1,0 +1,21 @@
+<map id="l4/re/rm" name="l4/re/rm">
+<area shape="rect" id="node2" href="$env.html" title="Environment interface. " alt="" coords="816,80,893,107"/>
+<area shape="rect" id="node4" href="$server_2l4virtio_source.html" title="l4/l4virtio/server\l/l4virtio" alt="" coords="8,155,131,196"/>
+<area shape="rect" id="node10" href="$vfs__impl_8h_source.html" title="l4/l4re_vfs/impl/vfs\l_impl.h" alt="" coords="1271,155,1409,196"/>
+<area shape="rect" id="node11" href="$util_2event.html" title="l4/re/util/event" alt="" coords="1434,162,1545,189"/>
+<area shape="rect" id="node16" href="$rm__impl_8h.html" title="Region map client stub implementation. " alt="" coords="1590,80,1733,107"/>
+<area shape="rect" id="node17" href="$event__buffer_source.html" title="l4/re/util/event_buffer" alt="" coords="1413,80,1566,107"/>
+<area shape="rect" id="node18" href="$region__mapping.html" title="Region handling. " alt="" coords="1757,80,1934,107"/>
+<area shape="rect" id="node20" href="$region__mapping__svr__2_source.html" title="l4/re/util/region_mapping\l_svr_2" alt="" coords="1883,155,2061,196"/>
+<area shape="rect" id="node3" href="$vcpu_source.html" title="l4/vcpu/vcpu" alt="" coords="1148,162,1247,189"/>
+<area shape="rect" id="node6" href="$env__ns_source.html" title="l4/re/util/env_ns" alt="" coords="155,162,277,189"/>
+<area shape="rect" id="node8" href="$ro__file__impl_8h_source.html" title="l4/l4re_vfs/impl/ro\l_file_impl.h" alt="" coords="301,155,435,196"/>
+<area shape="rect" id="node9" href="$vcon__stream__impl_8h_source.html" title="l4/l4re_vfs/impl/vcon\l_stream_impl.h" alt="" coords="459,155,610,196"/>
+<area shape="rect" id="node12" href="$icu__svr_source.html" title="l4/re/util/icu_svr" alt="" coords="634,162,753,189"/>
+<area shape="rect" id="node14" href="$kumem__alloc.html" title="Kumem allocator helper. " alt="" coords="777,162,933,189"/>
+<area shape="rect" id="node15" href="$object__registry_source.html" title="l4/re/util/object_registry" alt="" coords="957,162,1123,189"/>
+<area shape="rect" id="node5" href="$virtio-block_source.html" title="l4/l4virtio/server\l/virtio&#45;block" alt="" coords="5,244,128,285"/>
+<area shape="rect" id="node7" href="$ns__fs__impl_8h_source.html" title="l4/l4re_vfs/impl/ns\l_fs_impl.h" alt="" coords="153,244,287,285"/>
+<area shape="rect" id="node13" href="$event__svr_source.html" title="l4/re/util/event_svr" alt="" coords="625,251,762,278"/>
+<area shape="rect" id="node19" href="$region__mapping__svr_source.html" title="l4/re/util/region_mapping_svr" alt="" coords="1655,162,1859,189"/>
+</map>

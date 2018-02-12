@@ -1,0 +1,809 @@
+// vim: ft=cpp
+
+/*
+ * app --
+ *
+ *    Definitions of applications, instances
+ *
+ * (c) 2011-2013 Björn Döbel <doebel@os.inf.tu-dresden.de>,
+ *     economic rights: Technische Universität Dresden (Germany)
+ * This file is part of TUD:OS and distributed under the terms of the
+ * GNU General Public License 2.
+ * Please see the COPYING-GPL-2 file for details.
+ */
+
+#pragma once
+
+#include <cstdio>
+#include <iomanip>
+#include <stdlib.h>
+#include <malloc.h>
+#include <map>
+#include <semaphore.h>
+#include <pthread-l4.h>
+#include <atomic>
+
+#include <l4/sys/types.h>
+#include <l4/sys/utcb.h>
+#include <l4/sys/factory>
+#include <l4/sys/thread>
+#include <l4/sys/task>
+#include <l4/sys/scheduler>
+#include <l4/sys/segment.h>
+#include <l4/sys/debugger.h>
+
+#include <l4/vcpu/vcpu>
+#include <l4/plr/measurements.h>
+#include <l4/util/util.h>
+#include <l4/util/bitops.h>
+
+#include <l4/re/error_helper>
+#include <l4/re/util/cap_alloc>
+#include <l4/re/util/kumem_alloc>
+
+#include "log"
+#include "exceptions"
+#include "constants.h"
+#include "memory"
+
+using L4Re::chksys;
+using L4Re::chkcap;
+
+extern "C" void my_handler(void);
+
+class Breakpoint;
+
+namespace Romain {
+
+/*
+ * Instance of an application
+ *
+ * Every instance of the app is run within a dedicated vCPU address space.
+ * Instances are created depending on the amount of redundancy/checking
+ * needed.
+ */
+class App_instance
+{
+	// XXX: For multithreading, we might consider having a vCPU task for
+	//      every thread of the app -> see papers on deterministic multithreading
+	L4::Cap<L4::Task>    _vcpu_task;
+	/*
+	 * Instance ID
+	 */
+	l4_umword_t          _id;
+
+	/*
+	 * Map of addr -> addr mappings.
+	 *
+	 * This is a dirty trick keeping track of all pages in the master AS
+	 * that are mapped to the replica AS. We need it, because the usual sequence
+	 * for using a dataspace is:
+	 *
+	 *   ds.alloc()
+	 *   ds.attach()
+	 *   <raise page faults>
+	 *   ds.detach()
+	 *   unmap()
+	 *
+	 * And in the last unmap(), we cannot consult the region map for
+	 * this mapping anymore.
+	 *
+	 * XXX: Real fix would be to slightly adapt the region map for our
+	 *      purposes, because otherwise we are storing *a lot* of
+	 *      page-to-page mappings here.
+	 */
+	std::map<l4_addr_t, l4_addr_t> _mappings;
+
+	enum { debug_name_size = 16 };
+
+	public:
+		explicit App_instance(char const *name = "", l4_umword_t const instanceID = 0)
+			: _id(instanceID)
+		{
+			/*
+			 * Create instance vCPU
+			 */
+			_vcpu_task = chkcap(L4Re::Util::cap_alloc.alloc<L4::Task>(),
+			                    "vCPU task alloc");
+			chksys(L4Re::Env::env()->factory()->create_task(_vcpu_task,
+			                                                l4_fpage_invalid()),
+			       "create vCPU task");
+
+
+			/*
+			 * Every replica gets a name set as the debug ID
+			 */
+			char namebuf[debug_name_size];
+			snprintf(namebuf, debug_name_size, "V%ld %s", _id, name);
+			l4_debugger_set_object_name(_vcpu_task.cap(), namebuf);
+		}
+
+		L4::Cap<L4::Task> vcpu_task()	const { return _vcpu_task; }
+		l4_umword_t              id()   const { return _id; }
+
+		/*
+		 * Map a flexpage in an aligned way.
+		 *
+		 * Current impl.: simply map the page as we indirectly assume that
+		 *                we are always called for a single page.
+		 *
+		 * Future: this should align the local and remote targets and use the
+		 *         largest possible mapping so that we can avoid a couple
+		 *         of page faults if possible. XXX
+		 */
+		void map_aligned(l4_addr_t local, l4_addr_t remote, l4_umword_t shift, l4_umword_t flags)
+		{
+			//DEBUG() << "map_aligned(" << std::hex << local << ", " << remote
+			//        << ", " << shift << ", " << flags << ")";
+			l4_fpage_t fp = l4_fpage(local, shift, flags);
+			//DEBUG() << "fp: " << fp.raw;
+			l4_msgtag_t tag = vcpu_task()->map(L4Re::This_task, fp, remote);
+			_check(l4_msgtag_has_error(tag), "error mapping page");
+			//DEBUG() << "mapped " << std::hex << fp.raw << " : " << std::hex << tag.raw;
+			for (l4_umword_t offs = 0; offs < (L4_PAGESIZE << (shift - L4_PAGESHIFT));
+			          offs += L4_PAGESIZE) {
+				_mappings[remote + offs] = local + offs;
+			}
+		}
+
+
+		/*
+		 * Unmap a flexpage from replica
+		 */
+		void unmap(l4_umword_t fpraw)
+		{
+			l4_fpage_t fp;
+			l4_addr_t remote;
+			fp.raw = fpraw;
+                        if (l4_fpage_type(fp) != L4_FPAGE_MEMORY)
+                          return;
+
+                        remote = l4_fpage_memaddr(fp);
+                        remote = l4_trunc_size(remote, l4_fpage_size(fp));
+
+			l4_addr_t a = _mappings[remote];
+			DEBUG() << "unmap @ " << std::hex << remote << " -> " << "0x" << a;
+			vcpu_task()->unmap(l4_fpage(a, L4_PAGESIZE, L4_FPAGE_RO), L4_FP_ALL_SPACES);
+			_mappings[remote] = 0;
+			//enter_kdebug("unmapped");
+		}
+};
+
+/*
+ * Representation of an application-level thread
+ *
+ * In fact, a vCPU is used for every such thread. This class also includes
+ * the stacks needed for setting up the thread and later on running the
+ * VCPU exception handlers.
+ */
+class App_thread
+{
+	private:
+		l4_addr_t _handler_fn; // pointer to exception handler code
+		l4_addr_t _thread_fn;  // pointer to initial startup code
+
+		/* Handler stack layout:
+		 *
+		 * +-------------------------------+ _handler_stack + sizeof(_handler_stack)
+		 * | Instance Mgr pointer          |
+		 * | App_instance pointer          |
+		 * | App_thread pointer            |
+		 * | Thread group pointer          |
+		 * | App_model pointer             |
+		 * +-------------------------------+ _initial stack ptr
+		 * |   handler entry ebp           |
+		 * |   ...                         |
+		 * +-------------------------------+ _handler_stack
+		 */
+		char *_handler_stack;
+
+		l4_addr_t _handler_sp;
+		l4_addr_t _thread_sp;
+
+		l4_umword_t         _cpu;
+		L4::Cap<L4::Thread> _vcpu_cap;     // cap for vcpu object
+		L4vcpu::Vcpu       *_vcpu;         // vcpu state area
+		l4_utcb_t          *_vcpu_utcb;    // vcpu UTCB
+		pthread_t           _pthread;      // pthread backing this VCPU
+		l4_addr_t           _remote_utcb;  // address of remote UTCB
+
+		/*
+		 * Master segment registers. Restored whenever we enter the
+		 * master through a VCPU fault.
+		 */
+		l4_umword_t         _master_ds;
+		l4_umword_t         _master_fs;
+		l4_umword_t         _master_gs;
+
+		l4_umword_t         _pending_trap; // for injecting HW traps
+		l4_umword_t         _events;       // keeping track of handle events
+		enum eventpending {
+			/* Set if we detected a page fault that could not be handled.
+			 * Thereby, the PF handler can then bail out if this fault is
+			 * raised again. */
+			Unhandled_Page_Fault = 1,
+		};
+
+		struct gdt_entry_struct
+		{
+			l4_uint16_t limit_low;      // The lower 16 bits of the limit.
+			l4_uint16_t base_low;       // The lower 16 bits of the base.
+			l4_uint8_t  base_middle;    // The next 8 bits of the base.
+			l4_uint8_t  access;         // Access flags, determine what ring this segment can be used in.
+			l4_uint8_t  granularity;
+			l4_uint8_t  base_high;      // The last 8 bits of the base.
+		} __attribute__((packed))
+		_client_gdt[2];
+		bool                _gdt_modified; // track if GDT was modified
+
+#if WATCHDOG
+		/*
+		 * Watchdog: set on creation and defined in config file
+		 */
+		bool              _use_watchdog;
+		int               _watchdog_timeout;
+	
+		/*
+		 * Watchdog: interrupt object set on vcpu startup
+		 */
+		L4::Cap<L4::Irq>  _watchdog_irq;
+		
+		/*
+ 		 * Watchdog: use single-stepping for synchronization
+ 		 */ 
+		bool              _watchdog_ss;
+		unsigned          _watchdog_ss_count;
+		
+		/*
+ 		 * Watchdog: use breakpoints for synchronization
+ 		 */
+		bool              _watchdog_breakpointing;
+		Breakpoint       *_watchdog_breakpoint;
+
+		/*
+		 * Watchdog: am I the replica that passed the watchdog interrupt
+		 * with another trap
+		 */
+		bool              _watchdog_passed;
+
+		bool              _got_watchdog;
+		bool              _got_other_trap;
+		bool              _watchdog_suspended;
+		bool              _watchdog_met_leader;
+#endif
+
+		/*
+		 * Benchmarking: counters used to determine number and cycles spent in
+		 * different parts of the master if BENCHMARKING is set to 1 in
+		 * server/src/constants.h
+		 *
+		 * t_* -> accumulate cycles spent
+		 * c_* -> count the number of times certain paths were entered
+		 */
+		unsigned long long t_lock, c_lock;           // lock observer
+		unsigned long long t_pfh, c_pfh;             // page fault handling
+		unsigned long long t_syscalls, c_syscalls;   // syscall observer
+		unsigned long long t_kiptime, c_kiptime;     // KIP time observer
+		unsigned long long t_traps, c_traps;         // trap handling
+
+		unsigned long long t_handling;               // total handling time
+		unsigned long long t_observer, c_observer;   // time in observers
+		unsigned long long t_keepup, c_keepup;       // passive replicas: time to keep up with leader
+		unsigned long long t_user;                   // time in user mode
+		unsigned long long last_user_resume;         // timestamp of last ret to user
+
+		unsigned long long t_sync_enter_all;
+		unsigned long long t_sync_wait_for_active, c_sync_wait_for_active;
+		unsigned long long t_sync_wait, t_sync_waitforarrival;
+		unsigned long long t_sync_getdata, c_sync_getdata;
+		unsigned long long t_sync_active_validate, c_sync_active_validate;
+
+		//unsigned long long t_sync;
+		unsigned long long t_sync_enter;             // TS before DMR::enter()
+		unsigned long long t_sync_entered;           // TS before sleeping / validating replicas
+		unsigned long long t_sync_leave;
+
+		unsigned long long t_resume_active, c_resume_active;
+		unsigned long long t_resume_passive, c_resume_passive;
+		unsigned long long t_resume_enter;
+		
+		/*
+		 * Tracks if we are the currently active
+		 * trap handling replica
+		 */
+		bool active_handler;
+
+		/*
+		 * Get topmost address of exception handler/thread stacks
+		 */
+		l4_addr_t top_of_handler_stack() { return (l4_addr_t)(_handler_stack + HANDLER_STACK_SIZE); }
+
+		/*
+		 * Initialize handler and init thread stacks.
+		 *
+		 * This ensures that the handler stack is paged in correctly before we
+		 * do anything. Otherwise the handler might raise a page fault upon
+		 * first entry.
+		 */
+		void touch_stacks();
+
+
+		/*
+		 * Create the vCPU kernel object
+		 */
+		void alloc_vcpu_cap();
+
+
+		/*
+		 * Alloc and setup vCPU UTCB
+		 *
+		 * The setup code stores a pointer to this App_thread object on
+		 * the handler's stack so that it can be found upon an exception.
+		 */
+		void alloc_vcpu_mem();
+
+		App_thread() { }
+		App_thread(const App_thread&) { }
+
+	public:
+
+		App_thread(l4_addr_t eip,
+		           l4_addr_t esp,
+		           l4_addr_t handler_fn,
+		           l4_addr_t thread_fn,
+		           bool use_watchdog = false,
+		           l4_umword_t watchdog_timeout = 0)
+			:
+			  _handler_fn(handler_fn),
+			  _thread_fn(thread_fn),
+			  _cpu(1),
+			  _vcpu(0),
+			  _vcpu_utcb(0),
+			  _remote_utcb(0xFFFFFFFF),
+			  _pending_trap(0),
+			  _events(0),
+			  _gdt_modified(false)
+#if WATCHDOG
+			  ,
+			  _use_watchdog(use_watchdog),
+			  _watchdog_timeout(watchdog_timeout),
+			  _watchdog_ss(false),
+			  _watchdog_ss_count(0),
+			  _watchdog_passed(false),
+			  _watchdog_breakpointing(false),
+			  _watchdog_suspended(false),
+			  _got_watchdog(false),
+			  _got_other_trap(false),
+			  _watchdog_met_leader(false)
+#endif
+		     , t_lock(0ULL), c_lock(0ULL), t_pfh(0ULL), c_pfh(0ULL),
+			   t_syscalls(0ULL), c_syscalls(0ULL), t_kiptime(0ULL),
+			   c_kiptime(0ULL), t_traps(0ULL), c_traps(0ULL), t_handling(0ULL),
+			   t_observer(0ULL), c_observer(0ULL),
+			   t_keepup(0ULL), c_keepup(0ULL),
+			   t_user(0ULL), last_user_resume(0ULL),
+			   t_sync_enter_all(0ULL), t_sync_wait_for_active(0ULL), c_sync_wait_for_active(0ULL),
+			   t_sync_wait(0ULL), t_sync_waitforarrival(0ULL),
+			   t_sync_getdata(0ULL), c_sync_getdata(0ULL),
+			   t_sync_active_validate(0ULL), c_sync_active_validate(0ULL),
+			   t_resume_active(0ULL), c_resume_active(0ULL),
+			   t_resume_passive(0ULL), c_resume_passive(0ULL),
+			   t_resume_enter(0ULL)
+		{
+			asm volatile (
+			    "mov %%fs, %0\n\t"
+			    "mov %%gs, %1\n\t"
+			    "mov %%ds, %2\n\t"
+			    : "=r" (_master_fs),
+				  "=r" (_master_gs),
+			      "=r" (_master_ds));
+
+			_handler_stack = (char*)memalign(L4_PAGESIZE, HANDLER_STACK_SIZE);
+			_handler_sp    = top_of_handler_stack();
+			DEBUG() << "HANDLER STACK: " << (void*)_handler_stack;
+			_check(!_handler_stack, "could not allocate handler stack");
+
+			touch_stacks();
+			alloc_vcpu_cap();
+			alloc_vcpu_mem();
+
+			memset(gdt(), 0, gdt_size());
+
+			DEBUG() << "vCPU cap: " << std::hex << vcpu_cap();
+
+			DEBUG() << "STACK: " << std::hex << (void*)esp;
+			vcpu()->r()->ip = eip;
+			vcpu()->r()->sp = esp;
+			DEBUG() << "EIP " << (void*)eip << " ESP " << (void*)esp;
+		}
+
+#if WATCHDOG
+		void use_watchdog(bool u) { _use_watchdog = u; }
+		bool use_watchdog() { return _use_watchdog; }
+		void watchdog_timeout(l4_umword_t p) { _watchdog_timeout = p; }
+		l4_umword_t watchdog_timeout() { return _watchdog_timeout; }
+
+		void watchdog_ss(bool ss) { _watchdog_ss = ss; }
+		bool watchdog_ss() { return _watchdog_ss; }
+		unsigned watchdog_ss_count() { return _watchdog_ss_count; }
+		void increment_watchdog_ss_count() { ++_watchdog_ss_count; }
+		void reset_watchdog_ss_count() { _watchdog_ss_count = 0; }
+
+		void its_me_who_passed_the_watchdog(bool p) { _watchdog_passed = p; }
+		bool its_me_who_passed_the_watchdog() { return _watchdog_passed; }
+
+		void watchdog_irq(L4::Cap<L4::Irq> irq) { _watchdog_irq = irq; }
+		L4::Cap<L4::Irq> watchdog_irq() { return _watchdog_irq; }
+
+		void watchdog_breakpoint(Breakpoint *b) { _watchdog_breakpoint = b; }
+		Breakpoint *watchdog_breakpoint() { return _watchdog_breakpoint; }
+
+		void watchdog_breakpointing(bool b) { _watchdog_breakpointing = b; }
+		bool watchdog_breakpointing() { return _watchdog_breakpointing; }
+
+		void got_watchdog(bool w) { _got_watchdog = w; }
+		bool got_watchdog() { return _got_watchdog; }
+
+		void got_other_trap(bool t) { _got_other_trap = t; }
+		bool got_other_trap() { return _got_other_trap; }
+
+		void watchdog_suspended(bool s) { _watchdog_suspended = s; }
+		bool watchdog_suspended() { return _watchdog_suspended; }
+
+		void i_have_met_the_leader(bool m) { _watchdog_met_leader = m; }
+		bool i_have_met_the_leader() { return _watchdog_met_leader; }
+#endif
+
+		bool is_active() { return active_handler; }
+		void activate() { active_handler = true; }
+		void deactivate() { active_handler = false; }
+
+		void count_lock(unsigned long long increment)
+		{
+#if BENCHMARKING
+			t_lock += increment; c_lock++;
+#endif
+		}
+
+		void count_pfh(unsigned long long increment)
+		{
+#if BENCHMARKING
+			t_pfh += increment; c_pfh++;
+#endif
+		}
+		void count_syscalls(unsigned long long increment)
+		{
+#if BENCHMARKING
+			t_syscalls += increment; c_syscalls++;
+#endif
+		}
+
+		void count_kiptime(unsigned long long increment)
+		{
+#if BENCHMARKING
+			t_kiptime += increment; c_kiptime++;
+#endif
+		}
+
+		void count_traps(unsigned long long increment)
+		{
+#if BENCHMARKING
+			t_traps += increment; c_traps++;
+#endif
+		}
+
+		void count_handling(unsigned long long increment)
+		{
+#if BENCHMARKING
+			t_handling += increment;
+#endif
+		}
+
+		void ts_from_user() {
+#if BENCHMARKING
+			t_sync_enter = l4_rdtsc();
+			t_user += (t_sync_enter - last_user_resume);
+#endif
+		}
+
+		void ts_sync_entered() {
+#if BENCHMARKING
+			t_sync_entered = l4_rdtsc();
+			t_sync_enter_all += (t_sync_entered - t_sync_enter);
+#endif
+		}
+
+		void ts_sync_leave() {
+#if BENCHMARKING
+			t_sync_leave = l4_rdtsc();
+			if (is_active()) {
+				t_sync_active_validate +=  (t_sync_leave - t_sync_enter);
+				++c_sync_active_validate;
+			} else {
+				t_sync_wait_for_active +=  (t_sync_leave - t_sync_enter);
+				++c_sync_wait_for_active;
+			}
+#endif
+		}
+
+		void ts_resume_start() {
+#if BENCHMARKING
+			t_resume_enter = l4_rdtsc();
+			if (is_active()) {
+				t_observer += (t_resume_enter - t_sync_leave);
+				c_observer++;
+			} else {
+				t_keepup += (t_resume_enter - t_sync_leave);
+				c_keepup++;
+			}
+#endif
+		}
+
+		void ts_user_resume(bool first = false) {
+#if BENCHMARKING
+			last_user_resume = l4_rdtsc();
+
+			// the first call is only to set the resume TS, don't count
+			// resume time there
+			if (first)
+				return;
+
+			if (is_active()) {
+				t_resume_active += (last_user_resume - t_resume_enter);
+				++c_resume_active;
+			} else {
+				t_resume_passive += (last_user_resume - t_resume_enter);
+				++c_resume_passive;
+			}
+			deactivate(); // simply do this any time we resume
+#endif
+		}
+
+		void inc_wait(unsigned long long increment)
+		{
+#if BENCHMARKING
+			t_sync_wait += increment;
+#endif
+		}
+
+		void inc_waitleader(unsigned long long inc)
+		{
+#if BENCHMARKING
+			t_sync_waitforarrival += inc;
+#endif
+		}
+
+
+		void inc_getdata(unsigned long long increment)
+		{
+#if BENCHMARKING
+			c_sync_getdata++;
+			t_sync_getdata += increment;
+#endif
+		}
+
+
+		void print_helper(char const *msg, unsigned long long time,
+		                  unsigned long long count = 0, bool withCount = false)
+		{
+			if (withCount) {
+				INFO() << std::left << std::setw(32) << msg
+				       << " : " << std::right << std::setw(16) << time
+					   << " [ " << std::setw(10) << count << " ]";
+			} else {
+				INFO() << std::left << std::setw(32) << msg
+				       << " : " << std::right << std::setw(16) << time;
+			}
+		}
+
+		void print_stats()
+		{
+#if BENCHMARKING
+			print_helper(GREEN  "Clocks spent in user            " NOCOLOR, t_user);
+			print_helper(GREEN  "Clocks spent in master          " NOCOLOR, t_handling);
+			print_helper(YELLOW "       synchronization          " NOCOLOR, t_sync_enter_all + t_sync_active_validate + t_sync_wait_for_active);
+			print_helper(       "           enter sync           ", t_sync_enter_all);
+			print_helper(       "           active: check        ", t_sync_active_validate, c_sync_active_validate, true);
+			print_helper(       "           passive: wait        ", t_sync_wait_for_active, c_sync_wait_for_active, true);
+			print_helper(       "              (early wait)      ", t_sync_waitforarrival);
+			print_helper(       "              (total wait)      ", t_sync_wait);
+			print_helper(       "              (get data)        ", t_sync_getdata, c_sync_getdata, true);
+			print_helper(YELLOW "       observers                " NOCOLOR, t_observer, c_observer, true);
+			print_helper(       "           PFH                  ", t_pfh, c_pfh, true);
+			print_helper(       "           Locking              ", t_lock, c_lock, true);
+			print_helper(       "           Syscalls             ", t_syscalls, c_syscalls, true);
+			print_helper(       "           gettime()            ", t_kiptime, c_kiptime, true);
+			print_helper(       "           CPU Traps            ", t_traps, c_traps, true);
+			print_helper(YELLOW "       keepup with leader       " NOCOLOR, t_keepup, c_keepup, true);
+			print_helper(YELLOW "       resume                   " NOCOLOR, t_resume_active + t_resume_passive);
+			print_helper(       "           active               ", t_resume_active,  c_resume_active, true);
+			print_helper(       "           passive              ", t_resume_passive, c_resume_passive, true);
+			INFO() << "    ------------------------------------------------------";
+#endif
+		}
+
+		/*
+		 * Manage fast lookup for the replica's UTCB address
+		 */
+		void remote_utcb(l4_addr_t a) { _remote_utcb = a; }
+		l4_addr_t remote_utcb() const { return _remote_utcb; }
+
+		/*
+		 * Start the vCPU thread
+		 */
+		void start();
+
+
+		l4_addr_t            handler_sp()     const { return _handler_sp; }
+		void handler_sp(l4_addr_t sp) { _handler_sp = sp; }
+
+		l4_addr_t            thread_sp()      const { return _thread_sp; }
+		void thread_sp(l4_addr_t sp)  { _thread_sp = sp; }
+
+		l4_addr_t            thread_entry()   const { return _thread_fn; }
+
+		l4_umword_t           cpu()           const { return _cpu; }
+		void                  cpu(l4_umword_t c)    { _cpu = c; }
+		L4::Cap<L4::Thread>   vcpu_cap()      const { return _vcpu_cap; }
+		void                  vcpu_cap(L4::Cap<L4::Thread> c) { _vcpu_cap = c; }
+		L4vcpu::Vcpu         *vcpu()          const { return _vcpu; }
+		l4_utcb_t            *vcpu_utcb()     const { return _vcpu_utcb; }
+
+		l4_umword_t           ds()            const { return _master_ds; }
+		l4_umword_t           fs()            const { return _master_fs; }
+		l4_umword_t           gs()            const { return _master_gs; }
+//		void                  gs(l4_addr_t a)       { _master_gs = a; }
+
+		void *                gdt()           const
+		{
+			return (void*)&_client_gdt[0];
+		}
+		l4_umword_t           gdt_size()      const { return sizeof(_client_gdt); }
+
+		/***********************************************************************
+		 * GDT Handling Explained
+		 *
+		 * Fiasco uses the FS register to store the current UTCB address,
+		 * libpthread uses GS for providing thread-local storage. Both require
+		 * a valid entry in the GDT, which user space can access through the
+		 * fiasco_gdt_set() system call. Furthermore, Fiasco provides a range
+		 * of user-defined segment entries at offsets 0x48, 0x50, and 0x58.
+		 *
+		 * By default, the GDT entry for the UTCB address is 0x40. As Romain
+		 * uses pthreads, the first user-defined segment is used for Romain's
+		 * TLS address.
+		 *
+		 * Replicas use user-defined entries 2 and 3:
+		 * - Entry 2 (0x50) contains the replica's UTCB address.
+		 * - Entry 3 (0x58) can later be set up for thread-local storage.
+		 *
+		 * This means there are no free user-defined GDT entries anymore! If we
+		 * wanted to fix this, we'd have to manually swap GDT entries every
+		 * time we switch between replicas and master. This would require two
+		 * additional system calls for modifying the GDT.
+		 ***********************************************************************/
+
+		/*
+		 * Set up the initial GDT segment (e.g., UTCB address)
+		 * XXX: rename!
+		 */
+		void setup_utcb_segdesc(l4_addr_t base, l4_addr_t limit)
+		{
+			DEBUG() << "Base " << std::hex << base
+			        << " Limit " << limit;
+			memset(_client_gdt, 0, sizeof(_client_gdt));
+
+			_client_gdt[0].limit_low   = limit & 0xFFFF;
+			_client_gdt[0].base_low    = base & 0xFFFF;
+			_client_gdt[0].base_middle = (base >> 16) & 0xFF;
+			_client_gdt[0].base_high   = (base >> 24) & 0xFF;
+			_client_gdt[0].access      = 0xF2;
+			_client_gdt[0].granularity = 0x40;
+
+			_gdt_modified = true;
+		}
+
+
+		bool gdt_changed() { return _gdt_modified; }
+
+
+		/*
+		 * Write the second entry, actually.
+		 * XXX: RENAME!
+		 */
+		void write_gdt_entry(l4_umword_t *src, l4_umword_t bytes)
+		{
+			memcpy(&_client_gdt[1], src, bytes);
+			_gdt_modified = true;
+		}
+
+
+		/*
+		 * Write the user GDT entries
+		 */
+		void commit_client_gdt();
+
+		/*
+		 * Schedule a "virtual" trap
+		 *
+		 * The whole thing is used to mark pending events for future
+		 * invocations of some fault observers. These events currently
+		 * include
+		 *
+		 *   - unhandled page fault
+		 */
+		void set_pending_trap(l4_umword_t no) { _pending_trap |= (1 << no); }
+
+		void set_unhandled_pf()
+		{
+			_events |= Unhandled_Page_Fault;
+			set_pending_trap(0xE);
+		}
+
+		void unset_unhandled_pf() { _events &= ~Unhandled_Page_Fault; }
+		bool unhandled_pf()       { return _events & Unhandled_Page_Fault; }
+
+		l4_umword_t events_pending() { return _events; }
+
+		/*
+		 * Get the next pending trap (and remove it from pending list)
+		 */
+		l4_umword_t get_pending_trap()
+		{
+			l4_umword_t ret = l4util_find_first_set_bit(&_pending_trap, sizeof(_pending_trap));
+			if (ret >= sizeof(_pending_trap) * 8) {
+				return 0;
+			} else {
+				_pending_trap &= ~(1 << ret);
+			}
+		
+			return ret;
+		}
+
+
+		void print_vcpu_state()
+		{
+			char pref[32];
+			snprintf(pref, 32, "[VCPU %p] ", vcpu());
+			vcpu()->print_state(pref);
+		}
+
+		l4_umword_t csum_state();
+
+
+		void halt()
+		{
+			INFO() << "   Halting VCPU " << std::hex << vcpu();
+			l4_sched_param_t sp = l4_sched_param(0);
+			if (pthread_l4_cap(pthread_self()) != vcpu_cap().cap()) {
+			chksys(L4Re::Env::env()->scheduler()->run_thread(vcpu_cap(), sp));
+		}
+		}
+
+
+		void return_to(l4_addr_t ret)
+		{
+			vcpu()->r()->sp += sizeof(l4_umword_t); // RET: inc. ESP
+			vcpu()->r()->ip  = ret;                 // RET: return addr 
+		}
+};
+
+
+}
+
+/*
+ * Common prolog to be executed upon entry to exception handler function. It
+ * restores this VCPU's ES, DS, FS, and GS registers before continuing
+ * execution in the handler address space.
+ */
+#define handler_prolog(app_thread) \
+	do {  \
+		  asm volatile ( \
+	              "mov %0, %%es;" \
+	              "mov %0, %%ds;" \
+	              "mov %1, %%fs;" \
+	              "mov %2, %%gs;" \
+	              : : \
+	                  "r"((app_thread)->ds()), "r"((app_thread)->fs()), \
+	                  "r"((app_thread)->gs())); \
+	} while (0)

@@ -1,0 +1,3 @@
+<map id="L4vcpu::Vcpu::is_page_fault_entry" name="L4vcpu::Vcpu::is_page_fault_entry">
+<area shape="rect" id="node2" href="$group__api__libvcpu.html#gab5156a117efc0b4760e81e99938a2dc1" title="Return whether the entry reason was a page fault. " alt="" coords="213,5,368,47"/>
+</map>

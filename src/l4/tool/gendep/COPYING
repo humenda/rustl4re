@@ -1,0 +1,50 @@
+This code is public domain. Copy it, use it, distribute it. Under no
+circumstences the authors can be made responsible for any kind of damage,
+loss or anger or irritation resulting from the use, distribution or
+existance of this code.
+
+
+Mail of Han-Wen Nienhuys <hanwen@cs.uu.nl>, the original author of
+libgendep:
+
++++ BEGIN OF MAIL
+Received: from sunset.cs.uu.nl
+        ([131.211.80.32] helo=mail.cs.uu.nl ident=vmailer)
+        by os.inf.tu-dresden.de with esmtp (Exim 3.36)
+        id 17EtJp-000KNm-00
+        for jork@os.inf.tu-dresden.de; Mon, 03 Jun 2002 17:00:25 +0200
+Received: from meddo.cs.uu.nl.cs.uu.nl (meddo.cs.uu.nl [131.211.80.91])
+        by mail.cs.uu.nl (Postfix) with ESMTP id 845284532
+        for <jork@os.inf.tu-dresden.de>; Mon,  3 Jun 2002 17:00:14 +0200
+(MET DS
+From: Han-Wen Nienhuys <hanwen@cs.uu.nl>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Transfer-Encoding: 7bit
+Message-ID: <15611.33918.276801.358713@meddo.cs.uu.nl>
+Date: Mon, 3 Jun 2002 17:00:14 +0200
+To: Jork Loeser <jork@os.inf.tu-dresden.de>
+Subject: libgendep copyright status
+In-Reply-To:
+<Pine.A41.4.10.10206031629320.73734-100000@os.inf.tu-dresden.de>
+References: <Pine.A41.4.10.10206031629320.73734-100000@os.inf.tu-dresden.de>
+X-Mailer: VM 7.03 under Emacs 21.2.1
+
+jork@os.inf.tu-dresden.de writes:
+> Han-Wen,
+> 
+> I slightly modified your gendep library and would like to use this in our
+> drops project <http://os.inf.tu-dresden.de/drops/overview.html>. Can you
+> tell me about the copyright status of this code? Thank you.
+
+It's PD. It's so small, hardly worth the trouble of GPL'ing, but some
+credit somewhere would be nice, of course :)
+
+BTW, what license does DROPS use?
+
+-- 
+
+Han-Wen Nienhuys   |   hanwen@cs.uu.nl    | http://www.cs.uu.nl/~hanwen/
+
+
++++ END OF MAIL

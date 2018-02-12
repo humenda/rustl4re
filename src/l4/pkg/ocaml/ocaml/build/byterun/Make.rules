@@ -1,0 +1,27 @@
+# vim:set ft=make:
+PKGDIR  ?= ../..
+L4DIR   ?= $(PKGDIR)/../..
+
+TARGET        = ocamlrun
+LIBS          = -locaml_camlrun
+REQUIRES_LIBS = libc_support_misc libc_be_sig
+
+CONTRIBDIR = $(PKGDIR)/contrib
+
+vpath %.c $(CONTRIBDIR)/byterun
+
+PRIVATE_LIBDIR = $(OBJ_DIR)/lib/OBJ-$(ARCH)_$(CPU)-$(L4API)
+PRIVATE_INCDIR = $(CONTRIBDIR)/byterun \
+		 $(SRC_DIR)/ \
+                 $(SRC_DIR)/../ARCH-$(ARCH)/config
+
+
+BYTECCCOMPOPTS=-fno-defer-pop -Wall -D_FILE_OFFSET_BITS=64 -D_REENTRANT
+CFLAGS += -DCAML_NAME_SPACE $(BYTECCCOMPOPTS) $(IFLEXDIR)
+
+SRC_C = prims.c
+
+# contrib code: hide all the warnings
+WARNINGS_prims.o := -Wno-missing-prototypes -Wno-missing-declarations \
+                    -Wno-sign-compare -Wno-unused -Wno-implicit \
+	            -Wno-strict-prototypes
