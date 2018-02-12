@@ -1,0 +1,4 @@
+#ifndef __ASM_L4__L4LXAPI__GENERIC__IRQ_GEN_H__
+#define __ASM_L4__L4LXAPI__GENERIC__IRQ_GEN_H__
+
+#endif /* ! __ASM_L4__L4LXAPI__GENERIC__IRQ_GEN_H__ */

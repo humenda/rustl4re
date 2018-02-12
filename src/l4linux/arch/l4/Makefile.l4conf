@@ -1,0 +1,48 @@
+# Makefile to extract option for the L4Linux build from the
+# L4 BID configuration. Separated in this Makefile to avoid pollution of the
+# kernel make system.
+
+ifeq ($(L4DIR),)
+
+linux_dot_config := $(wildcard .config)
+
+ifneq ($(L4X_LOOP_CHECK),)
+$(error Recursive call of Makefile.l4conf, aborting, please check)
+endif
+
+include $(linux_dot_config)
+
+L4OBJ := $(patsubst "%",%,$(CONFIG_L4_OBJ_TREE))
+L4DIR := $(shell readlink $(L4OBJ)/source)
+export L4OBJ L4DIR
+
+ifneq ($(L4DIR),)
+$(LINUX_OBJTREE)/Makeconf.l4conf:
+	@echo L4 source directory: $(L4DIR)
+	$(Q)PWD=$(L4DIR) $(MAKE) -C $(L4DIR) -f $(LINUX_SRCTREE)/arch/l4/Makefile.l4conf O=$(L4OBJ) L4X_LOOP_CHECK=1 OUTPUT=$@
+else
+$(LINUX_OBJTREE)/Makeconf.l4conf:
+	@echo
+	@echo "ERROR:"
+	@echo "    Cannot determine L4 source directory"
+	@echo "    Please properly set the path to your L4 build directory"
+	@echo "    in the configuration menu."
+	@echo
+	@exit 1
+endif
+
+else
+
+-include $(L4OBJ)/source/mk/Makeconf
+
+PHONY := all
+
+all:: $(OUTPUT)
+
+$(OUTPUT): $(LINUX_SRCTREE)/arch/l4/Makefile.l4conf $(OBJ_BASE)/.config.all $(OBJ_BASE)/.config
+	@echo "  GEN     $@" ;                                                             \
+	echo "L4BID_CONF_AVAILABLE=yes"                          > $@ ;                   \
+	echo "L4BID_CPPFLAGS_SYSCALLS-$(L4_ABS_SYSCALLS)=$(BID_CPPFLAGS_SYSCALLS)" >> $@ ;\
+	echo "L4BID_DICE=$(DICE)"                                >> $@ ;\
+	echo "L4BID_DICE_INCDIR=$(DICE_INCDIR)"                  >> $@
+endif

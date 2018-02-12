@@ -1,0 +1,17 @@
+# vim:set ft=make:
+#
+
+# 1: prefix-path
+# 2: list of filenames, with or without .o extension
+define L4X_FILEREF
+  $(foreach f,$(patsubst %.o,%,$(2)),$(eval $(f)-y := $(1)/$(f).o))
+endef
+
+# 1: prefix-path
+# 2: input list
+# 3: list of names needing the prefix
+# return: modified list
+define L4X_PREFIX_IF
+  $(foreach f,$(patsubst %.o,%,$(2)), \
+            $(if $(filter $(f),$(3)),$(1)/$(f).o,$(f).o))
+endef
