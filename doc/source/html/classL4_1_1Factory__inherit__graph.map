@@ -1,0 +1,7 @@
+<map id="L4::Factory" name="L4::Factory">
+<area shape="rect" id="node5" href="$classL4_1_1Kobject__t.html" title="{L4::Kobject_t\&lt; Mem\l_alloc, L4::Factory,\l L4::PROTO_EMPTY \&gt;\n||# c()\l# __check_protocols__()\l}" alt="" coords="64,575,243,696"/>
+<area shape="rect" id="node2" href="$classL4_1_1Kobject__t.html" title="{L4::Kobject_t\&lt; Factory,\l Kobject, L4_PROTO_FACTORY \&gt;\n||# c()\l# __check_protocols__()\l}" alt="" coords="34,189,273,296"/>
+<area shape="rect" id="node3" href="$classL4_1_1Kobject.html" title="Base class for all kinds of kernel objects and remote objects, referenced by capabilities. " alt="" coords="5,13,117,105"/>
+<area shape="rect" id="node4" href="$classL4_1_1Kobject__t.html" title="Helper class to create an L4Re interface class that is derived from a single base class..." alt="" coords="141,5,352,112"/>
+<area shape="rect" id="node6" href="$classL4Re_1_1Mem__alloc.html" title="Memory allocation interface. " alt="" coords="88,745,219,837"/>
+</map>

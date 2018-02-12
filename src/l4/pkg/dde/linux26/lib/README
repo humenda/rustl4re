@@ -1,0 +1,5 @@
+These are the DDE libraries.
+
+* src	- main DDELinux lib
+* net	- network support for DDELinux
+[* sound]

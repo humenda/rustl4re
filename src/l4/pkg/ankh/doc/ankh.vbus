@@ -1,0 +1,7 @@
+ankh => new System_bus()
+{
+	PCI0 => new PCI_bus()
+	{
+		nic[] => wrap(hw-root.match("PCI/CC_02"));
+	}
+}

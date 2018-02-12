@@ -1,0 +1,54 @@
+## This file states the license of this package and possibly its subpackages
+## in machine and human readable format. The PackageName refers to the package
+## whose license is defined by PackageLicenseConcluded.
+## For more information about this file format visit the SPDX website at
+## https://spdx.org
+
+SPDXVersion: SPDX-2.1
+DataLicense: CC0-1.0
+SPDXID: SPDXRef-DOCUMENT
+DocumentNamespace: spdx:kernkonzept/bootstrap-06ed57d1-8b41-4651-88f2-3665d521c08f
+DocumentName: LICENSE.spdx
+
+Creator: Organization: Kernkonzept GmbH (info@kernkonzept.com)
+
+## Package Information
+PackageName: bootstrap
+PackageOriginator: Organization: Kernkonzept GmbH (info@kernkonzept.com)
+PackageLicenseDeclared: (GPL-2.0-only OR LicenseRef-kk-custom)
+PackageLicenseConcluded: (GPL-2.0-only OR LicenseRef-kk-custom)
+FilesAnalyzed: true
+PackageCopyrightText: NOASSERTION
+PackageDownloadLocation: NOASSERTION
+
+FileName: ./server/src/ARCH-amd64/libc32/*
+SPDXID: SPDXRef-amd64-libc32
+LicenseConcluded: GPL-2.0-only
+LicenseInfoInFile: NOASSERTION
+FileCopyrightText: NOASSERTION
+
+FileName: ./server/src/gunzip.h
+SPDXID: SPDXRef-gunzip.h
+FileChecksum: SHA1: d88d30e3622cc212a2f4c96db7d20ab295c93c1a
+LicenseConcluded: GPL-2.0-only
+LicenseInfoInFile: NOASSERTION
+FileCopyrightText: NOASSERTION
+
+FileName: ./server/src/gunzip.c
+SPDXID: SPDXRef-gunzip.c
+FileChecksum: SHA1: 0f97d279031c3ef413cb06cd15ee5959f4f4678b
+LicenseConcluded: GPL-2.0-only
+LicenseInfoInFile: NOASSERTION
+FileCopyrightText: NOASSERTION
+
+## License Information
+LicenseID: LicenseRef-kk-custom
+ExtractedText: <text>Kernkonzept Custom License
+
+If you have sought a special licensing agreement with Kernkonzept GmbH the
+terms and conditions from therein apply to this package.
+
+If you require a different licensing scheme please contact us at
+info@kernkonzept.com.
+</text>
+LicenseName: Kernkonzept Custom License

@@ -1,0 +1,7 @@
+L4 input library implementation
+
+Files in the contrib subtree were taken from drivers/input directory
+from Linux sources and slightly modified. All modifications are tagged
+with DDE_LINUX.
+
+Current version: linux-2.6.29 (according to the current dde)

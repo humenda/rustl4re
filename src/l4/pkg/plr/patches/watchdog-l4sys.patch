@@ -1,0 +1,113 @@
+Index: pkg/l4sys/include/thread
+===================================================================
+--- pkg/l4sys/include/thread	(revision 42489)
++++ pkg/l4sys/include/thread	(working copy)
+@@ -209,6 +209,22 @@
+    */
+   l4_msgtag_t register_del_irq(Cap<Irq> irq, l4_utcb_t *u = l4_utcb()) throw()
+   { return l4_thread_register_del_irq_u(cap(), irq.cap(), u); }
++ 
++	/**
++   * \brief Setup watchdog with performance counter. 
++   * \param utcb the UTCB of the current thread.
++   *
++   */
++	l4_msgtag_t watchdog_enable(Cap<Irq> irq, l4_utcb_t *utcb = l4_utcb()) throw()
++  { return l4_thread_watchdog_enable_u(cap(), irq.cap(), utcb); }
++	
++	/**
++   * \brief Manage watchdog with performance counter. 
++   * \param utcb the UTCB of the current thread.
++   *
++   */
++	l4_msgtag_t watchdog_control(l4_utcb_t *utcb = l4_utcb()) throw()
++  { return l4_thread_watchdog_control_u(cap(), utcb); }
+ 
+   /**
+    * \brief Wrapper class for modifying senders.
+Index: pkg/l4sys/include/thread.h
+===================================================================
+--- pkg/l4sys/include/thread.h	(revision 42489)
++++ pkg/l4sys/include/thread.h	(working copy)
+@@ -364,8 +364,39 @@
+ L4_INLINE l4_msgtag_t
+ l4_thread_stats_time_u(l4_cap_idx_t thread, l4_utcb_t *utcb) L4_NOTHROW;
+ 
++/**
++ * \brief Setup watchdog with performance counter.
++ * \ingroup l4_thread_api
++ * \param thread Thread for whom the watchdog shall be enabled.
++ *
++ */
++L4_INLINE l4_msgtag_t
++l4_thread_watchdog_enable(l4_cap_idx_t thread, l4_cap_idx_t irq) L4_NOTHROW;
+ 
+ /**
++ * \internal
++ * \ingroup l4_thread_api
++ */
++L4_INLINE l4_msgtag_t
++l4_thread_watchdog_enable_u(l4_cap_idx_t thread, l4_cap_idx_t irq, l4_utcb_t *utcb) L4_NOTHROW;
++
++/**
++ * \brief Manage watchdog with performance counter.
++ * \ingroup l4_thread_api
++ * \param thread Thread for whom the watchdog shall be managed.
++ *
++ */
++L4_INLINE l4_msgtag_t
++l4_thread_watchdog_control(l4_cap_idx_t thread) L4_NOTHROW;
++
++/**
++ * \internal
++ * \ingroup l4_thread_api
++ */
++L4_INLINE l4_msgtag_t
++l4_thread_watchdog_control_u(l4_cap_idx_t thread, l4_utcb_t *utcb) L4_NOTHROW;
++
++/**
+  * \brief vCPU return from event handler.
+  * \ingroup l4_thread_api
+  *
+@@ -594,6 +625,8 @@
+   L4_THREAD_REGISTER_DELETE_IRQ_OP = 5UL,    /**< Register an IPC-gate deletion IRQ */
+   L4_THREAD_MODIFY_SENDER_OP       = 6UL,    /**< Modify all senders IDs that match the given pattern */
+   L4_THREAD_VCPU_CONTROL_OP        = 7UL,    /**< Enable / disable VCPU feature */
++	L4_THREAD_WATCHDOG_ENABLE_OP 		 = 8UL, 	 /**< Enable watchdog with performance counter */
++	L4_THREAD_WATCHDOG_CONTROL_OP 	 = 9UL, 	 /**< Manage watchdog with performance counter */
+   L4_THREAD_VCPU_CONTROL_EXT_OP    = L4_THREAD_VCPU_CONTROL_OP | 0x10000,
+   L4_THREAD_GDT_X86_OP             = 0x10UL, /**< Gdt */
+   L4_THREAD_SET_FS_AMD64_OP        = 0x12UL, /**< Set FS/TLS */
+@@ -801,6 +834,32 @@
+   return l4_thread_ex_regs_ret_u(thread, ip, sp, flags, l4_utcb());
+ }
+ 
++L4_INLINE l4_msgtag_t
++l4_thread_watchdog_enable(l4_cap_idx_t thread, l4_cap_idx_t irq) L4_NOTHROW
++{ return l4_thread_watchdog_enable_u(thread, irq, l4_utcb()); }
++
++L4_INLINE l4_msgtag_t
++l4_thread_watchdog_enable_u(l4_cap_idx_t thread, l4_cap_idx_t irq, l4_utcb_t *utcb) L4_NOTHROW
++{
++  l4_msg_regs_t *v = l4_utcb_mr_u(utcb);
++  v->mr[0] = L4_THREAD_WATCHDOG_ENABLE_OP;
++	v->mr[1] = l4_map_obj_control(0,0);
++	v->mr[2] = l4_obj_fpage(irq, 0, L4_CAP_FPAGE_RWS).raw;
++  return l4_ipc_call(thread, utcb, l4_msgtag(L4_PROTO_THREAD, 1, 1, 0), L4_IPC_NEVER);
++}
++
++L4_INLINE l4_msgtag_t
++l4_thread_watchdog_control(l4_cap_idx_t thread) L4_NOTHROW
++{ return l4_thread_watchdog_control_u(thread, l4_utcb()); }
++
++L4_INLINE l4_msgtag_t
++l4_thread_watchdog_control_u(l4_cap_idx_t thread, l4_utcb_t *utcb) L4_NOTHROW
++{
++  l4_msg_regs_t *v = l4_utcb_mr_u(utcb);
++  v->mr[0] = L4_THREAD_WATCHDOG_CONTROL_OP;
++  return l4_ipc_call(thread, utcb, l4_msgtag(L4_PROTO_THREAD, 1, 0, 0), L4_IPC_NEVER);
++}
++
+ L4_INLINE void
+ l4_thread_control_start(void) L4_NOTHROW
+ {

@@ -1,0 +1,7 @@
+<map id="L4Re::Mem_alloc" name="L4Re::Mem_alloc">
+<area shape="rect" id="node2" href="$classL4_1_1Kobject__t.html" title="{L4::Kobject_t\&lt; Mem\l_alloc, L4::Factory,\l L4::PROTO_EMPTY \&gt;\n||# c()\l# __check_protocols__()\l}" alt="" coords="209,603,387,724"/>
+<area shape="rect" id="node3" href="$classL4_1_1Factory.html" title="C++ Factory interface to create kernel objects. " alt="" coords="91,373,227,553"/>
+<area shape="rect" id="node4" href="$classL4_1_1Kobject__t.html" title="{L4::Kobject_t\&lt; Factory,\l Kobject, L4_PROTO_FACTORY \&gt;\n||# c()\l# __check_protocols__()\l}" alt="" coords="5,189,244,296"/>
+<area shape="rect" id="node5" href="$classL4_1_1Kobject.html" title="Base class for all kinds of kernel objects and remote objects, referenced by capabilities. " alt="" coords="25,13,137,105"/>
+<area shape="rect" id="node6" href="$classL4_1_1Kobject__t.html" title="Helper class to create an L4Re interface class that is derived from a single base class..." alt="" coords="182,5,393,112"/>
+</map>

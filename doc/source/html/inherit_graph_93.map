@@ -1,0 +1,12 @@
+<map id="Graphical Class Hierarchy" name="Graphical Class Hierarchy">
+<area shape="rect" id="node1" href="$structL4_1_1Ipc_1_1Msg_1_1Cls__buffer.html" title="Marker type for receive buffer values. " alt="" coords="5,13,171,39"/>
+<area shape="rect" id="node2" href="$structL4_1_1Ipc_1_1Msg_1_1Do__rcv__buffers.html" title="Marker for receive buffers. " alt="" coords="237,5,383,47"/>
+<area shape="rect" id="node3" href="$structL4_1_1Ipc_1_1Msg_1_1Cls__data.html" title="Marker type for data values. " alt="" coords="9,125,167,151"/>
+<area shape="rect" id="node4" href="$structL4_1_1Ipc_1_1Msg_1_1Do__in__data.html" title="Marker for Input data. " alt="" coords="223,71,397,98"/>
+<area shape="rect" id="node5" href="$structL4_1_1Ipc_1_1Msg_1_1Do__out__data.html" title="Marker for Output data. " alt="" coords="219,189,401,215"/>
+<area shape="rect" id="node6" href="$structL4_1_1Ipc_1_1Msg_1_1Cls__item.html" title="Marker type for item values. " alt="" coords="10,181,166,207"/>
+<area shape="rect" id="node7" href="$structL4_1_1Ipc_1_1Msg_1_1Do__in__items.html" title="Marker for Input items. " alt="" coords="241,123,379,164"/>
+<area shape="rect" id="node8" href="$structL4_1_1Ipc_1_1Msg_1_1Do__out__items.html" title="Marker for Output items. " alt="" coords="237,240,383,281"/>
+<area shape="rect" id="node9" href="$structL4_1_1Ipc_1_1Msg_1_1Dir__in.html" title="Marker type for input values. " alt="" coords="19,71,157,98"/>
+<area shape="rect" id="node10" href="$structL4_1_1Ipc_1_1Msg_1_1Dir__out.html" title="Marker type for output values. " alt="" coords="15,243,161,270"/>
+</map>

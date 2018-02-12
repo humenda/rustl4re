@@ -1,0 +1,68 @@
+# vim:set ts=4:
+
+include $(L4DIR)/mk/Makeconf
+
+SYSTEMS =
+
+ifneq ($(filter x86,$(DDE_SYSTEMS)),)
+SYSTEMS += x86-l4f
+endif
+
+ifneq ($(filter arm,$(DDE_SYSTEMS)),)
+ifneq ($(CONFIG_CPU_ARMV6KPLUS),)
+SYSTEMS += arm-l4f
+endif
+endif
+
+# Linux 2.6 defines some macros on command line
+KBUILD_DEFINES = -D"KBUILD_STR(s)=\#s" \
+                 -D"KBUILD_BASENAME=KBUILD_STR($(patsubst %.o,%,$(notdir $@)))" \
+                 -D"KBUILD_MODNAME=KBUILD_STR($(patsubst %.o,%,$@))"
+
+# for some reasons, Linux 2.6 does not include autoconf.h in the implementation
+# files but does so on the command line
+ifeq ($(ARCH), x86)
+KBUILD_CPPFLAGS = -include linux/autoconf.h
+endif
+
+ifeq ($(ARCH), arm)
+KBUILD_CPPFLAGS = -include linux/autoconf-arm.h
+endif
+
+# includes
+MY_DDE_INCDIR = $(OBJ_BASE)/include/$(ARCH)/l4/dde/linux26 \
+                $(OBJ_BASE)/include/l4/dde/linux26
+
+SUFFIX_amd64 = x86_64
+SUFFIX_x86   = x86
+SUFFIX_arm   = arm
+
+MY_LINUX26_INCDIR = $(OBJ_BASE)/include/$(ARCH)/l4/dde/linux26/linux-headers \
+                    $(OBJ_BASE)/include/$(ARCH)/l4/dde/linux26/asm \
+                    $(OBJ_BASE)/include/l4/dde/linux26/linux-headers-mach \
+                    $(OBJ_BASE)/include/$(ARCH)/l4/dde/linux26/asm \
+                    $(OBJ_BASE)/include/l4/dde/linux26/linux-headers
+
+# arch-specific stuff
+ifeq ($(ARCH), x86)
+MY_DDE_INCDIR += $(OBJ_BASE)/include/l4/dde/linux26/linux-headers/asm/mach-default
+endif
+
+ifeq ($(ARCH), arm)
+MY_DDE_INCDIR += $(OBJ_BASE)/include/$(ARCH)/l4/dde/linux26/asm-$(ARCH)/mach-realview \
+				 $(OBJ_BASE)/include/$(ARCH)/l4/dde/linux26/asm-$(ARCH)/mach-realview/include
+endif
+
+PRIVATE_INCDIR += $(MY_DDE_INCDIR) $(MY_LINUX26_INCDIR)
+
+DEFINES += -D__KERNEL__ -DDDE_LINUX $(KBUILD_DEFINES)
+CPPFLAGS += $(KBUILD_CPPFLAGS)
+CFLAGS += -ffunction-sections
+ASFLAGS += -D__ASSEMBLY__
+
+WARNINGS  += -Wall -Wstrict-prototypes -fno-strict-aliasing
+WARNINGS  += $(call checkcc, -Wno-unused,)
+WARNINGS  += $(call checkcc, -Wno-pointer-sign,)
+ifeq ($(ARCH), arm)
+WARNINGS += -Wno-uninitialized
+endif

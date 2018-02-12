@@ -1,0 +1,8 @@
+<map id="l4/sys/cxx/ipc_client" name="l4/sys/cxx/ipc_client">
+<area shape="rect" id="node2" href="$l4virtio_source.html" title="l4/l4virtio/l4virtio" alt="" coords="5,87,128,114"/>
+<area shape="rect" id="node5" href="$dataspace__impl_8h.html" title="Dataspace client stub implementation. " alt="" coords="152,80,301,121"/>
+<area shape="rect" id="node6" href="$namespace__impl_8h.html" title="Namespace client stub implementation. " alt="" coords="326,80,482,121"/>
+<area shape="rect" id="node7" href="$rm__impl_8h.html" title="Region map client stub implementation. " alt="" coords="506,87,649,114"/>
+<area shape="rect" id="node3" href="$server_2l4virtio_source.html" title="l4/l4virtio/server\l/l4virtio" alt="" coords="5,169,128,211"/>
+<area shape="rect" id="node4" href="$virtio-block_source.html" title="l4/l4virtio/server\l/virtio&#45;block" alt="" coords="5,259,128,300"/>
+</map>

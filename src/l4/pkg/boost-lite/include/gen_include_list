@@ -1,0 +1,24 @@
+#! /usr/bin/perl -W
+
+# take the file-list and generate an include-list for rsync, we need to take
+# care on the listing of the each directory
+
+use strict;
+
+my %list;
+
+open(I, $ARGV[0]) or die "Cannot open $ARGV[0]: $!";
+while (<I>) {
+  chomp;
+  my $l = $_;
+  $list{$l} = 1;
+  my @p;
+  my @s = split /\//, $l;
+  foreach (0 .. scalar @s - 2) {
+    push @p, $s[$_];
+    $list{join('/', @p).'/'} = 1;
+  }
+}
+close I;
+
+print join("\n", map { "+ $_" } sort keys %list), "\n- *\n";

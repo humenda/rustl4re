@@ -1,0 +1,8 @@
+<map id="L4Re::Env::env" name="L4Re::Env::env">
+<area shape="rect" id="node2" href="$classL4virtio_1_1Svr_1_1Dev__config.html#a663b81f49e6ce03f9b7e136d6646bf89" title="Setup/Create a L4&#45;Virtio config data space. " alt="" coords="176,86,321,127"/>
+<area shape="rect" id="node7" href="$classL4vcpu_1_1Vcpu.html#a8b80a393ef89fe4b654d957bc61a046a" title="Set vCPU entry instruction pointer. " alt="" coords="168,152,329,179"/>
+<area shape="rect" id="node3" href="$classL4virtio_1_1Svr_1_1Dev__config.html#aeada3571131b79907af95caa9b719663" title="Get data&#45;space capability for the shared config data space. " alt="" coords="377,86,504,127"/>
+<area shape="rect" id="node4" href="$classL4virtio_1_1Svr_1_1Driver__mem__list__t.html#a6749bd65e419d7f814dd4c27e0567f28" title="Add a new region to the list. " alt="" coords="560,5,723,61"/>
+<area shape="rect" id="node5" href="$classL4virtio_1_1Svr_1_1Device__t.html#a3fa20bf911056f0d03c8274982b1e167" title="Get the memory region list used for this device. " alt="" coords="552,86,731,127"/>
+<area shape="rect" id="node6" href="$classL4virtio_1_1Svr_1_1Device__t.html#a460f5dc2b32e33a616eb822ffd2f88f0" title="Check for a value in the cmd register and handle a write. " alt="" coords="561,152,721,208"/>
+</map>

@@ -1,0 +1,33 @@
+-- vi:ft=lua
+
+local Res = Io.Res
+local Hw = Io.Hw
+
+Io.hw_add_devices(function()
+
+  P80 = Hw.Device(function()
+    Property.hid = "P80";
+    Resource.iop1 = Res.io(0x80);
+  end);
+
+  BIOS = Hw.Device(function()
+    Property.hid = "BIOS";
+    Resource.reg1 = Res.mmio(0x0, 0xfff);
+    Resource.reg2 = Res.mmio(0x9f000, 0x9ffff);
+    Resource.reg3 = Res.mmio(0xc0000, 0xfffff);
+  end);
+
+  VGA = Hw.Device(function()
+    Property.hid = "PNP0900";
+    Resource.iop1 = Res.io(0x3b0, 0x3bf); -- MDA
+    Resource.iop2 = Res.io(0x3c0, 0x3df); -- EGA/VGA
+    Resource.iop3 = Res.io(0x1ce, 0x1d0); -- Vbox
+    Resource.iop4 = Res.io(0x402, 0x402); -- QEMU Debug Port
+    Resource.mmio = Res.mmio(0xa0000, 0xbffff);
+  end);
+
+  RTC = Hw.Device(function()
+    Property.hid = "PNP0B00";
+    Resource.iop1 = Res.io(0x70, 0x71);
+  end);
+end)

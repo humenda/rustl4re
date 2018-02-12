@@ -1,0 +1,9 @@
+<map id="l4/sys/kip.h" name="l4/sys/kip.h">
+<area shape="rect" id="node2" href="$compiler_8h.html" title="L4 compiler related defines. " alt="" coords="457,304,583,331"/>
+<area shape="rect" id="node4" href="$l4_2sys_2l4int_8h.html" title="Fixed sized integer types, generic version. " alt="" coords="5,304,104,331"/>
+<area shape="rect" id="node6" href="$____kip-64bit_8h_source.html" title="l4/sys/__kip&#45;64bit.h" alt="" coords="201,80,343,107"/>
+<area shape="rect" id="node7" href="$l4_2sys_2types_8h.html" title="Common L4 ABI Data Types. " alt="" coords="219,155,325,181"/>
+<area shape="rect" id="node8" href="$l4_2sys_2consts_8h.html" title="Common constants. " alt="" coords="368,229,483,256"/>
+<area shape="rect" id="node9" href="$____l4__fpage_8h_source.html" title="l4/sys/__l4_fpage.h" alt="" coords="200,229,344,256"/>
+<area shape="rect" id="node10" href="$____timeout_8h_source.html" title="l4/sys/__timeout.h" alt="" coords="41,229,175,256"/>
+</map>

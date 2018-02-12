@@ -1,0 +1,59 @@
+// vi:ft=cpp
+/*
+ * (c) 2010 Alexander Warg <warg@os.inf.tu-dresden.de>
+ *     economic rights: Technische Universität Dresden (Germany)
+ *
+ * This file is part of TUD:OS and distributed under the terms of the
+ * GNU General Public License 2.
+ * Please see the COPYING-GPL-2 file for details.
+ */
+#pragma once
+
+#include <l4/scout-gfx/widget>
+#include <l4/scout-gfx/style>
+
+namespace Scout_gfx {
+  
+/**
+ * String token
+ *
+ * A Token is a group of characters that are handled as an atomic text unit.
+ * Line wrapping is performed at the granularity of tokens.
+ */
+class Token : public Widget
+{
+protected:
+
+  const char  *_str;       /* start  of string   */
+  int          _len;       /* length of string   */
+  Style       *_style;     /* textual style      */
+  Color        _col;       /* current text color */
+  Color        _outline;   /* outline color      */
+
+  Token *_next;
+
+public:
+  Area min_size() const { return _size; }
+  Area preferred_size() const { return _size; }
+  Area max_size() const { return _size; }
+  bool empty() const { return false; }
+  Orientations expanding() const { return 0; }
+  Rect geometry() const { return Rect(_pos, _size); }
+  void set_geometry(Rect const &s) { _pos = s.p1(); }
+
+  /**
+   * Constructor
+   */
+  Token(Style *style, const char *str, int len);
+
+  /**
+   * Element interface
+   */
+  void draw(Canvas *c, Point const &p);
+  void refresh() { redraw_area(Rect(_size)); /*-1, 0, _w + 1, _h);*/ }
+  void add_clause(Token *n)
+  { n->_next = _next; _next = n; }
+};
+
+
+}

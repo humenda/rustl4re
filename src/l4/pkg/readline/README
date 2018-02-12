@@ -1,0 +1,5 @@
+Port of libreadline and libhistory to L4
+
+Status:
+libhistory: seems to be working; use of a history file is not supported
+libreadline: works to some extent; the use of a .inputrc file is also unsupported

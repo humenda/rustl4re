@@ -1,0 +1,111 @@
+// vi:ft=cpp
+/*
+ * (c) 2010 Alexander Warg <warg@os.inf.tu-dresden.de>
+ *     economic rights: Technische Universität Dresden (Germany)
+ *
+ * This file is part of TUD:OS and distributed under the terms of the
+ * GNU General Public License 2.
+ * Please see the COPYING-GPL-2 file for details.
+ */
+#pragma once
+
+#include <l4/mag-gfx/geometry>
+
+namespace Scout_gfx {
+
+using Mag_gfx::Area;
+using Mag_gfx::Point;
+using Mag_gfx::Rect;
+using Mag_gfx::Orientation;
+using Mag_gfx::Horizontal;
+using Mag_gfx::Horz;
+using Mag_gfx::Vertical;
+using Mag_gfx::Vert;
+using Mag_gfx::Orientations;
+
+class Widget;
+class Layout;
+
+class Layout_item_iface
+{
+public:
+  virtual Area preferred_size() const = 0;
+  virtual Area min_size() const = 0;
+  virtual Area max_size() const = 0;
+
+  virtual Orientations expanding() const = 0;
+  virtual bool empty() const = 0;
+
+  virtual bool has_height_for_width() const = 0;
+  virtual int height_for_width(int) const  = 0;
+  virtual int min_height_for_width(int) const  = 0;
+
+  virtual ~Layout_item_iface() = 0;
+};
+
+inline Layout_item_iface::~Layout_item_iface() {}
+
+class Layout_item : public virtual Layout_item_iface
+{
+private:
+  Layout_item *_parent;
+  Mag_gfx::Alignment _alignment;
+
+public:
+  Layout_item() : _parent(0), _alignment(0) {}
+  virtual ~Layout_item() {}
+  Layout_item *parent_layout_item() const { return _parent; }
+  void set_parent_layout_item(Layout_item *p) { _parent = p; }
+
+
+  virtual void set_geometry(Rect const &) = 0;
+  virtual Rect geometry() const = 0;
+
+  virtual void invalidate()
+  { if (_parent) _parent->child_invalidate(); }
+
+  virtual void child_invalidate() {}
+
+  Mag_gfx::Alignment alignment() const
+  { return _alignment; }
+
+  void set_alignment(Mag_gfx::Alignment a)
+  { _alignment = a; }
+
+  Rect aligned_rect(Rect const &);
+  Area aligned_max_size() const;
+  void aligned_set_geometry(Rect const &);
+
+  virtual bool has_height_for_width() const { return false; }
+  virtual int height_for_width(int) const { return -1; }
+  virtual int min_height_for_width(int) const { return -1; }
+};
+
+
+class Spacer_item : public Layout_item
+{
+private:
+  Orientations _expanding;
+
+public:
+  virtual ~Spacer_item() {}
+
+  explicit Spacer_item(Orientations exp = 0) : _expanding(exp) {}
+
+  void set_expanding(Orientations exp) { _expanding = exp; }
+
+  Area preferred_size() const { return Area(0, 0); }
+  Area min_size() const { return Area(0, 0); }
+  Area max_size() const { return Area(Area::Max_w, Area::Max_h); }
+
+  Orientations expanding() const { return _expanding; }
+  bool empty() const { return false; }
+
+  void set_geometry(Rect const &) {};
+  Rect geometry() const { return Rect(); }
+
+};
+
+}
+
+

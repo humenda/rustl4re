@@ -1,0 +1,5 @@
+<map id="L4::Factory::create_thread" name="L4::Factory::create_thread">
+<area shape="rect" id="node2" href="$classL4_1_1Cap__base.html#a6181bad79c41cdbf5c030877b94e25bf" title="Return capability selector. " alt="" coords="220,5,357,32"/>
+<area shape="rect" id="node3" href="$classL4_1_1Kobject.html#a314161cb755de6fd0c50da0a757eb4c7" title="Return capability selector. " alt="" coords="229,56,348,83"/>
+<area shape="rect" id="node4" href="$group__l4__factory__api.html#gae2d74a5b658a47fcd6bd74eee6409fdb" title="Create a new thread. " alt="" coords="191,107,387,133"/>
+</map>

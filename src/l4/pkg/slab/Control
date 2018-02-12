@@ -1,0 +1,4 @@
+provides: slab
+requires: libc l4util
+Maintainer: doebel@os.inf.tu-dresden.de
+Maintainer: l4pkgqa@os.inf.tu-dresden.de

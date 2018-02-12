@@ -1,0 +1,69 @@
+// vi:ft=cpp
+/*
+ * (c) 2010 Alexander Warg <warg@os.inf.tu-dresden.de>
+ *     economic rights: Technische Universität Dresden (Germany)
+ *
+ * This file is part of TUD:OS and distributed under the terms of the
+ * GNU General Public License 2.
+ * Please see the COPYING-GPL-2 file for details.
+ */
+#pragma once
+
+#include <l4/scout-gfx/widget>
+#include <l4/scout-gfx/layout_item>
+
+#include <l4/mag-gfx/gfx_colors>
+
+#include <algorithm>
+
+namespace Scout_gfx {
+
+
+class Icon : public Widget
+{
+protected:
+  int _icon_alpha;
+  Area _max_size;
+  Orientations _expanding;
+
+public:
+  Icon()
+  : _icon_alpha(255), _max_size(Area::Max_w, Area::Max_h)
+  {}
+
+  virtual ~Icon() {}
+
+  Area min_size() const { return _size; }
+  Area preferred_size() const { return _size; }
+  Area max_size() const { return _max_size; }
+  bool empty() const { return false; }
+  Orientations expanding() const { return _expanding; }
+  void set_expanding(Orientations e) { _expanding = e; }
+  Rect geometry() const { return Rect(_pos, _size); }
+
+  /**
+   * Request current alpha value
+   */
+  int alpha() const { return _icon_alpha; }
+
+  /**
+   * Define alpha value of the icon
+   */
+  virtual void alpha(int alpha)
+  {
+    _icon_alpha = alpha;
+    refresh();
+  }
+
+  virtual void default_alpha(int) { };
+  virtual void focus_alpha(int) { };
+
+  virtual void rgba(void const *src, Area const &size, int vshift = 0,
+                    int shadow = 4) = 0;
+
+  virtual void glow(unsigned char const *src, Area const &size,
+                    Mag_gfx::Rgba32::Color c) = 0;
+
+};
+
+}

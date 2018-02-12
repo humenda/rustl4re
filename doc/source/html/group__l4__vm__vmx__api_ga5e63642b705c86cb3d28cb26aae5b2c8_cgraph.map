@@ -1,0 +1,6 @@
+<map id="l4_vm_vmx_read" name="l4_vm_vmx_read">
+<area shape="rect" id="node2" href="$group__l4__vm__vmx__api.html#ga0e2bcaaaab669770cccebfe57bf9a0c7" title="Read a 16bit VMCS field. " alt="" coords="185,5,338,32"/>
+<area shape="rect" id="node3" href="$group__l4__vm__vmx__api.html#ga61ff297f992665a110c3693a4683d02b" title="Read a 32bit VMCS field. " alt="" coords="185,56,338,83"/>
+<area shape="rect" id="node4" href="$group__l4__vm__vmx__api.html#gabc2c4aa13e806afb4c1701f366eb2c88" title="Read a 64bit VMCS field. " alt="" coords="185,107,338,133"/>
+<area shape="rect" id="node5" href="$group__l4__vm__vmx__api.html#gabc0002470856bad7a0e0038f539b56bb" title="Read a natural width VMCS field. " alt="" coords="183,157,340,184"/>
+</map>

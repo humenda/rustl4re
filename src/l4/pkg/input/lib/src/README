@@ -1,0 +1,4 @@
+L4 input library implementation
+
+1. Emulation of some essential Linux functions.
+2. Libinput API

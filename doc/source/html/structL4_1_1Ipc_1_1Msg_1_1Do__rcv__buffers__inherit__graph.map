@@ -1,0 +1,4 @@
+<map id="L4::Ipc::Msg::Do_rcv_buffers" name="L4::Ipc::Msg::Do_rcv_buffers">
+<area shape="rect" id="node2" href="$structL4_1_1Ipc_1_1Msg_1_1Dir__in.html" title="Marker type for input values. " alt="" coords="5,5,144,83"/>
+<area shape="rect" id="node3" href="$structL4_1_1Ipc_1_1Msg_1_1Cls__buffer.html" title="Marker type for receive buffer values. " alt="" coords="168,5,333,83"/>
+</map>

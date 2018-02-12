@@ -1,0 +1,4 @@
+<map id="cxx::Bitmap_base::clear_bit" name="cxx::Bitmap_base::clear_bit">
+<area shape="rect" id="node2" href="$classcxx_1_1Bitmap__base.html#a63b497caf4cba8376deb2b8831d3fb4f" title="Get the bit index within word_type for the given bit. " alt="" coords="251,5,401,47"/>
+<area shape="rect" id="node3" href="$classcxx_1_1Bitmap__base.html#a7a9d9e1459ab5508c071f3989c3bbf4e" title="Get the word index for the given bit. " alt="" coords="243,71,409,112"/>
+</map>

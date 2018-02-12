@@ -1,0 +1,3 @@
+provides: x86emu x86emu_int10
+requires: libc l4re_c libio cxx_base libedid
+Maintainer: adam@os.inf.tu-dresden.de

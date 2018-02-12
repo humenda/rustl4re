@@ -1,0 +1,29 @@
+
+CROSS_COMPILE_sparc         = $(if $(GCCIS_sparc_leon),sparc-elf-,sparc-linux-)
+LD_EMULATION_CHOICE_sparc   = $(if $(GCCIS_sparc_leon),sparcleon,elf32_sparc)
+OFORMAT_sparc               = elf32-sparc
+BFD_ARCH_sparc              = sparc
+L4_KIP_ADDR_sparc          ?= 0xaffff000
+L4_STACK_ADDR_sparc        ?= 0xb0000000
+CARCHFLAGS_sparc_v7         = -mcpu=v7
+# the -Wa.. is probably a gcc buglet fix only, check again later
+
+CARCHFLAGS_sparc_leon        = -mcpu=leon -Wa,-Av8
+CARCHFLAGS_sparc_leon3       = -mcpu=leon3
+CARCHFLAGS_sparc_v8          = -mcpu=v8
+CARCHFLAGS_sparc_v9          = -mcpu=v9
+CARCHFLAGS_sparc_ultrasparc  = -mcpu=ultrasparc
+CARCHFLAGS_sparc_ultrasparc3 = -mcpu=ultrasparc3
+CARCHFLAGS_sparc_niagara     = -mcpu=niagara
+CARCHFLAGS_sparc_niagara2    = -mcpu=niagara2
+CARCHFLAGS_sparc_niagara3    = -mcpu=niagara3
+CARCHFLAGS_sparc_niagara4    = -mcpu=niagara4
+
+CCXX_FLAGS_sparc += -m32
+CC_sparc        = $(CROSS_COMPILE)gcc
+CXX_sparc       = $(CROSS_COMPILE)g++
+FC_sparc        = $(CROSS_COMPILE)gfortran
+
+SYSTEMS_ABI    += sparc-l4f
+SYSTEMS_PLAIN  += sparc
+

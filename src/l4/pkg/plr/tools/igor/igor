@@ -1,0 +1,384 @@
+#!/usr/bin/python
+
+# IGOR (Injection experiment GeneratOR)
+#
+#    Tool for generating scripts running fault injection experiments
+#    based on Romain running in QEMU
+#
+# (c) 2011-2013 Björn Döbel <doebel@os.inf.tu-dresden.de>,
+#     economic rights: Technische Universität Dresden (Germany)
+#
+#  This file is part of TUD:OS and distributed under the terms of the
+#  GNU General Public License 2.
+#  Please see the COPYING-GPL-2 file for details.
+
+import time
+import os,sys
+import subprocess
+
+import argparse
+
+class Configuration:
+    """
+    Application configuration
+    """
+    def __init__(self):
+        self.dryrun       = False
+        self.config_time  = time.strftime("%G%b%d-%H%M%S")
+        self.directory    = "/tmp" + "/results-%s" % (self.config_time)
+        self.qemu_dir     = "qemu"
+        self.fiasco_dir   = ""
+        self.l4re_dir     = ""
+        self.l4reconf_dir = ""
+        self.runs         = 1
+        self.app          = ""
+        self.verbose      = False
+        self.inject_addr  = 0
+        self.mode         = "gpr"
+        self.install      = []
+        self.sleep        = 15
+        self.kipaddr      = []
+
+    @property
+    def DryRun(self): return self.dryrun
+
+    @property
+    def Verbose(self): return self.verbose
+
+    @property
+    def FullDir(self): return self.directory
+
+    @property
+    def ConfDir(self): return self.FullDir + "/config"
+
+    @property
+    def ResDir(self):  return self.FullDir + "/results"
+
+    @property
+    def QemuDir(self): return self.qemu_dir
+
+    @property
+    def FiascoDir(self): return self.fiasco_dir
+
+    @property
+    def L4ReDir(self): return self.l4re_dir
+
+    @property
+    def MaxRuns(self): return self.runs
+
+    @property
+    def App(self): return self.app
+
+    @property
+    def AppBinary(self): return self.App.split()[0]
+
+    @property
+    def Mode(self): return self.mode
+
+    @property
+    def InstallFiles(self): return self.install
+         
+    @property
+    def SleepTime(self): return self.sleep
+
+    @property
+    def KipAddresses(self): return self.kipaddr
+
+
+class ArgumentParser:
+    def __init__(self):
+        self.conf   = Configuration()
+        self.parser = argparse.ArgumentParser(description = "Generate thtartup thcriptth for a Romain/QEMU-bathed THWIFI campaign.")
+
+        self.parser.add_argument("-c", "--config", dest="configfile", help="read config from a thource file inthtead of command line"
+                                 + " (overrideth all other cmdline parameterth)", default=None)
+
+        self.parser.add_argument("--qemu",      dest="qemu",    help="QEMU to uthe, default: %(default)s",
+                                 default="qemu")
+        self.parser.add_argument("--basedir",   dest="basedir", help="where to plathe rethult thubdirth, default: %(default)s",
+                                 default="/tmp")
+        self.parser.add_argument("--fiasco",    dest="fiasco",  help="fiathco build dir",
+                                 default="/path/to/fiasco/build")
+        self.parser.add_argument("--l4re",      dest="l4re",    help="L4Re build dir",
+                                 default="/path/to/l4rebuild")
+        self.parser.add_argument("--app",       dest="app",     help="Application (cmd line) to perform tethtth on",
+                                 default="rom/hello")
+
+        self.parser.add_argument("--runs",      dest="runs",    help="no. of fault injection runth",
+                                 default=10)
+
+        self.parser.add_argument('-d', "--dry", action="store_true", help="only print content that would be generated",
+                                 dest="dryrun")
+        self.parser.add_argument("-v", "--verbose", action="store_true", help="do not throw away Qemu output",
+                                 dest="verbose")
+
+        self.parser.add_argument('-a', dest="inject_addr", default="0",
+                                 help="hex address to inject faults")
+        self.parser.add_argument('-m', dest="mode", default="gpr",
+                                 help="injection mode (gpr|alu|instr|rat)")
+        self.parser.add_argument('-i', dest="install", default="",
+                                 help="additional files to install and boot")
+        self.parser.add_argument('-s', dest="sleep", default="10",
+                                 help="time to keep an experiment running before killing it.")
+        self.parser.add_argument('--kip', dest="kip", default="",
+                                 help="kip time emulation addresses (comma-separated hex)")
+
+
+    def parse(self, args = sys.argv[1:]):
+        ns = self.parser.parse_args(args)
+
+        if ns.configfile is not None:
+            exec "from %s import adapt" % ns.configfile
+            exec "adapt(self.conf)"
+        else:
+            self.conf.DryRun      = ns.dryrun
+            self.conf.Verbose     = ns.verbose
+            self.conf.MaxRuns     = int(ns.runs)
+            self.conf.App         = ns.app
+
+            self.conf.QemuDir     = ns.qemu
+            self.conf.FullDir     = ns.basedir + "/results-%s" % (self.conf.config_time)
+            self.conf.FiascoDir   = ns.fiasco
+            self.conf.L4ReDir     = ns.l4re
+            self.conf.inject_addr = int(ns.inject_addr, 16)
+            self.conf.mode        = ns.mode
+            self.conf.sleep       = int(ns.sleep,10)
+            if ns.install != "":
+                self.conf.install = ns.install.split(",")
+            if ns.kip != "":
+                self.conf.kipaddr = [int(s,16) for s in ns.kip.split(",")]
+        
+        return self.conf
+
+
+class TemplateWriter:
+    """
+    Generic file writer.
+    
+    The idea is to have a string template for the file to be written
+    and let this template be filled with arguments depending on specific
+    implementations.
+    """
+    def __init__(self, global_config, filename):
+        self.config   = global_config
+        self.filename = "%s/%s" % (self.config.ConfDir, filename)
+
+    def write(self):
+        print "======== %s ========" % self.filename
+
+
+class LuaScriptWriter(TemplateWriter):
+    """
+    Generator for Romain Lua startup scripts.
+    """
+    def __init__(self, global_config, filename):
+        TemplateWriter.__init__(self, global_config, filename)
+
+    def template(self):
+        return """package.path = "rom/?.lua";
+require("L4");
+
+local ldr = L4.default_loader;
+
+ldr:start( { caps = {} ,
+             log = {"romain", "c"},
+           },
+           "rom/romain rom/%s" );""" % self.config.App
+
+    def write(self):
+        TemplateWriter.write(self)
+        if self.config.DryRun:
+            print self.template()
+        else:
+            f = file(self.filename, "w")
+            f.write(self.template())
+
+
+class IniFileWriter(TemplateWriter):
+    """
+    Generator for Romain INI files
+    """
+    def __init__(self, global_config, filename):
+        TemplateWriter.__init__(self, global_config, filename)
+
+    def template(self):
+        ret  = "[general]\n"
+        ret += "page_fault_handling = rw\n"
+        ret += "romain = yes\n"
+        ret += "swifi = yes\n"
+        ret += "log = swifi\n"
+        ret += "intercept_kip = true\n"
+
+        if self.config.KipAddresses != []:
+            ret += "[kip-time]\n"
+            ret += "  target = "
+            ret += "0x%08x" % self.config.KipAddresses[0]
+            for a in self.config.KipAddresses[1:]:
+                ret += (",0x%08x" % a)
+            ret += "\n"
+
+        return ret
+
+
+    def write(self):
+        TemplateWriter.write(self)
+        if self.config.DryRun:
+            print self.template() 
+        else:
+            f = file(self.filename, "w")
+            f.write(self.template())
+
+
+class GPRIniFileWriter(IniFileWriter):
+    """
+    Generator for specific INI files aimed at flipping bits in GPRs
+    """
+    def __init__(self, global_config, filename):
+        IniFileWriter.__init__(self, global_config, filename)
+
+    def template(self):
+        return IniFileWriter.template(self) + """[swifi]
+  target = 0x%lx
+  inject = %s
+""" % (self.config.inject_addr, "gpr")
+
+
+class InstrIniFileWriter(IniFileWriter):
+    """
+    Generator for decoder-flipping
+    """
+    def __init__(self, global_config, filename):
+        IniFileWriter.__init__(self, global_config, filename)
+
+    def template(self):
+        return IniFileWriter.template(self) + """[swifi]
+  target = 0x%lx
+  inject = %s
+""" % (self.config.inject_addr, "instr")
+
+
+class AluIniFileWriter(IniFileWriter):
+    def __init__(self, global_config, filename):
+        IniFileWriter.__init__(self, global_config, filename)
+
+    def template(self):
+        return IniFileWriter.template(self) + """[swifi]
+  target = 0x%lx
+  inject = %s
+""" % (self.config.inject_addr, "alu")
+
+
+class ScriptWriter(TemplateWriter):
+    """
+    Writer for the SWIFI campaign startup script
+    """
+    def __init__(self, global_config, filename):
+        TemplateWriter.__init__(self, global_config, filename)
+
+    def qemu_cmd(self):
+        build  = self.config.L4ReDir
+        fiasco = "%s/fiasco -jdb_cmd=JS -serial_esc" % self.config.FiascoDir
+        ret = "%s -kernel %s/../bootstrap " % (self.config.QemuDir, build)
+        ret += "-append \"bootstrap -modaddr 0x01100000\" "
+        ret += "-initrd \""
+
+        ret += fiasco
+
+        for s in ["sigma0", "moe rom/romain.lua", "l4re", "ned", self.config.AppBinary, "romain",]:
+            ret += ","
+            ret += "%s/%s" % (build, s)
+
+        for f in self.config.InstallFiles:
+            ret += ","
+            ret += "%s/%s" % (self.config.ConfDir, f.split("/")[-1])
+
+        ret += ",%s" % ("%s/romain.ini" % (self.config.ConfDir))
+        ret += ",%s" % ("%s/romain.lua" % (self.config.ConfDir))
+
+        ret += "\" -no-reboot -nographic -serial file:$filename-raw$no.log "
+        ret += "-monitor file:/dev/null"
+
+        return ret
+
+
+    def template(self):
+        ret =  "#!/bin/bash\n"
+        ret += "no=0\n"
+        ret += "max=%d\n" % self.config.MaxRuns
+        ret += ("logdir=%s\n"  % self.config.ResDir +
+               "logprefix=swifi\n" +
+               "filename=$logdir/$logprefix\n\n" +
+               "mkdir -p $logdir\n" +
+               "while [[ $no -lt $max ]]; do\n" +
+               "   echo $no\n")
+        ret += """%s %s &\n\n"""
+        ret += "   sleep %d && kill $!\n\n" % self.config.SleepTime
+        ret += """   cat $filename-raw$no.log | sed -r "s:\x1B\[[0-9;]*[A-Za-z]::g" >$filename$no.log ;
+                  rm $filename-raw$no.log
+                  
+                  no=$((no+1))
+               done"""
+        return ret
+
+    def write(self):
+        TemplateWriter.write(self)
+
+        verbose_redir = ""
+        if (not self.config.Verbose):
+            verbose_redir = ">/dev/null 2>/dev/null"
+
+        if self.config.DryRun:
+            print self.template() % (self.qemu_cmd(), verbose_redir)
+        else:
+            f = file(self.filename, "w")
+            f.write(self.template() % (self.qemu_cmd(), verbose_redir))
+            os.chmod(self.filename, 0700)
+
+
+class AdditionalFileInstaller:
+    def __init__(self, globalconfig):
+        self.config = globalconfig
+
+    def install(self):
+        print "======== Installing files ========"
+        for f in self.config.InstallFiles:
+            print f, "->", self.config.ConfDir
+            if not self.config.DryRun:
+                os.symlink(f, "%s/%s" % (self.config.ConfDir, f.split("/")[-1]))
+
+
+class CampaignRunner:
+    def __init__(self, config):
+        self.conf = config
+        self.script = "%s/swifi.sh" % self.conf.ConfDir
+
+    def run(self):
+        print "======== Exthecuting ========"
+        if not self.conf.DryRun:
+            print self.script
+            subprocess.call(self.script)
+        else:
+            print "Not exthecuting %s in a dry run." % self.script
+
+
+writers = {
+    "alu" : AluIniFileWriter,
+    "gpr" : GPRIniFileWriter,
+    "instr" : InstrIniFileWriter,
+}
+
+
+def run(config):
+    if not config.DryRun:
+        os.mkdir(config.FullDir)
+        os.mkdir(config.ConfDir)
+        os.mkdir(config.ResDir)
+
+    writers[config.Mode](config, "romain.ini").write()
+    LuaScriptWriter(config, "romain.lua").write()
+    ScriptWriter(config, "swifi.sh").write()
+    AdditionalFileInstaller(config).install()
+    CampaignRunner(config).run()
+
+if __name__ == "__main__":
+    run(ArgumentParser().parse())

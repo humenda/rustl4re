@@ -1,0 +1,169 @@
+#! /usr/bin/perl -W
+
+# This program generates an image from a list of files, where every
+# file is aligned to PAGE_SIZE boundaries.
+# The image starts with an offset table followed by a list of the filenames.
+#
+# The offset table contain one entry for every file has the following format:
+# [4 bytes] offset of the file in the image (should be aligned to PAGE_SIZE!)
+# [4 bytes] size of the file
+# [4 bytes] offset of the filename in the image
+# A file offset with the value zero indicates the end of the offset table.
+#
+
+use strict;
+
+my $OUT_FILE = shift;
+my $PAGE_SIZE = 4096;
+my $BLOCK_SIZE = 4096;
+
+my @file_name;
+my @file_name_ptr;
+my @file_offset;
+my @file_size;
+
+my $count_files = 0;
+
+my $zero_buffer = "\0" x $BLOCK_SIZE;
+
+my $off_archive = 0;
+my $off_binary = 0;
+
+my $count_padding = 0; # just for statistics
+
+sub write_file($$$$)
+{
+  my $file = shift;
+  my $off = shift;
+  my $buffer = shift;
+  my $buffer_size = shift;
+
+  syswrite($file, $buffer, $buffer_size);
+  $off = $off + $buffer_size;
+
+  return $off;
+}
+
+die "no output file specified, usage: $0 OUT_FILE <FILE_LIST>\n"
+  unless defined $OUT_FILE;
+
+print "Generating archive: $OUT_FILE\n";
+
+sub read_dir($$)
+{
+  my $dir = shift;
+  my $file_list = shift;
+  my $count_files = 0;
+  my $fh;
+
+  opendir($fh, $dir) || die("Cannot open directory");
+  
+  # skip over current and parent directory
+  foreach my $i (readdir($fh))
+  {
+    next if $i eq '.' or $i eq '..' or $i eq '.svn';
+
+    if (-d "$dir/$i")
+      {
+	print "found dir: $dir/$i\n";
+	$count_files += &read_dir("$dir/$i", $file_list);
+      }
+    else
+      {
+	print "found file: $dir/$i\n";
+	push @{$file_list}, "$dir/$i";
+	$count_files++;
+      }
+  }
+
+  closedir $fh; 
+
+  return $count_files;
+}
+
+# scrap up all files in directories
+foreach my $i (@ARGV)
+{
+  if (-d $i)
+    {
+      printf("found dir: %s\n", $i);
+      $count_files += read_dir($i, \@file_name);
+    }
+  else
+    {
+      printf("found file:%s\n", $i);
+      push(@file_name, $i);
+      $count_files++;
+    }
+}
+
+my $archive;
+open($archive, "+>", $OUT_FILE) or die $!;
+binmode($archive);
+
+# reserve space for the offset table
+$off_archive = write_file($archive, $off_archive, "\0" x ($count_files * 12 + 4), ($count_files * 12 + 4));
+
+# write filenames into the archive
+my $i;
+for ($i = 0; $i < $count_files; ++$i)
+{
+  $file_name_ptr[$i] = $off_archive;
+  
+# write filename and add string termination
+  $off_archive = write_file($archive, $off_archive, $file_name[$i], length($file_name[$i]));
+  $off_archive = write_file($archive, $off_archive, "\0", 1);
+}
+
+# add padding to PAGE_SIZE granularity
+if ($off_archive % $PAGE_SIZE)
+{
+  $count_padding += $PAGE_SIZE - ($off_archive % $PAGE_SIZE); 
+  $off_archive = write_file($archive, $off_archive, $zero_buffer, $PAGE_SIZE - ($off_archive % $PAGE_SIZE));
+}
+
+# write files into the archive
+for ($i = 0; $i < $count_files; ++$i)
+{
+  open(BINARY, '<', $file_name[$i]) or die $!;
+  binmode(BINARY);
+  $file_offset[$i] = $off_archive;
+  $file_size[$i] = -s $file_name[$i];
+
+  my $read_bytes;
+  do
+  {
+    my $buffer;
+    $read_bytes = sysread(BINARY, $buffer, $BLOCK_SIZE);
+    $off_binary += $read_bytes;
+
+    $off_archive = write_file($archive, $off_archive, $buffer, $read_bytes);
+  }
+  while ($read_bytes == $BLOCK_SIZE);
+
+  close(BINARY);
+
+# add padding to PAGE_SIZE granularity
+  if ($off_archive % $PAGE_SIZE)
+  {
+    $count_padding += $PAGE_SIZE - ($off_archive % $PAGE_SIZE); 
+    $off_archive = write_file($archive, $off_archive, $zero_buffer, $PAGE_SIZE - ($off_archive % $PAGE_SIZE));
+  }
+}
+
+seek($archive, 0, 0);
+$off_archive = 0;
+
+# write offset table into the archive
+for ($i = 0; $i < $count_files; ++$i)
+{
+#  printf("offset:%x\n", $file_offset[$i]);
+
+  #printf("file offset:%x size:%x\n", $file_offset[$i], $file_size[$i]);
+  my $val = pack("lll", $file_offset[$i], $file_size[$i], $file_name_ptr[$i]);
+  $off_archive = write_file($archive, $off_archive, $val, 12);
+}
+
+close($archive);
+printf "Done, generating archive. Blowup factor is %3.2f\n",
+       ((-s $OUT_FILE)/((-s $OUT_FILE)-$count_padding)-1)*100;

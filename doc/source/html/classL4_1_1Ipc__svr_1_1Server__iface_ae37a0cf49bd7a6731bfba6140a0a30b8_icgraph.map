@@ -1,0 +1,5 @@
+<map id="L4::Ipc_svr::Server_iface::alloc_buffer_demand" name="L4::Ipc_svr::Server_iface::alloc_buffer_demand">
+<area shape="rect" id="node2" href="$classL4Re_1_1Util_1_1Object__registry.html#a43efef7072073bd60c32be1474b38ed3" title="Create a registry for arbitrary threads. " alt="" coords="192,5,371,47"/>
+<area shape="rect" id="node3" href="$classL4_1_1Ipc__svr_1_1Server__iface.html#aa17aa10ace494b229a3e0879599e23b9" title="Make a server interface. " alt="" coords="208,71,355,112"/>
+<area shape="rect" id="node4" href="$classL4_1_1Ipc__svr_1_1Server__iface.html#abf34a40926c8929fc3ada150a7a6f491" title="Get receive cap with the given index as generic (void) type. " alt="" coords="419,71,557,112"/>
+</map>

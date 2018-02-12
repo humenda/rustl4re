@@ -1,0 +1,6 @@
+provides: libcrypto_aes_linux libcrypto_aes_linux_586
+          libcrypto_aes_openssl libcrypto_base64 libcrypto_modes libcrypto_pad
+          libcrypto_rsaref2 libcrypto_sha1_linux libcrypto_sha1_linux_new
+          libcrypto_sha1_openssl libcrypto_sha1_oslo libcrypto_sha1_ref
+requires: libc log l4util stdlibs
+Maintainer: weinhold@os.inf.tu-dresden.de

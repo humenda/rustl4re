@@ -1,0 +1,86 @@
+// vi:ft=c
+/**
+
+\page l4re_pthreads Pthread Support
+
+L4Re supports the standard pthread library functionality. Therefore L4Re
+itself does not contain any documentation for pthreads itself. Please refer
+to the standard pthread documentation instead.
+
+The L4Re specific parts will be described herein.
+
+<ul>
+  <li>
+    Include pthread-l4.h header file:
+  \code
+   #include <pthread-l4.h>
+  \endcode
+
+  </li>
+  <li>Return the local thread capability of a pthread thread:
+
+  Use \c pthread_l4_cap(pthread_t t) to get the capability index of
+  the pthread t.
+
+  For example:
+  \code
+  pthread_l4_cap(pthread_self());
+  \endcode
+  </li>
+
+  <li> Setting the L4 priority of an L4 thread works with a special
+       scheduling policy (other policies do not affect the L4 thread
+       priority):
+
+  \code
+  pthread_t t;
+  pthread_attr_t a;
+  struct sched_param sp;
+
+  pthread_attr_init(&a);
+  sp.sched_priority = l4_priority;
+  pthread_attr_setschedpolicy(&a, SCHED_L4);
+  pthread_attr_setschedparam(&a, &sp);
+  pthread_attr_setinheritsched(&a, PTHREAD_EXPLICIT_SCHED);
+
+  if (pthread_create(&t, &a, pthread_func, NULL))
+    // failure...
+
+  pthread_attr_destroy(&a);
+  \endcode
+
+  </li>
+
+  <li> You can prevent your pthread from running immediately after the call to
+       \c pthread_create(..) by adding \c PTHREAD_L4_ATTR_NO_START to the
+       \c create_flags of the pthread attributes. To finally start the thread
+       you need to call \c scheduler()->run_thread() passing the capability
+       of the pthread and scheduling parameters.
+
+    \code
+      pthread_t t;
+      pthread_attr_t attr;
+
+      pthread_attr_init(&attr);
+      attr.create_flags |= PTHREAD_L4_ATTR_NO_START;
+
+      if (pthread_create(t, &pattr, pthread_func, nullptr))
+        // failure...
+
+      pthread_attr_destroy(&attr);
+
+      // do stuff
+
+      auto ret = L4Re::Env::env()->scheduler()->run_thread(pthread_l4_cap(t),
+                                                           l4_sched_param(2));
+      if (l4_error(ret))
+        // failure...
+    \endcode
+
+  </li>
+</ul>
+
+
+
+
+*/

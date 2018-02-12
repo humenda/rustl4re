@@ -1,0 +1,38 @@
+<map id="l4/cxx/ipc_server" name="l4/cxx/ipc_server">
+<area shape="rect" id="node2" href="$capability.html" title="L4::Cap related definitions. " alt="" coords="1144,155,1264,181"/>
+<area shape="rect" id="node15" href="$err_8h.html" title="Error codes. " alt="" coords="1493,767,1584,793"/>
+<area shape="rect" id="node26" href="$typeinfo__svr.html" title="Type information server template. " alt="" coords="496,80,635,107"/>
+<area shape="rect" id="node27" href="$ipc__epiface_source.html" title="l4/sys/cxx/ipc_epiface" alt="" coords="593,155,751,181"/>
+<area shape="rect" id="node30" href="$type__traits_source.html" title="l4/cxx/type_traits" alt="" coords="5,229,133,256"/>
+<area shape="rect" id="node32" href="$ipc__stream.html" title="IPC stream. " alt="" coords="923,80,1053,107"/>
+<area shape="rect" id="node35" href="$ipc__server__loop_source.html" title="l4/sys/cxx/ipc_server_loop" alt="" coords="710,80,898,107"/>
+<area shape="rect" id="node36" href="$exceptions.html" title="Base exceptions. " alt="" coords="1456,80,1587,107"/>
+<area shape="rect" id="node3" href="$l4_2sys_2consts_8h.html" title="Common constants. " alt="" coords="1073,916,1188,943"/>
+<area shape="rect" id="node7" href="$l4_2sys_2types_8h.html" title="Common L4 ABI Data Types. " alt="" coords="847,841,953,868"/>
+<area shape="rect" id="node10" href="$kobject_source.html" title="l4/sys/kobject" alt="" coords="909,379,1016,405"/>
+<area shape="rect" id="node20" href="$task_8h.html" title="Common task related definitions. " alt="" coords="880,610,979,637"/>
+<area shape="rect" id="node21" href="$sys_2meta.html" title="Meta interface for getting dynamic type information about objects behind capabilities. " alt="" coords="472,229,565,256"/>
+<area shape="rect" id="node4" href="$compiler_8h.html" title="L4 compiler related defines. " alt="" coords="1342,991,1469,1017"/>
+<area shape="rect" id="node6" href="$l4_2sys_2l4int_8h.html" title="Fixed sized integer types, generic version. " alt="" coords="796,991,895,1017"/>
+<area shape="rect" id="node8" href="$____l4__fpage_8h_source.html" title="l4/sys/__l4_fpage.h" alt="" coords="745,916,889,943"/>
+<area shape="rect" id="node9" href="$____timeout_8h_source.html" title="l4/sys/__timeout.h" alt="" coords="914,916,1049,943"/>
+<area shape="rect" id="node11" href="$kernel__object_8h.html" title="Kernel object system calls. " alt="" coords="989,528,1107,555"/>
+<area shape="rect" id="node16" href="$____typeinfo_8h.html" title="Type information handling. " alt="" coords="625,453,724,480"/>
+<area shape="rect" id="node12" href="$l4_2sys_2utcb_8h.html" title="UTCB definitions. " alt="" coords="800,767,899,793"/>
+<area shape="rect" id="node13" href="$____kernel__object__impl_8h.html" title="Low&#45;level kernel debugger functions. " alt="" coords="1053,603,1216,644"/>
+<area shape="rect" id="node14" href="$l4_2sys_2ipc_8h.html" title="Common IPC interface. " alt="" coords="1032,692,1123,719"/>
+<area shape="rect" id="node17" href="$types.html" title="cxx/types" alt="" coords="470,610,551,637"/>
+<area shape="rect" id="node18" href="$ipc__basics_source.html" title="cxx/ipc_basics" alt="" coords="361,528,473,555"/>
+<area shape="rect" id="node19" href="$capability_8h_source.html" title="cxx/capability.h" alt="" coords="650,528,766,555"/>
+<area shape="rect" id="node22" href="$ipc__iface.html" title="Interface Definition Language. " alt="" coords="433,379,535,405"/>
+<area shape="rect" id="node24" href="$ipc__string_source.html" title="cxx/ipc_string" alt="" coords="262,304,370,331"/>
+<area shape="rect" id="node23" href="$ipc__types.html" title="l4/sys/cxx/ipc_types" alt="" coords="455,453,601,480"/>
+<area shape="rect" id="node25" href="$ipc__array_source.html" title="ipc_array" alt="" coords="275,379,357,405"/>
+<area shape="rect" id="node28" href="$sys_2cxx_2ipc__server_source.html" title="ipc_server" alt="" coords="529,304,617,331"/>
+<area shape="rect" id="node31" href="$type__traits_8h_source.html" title="bits/type_traits.h" alt="" coords="7,304,131,331"/>
+<area shape="rect" id="node33" href="$ipc__varg_source.html" title="l4/sys/cxx/ipc_varg" alt="" coords="748,453,889,480"/>
+<area shape="rect" id="node34" href="$minmax_source.html" title="l4/cxx/minmax" alt="" coords="933,155,1043,181"/>
+<area shape="rect" id="node37" href="$l4types_8h.html" title="L4 Types. " alt="" coords="1414,155,1533,181"/>
+<area shape="rect" id="node38" href="$basic__ostream.html" title="Basic IO stream. " alt="" coords="1494,229,1647,256"/>
+<area shape="rect" id="node39" href="$backtrace_8h.html" title="Backtrace. " alt="" coords="1621,155,1752,181"/>
+</map>

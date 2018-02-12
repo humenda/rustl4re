@@ -1,0 +1,57 @@
+// vim: ft=cpp
+#pragma once
+
+#include <cassert>
+#include <pthread.h>
+
+namespace Ankh
+{
+    class Lock
+    {
+        private:
+            pthread_mutex_t mtx;
+            Lock(Lock&) { }
+
+        public:
+            explicit Lock()
+            {
+                int err = pthread_mutex_init(&mtx, NULL);
+                assert(err == 0);
+            }
+
+            ~Lock()
+            {
+                pthread_mutex_destroy(&mtx);
+            }
+
+            void lock()
+            {
+                pthread_mutex_lock(&mtx);
+            }
+
+            void unlock()
+            {
+                pthread_mutex_unlock(&mtx);
+            }
+    };
+
+
+    class Lock_guard
+    {
+        private:
+            Ankh::Lock& lock;
+
+        public:
+            explicit Lock_guard(Ankh::Lock& l)
+                : lock(l)
+            {
+                lock.lock();
+            }
+
+            ~Lock_guard()
+            {
+                lock.unlock();
+            }
+    };
+
+}

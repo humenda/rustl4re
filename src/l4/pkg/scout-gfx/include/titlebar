@@ -1,0 +1,105 @@
+// vi:ft=cpp
+/*
+ * \brief   Titlebar interface
+ * \date    2005-10-24
+ * \author  Norman Feske <norman.feske@genode-labs.com>
+ */
+
+/*
+ * Copyright (C) 2005-2009
+ * Genode Labs, Feske & Helmuth Systementwicklung GbR
+ *
+ * This file is part of the Genode OS framework, which is distributed
+ * under the terms of the GNU General Public License version 2.
+ */
+
+#pragma once
+
+#include <l4/mag-gfx/geometry>
+#include <l4/mag-gfx/canvas>
+
+#include <l4/scout-gfx/icon>
+#include <l4/scout-gfx/fonts>
+#include <l4/scout-gfx/widget>
+#include <l4/scout-gfx/factory>
+#include <l4/scout-gfx/style>
+
+#include <cstring>
+
+namespace Scout_gfx {
+
+/***************
+ ** Title bar **
+ ***************/
+class Titlebar : public Parent_widget
+{
+private:
+  Icon *_fg;
+  const char *_txt;
+  Mag_gfx::Area _txt_sz;
+  int _txt_len;
+  Mag_gfx::Font const *_font;
+
+public:
+
+  Area preferred_size() const { return _txt_sz + Area(32, 10); }
+  Area min_size() const { return _txt_sz + Area(32, 10); }
+  Area max_size() const { return Area(Area::Max_w, _txt_sz.h() + 10); }
+
+  Orientations expanding() const { return Horizontal; }
+  bool empty() const { return false; }
+
+  void set_geometry(Rect const &r)
+  {
+
+    _pos = r.p1(); _size = r.area().min(max_size());
+    if (_fg)
+      _fg->set_geometry(Rect(Point(0,0), _size));
+  }
+
+  Rect geometry() const { return Rect(_pos, _size); }
+
+  void text(const char *txt)
+  {
+    _txt     = txt ? txt : "Scout";
+    _txt_sz  = Area(_font->str_w(_txt), _font->str_h(_txt));
+    _txt_len = strlen(_txt);
+  }
+
+  /**
+   * Constructor
+   */
+  explicit Titlebar(Factory *f, Mag_gfx::Font const *font)
+  : _fg(f->create_icon()), _font(font)
+  {
+    _fg->alpha(255);
+    _fg->findable(0);
+    text(0);
+
+    append(_fg);
+  }
+
+  /**
+   * Define foreground of titlebar
+   */
+  void rgba(unsigned char *rgba)
+  { _fg->rgba(rgba, Area(32, 32), 0, 0); };
+
+  /**
+   * Element interface
+   */
+
+  void draw(Mag_gfx::Canvas *c, Mag_gfx::Point const &p)
+  {
+    using Mag_gfx::Point;
+
+    const int b = 180, a = 200;
+    c->draw_box(Rect(_size) + p, Color(b, b, b, a));
+
+    Point _txt_pos = p + Point(8, 0).max(Rect(_size).center(_txt_sz)) - Point(0, 1);
+    c->draw_string(_txt_pos, _font, Color(0,0,0,200), _txt);
+    Parent_widget::draw(c, p);
+  }
+};
+
+}

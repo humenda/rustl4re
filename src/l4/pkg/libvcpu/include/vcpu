@@ -1,0 +1,286 @@
+// vi:se ft=cpp:
+/*
+ * (c) 2010 Adam Lackorzynski <adam@os.inf.tu-dresden.de>
+ *     economic rights: Technische Universität Dresden (Germany)
+ *
+ * This file is part of TUD:OS and distributed under the terms of the
+ * GNU General Public License 2.
+ * Please see the COPYING-GPL-2 file for details.
+ *
+ * As a special exception, you may use this file as part of a free software
+ * library without restriction.  Specifically, if other files instantiate
+ * templates or use macros or inline functions from this file, or you compile
+ * this file and link it with other files to produce an executable, this
+ * file does not by itself cause the resulting executable to be covered by
+ * the GNU General Public License.  This exception does not however
+ * invalidate any other reasons why the executable file might be covered by
+ * the GNU General Public License.
+ */
+
+#pragma once
+
+#include <l4/re/env>
+#include <l4/vcpu/vcpu.h>
+
+namespace L4vcpu {
+
+/**
+ * \brief C++ implementation of state word in the vCPU area
+ * \ingroup api_libvcpu
+ */
+class State
+{
+public:
+  State() {}
+
+  /**
+   * \brief Initialize state.
+   *
+   * \param v Initial state.
+   */
+  explicit State(unsigned v) : _s(v) {}
+
+  /**
+   * \brief Add flags.
+   *
+   * \param bits Bits to add to the word.
+   */
+  void add(unsigned bits) throw()    { _s |= bits; }
+
+  /**
+   * \brief Clear flags.
+   *
+   * \param bits Bits to clear in the word.
+   */
+  void clear(unsigned bits) throw()  { _s &= ~bits; }
+
+  /**
+   * \brief Set flags.
+   *
+   * \param v Set the word to the value of v.
+   */
+  void set(unsigned v) throw() { _s = v; }
+
+private:
+  __typeof__(((l4_vcpu_state_t *)0)->state) _s;
+};
+
+/**
+ * \brief C++ implementation of the vCPU save state area
+ * \ingroup api_libvcpu
+ */
+class Vcpu : private l4_vcpu_state_t
+{
+public:
+  /**
+   * \brief Disable the vCPU for event delivery.
+   */
+  void irq_disable() throw()
+  { l4vcpu_irq_disable(this); }
+
+  /**
+   * \brief Disable the vCPU for event delivery and return previous state.
+   * \return IRQ state before disabling IRQs.
+   */
+  unsigned irq_disable_save() throw()
+  { return l4vcpu_irq_disable_save(this); }
+
+  l4_vcpu_state_t *s() { return this; }
+  l4_vcpu_state_t const *s() const { return this; }
+
+  /**
+   * \brief Get state word
+   * \return Pointer to state word in the vCPU
+   */
+  State *state() throw()
+  {
+    static_assert(sizeof(State) == sizeof(l4_vcpu_state_t::state),
+                  "size mismatch");
+    return reinterpret_cast<State *>(&(l4_vcpu_state_t::state));
+  }
+
+  /**
+   * \brief Get state word
+   * \return Pointer to state word in the vCPU
+   */
+  State state() const throw()
+  { return static_cast<State>(l4_vcpu_state_t::state); }
+
+  /**
+   * \brief Get saved_state word
+   * \return Pointer to saved_state word in the vCPU
+   */
+  State *saved_state() throw()
+  {
+    static_assert(sizeof(State) == sizeof(l4_vcpu_state_t::saved_state),
+                  "size mismatch");
+    return reinterpret_cast<State *>(&(l4_vcpu_state_t::saved_state));
+  }
+  /**
+   * \brief Get saved_state word
+   * \return Pointer to saved_state word in the vCPU
+   */
+  State saved_state() const throw()
+  { return static_cast<State>(l4_vcpu_state_t::saved_state); }
+
+  /**
+   * \brief Get sticky flags
+   */
+  l4_uint16_t sticky_flags() const throw()
+  { return l4_vcpu_state_t::sticky_flags; }
+
+  /**
+   * \brief Enable the vCPU for event delivery.
+   *
+   * \param utcb             The UTCB to use.
+   * \param do_event_work_cb Call-back function that is called in case an
+   *                         event (such as an interrupt) is pending.
+   * \param setup_ipc        Call-back function that is called before an
+   *                         IPC operation is called, and before event
+   *                         delivery is enabled.
+   */
+  void irq_enable(l4_utcb_t *utcb, l4vcpu_event_hndl_t do_event_work_cb,
+                  l4vcpu_setup_ipc_t setup_ipc) throw()
+  { l4vcpu_irq_enable(this, utcb, do_event_work_cb, setup_ipc); }
+
+  /**
+   * \brief Restore a previously saved IRQ/event state.
+   *
+   * \param s                IRQ state to be restored.
+   * \param utcb             The UTCB to use.
+   * \param do_event_work_cb Call-back function that is called in case an
+   *                         event (such as an interrupt) is pending.
+   * \param setup_ipc        Call-back function that is called before an
+   *                         IPC operation is called, and before event
+   *                         delivery is enabled.
+   */
+  void irq_restore(unsigned s, l4_utcb_t *utcb,
+                   l4vcpu_event_hndl_t do_event_work_cb,
+                   l4vcpu_setup_ipc_t setup_ipc) throw()
+  { l4vcpu_irq_restore(this, s, utcb, do_event_work_cb, setup_ipc); }
+
+  /**
+   * \brief Wait for event.
+   *
+   * \param utcb             The UTCB to use.
+   * \param do_event_work_cb Call-back function that is called in case an
+   *                         event (such as an interrupt) is pending.
+   * \param setup_ipc        Call-back function that is called before an
+   *                         IPC operation is called.
+   *
+   * Note that event delivery remains disabled after this function returns.
+   */
+  void wait_for_event(l4_utcb_t *utcb, l4vcpu_event_hndl_t do_event_work_cb,
+                      l4vcpu_setup_ipc_t setup_ipc) throw()
+  { l4vcpu_wait_for_event(this, utcb, do_event_work_cb, setup_ipc); }
+
+  /**
+   * \brief Set the task of the vCPU.
+   * \param task Task to set, defaults to invalid task.
+   */
+  void task(L4::Cap<L4::Task> const task = L4::Cap<L4::Task>::Invalid) throw()
+  { user_task = task.cap(); }
+
+  /**
+   * \brief Return whether the entry reason was a page fault.
+   * return 0 if not, !=0 otherwise.
+   */
+  int is_page_fault_entry() const
+  { return l4vcpu_is_page_fault_entry(this); }
+
+  /**
+   * \brief Return whether the entry reason was an IRQ/IPC message.
+   * return 0 if not, !=0 otherwise.
+   */
+  int is_irq_entry() const
+  { return l4vcpu_is_irq_entry(this); }
+
+  /**
+   * \brief Return pointer to register state.
+   * \return Pointer to register state.
+   */
+  l4_vcpu_regs_t *r() throw()
+  { return &(l4_vcpu_state_t::r); }
+
+  /**
+   * \brief Return pointer to register state.
+   * \return Pointer to register state.
+   */
+  l4_vcpu_regs_t const *r() const throw()
+  { return &(l4_vcpu_state_t::r); }
+
+  /**
+   * \brief Return pointer to IPC state.
+   * \return Pointer to IPC state.
+   */
+  l4_vcpu_ipc_regs_t *i() throw()
+  { return &(l4_vcpu_state_t::i); }
+
+  /**
+   * \brief Return pointer to IPC state.
+   * \return Pointer to IPC state.
+   */
+  l4_vcpu_ipc_regs_t const *i() const throw()
+  { return &(l4_vcpu_state_t::i); }
+
+  /**
+   * \brief Set vCPU entry stack pointer.
+   * \param sp  Stack pointer address to set.
+   *
+   * \note The value is only used when entering from a user-task.
+   */
+  void entry_sp(l4_umword_t sp)
+  { l4_vcpu_state_t::entry_sp = sp; }
+
+  /**
+   * \brief Set vCPU entry instruction pointer.
+   * \param ip  Instruction pointer address to set.
+   */
+  void entry_ip(l4_umword_t ip)
+  { l4_vcpu_state_t::entry_ip = ip; }
+
+  /**
+   * \brief Allocate state area for an extended vCPU.
+   *
+   * \retval vcpu      Allocated vcpu-state area.
+   * \retval ext_state Allocated extended vcpu-state area.
+   * \param  task      Task to use for allocation, defaults to own task.
+   * \param  rm        Region manager to use for allocation defaults to standard region manager.
+   *
+   * \return 0 for success, error code otherwise
+   */
+  L4_CV static int
+  ext_alloc(Vcpu **vcpu,
+            l4_addr_t *ext_state,
+            L4::Cap<L4::Task> task = L4Re::Env::env()->task(),
+            L4::Cap<L4Re::Rm> rm = L4Re::Env::env()->rm()) throw();
+
+  /**
+   * \brief Cast a void pointer to a class pointer.
+   *
+   * \param x Pointer.
+   *
+   * \return Pointer to Vcpu class.
+   */
+  static inline Vcpu *cast(void *x) throw()
+  { return reinterpret_cast<Vcpu *>(x); }
+
+  /**
+   * \brief Cast an address to a class pointer.
+   *
+   * \param x Pointer.
+   *
+   * \return Pointer to Vcpu class.
+   */
+  static inline Vcpu *cast(l4_addr_t x) throw()
+  { return reinterpret_cast<Vcpu *>(x); }
+
+  /**
+   * \brief Print the state of the vCPU.
+   */
+  void print_state(const char *prefix = "") const throw()
+  { l4vcpu_print_state(this, prefix); }
+};
+
+
+}

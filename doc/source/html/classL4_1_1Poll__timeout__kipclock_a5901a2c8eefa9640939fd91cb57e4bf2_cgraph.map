@@ -1,0 +1,5 @@
+<map id="L4::Poll_timeout_kipclock::test" name="L4::Poll_timeout_kipclock::test">
+<area shape="rect" id="node2" href="$group__l4__kip__api.html#ga833b0dd3ac6cf62453707f89d695a96f" title="Return clock value from the KIP. " alt="" coords="232,5,331,32"/>
+<area shape="rect" id="node4" href="$group__api__l4re__env.html#gae222fd7f694a90a34b8bde0edd265f4b" title="Get Kernel Info Page. " alt="" coords="245,56,317,83"/>
+<area shape="rect" id="node3" href="$group__l4sys__defines.html#ga5d5bbbe36a0d144d1f465dbca715718e" title="Memory barrier. " alt="" coords="379,5,437,32"/>
+</map>

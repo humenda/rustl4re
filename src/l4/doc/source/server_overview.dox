@@ -1,0 +1,92 @@
+// vi:ft=c
+/**
+
+\page l4re_servers L4Re Servers
+\brief Here you shall find a quick overview over the standard services
+       running on Fiasco.OC and L4Re.
+
+Sigma0, the Root Pager
+======================
+
+Sigma0 is a special server running on L4 because it is responsible
+of resolving page faults for the root task, the first useful task on
+L4Re.  Sigma0 can be seen as part of the kernel, however it runs in
+unprivileged mode.  To run something useful on Fiasco.OC you usually
+need to run Sigma0, nevertheless it is possible to replace Sigma0
+by a different implementation.
+
+
+Moe, the Root Task
+==================
+
+Moe is our implementation of the L4 root task that is responsible for
+bootstrapping the system, and to provide basic resource management services
+to the applications on top. Therefore Moe provides L4Re resource management
+and multiplexing services:
+\li \b Memory in the form of memory allocators (L4Re::Mem_alloc, L4::Factory)
+    and data spaces (L4Re::Dataspace)
+\li \b Cpu in the form of basic scheduler objects (L4::Scheduler)
+\li \b Vcon multiplexing for debug output (output only)
+\li \b Virtual \b memory \b management for applications, L4Re::Rm
+
+Moe further provides an implementation of L4Re name spaces (L4Re::Namespace),
+which are for example used to provide a read only directory of all multi-boot
+modules.  In the case of a boot loader, like grub that enables a VESA frame
+buffer, there is also a single instance of an L4Re graphics session
+(L4Re::Goos).
+
+To start the system Moe starts a single ELF program, the init process.  The
+init process (usually Ned, see the next section) gets access to all resources
+managed by Moe and to the Sigma0 root pager interface.
+
+For more details see \subpage l4re_servers_moe "Moe, the Root-Task".
+
+
+Ned, the Default Init Process
+=============================
+
+To keep the root task free from complicated scripting engines and to avoid
+circular dependencies in application startup (that could lead to dead locks)
+the configuration and startup of the real system is managed by an extra task,
+the init process.
+
+Ned is such an init process that allows system configuration via Lua scripts.
+
+For more information see \subpage l4re_servers_ned "Ned".
+
+
+Io, the Platform and Device Resource Manager
+============================================
+
+Because all peripheral management of Fiasco.OC is done in user-level
+applications, there is the need to have a centralized management of
+the resources belonging to the platform and to peripheral devices.
+
+This is the job of Io.  Io provides portable abstractions for iterating and
+accessing devices and their resources (IRQ's, IO Memory...), as well as
+delegating access to those resources to other applications (e.g., device
+drivers).
+
+For more details see \subpage io "Io, the Io Server".
+
+
+Other Servers
+=============
+
+The following additional server package are available on top of the core
+L4Re environment.
+
+ - Rtc, the Real-Time Clock Server
+
+   is a simple multiplexer for real-time clock hardware on your platform.
+
+ - fb-drv, the Low-Level Graphics Driver
+
+   provides low-level access and initialization of various
+   graphics hardware.  It has support for running VESA BIOS calls on Intel x86
+   platforms, as well as support for various ARM display controllers.
+   `fb-drv` provides a single instance of the L4Re::Goos interface and can
+   serve as a back end for the Mag server, in particular, if there is no graphics
+   support in the boot loader.
+
+*/

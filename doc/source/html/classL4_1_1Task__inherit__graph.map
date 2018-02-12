@@ -1,0 +1,7 @@
+<map id="L4::Task" name="L4::Task">
+<area shape="rect" id="node5" href="$classL4_1_1Kobject__t.html" title="{L4::Kobject_t\&lt; Vm,\l Task, L4_PROTO_VM \&gt;\n||# c()\l# __check_protocols__()\l}" alt="" coords="64,619,243,725"/>
+<area shape="rect" id="node2" href="$classL4_1_1Kobject__t.html" title="{L4::Kobject_t\&lt; Task,\l Kobject, L4_PROTO_TASK,\l Type_info::Demand_t\&lt; 2 \&gt; \&gt;\n||# c()\l# __check_protocols__()\l}" alt="" coords="51,204,255,325"/>
+<area shape="rect" id="node3" href="$classL4_1_1Kobject.html" title="Base class for all kinds of kernel objects and remote objects, referenced by capabilities. " alt="" coords="5,13,117,105"/>
+<area shape="rect" id="node4" href="$classL4_1_1Kobject__t.html" title="Helper class to create an L4Re interface class that is derived from a single base class..." alt="" coords="141,5,352,112"/>
+<area shape="rect" id="node6" href="$classL4_1_1Vm.html" title="Virtual machine. " alt="" coords="121,775,185,852"/>
+</map>

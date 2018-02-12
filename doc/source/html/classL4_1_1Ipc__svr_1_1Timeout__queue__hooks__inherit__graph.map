@@ -1,0 +1,5 @@
+<map id="L4::Ipc_svr::Timeout_queue_hooks&lt; HOOKS, BR_MAN &gt;" name="L4::Ipc_svr::Timeout_queue_hooks&lt; HOOKS, BR_MAN &gt;">
+<area shape="rect" id="node3" href="$classL4_1_1Ipc__svr_1_1Timeout__queue__hooks.html" title="{L4::Ipc_svr::Timeout\l_queue_hooks\&lt; Br_manager\l_timeout_hooks, Br_manager \&gt;\n|+ queue\l|+ timeout()\l+ setup_wait()\l+ before_reply()\l+ add_timeout()\l+ remove_timeout()\l}" alt="" coords="5,507,224,672"/>
+<area shape="rect" id="node2" href="$classL4_1_1Ipc__svr_1_1Server__iface.html" title="Interface for server&#45;loop related functions. " alt="" coords="27,5,203,215"/>
+<area shape="rect" id="node4" href="$structL4Re_1_1Util_1_1Br__manager__timeout__hooks.html" title="Predefined server&#45;loop hooks for a server with using the Br_manager and a timeout queue..." alt="" coords="31,721,198,813"/>
+</map>

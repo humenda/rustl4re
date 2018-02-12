@@ -1,0 +1,306 @@
+// vim: ft=cpp
+#pragma once
+
+/*
+ * app_loading --
+ *
+ *    Implementation of application loading. Similar to the stuff
+ *    moe and ned do.
+ *
+ * (c) 2011-2013 Björn Döbel <doebel@os.inf.tu-dresden.de>,
+ *     economic rights: Technische Universität Dresden (Germany)
+ * This file is part of TUD:OS and distributed under the terms of the
+ * GNU General Public License 2.
+ * Please see the COPYING-GPL-2 file for details.
+ */
+
+#include <fcntl.h>
+#include <l4/sys/consts.h>
+#include <l4/sys/capability>
+#include <l4/re/env>
+#include <l4/re/rm>
+#include <l4/re/dataspace>
+#include <l4/re/util/cap_alloc>
+#include <l4/libloader/elf>
+#include <l4/libloader/remote_mem>
+#include <l4/l4re_vfs/vfs.h>
+#include <l4/l4re_vfs/backend>
+
+#include <l4/sys/kdebug.h>
+
+#include "app"
+#include "log"
+#include "memory"
+#include "emulation"
+#include "locking.h"
+
+namespace Romain {
+
+class App_stack : public Ldr::Remote_stack<>
+{ };
+
+
+/*
+ * Application model
+ *
+ * This model is used for two purposes:
+ *
+ * 1) It serves as the class implementing the policies required by Loader's
+ *    app model (dataspace - data type, allocation, attachment).
+ * 2) It keeps track of the redundant instances of tasks kept by Romain
+ */
+class App_model : public Ldr::Base_app_model<Romain::App_stack>
+{
+	l4_addr_t _local_stack_address;
+
+	public:
+		enum
+		{
+			Kip_cap                = 0xB,
+			First_free_cap         = 0xD,
+			Utcb_area_start        = 0xb3000000,
+			Kip_address            = 0xa0000000,
+		};
+
+		/****************************************************************************
+		 *                         Types needed by Ldr::*                           *
+		 ****************************************************************************/
+
+		typedef L4::Cap<L4Re::Dataspace> const Const_dataspace;
+		typedef L4::Cap<L4Re::Dataspace> Dataspace;
+
+
+		/****************************************************************************
+		 *                       Functions needed by Ldr::*                         *
+		 ****************************************************************************/
+
+		static Const_dataspace open_file(char const *name);
+
+		Dataspace    alloc_ds(l4_umword_t size) const;
+		static void  copy_ds(Dataspace dst, l4_umword_t dst_offs,
+		                     Const_dataspace src, l4_umword_t src_offs,
+		                     l4_umword_t size);
+
+		void *       prog_attach_ds(l4_addr_t addr, l4_umword_t size,
+		                            Const_dataspace ds, l4_umword_t offset,
+		                            l4_umword_t flags, char const *what, l4_addr_t local_start = 0,
+		                            bool shared = false);
+		l4_addr_t    local_attach_ds(Const_dataspace ds, l4_umword_t size,
+		                             l4_umword_t offset, l4_umword_t address_hint = 0) const;
+		void         local_detach_ds(l4_addr_t addr, l4_umword_t /*size*/) const;
+		l4_mword_t   prog_reserve_area(l4_addr_t *start, l4_umword_t size,
+		                               l4_umword_t flags, l4_uint8_t align);
+
+		Dataspace    alloc_app_stack();
+		void         prog_attach_stack(Dataspace app_stack);
+
+		void         prog_attach_kip();
+		L4Re::Env*   add_env();
+		void         prog_reserve_utcb_area();
+		void const * generate_l4aux(char const *name);
+
+
+		static bool            all_segs_cow()  { return false; }
+		static Const_dataspace reserved_area() { return Const_dataspace(); }
+
+		void init_prog()
+		{
+			push_trampoline();
+			push_env_strings();
+			push_argv_strings();
+		}
+
+		static Dataspace local_kip_ds()
+		{
+			extern l4re_aux_t* l4re_aux;
+			return L4::Cap<L4Re::Dataspace>(l4re_aux->kip_ds);
+		}
+
+
+		L4::Cap<void> prog_kip_ds() const
+		{
+			return L4::Cap<void>(Kip_cap << L4_CAP_SHIFT);
+		}
+
+		void push_initial_caps()
+		{
+			L4Re::Env::Cap_entry const *c = L4Re::Env::env()->initial_caps();
+			l4_umword_t count = 0;
+			for ( ; c->flags != ~0UL; ++c, ++count) {
+				_stack.push(*c);
+			}
+		}
+
+
+		void start_prog(L4Re::Env const *) { }
+
+
+		void push_argv_strings()
+		{
+			for (l4_umword_t i = 0; i < _argc; ++i) {
+				_remote_argv[i] = _stack.push_str(_argv[i], strlen(_argv[i]));
+			}
+		}
+
+		void push_trampoline()
+		{
+			l4_umword_t v = 0;
+			for (l4_umword_t i = 0; i < Romain::TRAMPOLINE_SIZE / sizeof(v); ++i)
+				_stack.push(v);
+			INFO() << "trampoline ptr " << (void*)_stack.ptr()
+			       << " " << (void*)_stack.relocate(_stack.ptr());
+			_trampoline_local  = (l4_addr_t)_stack.ptr();
+			_trampoline_remote = (l4_addr_t)_stack.relocate(_stack.ptr());
+		}
+
+		void push_env_strings()
+		{
+			char **p = environ;
+			while (*p) {
+				printf("ENV: %s\n", *p);
+				_remote_env[_env_count++] = _stack.push_str(*p, strlen(*p));
+				p++;
+			}
+		}
+
+
+		void push_envp()
+		{
+			_stack.push(0UL);
+			for (l4_umword_t i = 0; i < _env_count; ++i) {
+				_stack.push_local_ptr(_remote_env[i]);
+			}
+		}
+
+
+		void push_argv()
+		{
+			_stack.push(0UL);
+			for (l4_umword_t i = _argc; i > 0; --i) {
+				_stack.push_local_ptr(_remote_argv[i-1]);
+			}
+			_stack.push(_argc);
+		}
+
+
+		/****************************************************************************
+		 *                   Local App_model functionality                          *
+		 ****************************************************************************/
+
+	private:
+		Const_dataspace  _binary_ds;       // dataspace containing the original ELF binary
+		Romain::Region_map *_rm;           // our region map
+		l4_umword_t         _argc;            // app argc
+		char const     **_argv;            // app argv
+		char const     *_remote_argv[32];  // XXX
+		char const     *_remote_env[32];   // XXX
+		l4_umword_t         _env_count;       //
+		Dataspace        _utcb_area;       // XXX: this is per thread!
+
+		/*
+		 * We keep a trampoline of TRAMPOLINE_SIZE bytes in the replica's
+		 * thread area that we can use as scratch data.
+		 */
+		l4_addr_t        _trampoline_local;
+		l4_addr_t        _trampoline_remote;
+
+		/*
+		 * Store lock info page for pthread determinism enforcer. See
+		 * fault_handlers/lock_observer.*
+		 */
+		l4_addr_t        _lockinfo_local;
+		l4_addr_t        _lockinfo_remote;
+
+	public:
+		App_model(char const *filename, l4_umword_t argc, char const **argv)
+			: _binary_ds(Romain::App_model::open_file(filename)),
+			  _argc(argc), _argv(argv), _env_count(0),
+		      _trampoline_local(0), _trampoline_remote(0),
+		      _lockinfo_local(0), _lockinfo_remote(0)
+		{
+		    _rm = new Romain::Region_map();
+
+			prog_info()->utcbs_start    = Utcb_area_start;
+			prog_info()->utcbs_log2size = L4_PAGESHIFT;
+			// poison this pointer -- the real address should come
+			// from the ELF binary
+			prog_info()->kip            = 0xdeadbeef;
+
+			memset(_remote_argv, 0, sizeof(_remote_argv));
+			memset(_remote_env, 0, sizeof(_remote_env));
+		}
+
+		Const_dataspace binary()      const { return _binary_ds; }
+		Romain::Region_map *rm()      const { return _rm; }
+		Dataspace utcb_area()         const { return _utcb_area; }
+
+		/*
+		 * Get the trampoline's address within the master.
+		 */
+		l4_addr_t trampoline_local()  const { return _trampoline_local; }
+		/*
+		 * Remote trampoline address
+		 */
+		l4_addr_t trampoline_remote() const { return _trampoline_remote; }
+		/*
+		 * Determine if the address is within the remote trampoline.
+		 */
+		bool in_trampoline(l4_addr_t a) const
+		{
+			return ((a >= _trampoline_remote) && (a < (_trampoline_remote + Romain::TRAMPOLINE_SIZE)));
+		}
+
+
+		l4_addr_t lockinfo_local() const { return _lockinfo_local; }
+		l4_addr_t lockinfo_remote() const { return _lockinfo_remote; }
+		void lockinfo_local(l4_addr_t a) { _lockinfo_local = a; }
+		void lockinfo_remote(l4_addr_t a) { _lockinfo_remote = a; }
+};
+
+
+struct AppModelAddressTranslator : public Romain::AddressTranslator
+{
+	Romain::App_model *am;
+	Romain::App_instance *inst;
+	public:
+		AppModelAddressTranslator(Romain::App_model* a, Romain::App_instance *i)
+			: am(a), inst(i)
+		{ }
+
+		virtual ~AppModelAddressTranslator() { }
+
+		virtual l4_addr_t translate(l4_addr_t orig) const
+		{ return am->rm()->remote_to_local(orig, inst->id()); }
+};
+
+
+/*
+ * ELF Loader wrapper class.
+ */
+class Elf_Ldr
+: public Ldr::Elf_loader<Romain::App_model, Romain::Dbg>
+{
+	Romain::App_model *_appModel;
+
+	public:
+	typedef Ldr::Elf_loader<Romain::App_model, Romain::Dbg> Base;
+
+	Elf_Ldr(Romain::App_model *am)
+		: _appModel(am)
+	{
+	}
+
+	void load()
+	{
+		INFO() << "loading...";
+		Base::load(_appModel, _appModel->binary(), Romain::Dbg());
+	}
+
+	void launch()
+	{
+		INFO() << __func__ ;
+		Base::launch(_appModel, _appModel->binary(), Romain::Dbg());
+	}
+};
+
+} // ns Romain

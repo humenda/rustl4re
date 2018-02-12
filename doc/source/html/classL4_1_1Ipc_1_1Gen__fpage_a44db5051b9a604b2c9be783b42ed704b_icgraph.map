@@ -1,0 +1,4 @@
+<map id="L4::Ipc::Gen_fpage::cap_received" name="L4::Ipc::Gen_fpage::cap_received">
+<area shape="rect" id="node2" href="$classL4virtio_1_1Svr_1_1Device__t.html#a460f5dc2b32e33a616eb822ffd2f88f0" title="Check for a value in the cmd register and handle a write. " alt="" coords="203,5,363,61"/>
+<area shape="rect" id="node3" href="$classL4virtio_1_1Svr_1_1Device__t.html#a3fa20bf911056f0d03c8274982b1e167" title="Get the memory region list used for this device. " alt="" coords="193,86,372,127"/>
+</map>

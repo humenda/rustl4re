@@ -1,0 +1,4 @@
+<map id="l4_sched_cpu_set" name="l4_sched_cpu_set">
+<area shape="rect" id="node2" href="$structl4__sched__cpu__set__t.html#a8e4373ef5c99b90c1d305975cd694895" title="l4_sched_cpu_set_t\l::granularity" alt="" coords="189,5,337,47"/>
+<area shape="rect" id="node3" href="$structl4__sched__cpu__set__t.html#a23f6f4962b55dc6b0d581c6c5ad4d8a2" title="l4_sched_cpu_set_t\l::offset" alt="" coords="189,71,337,112"/>
+</map>

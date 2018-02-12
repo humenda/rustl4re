@@ -1,0 +1,18 @@
+This is an emulator for 16-bit x86 code. The project x86emu was written by
+SciTech (the business was shutdown sometime around 2006/2007) and is under
+a BSD style license, compatible with the XFree86 and X licenses used by
+XFree86 (see license at lib/src/LICENSE). This library is used by XFree86 4.xx
+to emulate x86 BIOS calls on operating systems which do not support the vm86
+mode.
+
+There is an L4Linux kernel module (examples/linux_stub) which offers
+functionality to emulate the sys_vm86old() system call. sys_vm86old()
+is used by XFree86. In L4Linux, we have to ensure that we have access to
+the whole 1MB address space which was set up by the Linux program which
+want to execute some code using the vm86 mode.
+
+The library lib/int10 provides support for executing BIOS calls, e.g. for
+mode switching via the VESA bios.
+
+November 2005
+Frank Mehnert (fm3@os.inf.tu-dresden.de)

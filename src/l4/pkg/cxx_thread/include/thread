@@ -1,0 +1,74 @@
+/**
+ * \file
+ * \brief Thread implementation
+ */
+/*
+ * (c) 2004-2009 Alexander Warg <warg@os.inf.tu-dresden.de>
+ *     economic rights: Technische Universität Dresden (Germany)
+ * This file is part of TUD:OS and distributed under the terms of the
+ * GNU Lesser General Public License 2.1.
+ * Please see the COPYING-LGPL-2.1 file for details.
+ */
+
+#ifndef CXX_THREAD_H__
+#define CXX_THREAD_H__
+
+#include <l4/sys/capability>
+#include <l4/sys/types.h>
+
+namespace cxx {
+
+  class Thread
+  {
+  public:
+
+    enum State
+    {
+      Dead    = 0,
+      Running = 1,
+      Stopped = 2,
+    };
+
+    Thread(bool initiate);
+    Thread(void *stack);
+    Thread(void *stack, L4::Cap<L4::Thread> const &cap);
+    virtual ~Thread();
+    void execute() asm ("L4_Thread_execute");
+    virtual void run() = 0;
+    virtual void shutdown() asm ("L4_Thread_shutdown");
+    void start();
+    void stop();
+    
+    L4::Cap<L4::Thread> self() const throw()
+    { return _cap; }
+
+    State state() const
+    { return _state; }
+      
+    static void start_cxx_thread(Thread *_this)
+      asm ("L4_Thread_start_cxx_thread");
+
+    static void kill_cxx_thread(Thread *_this)
+      asm ("L4_Thread_kill_cxx_thread");
+
+    static void set_pager(L4::Cap<void>const &p) throw()
+    { _pager = p; }
+
+  private:
+    int create();
+
+    L4::Cap<L4::Thread> _cap;
+    State _state;
+
+  protected:
+    void *_stack;
+
+  private:
+    static L4::Cap<void> _pager;
+    static L4::Cap<void> _master;
+  };
+  
+};
+
+#endif  /* CXX_THREAD_H__ */
+

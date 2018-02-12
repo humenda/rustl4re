@@ -1,0 +1,73 @@
+
+# ARM platforms
+SUPPORT_CC_arm-sa1000          := platform/sa1000.cc
+SUPPORT_CC_arm-pxa             := platform/pxa.cc
+SUPPORT_CC_arm-integrator      := platform/integrator.cc
+SUPPORT_CC_arm-rv              := platform/rv.cc
+SUPPORT_CC_arm-rv_pbx          := platform/rv.cc
+SUPPORT_CC_arm-rv_vexpress     := platform/rv_vexpress.cc
+SUPPORT_CC_arm-rv_vexpress_a15 := platform/rv_vexpress.cc
+SUPPORT_CC_arm-omap3evm        := platform/omap.cc
+SUPPORT_CC_arm-omap3_am33xx    := platform/omap.cc
+SUPPORT_CC_arm-beagleboard     := platform/omap.cc
+SUPPORT_CC_arm-pandaboard      := platform/omap.cc
+SUPPORT_CC_arm-omap5           := platform/omap.cc
+SUPPORT_CC_arm-tegra2          := platform/tegra2.cc
+SUPPORT_CC_arm-tegra3          := platform/tegra3.cc
+SUPPORT_CC_arm-imx21           := platform/imx.cc
+SUPPORT_CC_arm-imx28           := platform/imx.cc
+SUPPORT_CC_arm-ls1021atwr      := platform/layerscape.cc
+SUPPORT_CC_arm-ls1012afrdm     := platform/layerscape.cc
+DEFAULT_RELOC_arm-imx21        := 0x00200000  # because of blob
+SUPPORT_CC_arm-imx35           := platform/imx.cc
+SUPPORT_CC_arm-imx51           := platform/imx.cc
+SUPPORT_CC_arm-imx6            := platform/imx.cc
+SUPPORT_CC_arm-imx6ul          := platform/imx.cc
+SUPPORT_CC_arm-imx7            := platform/imx.cc
+SUPPORT_CC_arm-om              := platform/om.cc
+SUPPORT_CC_arm-kirkwood        := platform/kirkwood.cc
+SUPPORT_CC_arm-rpi_a           := platform/rpi.cc
+SUPPORT_CC_arm-rpi_b           := platform/rpi.cc
+SUPPORT_CC_arm-exynos4         := platform/exynos.cc
+SUPPORT_CC_arm-exynos5         := platform/exynos.cc
+SUPPORT_CC_arm-zedboard        := platform/zynq.cc
+SUPPORT_CC_arm-parallella      := platform/zynq.cc
+SUPPORT_CC_arm-zynqmp          := platform/zynq.cc
+SUPPORT_CC_arm-cubieboard2     := platform/sunxi.cc
+SUPPORT_CC_arm-armada38x       := platform/armada38x.cc
+SUPPORT_CC_arm-rcar3           := platform/rcar3.cc
+DEFAULT_RELOC_arm-rcar3        := 0x09000000
+SUPPORT_CC_arm-arm_virt        := platform/arm_virt.cc
+
+# ARM64
+SUPPORT_CC_arm64-rv            := platform/rv.cc
+SUPPORT_CC_arm64-rv_vexpress_a15 := platform/rv_vexpress.cc
+SUPPORT_CC_arm64-rcar3         := platform/rcar3.cc
+DEFAULT_RELOC_arm64-rcar3      := 0x09000000
+SUPPORT_CC_arm64-rpi_b         := platform/rpi.cc
+SUPPORT_CC_arm64-ls1012afrdm   := platform/layerscape.cc
+SUPPORT_CC_arm64-zynqmp        := platform/zynq.cc
+SUPPORT_CC_arm64-arm_virt      := platform/arm_virt.cc
+
+# PPC
+SUPPORT_CC_ppc32-mpc5200       := platform/mpc5200.cc
+
+# Sparc
+SUPPORT_CC_sparc-leon3         := platform/leon3.cc
+
+# x86
+ifneq ($(BOOTSTRAP_DO_UEFI),y)
+SUPPORT_CC_x86-pc              := platform/x86_pc.cc
+SUPPORT_CC_amd64-pc            := platform/x86_pc.cc
+else
+SUPPORT_CC_x86-pc              := platform/x86_efi_pc.cc
+SUPPORT_CC_amd64-pc            := platform/x86_efi_pc.cc
+endif
+
+# MIPS
+SUPPORT_CC_mips-malta          := platform/malta.cc
+SUPPORT_CC_mips-ci20           := platform/ci20.cc
+SUPPORT_CC_mips-ci40           := platform/ci40.cc
+SUPPORT_CC_mips-sead3          := platform/sead3.cc
+SUPPORT_CC_mips-baikal_t       := platform/baikal.cc
+SUPPORT_CC_mips-boston         := platform/boston.cc

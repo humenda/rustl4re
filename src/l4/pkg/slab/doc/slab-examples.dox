@@ -1,0 +1,196 @@
+/* -*- c -*- */
+
+/**
+\page examples Examples
+
+- \ref example_simple "Simple heap memory management"
+- \ref example_grow_only "Dynamic grow-only heap management"
+
+\anchor example_simple
+<b>Simple heap memory management</b>
+
+\code
+
+// L4/L4Env includes
+#include <l4/slab/slab.h>
+#include <l4/dm_mem/dm_mem.h>
+#include <l4/env/errno.h>
+
+#define OBJ_SIZE 64
+
+// grow callback
+static void * 
+__grow_simple(l4slab_cache_t * cache, void ** data)
+{
+  void * page;
+
+  // allocate and map page
+  page = l4dm_mem_allocate(L4_PAGESIZE,L4RM_MAP | L4RM_LOG2_ALIGNED);
+  if (page == NULL)
+    Error("__grow_simple: page allocation failed!\n");
+
+  return page;
+}
+
+// release callback 
+static void
+__release_simple(l4slab_cache_t * cache, void * page, void * data)
+{
+  // free page
+  l4dm_mem_release(page);
+}
+
+// Main
+int
+main(void)
+{
+  l4slab_cache_t slab;
+  int ret;
+  void * objp;
+
+  // initialize slab
+  ret = l4slab_cache_init(&slab,OBJ_SIZE,0,__grow_simple,__release_simple);
+  if (ret < 0)
+    {
+      Error("slab cache initializstion failed: %s (%d)\n",
+	    l4env_errstr(ret),ret);
+      return -1;
+    }
+
+  // allocate object
+  objp = l4slab_alloc(&slab);
+
+  // do something
+
+  // release object
+  l4slab_free(&slab,objp);
+  
+  // destroy slab
+  l4slab_destroy(&slab);
+
+  // done
+  return 0;
+}
+
+\endcode
+
+\anchor example_grow_only
+<b>Grow-only heap</b>
+
+This is an a bit more advanced example of how to build a grow-only heap 
+for a slab cache. It avoids to create a new dataspace / vm-region for each 
+page added to the slab cache, instead it resizes the heap dataspace to 
+add a new page to the slab cache.  
+
+\code
+
+// L4/L4Env includes
+#include <l4/slab/slab.h>
+#include <l4/dm_mem/dm_mem.h>
+#include <l4/l4rm/l4rm.h>
+#include <l4/env/errno.h>
+#include <l4/util/macros.h>
+
+#define MAX_HEAP_SIZE  (64 * 1024)
+#define INIT_HEAP_SIZE (16 * 1024)
+ 
+l4dm_dataspace_t heap_ds;
+l4_addr_t        heap_addr;
+l4_size_t        heap_cur_size;
+
+// grow callback
+static void *
+__grow(l4slab_cache_t * cache, void ** data)
+{
+  l4_addr_t addr;
+  l4_size_t new_size; 
+  int ret;
+
+  if ((heap_cur_size + L4_PAGESIZE) > MAX_HEAP_SIZE)
+    {
+      printf("__grow: heap overflow!\n");
+      return NULL;
+    }
+
+  // resize dataspace
+  addr = heap_addr + heap_cur_size;
+  new_size = heap_cur_size + L4_PAGESIZE;
+
+  ret = l4dm_mem_resize(&heap_ds,new_size);
+  if (ret < 0)
+    {
+      printf("__grow: resize heap dataspace failed: %s (%d)\n",
+	     l4env_errstr(ret),ret);
+      return NULL;
+    }
+  heap_cur_size = new_size;
+
+  // done
+  return (void *)addr;
+}
+
+// Main
+int
+main(void)
+{
+  int ret;
+  void * heap, * page;
+  l4slab_cache_t slab;
+  void * objp;
+
+  // allocate heap dataspace
+  ret = l4dm_mem_open(L4DM_DEFAULT_DSM, INIT_HEAP_SIZE, L4_PAGESIZE, 0,
+		      "Heap", &heap_ds);
+  if (ret < 0)
+    {
+      Error("heap allocation failed: %s (%d)\n",l4env_errstr(ret),ret);
+      return -1;
+    }
+
+  // attach heap dataspace, already reserve the whole vm area 
+  ret = l4rm_attach(&heap_ds, MAX_HEAP_SIZE, 0, L4DM_RW, &heap);
+  if (ret < 0)
+    {
+      Error("attach heap dataspace failed: %s (%d)\n",l4env_errstr(ret),ret);
+      l4dm_close(&heap_ds);
+      return -1;
+    }
+  heap_addr = (l4_addr_t)heap;
+  heap_cur_size = INIT_HEAP_SIZE;
+
+  // setup slab cache, no release callback
+  ret = l4slab_cache_init(&slab,OBJ_SIZE,0,__grow,NULL);
+  if (ret < 0)
+    {
+      Error("slab cache initialization failed: %s (%d)\n",
+	    l4env_errstr(ret),ret);
+      return -1;
+    }
+
+  // add initial pages to the slab cache 
+  page = heap;
+  while (page < (heap + INIT_HEAP_SIZE))
+    {
+      l4slab_add_page(&slab,page,NULL);
+      page += L4_PAGESIZE;
+    }
+
+  // allocate objects
+  objp = l4slab_alloc(&slab);
+ 
+  // do something 
+
+  // release object
+  l4slab_free(&slab,objp);
+  
+  // destroy slab
+  l4slab_destroy(&slab);
+
+  // release heap memory 
+  l4rm_detach((void *)heap_addr);
+  l4dm_close(&heap_ds);
+}
+
+\endcode
+
+*/

@@ -1,0 +1,16 @@
+// vim: ft=cpp
+#pragma once
+#include <l4/ankh/session.h>
+
+namespace Ankh {
+
+class Session
+{
+	public:
+		Session()
+		{ }
+		virtual void configure() = 0;
+		virtual char *mac()  = 0;
+};
+
+}

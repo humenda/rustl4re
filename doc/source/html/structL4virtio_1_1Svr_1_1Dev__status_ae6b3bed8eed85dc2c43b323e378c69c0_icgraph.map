@@ -1,0 +1,6 @@
+<map id="L4virtio::Svr::Dev_status::failed" name="L4virtio::Svr::Dev_status::failed">
+<area shape="rect" id="node2" href="$classL4virtio_1_1Svr_1_1Device__t.html#a460f5dc2b32e33a616eb822ffd2f88f0" title="Check for a value in the cmd register and handle a write. " alt="" coords="189,5,349,61"/>
+<area shape="rect" id="node3" href="$classL4virtio_1_1Svr_1_1Device__t.html#a3fa20bf911056f0d03c8274982b1e167" title="Get the memory region list used for this device. " alt="" coords="180,86,359,127"/>
+<area shape="rect" id="node4" href="$classL4virtio_1_1Svr_1_1Dev__config.html#a174d852ecb39140c6399af6dffe5efb1" title="Set device status failed bit. " alt="" coords="202,151,337,193"/>
+<area shape="rect" id="node5" href="$classL4virtio_1_1Svr_1_1Device__t.html#a29f780ecb04509d8b72f4a155b073c74" title="Transition device into failed state. " alt="" coords="407,151,604,193"/>
+</map>

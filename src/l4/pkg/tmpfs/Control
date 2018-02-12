@@ -1,0 +1,3 @@
+provides: libl4revfs-fs-tmpfs
+requires: libl4re-vfs
+maintainer: adam@os.inf.tu-dresden.de

@@ -1,0 +1,16 @@
+CROSS_COMPILE_ppc32        = powerpc-linux-
+LD_EMULATION_CHOICE_ppc32  = elf32ppc
+OFORMAT_ppc32              = elf32-powerpc
+BFD_ARCH_ppc32             = powerpc
+L4_KIP_ADDR_ppc32         ?= 0xaffff000
+L4_STACK_ADDR_ppc32       ?= 0xb0000000
+CCXX_FLAGS_ppc32          += -m32
+CC_ppc32                   = $(CROSS_COMPILE)gcc
+CXX_ppc32                  = $(CROSS_COMPILE)g++
+FC_ppc32                   = $(CROSS_COMPILE)gfortran
+
+SYSTEMS_ABI    += ppc32-l4f
+SYSTEMS_PLAIN  += ppc32
+
+QEMU_ARCH_MAP_ppc32   = qemu-system-ppc
+

@@ -1,0 +1,171 @@
+// vi:ft=cpp
+/*
+ * (c) 2010 Alexander Warg <warg@os.inf.tu-dresden.de>
+ *     economic rights: Technische Universität Dresden (Germany)
+ *
+ * This file is part of TUD:OS and distributed under the terms of the
+ * GNU General Public License 2.
+ * Please see the COPYING-GPL-2 file for details.
+ */
+#pragma once
+
+#include <l4/mag-gfx/texture>
+#include <cstring>
+
+namespace Mag_gfx {
+namespace Mem {
+
+template< typename PT >
+class Texture : public Mag_gfx::Texture
+{
+public:
+  typedef PT Pixel_traits;
+  typedef typename PT::Pixel Pixel;
+  typedef typename PT::Color Color;
+
+public:
+  Texture(Pixel *pixels, Area const &size, bool xalpha = false)
+  : Mag_gfx::Texture(PT::type(), pixels, size, xalpha)
+  {}
+
+  bool alloc_buffer(Area const &size)
+  {
+    if (_pixels)
+      return false;
+
+    _size = size;
+
+    _pixels = malloc(_size.pixels() * (sizeof(Pixel) + (extra_alpha() ? 1 :0)));
+    return _pixels;
+  }
+
+  Pixel const *pixels() const
+  { return (Pixel const *)Mag_gfx::Texture::pixels(); }
+
+  Pixel *pixels()
+  { return (Pixel *)Mag_gfx::Texture::pixels(); }
+
+  unsigned char const *alpha_buffer() const
+  {
+    return extra_alpha()
+      ? reinterpret_cast<unsigned char const *>(pixels() + size().pixels())
+      : 0;
+  }
+
+  unsigned char *alpha_buffer()
+  {
+    return extra_alpha()
+      ? reinterpret_cast<unsigned char *>(pixels() + size().pixels())
+      : 0;
+  }
+
+  void blit(Mag_gfx::Texture const *o, int start_line = 0)
+  {
+    Pixel *dst = pixels();
+
+    if (start_line >= size().h())
+      return;
+
+    dst += size().w() * start_line;
+
+    int const w = std::min(size().w(), o->size().w());
+    int const h = std::min(size().h() - start_line, o->size().h());
+
+    if (o->type() == type())
+      {
+	int const ow = o->size().w();
+        Pixel const *src = reinterpret_cast<Pixel const *>(o->pixels());
+        for (int i = 0; i < h; ++i, dst += size().w(), src += ow)
+	  memcpy(dst, src, size().w() * sizeof(Pixel));
+
+	if (extra_alpha())
+	  memset(alpha_buffer() + size().w() * start_line, ~0, size().w() * h);
+      }
+    else
+      {
+#if 0
+	printf("texture convert: %dx%d %d(%d):%d(%d):%d(%d):%d(%d) -> %dx%d %d(%d):%d(%d):%d(%d):%d(%d)\n",
+	    (int)o->size().w(), (int)o->size().h(),
+	    (int)o->type()->r.si, (int)o->type()->r.sh,
+	    (int)o->type()->g.si, (int)o->type()->g.sh,
+	    (int)o->type()->b.si, (int)o->type()->b.sh,
+	    (int)o->type()->a.si, (int)o->type()->a.sh,
+	    (int)size().w(), (int)size().h(),
+	    (int)type()->r.si, (int)type()->r.sh,
+	    (int)type()->g.si, (int)type()->g.sh,
+	    (int)type()->b.si, (int)type()->b.sh,
+	    (int)type()->a.si, (int)type()->a.sh);
+#endif
+	int const ow = o->size().w() * o->type()->bytes_per_pixel();
+	int const op = o->type()->bytes_per_pixel();
+        char const *src = reinterpret_cast<char const *>(o->pixels());
+
+	unsigned char *ab = alpha_buffer();
+	bool const xa = ab;
+	ab += size().w() * start_line;
+
+	for (int i = 0; i < h; i++, dst += size().w(), src += ow)
+	  {
+	    for (int y = 0; y < w; y++)
+	      {
+		Mag_gfx::Pixel_info::Color c = o->type()->get(src + y*op);
+		dst[y] = Color(c);
+		if (xa)
+		  ab[y] = c.a >> 8;
+	      }
+	    if (xa)
+	      ab += size().w();
+	  }
+      }
+  }
+
+  void blit_line(void const *_src, Pixel_info const *st, int line, unsigned *offset_buffer)
+  {
+    Pixel *dst = pixels();
+
+    if (line >= size().h())
+      return;
+
+    dst += size().w() * line;
+
+    char const *src = (char const *)_src;
+
+    if (st == type())
+      {
+	for (int i = 0; i < size().w(); ++i, ++dst)
+	  *dst = *(Pixel const *)(src + offset_buffer[i]);
+
+	if (extra_alpha())
+	  memset(alpha_buffer() + size().w() * line, ~0, size().w());
+      }
+    else
+      {
+#if 0
+	printf("texture convert: %dx%d %d(%d):%d(%d):%d(%d):%d(%d) -> %dx%d %d(%d):%d(%d):%d(%d):%d(%d)\n",
+	    (int)o->size().w(), (int)o->size().h(),
+	    (int)o->type()->r.si, (int)o->type()->r.sh,
+	    (int)o->type()->g.si, (int)o->type()->g.sh,
+	    (int)o->type()->b.si, (int)o->type()->b.sh,
+	    (int)o->type()->a.si, (int)o->type()->a.sh,
+	    (int)size().w(), (int)size().h(),
+	    (int)type()->r.si, (int)type()->r.sh,
+	    (int)type()->g.si, (int)type()->g.sh,
+	    (int)type()->b.si, (int)type()->b.sh,
+	    (int)type()->a.si, (int)type()->a.sh);
+#endif
+	unsigned char *ab = alpha_buffer();
+	bool const xa = ab;
+	ab += size().w() * line;
+
+	for (int y = 0; y < size().w(); y++)
+	  {
+	    Mag_gfx::Pixel_info::Color c = st->get(src + offset_buffer[y]);
+	    dst[y] = Color(c);
+	    if (xa)
+	      ab[y] = c.a >> 8;
+	  }
+      }
+  }
+};
+
+}}

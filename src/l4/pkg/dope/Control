@@ -1,0 +1,3 @@
+provides: dope
+requires: l4re_c libc input libio stdlibs libpthread
+Maintainer: weinhold@os.inf.tu-dresden.de

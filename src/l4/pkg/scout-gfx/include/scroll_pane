@@ -1,0 +1,126 @@
+// vi:ft=cpp
+/*
+ * (c) 2010 Alexander Warg <warg@os.inf.tu-dresden.de>
+ *     economic rights: Technische Universität Dresden (Germany)
+ *
+ * This file is part of TUD:OS and distributed under the terms of the
+ * GNU General Public License 2.
+ * Please see the COPYING-GPL-2 file for details.
+ */
+#pragma once
+
+#include <l4/scout-gfx/widget>
+#include <l4/scout-gfx/factory>
+#include <l4/scout-gfx/scrollbar>
+
+namespace Scout_gfx {
+
+class Scrollbar;
+
+class Scroll_pane : public Parent_widget
+{
+private:
+  class Sb_l : public Scrollbar_listener
+  {
+  private:
+    Scroll_pane *_p;
+
+  public:
+    Sb_l(Scroll_pane *p) : _p(p) {}
+    void handle_scroll(int)
+    { _p->refresh_geometry(); }
+
+  };
+
+  class Vp_l : public Layout_item
+  {
+  public:
+    Scroll_pane *_p;
+    Area _size;
+    Point _pos;
+
+    Area _min_csize;
+    Area _max_csize;
+    Area _pref_csize;
+    Area _sbres;
+
+  public:
+    Vp_l(Scroll_pane *p);
+    ~Vp_l() {}
+
+    Area min_size() const;
+    Area preferred_size() const;
+    Area max_size() const;
+
+    Orientations expanding() const { return _p->_exp; }
+    bool empty() const { return false; }
+
+    void set_geometry(Rect const &r);
+    Rect geometry() const { return Rect(_pos, _size); }
+  };
+
+
+  Scrollbar *_hsb;
+  Scrollbar *_vsb;
+  Widget *_texture;
+
+  Orientations _exp;
+  Orientations _sbvis;
+
+  Sb_l _sbl;
+  Vp_l _vp_layout;
+
+  bool _decouple_view_pane;
+
+private:
+  bool have_hsb() const { return (_sbvis & Horizontal) && _hsb; }
+  bool have_vsb() const { return (_sbvis & Vertical) && _vsb; }
+
+public:
+  Scroll_pane(Factory *f);
+
+  Area min_size() const;
+  Area preferred_size() const;
+  Area max_size() const;
+
+  void set_texture(Widget *t)
+  {
+    t->parent(this);
+    _texture = t;
+  }
+  void set_expanding(Orientations e) { _exp = e; }
+  void set_reserved_scrollbar_area(Area const &a)
+  { _vp_layout._sbres = a; }
+
+  Orientations expanding() const { return _exp; }
+  bool empty() const { return false; }
+
+  void refresh_geometry();
+
+  void set_geometry(Rect const &r);
+  Rect geometry() const { return Rect(_pos, _size); }
+
+  bool has_height_for_width() const { return false; }
+  int height_for_width(int) const { return -1; }
+  int min_height_for_width(int) const { return -1; }
+
+  void draw(Mag_gfx::Canvas *c, Point const &p);
+
+  Layout_item *view_pane_layout_item()
+  {
+    _decouple_view_pane = true;
+    return &_vp_layout;
+  }
+
+  void child_invalidate();
+
+  Widget *find(Point const &p);
+
+  //void redraw_area(Rect const &r) const;
+
+private:
+  void set_texture_geometry(Rect const &r);
+
+};
+
+}

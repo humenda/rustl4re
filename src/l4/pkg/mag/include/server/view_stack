@@ -1,0 +1,187 @@
+// vi:ft=cpp
+/*
+ * (c) 2010 Alexander Warg <warg@os.inf.tu-dresden.de>
+ *     economic rights: Technische Universität Dresden (Germany)
+ *
+ * This file is part of TUD:OS and distributed under the terms of the
+ * GNU General Public License 2.
+ * Please see the COPYING-GPL-2 file for details.
+ */
+#pragma once
+
+#include <l4/cxx/dlist>
+#include <l4/re/video/view>
+
+#include <l4/mag-gfx/canvas>
+#include <l4/mag/server/view>
+#include <l4/cxx/observer>
+
+#include <cassert>
+
+namespace Mag_server {
+
+using namespace Mag_gfx;
+
+class View_stack
+{
+private:
+  class Dummy_view : public View
+  {
+  public:
+    Dummy_view() : View(Rect(Point(0,0), Area(0,0)), F_ignore) {}
+    void draw(Canvas *, View_stack const *, Mode) const {}
+    void handle_event(Hid_report *, Point const &, bool) {}
+  };
+
+  typedef cxx::D_list<View> View_list;
+  typedef View_list::Iterator View_iter;
+  typedef View_list::Const_iterator Const_view_iter;
+
+  Dummy_view _no_stay_top_v;
+
+  Canvas *_canvas;
+  View *const _no_stay_top;
+  View_list _top;
+  View *const _background;
+  View *_focused;
+
+  Mode _mode;
+
+  L4Re::Video::View *_canvas_view;
+  Font const *_label_font;
+  cxx::Notifier _mode_notifier;
+
+  Rect outline(View const *v) const;
+
+  void draw_frame(View const *v) const;
+  void draw_label(View const *v) const;
+
+  void insert_before(View *o, View *p)
+  { _top.insert_before(o, _top.iter(p)); }
+
+  void insert_after(View *o, View *p)
+  { _top.insert_after(o, _top.iter(p)); }
+
+public:
+  explicit View_stack(Canvas *canvas, L4Re::Video::View *canvas_view, View *bg,
+                      Font const *label_font)
+  : _canvas(canvas), _no_stay_top(&_no_stay_top_v),
+    _background(bg), _canvas_view(canvas_view), _label_font(label_font)
+  {
+    _top.push_front(_no_stay_top);
+    _top.insert_after(bg, _top.iter(_no_stay_top));
+  }
+
+  View *top() const { return const_cast<View*>(*_top.begin()); }
+
+  virtual
+  void refresh_view(View const *v, View const *dst, Rect const &rect) const;
+
+  /**
+   * Draw whole view stack
+   */
+  void update_all_views() const
+  {
+    Rect r(Point(), _canvas->size());
+    place_labels(r);
+    refresh_view(0, 0, r);
+  }
+
+  virtual void flush();
+
+  Canvas *canvas() const { return _canvas; }
+
+  Mode mode() const { return _mode; }
+
+  void toggle_mode(Mode::Mode_flag m, bool update = false)
+  {
+    _mode.toggle(m);
+    if (update)
+      update_all_views();
+    _mode_notifier.notify();
+  }
+
+  void set_mode(Mode::Mode_flag m, bool on, bool update = false)
+  {
+    _mode.set(m, on);
+    if (update)
+      update_all_views();
+    _mode_notifier.notify();
+  }
+
+  void set_focused(View *v);
+  View *focused() const { return _focused; }
+
+  virtual
+  void viewport(View *v, Rect const &pos, bool redraw) const;
+
+  void draw_recursive(View const *v, View const *dst, Rect const &,
+                      View const *bg) const;
+
+  virtual
+  void draw_recursive(View const *v, View const *dst, Rect const &) const;
+
+  virtual
+  void stack(View *v, View *pivot, bool behind = true);
+
+  void push_top(View *v, bool stay_top = false)
+  { stack(v, _no_stay_top, !stay_top); }
+
+  void push_bottom(View *v);
+
+  void remove(View *v)
+  { if (_top.in_list(v)) _top.remove(v); }
+
+  void forget_view(View *v)
+  {
+    assert (v != _no_stay_top);
+    assert (v != _background);
+    remove(v);
+    refresh_view(0, 0, outline(v));
+  }
+
+  bool on_top(View const *v) const
+  { return *++_top.iter(_no_stay_top) == v; }
+
+  View *next_view(View *c) const
+  {
+    View_iter i = _top.iter(c);
+    ++i;
+    if (i != _top.end())
+      return *i;
+    else
+      return 0;
+  }
+
+  void add_mode_observer(cxx::Observer *o) { _mode_notifier.add(o); }
+
+  virtual
+  View *find(Point const &pos) const;
+
+  virtual ~View_stack() {}
+
+private:
+  View *current_background() const
+  {
+    Session *current_session = focused() ? focused()->session() : 0;
+    return current_session ? current_session->background() : 0;
+  }
+
+  View const *next_view(View const*, View const *bg) const;
+  View *next_view(View *v, View const *bg) const
+  { return const_cast<View*>(next_view(const_cast<View const *>(v), bg)); }
+
+  void optimize_label_rec(View *cv, View *lv, Rect const &rect, Rect *optimal,
+                          View *bg) const;
+  void do_place_labels(Rect const &rect) const;
+
+  void place_labels(Rect const &rect) const
+  {
+    if (_mode.flat())
+      return;
+
+    do_place_labels(rect);
+  }
+};
+
+}

@@ -1,0 +1,7 @@
+<map id="L4Re::Cap_alloc::alloc" name="L4Re::Cap_alloc::alloc">
+<area shape="rect" id="node2" href="$classL4Re_1_1Cap__alloc.html#a6e3ed88fd1d1ea9f6c9c36379f5e45a1" title="Allocate a capability. " alt="" coords="216,5,376,32"/>
+<area shape="rect" id="node3" href="$namespaceL4.html#ab7194c6fc9267a3bf67a3888681ef3c5" title="static_cast for capabilities. " alt="" coords="245,56,347,83"/>
+<area shape="rect" id="node5" href="$classL4Re_1_1Cap__alloc.html#a7382525834f59293b49934b376fbffd3" title="Free a capability. " alt="" coords="218,107,374,133"/>
+<area shape="rect" id="node6" href="$group__l4re__cap__api.html#gadb65db1681bc65100caf66924331b85b" title="Destructor. " alt="" coords="213,158,379,199"/>
+<area shape="rect" id="node4" href="$classL4_1_1Cap__base.html#a6181bad79c41cdbf5c030877b94e25bf" title="Return capability selector. " alt="" coords="427,56,564,83"/>
+</map>

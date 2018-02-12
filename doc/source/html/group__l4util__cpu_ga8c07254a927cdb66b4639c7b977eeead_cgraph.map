@@ -1,0 +1,5 @@
+<map id="l4util_cpu_capabilities" name="l4util_cpu_capabilities">
+<area shape="rect" id="node2" href="$group__l4util__cpu.html#ga7b371adca6d25b6c78978446e7c5d9d7" title="Returns the CPU capabilities. " alt="" coords="211,5,368,47"/>
+<area shape="rect" id="node4" href="$group__l4util__cpu.html#gae95607a69173331386af6f334be961ce" title="Check whether the CPU supports the &quot;cpuid&quot; instruction. " alt="" coords="213,71,365,98"/>
+<area shape="rect" id="node3" href="$group__l4util__cpu.html#ga210ddb09b799c674102ae776eaa9e003" title="Generic CPUID access function. " alt="" coords="416,13,537,39"/>
+</map>

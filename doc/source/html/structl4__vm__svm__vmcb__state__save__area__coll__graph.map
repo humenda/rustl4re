@@ -1,0 +1,3 @@
+<map id="l4_vm_svm_vmcb_state_save_area" name="l4_vm_svm_vmcb_state_save_area">
+<area shape="rect" id="node2" href="$structl4__vm__svm__vmcb__state__save__area__seg.html" title="State save area segment selector struct. " alt="" coords="5,5,176,141"/>
+</map>

@@ -1,0 +1,7 @@
+<map id="L4::Irq_mux" name="L4::Irq_mux">
+<area shape="rect" id="node2" href="$classL4_1_1Kobject__t.html" title="{L4::Kobject_t\&lt; Irq\l_mux, Triggerable, L4\l_PROTO_IRQ_MUX \&gt;\n||# c()\l# __check_protocols__()\l}" alt="" coords="175,500,354,621"/>
+<area shape="rect" id="node3" href="$structL4_1_1Triggerable.html" title="Interface that allows an object to be triggered by some source. " alt="" coords="77,373,193,451"/>
+<area shape="rect" id="node4" href="$classL4_1_1Kobject__t.html" title="{L4::Kobject_t\&lt; Triggerable,\l Irq_eoi, L4_PROTO_IRQ \&gt;\n||# c()\l# __check_protocols__()\l}" alt="" coords="5,189,201,296"/>
+<area shape="rect" id="node5" href="$classL4_1_1Irq__eoi.html" title="Interface for sending an acknowledge message to an object. " alt="" coords="13,20,106,97"/>
+<area shape="rect" id="node6" href="$classL4_1_1Kobject__t.html" title="Helper class to create an L4Re interface class that is derived from a single base class..." alt="" coords="150,5,361,112"/>
+</map>

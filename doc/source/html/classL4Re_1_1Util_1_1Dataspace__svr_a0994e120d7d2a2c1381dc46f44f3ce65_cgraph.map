@@ -1,0 +1,13 @@
+<map id="L4Re::Util::Dataspace_svr::is_static" name="L4Re::Util::Dataspace_svr::is_static">
+<area shape="rect" id="node2" href="$classL4Re_1_1Util_1_1Dataspace__svr.html#a48a8ee88ff01153e448533c98163faf1" title="Allocate a region within a dataspace. " alt="" coords="209,5,365,47"/>
+<area shape="rect" id="node3" href="$classL4Re_1_1Util_1_1Dataspace__svr.html#accb6988a354ec5c9e5dafb79d626de5a" title="Clear a region in the dataspace. " alt="" coords="413,93,569,135"/>
+<area shape="rect" id="node4" href="$classL4Re_1_1Util_1_1Dataspace__svr.html#ad9542604a396830ea8a6bea05a715460" title="Copy from src dataspace to this destination dataspace. " alt="" coords="209,123,365,164"/>
+<area shape="rect" id="node5" href="$classL4_1_1Ipc_1_1Gen__fpage.html#a487f1c81ebfed3e94c0b3fba49464499" title="Return the raw flex page descriptor. " alt="" coords="217,188,357,229"/>
+<area shape="rect" id="node6" href="$classL4_1_1Ipc_1_1Gen__fpage.html#a813f9ccb6b344c08d8f8b5c482c290cd" title="Check if a label was received instead of a mapping. " alt="" coords="217,253,357,295"/>
+<area shape="rect" id="node7" href="$group__l4__memory__api.html#gae8aa66c17956ac2dfc2a6d5788fd97a9" title="Round value up to the next alignment with bits size. " alt="" coords="232,319,343,346"/>
+<area shape="rect" id="node8" href="$classL4Re_1_1Util_1_1Dataspace__svr.html#a38241aa35cd0745b690ae61677c93d90" title="Map a region of the dataspace. " alt="" coords="209,371,365,412"/>
+<area shape="rect" id="node9" href="$classL4Re_1_1Util_1_1Dataspace__svr.html#a303bdd6e2d35f47be362bb44283e1354" title="Define the size of the flexpage to map. " alt="" coords="209,436,365,477"/>
+<area shape="rect" id="node10" href="$classL4Re_1_1Util_1_1Dataspace__svr.html#acbdfcf6194da26d19550037de365843e" title="Return physical address for a virtual address. " alt="" coords="209,501,365,543"/>
+<area shape="rect" id="node11" href="$classL4Re_1_1Util_1_1Dataspace__svr.html#a446e7024c788ff319d927693ed0efbf6" title="Release a reference to this dataspace. " alt="" coords="209,567,365,608"/>
+<area shape="rect" id="node12" href="$classL4Re_1_1Util_1_1Dataspace__svr.html#af20b3923eb39501f40ac3372dd198af1" title="Take a reference to this dataspace. " alt="" coords="209,632,365,673"/>
+</map>

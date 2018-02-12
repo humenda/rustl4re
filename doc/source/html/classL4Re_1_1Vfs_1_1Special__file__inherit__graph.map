@@ -1,0 +1,4 @@
+<map id="L4Re::Vfs::Special_file" name="L4Re::Vfs::Special_file">
+<area shape="rect" id="node2" href="$classL4Re_1_1Vfs_1_1File.html" title="The basic interface for an open POSIX file. " alt="" coords="27,145,144,325"/>
+<area shape="rect" id="node3" href="$classL4Re_1_1Vfs_1_1Be__file.html" title="Boiler plate class for implementing an open file for L4Re::Vfs. " alt="" coords="12,373,159,612"/>
+</map>

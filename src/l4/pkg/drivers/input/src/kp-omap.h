@@ -1,0 +1,114 @@
+#pragma once
+
+/* Module ids */
+#define TWL4030_MODULE_USB		0x00
+#define TWL4030_MODULE_AUDIO_VOICE	0x01
+#define TWL4030_MODULE_GPIO		0x02
+#define TWL4030_MODULE_INTBR		0x03
+#define TWL4030_MODULE_PIH		0x04
+#define TWL4030_MODULE_TEST		0x05
+#define TWL4030_MODULE_KEYPAD		0x06
+#define TWL4030_MODULE_MADC		0x07
+#define TWL4030_MODULE_INTERRUPTS	0x08
+#define TWL4030_MODULE_LED		0x09
+#define TWL4030_MODULE_MAIN_CHARGE	0x0A
+#define TWL4030_MODULE_PRECHARGE	0x0B
+#define TWL4030_MODULE_PWM0		0x0C
+#define TWL4030_MODULE_PWM1		0x0D
+#define TWL4030_MODULE_PWMA		0x0E
+#define TWL4030_MODULE_PWMB		0x0F
+#define TWL4030_MODULE_BACKUP		0x10
+#define TWL4030_MODULE_INT		0x11
+#define TWL4030_MODULE_PM_MASTER	0x12
+#define TWL4030_MODULE_PM_RECEIVER	0x13
+#define TWL4030_MODULE_RTC		0x14
+#define TWL4030_MODULE_SECURED_REG	0x15
+#define TWL4030_MODULES			TWL4030_MODULE_SECURED_REG
+
+/* Module address bases */
+/* USB ID */
+#define TWL4030_BASE_USB		0x00
+/* AUD ID */
+#define TWL4030_BASE_AUDIO_VOICE	0x00
+#define TWL4030_BASE_GPIO		0x98
+#define TWL4030_BASE_INTBR		0x85
+#define TWL4030_BASE_PIH		0x80
+#define TWL4030_BASE_TEST		0x4C
+/* AUX ID */
+#define TWL4030_BASE_INTERRUPTS         0xB9
+#define TWL4030_BASE_LED		0xEE
+#define TWL4030_BASE_MADC		0x00
+#define TWL4030_BASE_MAIN_CHARGE	0x74
+#define TWL4030_BASE_PRECHARGE	0xAA
+#define TWL4030_BASE_PWM0		0xF8
+#define TWL4030_BASE_PWM1		0xFB
+#define TWL4030_BASE_PWMA		0xEF
+#define TWL4030_BASE_PWMB		0xF1
+#define TWL4030_BASE_KEYPAD		0xD2
+/* POWER ID */
+#define TWL4030_BASE_BACKUP		0x14
+#define TWL4030_BASE_INT		0x2E
+#define TWL4030_BASE_PM_MASTER		0x36
+#define TWL4030_BASE_PM_RECIEVER	0x5B
+#define TWL4030_BASE_RTC		0x1C
+#define TWL4030_BASE_SECURED_REG	0x00
+
+/* Primary Interrupt Handler registers */
+#define REG_PIH_ISR_P1                  0x01
+#define REG_PIH_ISR_P2                  0x02
+#define REG_PIH_SIR                     0x03
+
+/* Keypad module registers */
+#define REG_KEYP_CTRL_REG		0x00
+#define REG_KEY_DEB_REG			0x01
+#define REG_LONG_KEY_REG1		0x02
+#define REG_LK_PTV_REG			0x03
+#define REG_TIME_OUT_REG1		0x04
+#define REG_TIME_OUT_REG2		0x05
+#define REG_KBC_REG			0x06
+#define REG_KBR_REG			0x07
+#define REG_KEYP_SMS			0x08
+#define REG_FULL_CODE_7_0		0x09
+#define REG_FULL_CODE_7_0		0x09
+#define REG_FULL_CODE_15_8		0x0A
+#define REG_FULL_CODE_23_16		0x0B
+#define REG_FULL_CODE_31_24		0x0C
+#define REG_FULL_CODE_39_32		0x0D
+#define REG_FULL_CODE_47_40		0x0E
+#define REG_FULL_CODE_55_48		0x0F
+#define REG_FULL_CODE_63_56		0x10
+#define REG_KEYP_ISR1			0x11
+#define REG_KEYP_IMR1			0x12
+#define REG_KEYP_ISR2			0x13
+#define REG_KEYP_IMR2			0x14
+#define REG_KEYP_SIR                    0x15
+#define REG_KEYP_EDR			0x16
+#define REG_KEYP_SIH_CTRL		0x17
+
+#if 0
+/* Keypad registers */
+#define KEYP_CTRL_REG       	0xD2
+#define KEY_DEB_REG         	0xD3
+#define LONG_KEY_REG1		0xD4
+#define LK_PTV_REG		0xD5
+#define TIME_OUT_REG1		0xD6
+#define TIME_OUT_REG2		0xD7
+#define KBC_REG			0xD8
+#define KBR_REG			0xD9
+#define KEYP_SMS		0xDA
+#define FULL_CODE_7_0		0xDB
+#define FULL_CODE_15_8		0xDC
+#define FULL_CODE_23_16		0xDD
+#define FULL_CODE_31_24		0xDE
+#define FULL_CODE_39_32		0xDF
+#define FULL_CODE_47_40		0xE0
+#define FULL_CODE_55_48		0xE1
+#define FULL_CODE_63_56		0xE2
+#define KEYP_ISR1		0xE3
+#define KEYP_IMR1		0xE4
+#define KEYP_ISR2		0xE5
+#define KEYP_IMR2		0xE6
+#define KEYP_SIR		0xE7
+#define KEYP_EDR		0xE8
+#define KEYP_SIH_CTRL		0xE9
+#endif

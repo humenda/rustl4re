@@ -1,0 +1,124 @@
+// vi:ft=cpp
+/*
+ * (c) 2014 Johannes Richter <johannes.richter@kernkonzept.com>
+ *
+ * This file is part of TUD:OS and distributed under the terms of the
+ * GNU General Public License 2.
+ * Please see the COPYING-GPL-2 file for details.
+ */
+
+#pragma once
+
+#include <l4/cxx/hlist>
+
+namespace Scout_gfx {
+
+/**
+ * \file message_observer
+ * \brief Generic subscriber mixin to register for messages/events from widgets.
+ *
+ * Usage
+ * -----
+ * * An Observable class inherits from `Message_observable<T_OBSERVABLE>`.
+ * * An Observer class inherits from `Message_observer<T_OBSERVABLE>`.
+ *
+ * An Observer instance can subscribe at an Observable with
+ * `subscribe(this)` and receives notifications by callbacks to the
+ * `changed()` method.
+ */
+
+/**
+ * internal template type - use `Message_observer` instead
+ */
+template <class T_OBSERVABLE, typename T_MSG>
+class _Message_observer : public cxx::H_list_item
+{
+public:
+  typedef T_OBSERVABLE Observable;
+  typedef T_MSG Msg_type;
+
+  virtual void changed(T_OBSERVABLE *subject, T_MSG msg) = 0;
+  virtual ~_Message_observer() = 0;
+};
+
+// pure virtual destructor implementation
+template<class T_OBSERVABLE, typename T_MSG> inline
+_Message_observer<T_OBSERVABLE, T_MSG>::~_Message_observer() {}
+
+
+/**
+ * Mix-in for the observer-class
+ *
+ * \tparam T_OBSERVABLE: Widget-class to be observed (Observable-class)
+ *
+ * details in: \ref message_observer
+ */
+template <class T_OBSERVABLE>
+class Message_observer :
+  public _Message_observer<T_OBSERVABLE, typename T_OBSERVABLE::Msg_type>
+{
+public:
+  /// type of observable objects
+  typedef T_OBSERVABLE Observable;
+  /// data type for the messages
+  typedef typename T_OBSERVABLE::Msg_type Msg_type;
+
+  /**
+   * This method is triggered for notifications from the Observable.
+   *
+   * \param subject: pointer to the observable object
+   * \param msg:     message about what changed
+   */
+  void changed(Observable *subject, Msg_type msg) = 0;
+};
+
+
+/**
+ * Mix-in for the observable-class
+ *
+ * \tparam T_OBSERVABLE: The observable itself, it must inherit from
+ *                       Message_observable.
+ * \tparam T_MSG:        Datatype used for notifications
+ *
+ * details in: \ref message_observer
+ */
+template <class T_OBSERVABLE, typename T_MSG = char const*>
+class Message_observable
+{
+private:
+  /// type of class, that implements the Message_observer interface
+  typedef cxx::H_list<_Message_observer<T_OBSERVABLE, T_MSG> > Observer_list;
+  Observer_list _observers;
+
+public:
+  /// type of observable objects
+  typedef T_OBSERVABLE Observable;
+  /// data type for the messages
+  typedef T_MSG Msg_type;
+
+
+
+  /**
+   * Allows to subscribe a Message_observer at this observable class.
+   *
+   * \param observer: pointer to the observer object to be
+   *                  subscribed (e.g. this)
+   */
+  void subscribe(Message_observer<Observable> *observer)
+  { _observers.add(observer); }
+
+
+  /**
+   * This method allows sending a message to all subscribed objects (observers).
+   *
+   * \param message: message about what changed
+   */
+  void notify_observers(Msg_type message)
+  {
+    typedef typename Observer_list::Iterator Observer_it;
+    for (Observer_it it = _observers.begin(); it != _observers.end(); ++it)
+      it->changed(static_cast<T_OBSERVABLE*>(this), message);
+  }
+};
+
+} //namespace Scout_gfx

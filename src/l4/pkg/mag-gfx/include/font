@@ -1,0 +1,79 @@
+// vi:ft=cpp
+/*
+ * (c) 2010 Adam Lackorzynski <adam@os.inf.tu-dresden.de>,
+ *          Alexander Warg <warg@os.inf.tu-dresden.de>
+ *     economic rights: Technische Universität Dresden (Germany)
+ *
+ * This file is part of TUD:OS and distributed under the terms of the
+ * GNU General Public License 2.
+ * Please see the COPYING-GPL-2 file for details.
+ */
+#pragma once
+
+#include <l4/sys/types.h>
+
+#include <l4/mag-gfx/geometry>
+
+namespace Mag_gfx {
+
+class Font
+{
+public:
+  unsigned char const *img;
+  l4_int32_t const *wtab, *otab;
+  int w, h;
+
+  explicit Font(void const *_ttf)
+  {
+    char const *ttf = (char const *)_ttf;
+
+    otab = (l4_int32_t const *)ttf;
+    wtab = (l4_int32_t const *)(ttf + 1024);
+    w = *(l4_int32_t const *)(ttf + 2048);
+    h = *(l4_int32_t const *)(ttf + 2052);
+    img = (unsigned char const *)(ttf + 2056);
+  }
+
+  /**
+   * Calculate width of string when printed with the font
+   */
+  int str_w(char const *_str) const
+  {
+    if (!_str)
+      return 0;
+
+    unsigned char const *str = (unsigned char const *)_str;
+    int res = 0;
+    for (; *str; ++str)
+      res += wtab[*str];
+
+    return res;
+  }
+
+  int str_w(char const *_str, int len) const
+  {
+    if (!_str)
+      return 0;
+
+    unsigned char const *str = (unsigned char const *)_str;
+    int res = 0;
+    for (; *str && len; ++str, --len)
+      res += wtab[*str];
+
+    return res;
+  }
+
+  /**
+   * Calculate height of string when printed with the font
+   */
+  int str_h(char const *) const { return h; }
+  int str_h(char const *, int) const { return h; }
+
+  Area str_sz(char const *s) const
+  { return Area(str_w(s), str_h(s)); }
+
+  Area str_sz(char const *s, int l) const
+  { return Area(str_w(s, l), str_h(s, l)); }
+};
+
+}

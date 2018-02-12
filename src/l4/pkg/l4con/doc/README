@@ -1,0 +1,59 @@
+The DROPS Graphical Console Server & Libs
+________________________________________________________________________________
+
+basic documentation:
+
+* con/doc:
+	README		this file
+	menu.lst	example GRUB config file
+
+after make in con/doc:
+
+* con/doc/refman:
+	html		directory full of reference manual pages
+
+* con/doc/internal:
+	html		directory full of con server internals
+________________________________________________________________________________
+
+- only VBE 2.0 graphics cards (initialized by GRUB) are supported
+- con expects a "common L4 environment"
+
+- virtual console switching is
+  - Linux-like: ALTGR + [F1..F10] and ALTGR + cursor [right, left]
+  - or        : SHIFT + [F1..F10] and SHIFT + cursor [right, left]
+  - left shift can be disabled by "--noshift" option on cmd line
+- enter kernel debugger with: ALTGR + SYSRQ
+- mind the event distribution in `evdemo'
+
+________________________________________________________________________________
+
+Option list:
+
+ [ -h | --help ]          - this help
+ [ -a | --noaccel ]       - disable hardware acceleration
+ [ -c | --cpuload ]       - show CPU load using rdtsc and rdpmc(0)
+ [ -e | --events ]        - use event server to free resources
+ [ -s | --sigma0 ]        - sigma0 direct mode
+ [ -l | --nolog ]         - don't connect to logserver
+ [ -m | --nomouse ]       - don't transmit mouse events to clients
+ [ -n | --nofastmemcpy ]  - force to not use fast memcpy
+ [ -o | --omega0 ]        - use omega0 for IRQ management
+ [ -p | --pan ]           - use panning to restrict client window
+ [ --noshift ]            - no shift key for console switching
+ [ -v | --vbemode num ]   - set VESA mode (0x0)
+
+________________________________________________________________________________
+
+logserverpatch for logserver tagversion R_0_4
+
+The logserverpatch modifies the logserver, so that it doesn't 
+overwrite the printf function. This cause that printf commands use the 
+DROPS console and all LOG* commands use the logserver for output.
+
+use: in .. l4/pkg/log/
+     patch -p0 < logserver.patch
+
+Not using this patch will cause that all outputs (printf, LOGL etc.) use
+the console, because the libcontxt overwrites the printf function last.
+________________________________________________________________________________

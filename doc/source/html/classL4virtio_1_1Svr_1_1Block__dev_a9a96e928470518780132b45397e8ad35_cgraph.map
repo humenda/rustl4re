@@ -1,0 +1,11 @@
+<map id="L4virtio::Svr::Block_dev::register_obj" name="L4virtio::Svr::Block_dev::register_obj">
+<area shape="rect" id="node2" href="$namespaceL4.html#ab7194c6fc9267a3bf67a3888681ef3c5" title="static_cast for capabilities. " alt="" coords="217,5,319,32"/>
+<area shape="rect" id="node4" href="$namespaceL4Re.html#a64b057254a760643ba67a9ed452fede8" title="Check for valid capability or raise C++ exception. " alt="" coords="215,56,321,83"/>
+<area shape="rect" id="node5" href="$namespaceL4Re.html#a3f17984019f06676a7e3eecb41bbb0bb" title="Generate C++ exception on error. " alt="" coords="215,107,321,133"/>
+<area shape="rect" id="node6" href="$classL4virtio_1_1Virtqueue.html#a031d371276beec1cb5cf550be6fac491" title="Completely disable the queue. " alt="" coords="201,158,335,199"/>
+<area shape="rect" id="node7" href="$classL4virtio_1_1Svr_1_1Virtqueue.html#aa7e9493f7fe5bfa9ebaa5d80be8179cf" title="Get the next available descriptor from the available ring. " alt="" coords="188,223,348,265"/>
+<area shape="rect" id="node8" href="$classL4virtio_1_1Virtqueue.html#aa242e930433e8705c4ee00afaf58f686" title="Test if this queue is in working state. " alt="" coords="201,289,335,330"/>
+<area shape="rect" id="node9" href="$classL4_1_1Registry__iface.html#ab2b05d116e522ebe06ebabe32bd7283a" title="Register o as server&#45;side object for asynchronous IRQs. " alt="" coords="201,354,335,395"/>
+<area shape="rect" id="node10" href="$classL4_1_1Registry__iface.html#a5467da542075321062daab1bda1768bb" title="Register an L4::Epiface for an IPC gate available in the applications environment under the name serv..." alt="" coords="201,419,335,461"/>
+<area shape="rect" id="node3" href="$classL4_1_1Cap__base.html#a6181bad79c41cdbf5c030877b94e25bf" title="Return capability selector. " alt="" coords="396,5,533,32"/>
+</map>

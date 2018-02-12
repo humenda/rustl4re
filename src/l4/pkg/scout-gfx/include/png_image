@@ -1,0 +1,57 @@
+// vi:ft=cpp
+/*
+ * (c) 2010 Alexander Warg <warg@os.inf.tu-dresden.de>
+ *     economic rights: Technische Universität Dresden (Germany)
+ *
+ * This file is part of TUD:OS and distributed under the terms of the
+ * GNU General Public License 2.
+ * Please see the COPYING-GPL-2 file for details.
+ */
+#pragma once
+
+#include <l4/scout-gfx/widget>
+#include <l4/mag-gfx/texture>
+
+namespace Scout_gfx {
+
+/**
+ * PNG Image
+ */
+class Png_image : public Widget
+{
+private:
+
+  void            *_png_data;
+  Mag_gfx::Texture *_texture;
+
+public:
+
+  /**
+   * Constructor
+   */
+  explicit Png_image(void *png_data)
+    : _png_data(png_data), _texture(0)
+  {}
+
+  /**
+   * Accessor functions
+   */
+  inline void *png_data() const { return _png_data; }
+
+  /**
+   * Element interface
+   */
+  void fill_cache(Mag_gfx::Pixel_info const *);
+  void flush_cache(Mag_gfx::Pixel_info const *);
+  void draw(Canvas *c, Point const &p);
+
+
+  Area min_size() const { return _size; }
+  Area preferred_size() const { return _size; }
+  Area max_size() const { return _size; }
+  bool empty() const { return false; }
+  Orientations expanding() const { return 0; }
+  void set_geometry(Rect const &s) { _pos = s.p1(); }
+};
+
+}

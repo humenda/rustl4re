@@ -1,0 +1,10 @@
+<map id="L4::Ipc::make_cap_rw" name="L4::Ipc::make_cap_rw">
+<area shape="rect" id="node2" href="$classL4Re_1_1Util_1_1Event__buffer__t.html#af8bab7db99fa72c6e88dc3152158ff02" title="Attach event buffer from address space. " alt="" coords="211,21,377,62"/>
+<area shape="rect" id="node3" href="$classL4virtio_1_1Svr_1_1Dev__config.html#a663b81f49e6ce03f9b7e136d6646bf89" title="Setup/Create a L4&#45;Virtio config data space. " alt="" coords="221,86,367,127"/>
+<area shape="rect" id="node8" href="$classL4Re_1_1Util_1_1Event__t.html#a6052908f83d35a7bb1ba9371cbfc9834" title="Initialise an event object. " alt="" coords="226,151,362,193"/>
+<area shape="rect" id="node9" href="$classL4Re_1_1Util_1_1Event__t.html#a2161b185b3f69aa9ef597a03fdbde247" title="Initialise an event object in polling mode. " alt="" coords="226,217,362,258"/>
+<area shape="rect" id="node4" href="$classL4virtio_1_1Svr_1_1Dev__config.html#aeada3571131b79907af95caa9b719663" title="Get data&#45;space capability for the shared config data space. " alt="" coords="425,86,552,127"/>
+<area shape="rect" id="node5" href="$classL4virtio_1_1Svr_1_1Driver__mem__list__t.html#a6749bd65e419d7f814dd4c27e0567f28" title="Add a new region to the list. " alt="" coords="608,5,771,61"/>
+<area shape="rect" id="node6" href="$classL4virtio_1_1Svr_1_1Device__t.html#a3fa20bf911056f0d03c8274982b1e167" title="Get the memory region list used for this device. " alt="" coords="600,86,779,127"/>
+<area shape="rect" id="node7" href="$classL4virtio_1_1Svr_1_1Device__t.html#a460f5dc2b32e33a616eb822ffd2f88f0" title="Check for a value in the cmd register and handle a write. " alt="" coords="609,152,769,208"/>
+</map>

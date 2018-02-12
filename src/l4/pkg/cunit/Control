@@ -1,0 +1,3 @@
+provides: libcunit libcunit_dde
+requires: log stdlibs
+Maintainer: doebel@os.inf.tu-dresden.de

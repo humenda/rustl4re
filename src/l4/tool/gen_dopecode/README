@@ -1,0 +1,5 @@
+This is a small tool that generates C code from a list
+of plain DOpE commands. The resulting C code is meant
+to be included in a C file. The recommended extension
+of DOpE command files is '.dpe'. The recommended
+extension for the resulting C include files is '.i'.

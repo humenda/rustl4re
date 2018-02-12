@@ -1,0 +1,76 @@
+#! /bin/sh
+#
+# ISO Creator with GRUB
+#
+#   Adam Lackorzynski <adam@os.inf.tu-dresden.de>
+#
+
+set -e
+
+if [ "$(id -u)" = 0 ]; then
+  echo "Do not run me as root, it's not necessary"
+  exit 1
+fi
+
+if [ -z "$2" ]; then
+  echo "Usage: $0 systemdir iso-image-file [ mkisofs-options ]"
+  exit 1
+fi
+
+systemdir=$1
+isoimage=$2
+shift; shift
+
+[ "${isoimage#/}" = "$isoimage" ] && isoimage=$(pwd)/$isoimage
+
+mkdir -p "$systemdir"
+
+if [ ! -e "$systemdir/boot/grub/stage2_eltorito" ]; then
+  if [ -e /usr/lib/grub/i386-pc/stage2_eltorito ]; then
+    COPYPATH=/usr/lib/grub/i386-pc
+  elif [ -e /usr/share/grub/i386-pc/stage2_eltorito ]; then
+    COPYPATH=/usr/share/grub/i386-pc
+  elif [ -e /boot/grub/stage2_eltorito ]; then
+    COPYPATH=/boot/grub
+  elif [ -e /usr/local/lib/grub/i386-pc/stage2_eltorito ]; then
+    COPYPATH=/usr/local/lib/grub/i386-pc
+  fi
+  if [ -z "$COPYPATH" ]; then
+    echo "Cannot find a stage2_eltorito file..."
+    exit 1
+  fi
+
+  # copy files
+  mkdir -p "$systemdir/boot/grub"
+  cp $COPYPATH/stage2_eltorito "$systemdir/boot/grub"
+  chmod 644 "$systemdir/boot/grub/stage2_eltorito"
+fi
+
+if ! grep -q modaddr $systemdir/boot/grub/stage2_eltorito; then
+  echo
+  echo "WARNING: The GRUB version you're using does not seem to support"
+  echo "         the 'modaddr' command. You may want to fix this."
+  echo
+fi
+
+if [ ! -e "$systemdir/boot/grub/menu.lst" ]; then
+  cat -<<EOF > "$systemdir/boot/grub/menu.lst"
+color 23 52
+
+title Example entry
+kernel /bootstrap -serial
+modaddr 0x2000000
+module /fiasco -serial_esc -comspeed 115200 -comport 1 -nokdb
+module /sigma0
+module /moe rom/hello
+module /l4re
+module /hello
+EOF
+fi
+
+cd "$systemdir"
+mkisofs "$@" -R -b boot/grub/stage2_eltorito \
+        -no-emul-boot -boot-load-size 4 -boot-info-table \
+        -hide-rr-moved \
+        -J -joliet-long \
+        -o "$isoimage" .

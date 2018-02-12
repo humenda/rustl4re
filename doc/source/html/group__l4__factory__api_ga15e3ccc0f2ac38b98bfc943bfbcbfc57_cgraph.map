@@ -1,0 +1,4 @@
+<map id="l4_factory_create_gate" name="l4_factory_create_gate">
+<area shape="rect" id="node2" href="$group__l4__factory__api.html#ga935f08d65381d02d9bc6d3a48abe8a78" title="Create a new IPC gate. " alt="" coords="221,5,404,32"/>
+<area shape="rect" id="node3" href="$group__l4__utcb__api.html#gadc099b4a59e1d99638c72c11a8c8b644" title="Get the UTCB address. " alt="" coords="279,56,346,83"/>
+</map>

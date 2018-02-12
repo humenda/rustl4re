@@ -1,0 +1,29 @@
+
+ARCH = l4
+
+# Use L4ARCH=xxx to override configured architecture
+ifeq ($(L4ARCH),arm)
+LINSRCARCH := arm
+endif
+ifeq ($(L4ARCH),x86)
+LINSRCARCH := x86
+endif
+
+ifeq ($(LINSRCARCH),)
+  L4X_CONFIG=$(shell echo $$PWD/.config)
+  L4X_DEFCONFIG = $(filter %_defconfig,$(MAKECMDGOALS))
+  ifneq ($(L4X_DEFCONFIG),)
+    ifneq ($(wildcard $(srctree)/arch/l4/configs/$(L4X_DEFCONFIG)),)
+      L4X_CONFIG=$(srctree)/arch/l4/configs/$(L4X_DEFCONFIG)
+    endif
+  endif
+  ifneq ($(wildcard $(L4X_CONFIG)),)
+    ifneq ($(shell . $(L4X_CONFIG); echo $$CONFIG_L4_ARCH_ARM),)
+      LINSRCARCH := arm
+    else
+      LINSRCARCH := x86
+    endif
+  endif
+endif
+
+export LINSRCARCH

@@ -1,0 +1,4 @@
+<map id="Interface for asynchronous ISR handlers." name="Interface for asynchronous ISR handlers.">
+<area shape="rect" id="node2" href="$group__l4irq__api__async__cap.html" title="This group is just an enhanced version to l4irq_request() which takes a capability object instead of ..." alt="" coords="439,5,629,61"/>
+<area shape="rect" id="node3" href="$group__l4irq__api.html" title="IRQ handling library" alt="" coords="5,20,152,47"/>
+</map>

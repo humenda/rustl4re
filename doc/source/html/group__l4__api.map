@@ -1,0 +1,15 @@
+<map id="Base API" name="Base API">
+<area shape="rect" id="node1" href="$group__l4__kip__api.html" title="Kernel Interface Page. " alt="" coords="155,5,315,32"/>
+<area shape="rect" id="node2" href="$group__l4__error__api.html" title="Common error codes. " alt="" coords="187,56,283,83"/>
+<area shape="rect" id="node3" href="$group__l4__basic__types.html" title="Integer Types" alt="" coords="179,107,290,133"/>
+<area shape="rect" id="node4" href="$group__l4__mem__op__api.html" title="Operations for memory access. " alt="" coords="161,157,308,184"/>
+<area shape="rect" id="node5" href="$group__l4__fpage__api.html" title="Flex&#45;page related API. " alt="" coords="189,208,280,235"/>
+<area shape="rect" id="node6" href="$group__l4__cxx__ipc__ifaces.html" title="APIs for defining IPC interfaces using C++ as language. " alt="" coords="133,259,336,285"/>
+<area shape="rect" id="node8" href="$group__l4__ipc__api.html" title="API for L4 object invocation. " alt="" coords="169,309,300,336"/>
+<area shape="rect" id="node9" href="$group__l4__memory__api.html" title="Memory related constants, data types and functions. " alt="" coords="174,360,295,387"/>
+<area shape="rect" id="node10" href="$group__api__calls__fiasco.html" title="Kernel debugger extensions of the Fiasco L4 implementation. " alt="" coords="167,411,302,437"/>
+<area shape="rect" id="node11" href="$group__l4__kernel__object__api.html" title="API of kernel objects. " alt="" coords="177,461,292,488"/>
+<area shape="rect" id="node12" href="$group__l4__cap__api.html" title="C interface for capabilities. " alt="" coords="187,512,282,539"/>
+<area shape="rect" id="node13" href="$group__l4__cache__api.html" title="Various functions for cache consistency. " alt="" coords="163,563,307,589"/>
+<area shape="rect" id="node14" href="$group__l4sys__defines.html" title="L4 standard macros for header files, function definitions, and public APIs etc. " alt="" coords="181,613,288,640"/>
+</map>

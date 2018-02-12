@@ -1,0 +1,47 @@
+// vi:ft=cpp
+/*
+ * (c) 2010 Alexander Warg <warg@os.inf.tu-dresden.de>
+ *     economic rights: Technische Universität Dresden (Germany)
+ *
+ * This file is part of TUD:OS and distributed under the terms of the
+ * GNU General Public License 2.
+ * Please see the COPYING-GPL-2 file for details.
+ */
+
+#pragma once
+
+#include <l4/mag/server/input_source>
+#include <l4/mag/server/plugin>
+
+namespace Mag_server {
+
+class Core_api_impl : public Core_api
+{
+private:
+  Registry *_reg;
+  Input_source *_input;
+  mutable cxx::Notifier _tick_ntfy;
+  mutable cxx::Notifier _session_ntfy;
+  mutable Session_list _sessions;
+
+public:
+  Core_api_impl(Registry *r, lua_State *lua, User_state *u,
+                L4::Cap<L4Re::Video::Goos> fb,
+                Mag_gfx::Font const *label_font)
+  : Core_api(lua, u, fb, label_font), _reg(r), _input(0)
+  {}
+
+  void add_input_source(Input_source *i);
+  Input_source *input_sources() const { return _input; }
+
+  Registry *registry() const { return _reg; }
+
+  void get_ticks(cxx::Observer *o) const;
+  void tick() const { _tick_ntfy.notify(); }
+
+  void register_session(Session *) const;
+  Session_list *sessions() const { return &_sessions; }
+  void add_session_observer(cxx::Observer *) const;
+};
+
+}

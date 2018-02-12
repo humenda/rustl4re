@@ -1,0 +1,84 @@
+# main window
+win = new Window()
+g1 = new Grid()
+win.set(-content g1 -x 0 -y 360)
+
+# labels
+temp = new Label()
+temp.set(-text "Control:")
+g1.place(temp, -column 0 -row 0)
+
+temp = new Label()
+temp.set(-text "Transfer:")
+g1.place(temp, -column 0 -row 3)
+
+temp = new Label()
+temp.set(-text "Sensors: (ID lost current copied)")
+g1.place(temp, -column 0 -row 6)
+
+# sensor grid
+g_sen = new Grid()
+g1.place(g_sen, -column 0 -row 7)
+
+# control buttons
+g_con = new Grid()
+g1.place(g_con, -column 0 -row 1)
+
+b_start = new Button()
+b_start.set(-text "Start")
+g_con.place(b_start, -column 0 -row 0)
+
+b_stop = new Button()
+b_stop.set(-text "Stop")
+g_con.place(b_stop, -column 1 -row 0)
+
+b_clear = new Button()
+b_clear.set(-text "Clear")
+g_con.place(b_clear, -column 2 -row 0)
+
+b_exit = new Button()
+b_exit.set(-text "Exit")
+g_con.place(b_exit, -column 3 -row 0)
+
+# fill level indicator
+l_fill = new LoadDisplay()
+l_fill.set(-orient horizontal)
+g1.place(l_fill, -column 0 -row 2)
+
+# transfer ip stuff
+g_tran_ip = new Grid()
+g1.place(g_tran_ip, -column 0 -row 4)
+
+temp = new Label()
+temp.set(-text "IP Address:")
+g_tran_ip.place(temp, -column 0 -row 0)
+
+e_ip = new Entry()
+e_ip.set(-text "141.76.48.62")
+g_tran_ip.place(e_ip, -column 0 -row 1)
+
+temp = new Label()
+temp.set(-text "Port:")
+g_tran_ip.place(temp, -column 1 -row 0)
+
+e_port = new Entry()
+e_port.set(-text "9000")
+g_tran_ip.place(e_port, -column 1 -row 1)
+
+b_tran_ip = new Button()
+b_tran_ip.set(-text "Transfer")
+g_tran_ip.place(b_tran_ip, -column 2 -row 1)
+
+# transfer log stuff
+g_tran_log = new Grid()
+g1.place(g_tran_log, -column 0 -row 5)
+
+e_log = new Entry()
+e_log.set(-text "drops.dump")
+g_tran_log.place(e_log, -column 0 -row 0)
+
+b_tran_log = new Button()
+b_tran_log.set(-text "Dump uuencoded to log")
+g_tran_log.place(b_tran_log, -column 1 -row 0)
+
+win.open()

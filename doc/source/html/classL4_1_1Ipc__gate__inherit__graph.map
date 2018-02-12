@@ -1,0 +1,7 @@
+<map id="L4::Ipc_gate" name="L4::Ipc_gate">
+<area shape="rect" id="node2" href="$classL4_1_1Kobject__t.html" title="{L4::Kobject_t\&lt; Ipc\l_gate, Rcv_endpoint,\l L4_PROTO_KOBJECT, Type\l_info::Demand_t\&lt; 1 \&gt; \&gt;\n||# c()\l# __check_protocols__()\l}" alt="" coords="201,559,412,695"/>
+<area shape="rect" id="node3" href="$classL4_1_1Rcv__endpoint.html" title="Interface for kernel objects that allow to receive IPC from them. " alt="" coords="85,432,216,509"/>
+<area shape="rect" id="node4" href="$classL4_1_1Kobject__t.html" title="{L4::Kobject_t\&lt; Rcv\l_endpoint, Kobject,\l L4_PROTO_KOBJECT, Type\l_info::Demand_t\&lt; 1 \&gt; \&gt;\n||# c()\l# __check_protocols__()\l}" alt="" coords="5,204,216,340"/>
+<area shape="rect" id="node5" href="$classL4_1_1Kobject.html" title="Base class for all kinds of kernel objects and remote objects, referenced by capabilities. " alt="" coords="11,13,123,105"/>
+<area shape="rect" id="node6" href="$classL4_1_1Kobject__t.html" title="Helper class to create an L4Re interface class that is derived from a single base class..." alt="" coords="180,5,391,112"/>
+</map>

@@ -1,0 +1,46 @@
+/*
+ * \brief   IDL interface of the DOpE application's event listener
+ * \date    2002-11-29
+ * \author  Norman Feske <nf2@inf.tu-dresden.de>
+ */
+
+/*
+ * Copyright (C) 2002-2003  Norman Feske  <nf2@os.inf.tu-dresden.de>
+ * Technische Universitaet Dresden, Operating Systems Research Group
+ *
+ * This file is part of the DOpE package, which is distributed under
+ * the  terms  of the  GNU General Public Licence 2.  Please see the
+ * COPYING file for details.
+ */
+
+typedef union dope_event_union switch(long type) {
+
+	case 1: struct command_struct {
+		[string] char *cmd;
+	} command;
+
+	case 2: struct motion_struct {
+		long rel_x;
+		long rel_y;
+		long abs_x;
+		long abs_y;
+	} motion;
+
+	case 3: struct press_struct {
+		long code;
+	} press;
+
+	case 4: struct release_struct {
+		long code;
+	} release;
+
+	case 5: struct keyrepeat_struct {
+		long code;
+	} keyrepeat;
+
+	default: long type;
+} dope_event_u;
+
+interface dopeapp_listener {
+	long event ([in] dope_event_u e, [in, ref, string] char *bindarg);
+};

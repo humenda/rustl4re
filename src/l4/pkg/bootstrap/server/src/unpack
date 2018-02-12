@@ -1,0 +1,175 @@
+#! /usr/bin/perl -W
+#
+# by Adam Lackorzynski
+#
+# Simple attack at unpacking a bootstrap-image again. A smarter way would
+# probably be if we'd add some clear marks in the image when generating
+# it...
+#
+# Todo: prettification
+
+use strict;
+
+my @phdrs;
+my $filename = shift;
+die "Need to give filename!" unless defined $filename;
+
+system("arm-linux-objcopy -j .data -O binary $filename unpack.data");
+die "objcopy failed" if $?;
+
+# make it easy, just hold the file parts in memory
+my $unpackdata;
+my $allfile;
+open(A, "unpack.data") || die "Cannot open: $!";
+{
+  local undef $/;
+  $unpackdata = <A>;
+}
+close A;
+
+open(A, $filename) || die "Cannot open: $!";
+{
+  local undef $/;
+  $allfile = <A>;
+}
+close A;
+
+sub find_offset($)
+{
+  my $vaddr = shift;
+  die "find_offset: EINVAL" unless defined $vaddr;
+
+  foreach my $p (@phdrs) {
+    if ($vaddr > @$p{vaddr} && @$p{vaddr} + @$p{memsize} >= $vaddr) {
+      return $vaddr - @$p{vaddr} + @$p{fileoff};
+    }
+  }
+  die "find_phdr unsuccessful";
+}
+
+sub get_string($)
+{
+  unpack("Z*", substr($allfile, find_offset(shift)));
+}
+
+sub get_blob($$)
+{
+  my $vaddr = shift;
+  my $len   = shift;
+  substr($allfile, find_offset($vaddr), $len);
+}
+
+# parse $filename PHDRs
+{
+  my $o = `objdump -p $filename`;
+
+  foreach (split / LOAD /, $o) {
+    if (/off\s+0x([a-fA-F0-9]+)\s+vaddr\s+0x([a-fA-F0-9]+)\s+paddr\s+0x[a-fA-F0-9]+\s+align\s+\d\*\*\d+\s*.\s+filesz\s+0x([a-fA-F0-9]+)\s+memsz\s+0x([a-fA-F0-9]+)/m) {
+      print "PHDR: off=$1 vaddr=$2 fsz=$3 msz=$4\n";
+      push @phdrs, { fileoff => hex($1), vaddr => hex($2), filesize => hex($3), memsize => hex($4) };
+    }
+  }
+}
+
+my $filesize = -s "$filename";
+
+my $offset = 0;
+my %entries;
+my $previous;
+my $delta = 4;
+my $modinfo_size = 24;
+while ($offset < length($unpackdata) - 12 * 4) {
+  my ($start0, $size0, $sizeun0, $name0, $md5comp0, $md5uncomp0,
+      $start1, $size1, $sizeun1, $name1, $md5comp1, $md5uncomp1,
+      $start2, $size2, $sizeun2, $name2, $md5comp2, $md5uncomp2)
+   = unpack("LLLLLLLLLLLLLLLLLL", substr($unpackdata, $offset));
+
+  if ((!defined $previous || $previous + $modinfo_size == $offset)
+      && ($start0 > 0x5000)
+      && ($start1 > 0x5000)
+      && ($start2 > 0x5000)
+      && (($start0 & 0xfff) == 0)
+      && (($start1 & 0xfff) == 0)
+      && (($start2 & 0xfff) == 0)
+      && ($size0 < $filesize)
+      && ($size1 < $filesize)
+      && ($size2 < $filesize)
+      && ($sizeun0 < (80 << 20))
+      && ($sizeun1 < (80 << 20))
+      && ($sizeun2 < (80 << 20))) {
+
+    #printf "%x %x %x\n", $start0, $start1, $start2;
+    printf "Found module info at offset %d/0x%x\n", $offset, $offset;
+
+    $entries{$offset}{addr}                          = $start0;
+    $entries{$offset}{size}                          = $size0;
+    $entries{$offset}{usize}                         = $sizeun0;
+    $entries{$offset}{name}                          = $name0;
+    $entries{$offset}{md5comp}                       = $md5comp0;
+    $entries{$offset}{md5uncomp}                     = $md5uncomp0;
+    $entries{$offset + 1 * $modinfo_size}{addr}      = $start1;
+    $entries{$offset + 1 * $modinfo_size}{size}      = $size1;
+    $entries{$offset + 1 * $modinfo_size}{usize}     = $sizeun1;
+    $entries{$offset + 1 * $modinfo_size}{name}      = $name1;
+    $entries{$offset + 1 * $modinfo_size}{md5comp}   = $md5comp1;
+    $entries{$offset + 1 * $modinfo_size}{md5uncomp} = $md5uncomp1;
+    $entries{$offset + 2 * $modinfo_size}{addr}      = $start2;
+    $entries{$offset + 2 * $modinfo_size}{size}      = $size2;
+    $entries{$offset + 2 * $modinfo_size}{usize}     = $sizeun2;
+    $entries{$offset + 2 * $modinfo_size}{name}      = $name2;
+    $entries{$offset + 2 * $modinfo_size}{md5comp}   = $md5comp2;
+    $entries{$offset + 2 * $modinfo_size}{md5uncomp} = $md5uncomp2;
+
+    $previous = $offset;
+    $delta = $modinfo_size;
+  } else {
+    $delta = 4;
+  }
+  $offset += $delta;
+
+  print "Scanning at offset $offset\n" if $offset % 1000 == 0;
+}
+
+my $dir = "unpack.dir";
+mkdir $dir;
+
+open(MODLIST, ">$dir/modules.list")
+  || die "Cannot open $dir/unpack.modules.list: $!";
+print MODLIST "entry unpacked\n";
+print MODLIST "modaddr 0x01200000\n";
+
+my $nr = 1;
+open(M, ">md5sums") || die "Cannot create checksum file: $!";
+foreach my $e (sort { $a <=> $b } keys %entries)
+{
+  my $name = get_string($entries{$e}{name});
+  my $fname = "$dir/$name";
+  open(A, ">$fname") || die "Cannot create file $fname: $!";
+  print A get_blob($entries{$e}{addr}, $entries{$e}{size});
+  close A;
+
+  print M get_string($entries{$e}{md5uncomp})."  $fname\n";
+
+
+  system("file $fname");
+
+  # missing: cmdlines
+  if ($nr == 1) {
+    print MODLIST "kernel $name\n";
+  } elsif ($nr == 2) {
+    print MODLIST "sigma0 $name\n";
+  } elsif ($nr == 3) {
+    print MODLIST "roottask $name\n";
+  } else {
+    print MODLIST "module $name\n";
+  }
+
+
+  $nr++;
+}
+close M;
+close MODLIST;
+
+unlink "unpack.data";
+
+system("md5sum -c md5sums");

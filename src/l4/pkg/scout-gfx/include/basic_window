@@ -1,0 +1,280 @@
+// vi:ft=cpp
+/*
+ * (c) 2010 Alexander Warg <warg@os.inf.tu-dresden.de>
+ *     economic rights: Technische Universität Dresden (Germany)
+ *
+ * This file is part of TUD:OS and distributed under the terms of the
+ * GNU General Public License 2.
+ * Please see the COPYING-GPL-2 file for details.
+ */
+
+#pragma once
+
+#include <l4/mag-gfx/geometry>
+
+#include <l4/scout-gfx/widget>
+#include <l4/scout-gfx/layout>
+#include <l4/mag-gfx/clip_guard>
+
+namespace Scout_gfx {
+
+/**********************
+ ** Basic_window interface **
+ **********************/
+
+
+class View
+{
+public:
+  virtual Rect geometry() const = 0;
+  virtual Rect set_geometry(Rect const &, bool redraw = false) = 0;
+  virtual void top() = 0;
+  virtual void redraw(Rect const &r) = 0;
+  virtual Mag_gfx::Pixel_info const *pixel_info() const = 0;
+  virtual ~View() {}
+
+};
+
+class Basic_window : public Scout_gfx::Parent_widget
+{
+private:
+  View *_view;
+  Area _max_sz;
+  Widget *_mfocus;
+  Widget *_kbd_focused;
+  Widget *_active;
+  Point _active_pos;
+
+protected:
+  Area _min_sz;
+  View *view() { return _view; }
+
+public:
+
+  Area preferred_size() const
+  { return child_layout() ? child_layout()->preferred_size() : _max_sz; }
+  Area min_size() const
+  { return child_layout() ? _min_sz.max(child_layout()->min_size()) : _min_sz; }
+  Area max_size() const { return _max_sz; }
+
+  void child_invalidate()
+  {
+    if (!child_layout())
+      return;
+
+    Area s = _size.min(child_layout()->max_size()).max(child_layout()->min_size());
+    int h = child_layout()->min_height_for_width(s.w());
+    if (h > 0)
+      s.h(std::max(s.h(), h));
+
+    child_layout()->set_geometry(Rect(Point(0, 0), s));
+    _size = s;
+  }
+
+  Orientations expanding() const { return Orientations(); }
+  bool empty() const { return false; }
+
+  void set_geometry(Rect const &r, bool force)
+  {
+    bool need_redraw = false;
+    Area s = r.area().min(max_size());
+
+    if (child_layout() && (force || s != _size))
+      {
+	_size = s;
+	child_layout()->set_geometry(Rect(s));
+	child_invalidate();
+        need_redraw = true;
+      }
+    else
+      _size = s;
+
+    //_pos = r.p1(); _size = s;
+    Rect ng = _view->set_geometry(Rect(r.p1(), _size), need_redraw);
+    _pos = ng.p1(); _size = ng.area();
+  }
+
+  void set_geometry(Rect const &r)
+  { set_geometry(r, false); }
+
+  Rect geometry() const { return Rect(_pos, _size); }
+
+  Basic_window(View *view, Area const &max_sz)
+  : _view(view), _max_sz(max_sz)
+  {
+    /* init element attributes */
+    _size = view->geometry().area();
+  }
+
+  virtual ~Basic_window() { }
+
+  /**
+   * Return current window position
+   */
+  virtual Rect view_pos() const { return _view->geometry(); }
+
+  /**
+   * Accessors
+   */
+  //Platform *pf() const { return _pf; }
+  Area max() const { return _max_sz; }
+
+  /**
+   * Bring window to front
+   */
+  virtual void top() { _view->top(); }
+
+  /**
+   * Element interface
+   *
+   * This function just collects the specified regions to be
+   * redrawn but does not perform any immediate drawing
+   * operation. The actual drawing must be initiated by
+   * calling the process_redraw function.
+   */
+  void redraw_area(Rect const &r) const
+  { _view->redraw(r + _pos); }
+
+  void draw(Mag_gfx::Canvas *c, Point const &p)
+  {
+    Mag_gfx::Clip_guard g(c, Rect(p, size()));
+    Parent_widget::draw(c, p);
+  }
+
+  Widget *handle_event(Event const &ev);
+
+  /**
+   * This method handles a left-mouse button or tab press and determines the
+   * next widget receiving the keyboard focus.
+   *
+   * \returns true if Event handling has finished,
+   *          false if Event was not handled by this method
+   */
+  bool handle_key_focus(Event const &ev);
+
+private:
+  /**
+   * This method finds the next widget with the `is_keyb_focusable()` property
+   * in the widget-hierarchy.
+   *
+   * \param cur_focus: the current widget receiving the keyboard focus
+   * \pre `cur_focus` must be non-Null
+   */
+  Widget *find_next_focus(Widget *cur_focus);
+  void _assign_mfocus(Widget *e, int force = 0);
+};
+
+
+/********************
+ ** Event handlers **
+ ********************/
+
+class Drag_event_handler : public Scout_gfx::Event_handler
+{
+protected:
+  Point _cm;  /* original mouse position      */
+  Point _om;  /* current mouse positon        */
+
+  virtual void start_drag() = 0;
+  virtual void do_drag() = 0;
+
+  Point diff() const { return _cm - _om; }
+
+public:
+  /**
+   * Event handler interface
+   */
+  bool handle(Scout_gfx::Event const &ev)
+  {
+    if (ev.key_cnt == 0)
+      return false;
+
+    /* first click starts dragging */
+    if ((ev.type == Scout_gfx::Event::PRESS) && (ev.key_cnt == 1))
+      {
+	_cm = ev.m;
+	_om = ev.m;
+	start_drag();
+      }
+
+    /* check if mouse was moved */
+    if (ev.m == _cm)
+      return true;
+
+    /* remember current mouse position */
+    _cm = ev.m;
+
+    do_drag();
+    return true;
+  }
+
+  virtual ~Drag_event_handler() {}
+};
+
+
+class Sizer_event_handler : public Drag_event_handler
+{
+protected:
+
+  Basic_window *_window;
+  Area _osz;   /* original window size */
+
+  /**
+   * Event handler interface
+   */
+  void start_drag()
+  { _osz = _window->view_pos().area(); }
+
+  void do_drag()
+  {
+    /* calculate new window size */
+    Area nsz = _osz.grow(diff());
+
+    _window->set_geometry(Rect(_window->geometry().p1(), nsz));
+  }
+
+public:
+
+  /**
+   * Constructor
+   */
+  Sizer_event_handler(Basic_window *window)
+  {
+    _window = window;
+  }
+};
+
+
+class Mover_event_handler : public Drag_event_handler
+{
+protected:
+
+  Basic_window *_window;
+  Point _ob;   /* original launchpad position */
+
+
+  void start_drag()
+  {
+    _ob = _window->view_pos().p1();
+    _window->top();
+  }
+
+  void do_drag()
+  {
+    Point nb = _ob + diff();
+
+    _window->set_geometry(Rect(nb, _window->geometry().area()));
+  }
+
+public:
+
+  /**
+   * Constructor
+   */
+  Mover_event_handler(Basic_window *window)
+  {
+    _window = window;
+  }
+};
+
+}

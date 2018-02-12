@@ -1,0 +1,451 @@
+// vi:ft=cpp
+/*
+ * (c) 2010 Alexander Warg <warg@os.inf.tu-dresden.de>
+ *     economic rights: Technische Universität Dresden (Germany)
+ *
+ * This file is part of TUD:OS and distributed under the terms of the
+ * GNU General Public License 2.
+ * Please see the COPYING-GPL-2 file for details.
+ */
+#pragma once
+
+#include <l4/mag-gfx/canvas>
+#include <l4/mag-gfx/mem_texture>
+#include <l4/mag-gfx/font>
+#include <l4/mag-gfx/blit>
+
+namespace Mag_gfx {
+namespace Mem {
+
+template< typename PT >
+class Canvas : public Mag_gfx::Canvas
+{
+public:
+  typedef PT Pixel_traits;
+  typedef typename PT::Pixel Pixel;
+  typedef typename PT::Color Color;
+
+private:
+  char *_pixels;
+  Pixel_info const *_type;
+  int _bpl;
+
+public:
+  Canvas(void *pixels, Area const &size, unsigned bpl)
+  : Mag_gfx::Canvas(size), _pixels((char *)pixels), _type(PT::type()), _bpl(bpl)
+  {}
+
+  Pixel_info const *type() const { return _type; }
+
+  void *buffer() const { return _pixels; }
+  void buffer(void *buf) { _pixels = (char *)buf; }
+  int bytes_per_line() const { return _bpl; }
+
+private:
+  template< typename CT >
+  void _draw_box(char *dst_line, int _w, int h, CT color, int a);
+
+  template< typename CT >
+  void __draw_string(Point const &p, Font const *font,
+                     typename CT::Color color,
+                     char const *_str, unsigned len);
+
+  bool _draw_alpha_texture(Texture<Pixel_traits> const *texture,
+      Pixel const *src, char *dst, int offset,
+      int h, int w, int src_w);
+
+public:
+  void draw_box(Rect const &rect, Rgba32::Color color)
+  {
+    Rect const clipped = _clip & rect;
+    if (!clipped.valid() || color.a() == 0)
+      return;
+
+    char *dst_line = _pixels + _bpl*clipped.y1() + sizeof(Pixel)*clipped.x1();
+
+    if (color.a() >= 255)
+      _draw_box(dst_line, clipped.w(), clipped.h(), Rgb32::Color(color.v()), 0);
+    else
+      _draw_box(dst_line, clipped.w(), clipped.h(), color, color.a());
+
+    flush_pixels(clipped);
+  }
+
+  void draw_string(Point const &p, Font const *font, Rgba32::Color color,
+                   char const *_str, unsigned len)
+  {
+    if (color.a() != Rgba32::Color::Amax)
+      __draw_string<Rgba32>(p, font, color, _str, len);
+    else
+      __draw_string<Rgb32>(p, font, Rgb32::Color(color.v()), _str, len);
+  }
+
+  void draw_texture(Mag_gfx::Texture const *texture, Rgb32::Color mix_color,
+                    Point const &pos, Mix_mode mode);
+
+  void draw_texture_scaled(Mag_gfx::Texture const *texture, Area const &size,
+                           Rgb32::Color mix_color, Point const &pos,
+                           Mix_mode mode);
+
+};
+
+
+template< typename PT>
+template< typename CT >
+void
+Canvas<PT>::_draw_box(char *dst_line, int _w, int h, CT color, int a)
+{
+  Color const c = color_conv<Color>(color);
+  for (; h--; dst_line += _bpl)
+    {
+      int w;
+      Pixel *dst = reinterpret_cast<Pixel*>(dst_line);
+      for (w = _w; w--; dst++)
+	if (CT::A::Size == 0)
+	  *dst = c;
+	else
+	  *dst = Color::Traits::mix(*dst, c, a);
+    }
+}
+
+template< typename PT>
+template< typename CT >
+void
+Canvas<PT>::__draw_string(Point const &p, Font const *font,
+                          typename CT::Color color,
+                          char const *_str, unsigned len)
+{
+  enum { Alphas = CT::A::Size };
+  const unsigned char *str = (const unsigned char *)_str;
+  int x = p.x(), y = p.y();
+
+  if (!str || !font)
+    return;
+
+  unsigned char const *src = font->img;
+  int d, h = font->str_h(_str);
+
+  /* check top clipping */
+  if ((d = _clip.y1() - y) > 0)
+    {
+      src += d * font->w;
+      y += d;
+      h -= d;
+    }
+
+  /* check bottom clipping */
+  if ((d = y + h - 1 - _clip.y2()) > 0)
+    h -= d;
+
+  if (h < 1)
+    return;
+
+  /* skip hidden glyphs */
+  for ( ; *str && len && (x + font->wtab[*str] < _clip.x1()); --len)
+    x += font->wtab[*str++];
+
+  int x_start = x;
+
+  char *dst = _pixels + y * _bpl;
+  Color pix = color_conv<Color>(color);
+  int alpha = 255;
+  if (Alphas != 0)
+    alpha = color.a() << (8 - Alphas);
+
+  /* draw glyphs */
+  for ( ; *str && len && (x <= _clip.x2()); ++str, --len)
+    {
+      int w = font->wtab[*str];
+      int start = std::max(0, _clip.x1() - x);
+      int end = std::min(w - 1, _clip.x2() - x);
+      char *d = dst + x * sizeof(Pixel);
+      unsigned char const *s = src + font->otab[*str];
+
+      for (int j = 0; j < h; ++j, s += font->w, d += _bpl)
+	for (int i = start; i <= end; ++i)
+	  if (s[i])
+	    {
+	      Pixel *p = reinterpret_cast<Pixel *>(d) + i;
+	      *p = Pixel_traits::mix(*p, pix, (alpha * s[i]) >> 8);
+	    }
+
+      x += w;
+    }
+
+  flush_pixels(Rect(Point(x_start, y), Area(x - x_start + 1, h)));
+}
+
+template<typename PT>
+bool
+Canvas<PT>::_draw_alpha_texture(Texture<Pixel_traits> const *texture,
+                                Pixel const *src, char *dst, int offset,
+                                int h, int w, int src_w)
+{
+  typedef typename Pixel_traits::Pixel Pixel;
+  bool xa = Pixel_traits::A::Size == 0 && texture->extra_alpha();
+  if (!xa && Pixel_traits::A::Size == 0)
+    return false;
+
+  unsigned char const *ab;
+  if (xa)
+    ab = texture->alpha_buffer() + offset;
+
+  for (int j = h; j--; src += src_w, dst += _bpl)
+    {
+      Pixel *dp = reinterpret_cast<Pixel*>(dst);
+      Pixel const *s = src;
+      unsigned char const *sab = ab;
+
+      for (int i = w; i--; ++s, ++dp)
+	{
+	  int alpha;
+	  if (!xa)
+	    alpha = Color(*s).a() << (8 - Pixel_traits::A::Size);
+	  else
+	    alpha = *sab++;
+
+	  if (alpha < 255)
+	    *dp = Pixel_traits::mix(*dp, *s, alpha);
+	  else if (alpha > 0)
+	    *dp = *s;
+	}
+      if (xa)
+	ab += src_w;
+    }
+  return true;
+}
+
+template<typename PT>
+void
+Canvas<PT>::draw_texture(Mag_gfx::Texture const *texture,
+                         Rgb32::Color mix_color, Point const &pos,
+                         Mix_mode mode)
+{
+  Rect const clipped = _clip & Rect(pos, texture->size());
+
+  if (!clipped.valid())
+    return;
+
+  int src_w = texture->size().w();
+  Texture<Pixel_traits> const *txt;
+  txt = static_cast<Texture<Pixel_traits> const *>(texture);
+  Pixel const *src = txt->pixels()
+    + (clipped.y1() - pos.y()) * src_w
+    +  clipped.x1() - pos.x();
+
+  char *dst = _pixels + clipped.y1() * _bpl + clipped.x1() * sizeof(Pixel);
+  char *d;
+
+  int i, j;
+  Pixel const *s;
+  Color mix_pixel = color_conv<Color>(mix_color);
+
+  switch (mode)
+    {
+    case Alpha:
+      if (_draw_alpha_texture(txt, src, dst,
+	    (clipped.y1() - pos.y()) * src_w +  clipped.x1() - pos.x(),
+	    clipped.h(), clipped.w(), src_w))
+	break;
+      // Fall through to solid!
+      /* FALLTHRU */
+    case Solid:
+      //	for (j = clipped.h(); j--; src += src_w, dst += _bpl)
+      //	  for (i = clipped.w(), s = src, d = dst; i--; ++s, d += sizeof(Pixel))
+      //	    *reinterpret_cast<Pixel*>(d) = *s;
+      Blit::blit(src, src_w * sizeof(Pixel),
+	  dst, _bpl, clipped.w() * sizeof(Pixel), clipped.h());
+      break;
+
+    case Mixed:
+      mix_pixel = color_50(mix_pixel);
+      for (j = clipped.h(); j--; src += src_w, dst += _bpl)
+	for (i = clipped.w(), s = src, d = dst; i--; ++s, d += sizeof(Pixel))
+	  *reinterpret_cast<Pixel*>(d) = color_50(Color(*s)) + mix_pixel;
+      break;
+
+    case Masked:
+      for (j = clipped.h(); j--; src += src_w, dst += _bpl)
+	for (i = clipped.w(), s = src, d = dst; i--; ++s, d += sizeof(Pixel))
+	  if (s->v())
+	    *reinterpret_cast<Pixel*>(d) = *s;
+      break;
+    }
+
+  flush_pixels(clipped);
+}
+
+template< typename Pixel, typename Op >
+inline
+void
+draw_loop(Area const &area, unsigned const *cb, unsigned const *rb,
+          unsigned bpl,
+          char const *src, char *dst, Op const &op)
+{
+  char const *s;
+  char *d;
+  int i, j;
+  for (j = area.h(); j--; dst += bpl)
+    for (i = area.w(), s = src + rb[j], d = dst; i--; d += sizeof(Pixel))
+      op(reinterpret_cast<Pixel*>(d), reinterpret_cast<Pixel const *>(s + cb[i]));
+}
+
+
+namespace {
+static inline void
+calc_xscale_buffer(unsigned dx, unsigned dy, unsigned s, unsigned w, unsigned sbpp, unsigned *sb)
+{
+  int f = dx / 2;
+  unsigned y = 0;
+  unsigned x = 0;
+
+  for (x = 0; x < s; ++x)
+    {
+      f = f - dy;
+      if (f < 0)
+	{
+	  y += sbpp;
+	  f = f + dx;
+	}
+    }
+
+  for (x = w; x--;)
+    {
+      f = f - dy;
+      sb[x] = y;
+      if (f < 0)
+	{
+	  y += sbpp;
+	  f = f + dx;
+	}
+    }
+}
+
+static inline void
+calc_yscale_buffer(unsigned dx, unsigned dy, unsigned s, unsigned w, unsigned sbpp, unsigned *sb)
+{
+  int f = dx / 2;
+  unsigned y = 0;
+  unsigned x = 0;
+  unsigned xv = 0;
+
+  for (x = 0; y < s && x < dx; ++x)
+    {
+      f = f - dy;
+      if (f < 0)
+	{
+	  f = f + dx;
+	  if (y >= s)
+	    break;
+	  ++y;
+	}
+      xv += sbpp;
+    }
+
+  y = w - 1;
+  sb[y] = xv;
+
+  if (!y)
+    return;
+
+  for (;x < dx; ++x)
+    {
+      f = f - dy;
+      if (f < 0)
+	{
+	  f = f + dx;
+	  --y;
+	  sb[y] = xv;
+	  if (y == 0)
+	    return;
+	}
+      xv += sbpp;
+    }
+}
+
+template< typename Pixel >
+struct Solid_copy
+{ void operator () (Pixel *d, Pixel const *s) const { *d = *s; } };
+
+template< typename Pixel, typename Color >
+struct Mix_50_copy
+{
+  Color mix_pixel;
+  Mix_50_copy(Rgb32::Color mix_color)
+  : mix_pixel(color_conv<Color>(mix_color))
+  {}
+
+  void operator () (Pixel *d, Pixel const *s) const
+  { *d = color_50(Color(*s)) + mix_pixel; }
+};
+
+template< typename Pixel >
+struct Masked_copy
+{
+  void operator () (Pixel *d, Pixel const *s) const
+  {
+    if (s->v()) *d = *s;
+  }
+};
+}
+
+template<typename PT>
+void
+Canvas<PT>::draw_texture_scaled(Mag_gfx::Texture const *texture,
+                                Area const &size,
+                                Rgb32::Color mix_color, Point const &pos,
+                                Mix_mode mode)
+{
+  Rect const clipped = _clip & Rect(pos, size); //texture->size());
+
+  if (!clipped.valid())
+    return;
+
+  Point tl_offs = clipped.p1() - pos;
+  unsigned *col_buf = (unsigned*)alloca(sizeof(unsigned) * clipped.w());
+  unsigned *row_buf = (unsigned*)alloca(sizeof(unsigned) * clipped.h());
+
+  Area ts = texture->size();
+
+  if (size.w() > ts.w())
+    calc_xscale_buffer(size.w(), ts.w(), tl_offs.x(), clipped.w(), sizeof(Pixel), col_buf);
+  else
+    calc_yscale_buffer(ts.w(), size.w(), tl_offs.x(), clipped.w(), sizeof(Pixel), col_buf);
+
+  if (size.h() > ts.h())
+    calc_xscale_buffer(size.h(), ts.h(), tl_offs.y(), clipped.h(), ts.w() * sizeof(Pixel), row_buf);
+  else
+    calc_yscale_buffer(ts.h(), size.h(), tl_offs.y(), clipped.h(), ts.w() * sizeof(Pixel), row_buf);
+
+  char const *src = (char const *)texture->pixels();
+  char *dst = _pixels + clipped.y1() * _bpl + clipped.x1() * sizeof(Pixel);
+
+  Mix_50_copy<Pixel, Color> mix_copy(mix_color);
+
+  switch (mode)
+    {
+    case Alpha:
+#if 0
+      if (_draw_alpha_texture(txt, src, dst,
+	    (clipped.y1() - pos.y()) * src_w +  clipped.x1() - pos.x(),
+	    clipped.h(), clipped.w(), src_w))
+	break;
+#endif
+      // Fall through to solid!
+    case Solid:
+      draw_loop<Pixel>(clipped.area(), col_buf, row_buf, _bpl, src, dst, Solid_copy<Pixel>());
+      break;
+
+    case Mixed:
+      draw_loop<Pixel>(clipped.area(), col_buf, row_buf, _bpl, src, dst, mix_copy);
+      break;
+
+    case Masked:
+      draw_loop<Pixel>(clipped.area(), col_buf, row_buf, _bpl, src, dst, Masked_copy<Pixel>());
+      break;
+    }
+
+  flush_pixels(clipped);
+}
+
+}}

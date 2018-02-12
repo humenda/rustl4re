@@ -1,0 +1,6 @@
+L4 input library implementation
+
+Subdirectories
+
+  contrib:  Linux 2.6.11.8 Input driver sources
+  src:      emulation code & library implementation

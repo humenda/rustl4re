@@ -1,0 +1,45 @@
+/* -*- c -*- */
+
+/**
+\mainpage Slab Memory Allocator
+
+\section content Contents
+
+- \ref intro
+- \ref use
+- \htmlonly<a href="group__api.html">\endhtmlonly User API 
+  reference\htmlonly</a>\endhtmlonly
+  - \htmlonly<a href="group__api__init.html">\endhtmlonly Slab cache 
+    initialization\htmlonly</a>\endhtmlonly
+  - \htmlonly<a href="group__api__alloc.html">\endhtmlonly 
+    Memory allocation\htmlonly</a>\endhtmlonly
+  - \htmlonly<a href="group__api__debug.html">\endhtmlonly Debugging
+    \htmlonly</a>\endhtmlonly
+- \htmlonly<a href="examples.html">\endhtmlonly 
+  Examples\htmlonly</a>\endhtmlonly
+  - \htmlonly<a href="examples.html#example_simple">\endhtmlonly
+    Simple heap memory management \htmlonly</a>\endhtmlonly
+  - \htmlonly<a href="examples.html#example_grow_only">\endhtmlonly
+    Dynamic grow-only heap management \htmlonly</a>\endhtmlonly
+
+\section intro Introduction
+
+This package provides a simple implementation of a Slab memory allocator 
+(Jeff Bonwick: "The Slab Allocator: An Object-Caching Kernel Memory Allocator").
+A Slab cache is a very efficient method to manage equally sized memory objects. 
+
+The current implementation has some limitations:
+- The maximum object size is 4064 byte (one page minus 32 byte header). However, 
+  with large objects it is more likely that a significant amount of memory is
+  wasted unused since objects must fit completely in a slab page (e.g. with 
+  an object size of 1024 byte each page can only hold 3 objects leaving 992 bytes 
+  unused). Slab caches work best for small objects.
+- No synchronization is done. If a slab cache is used concurrently, the 
+  application must provide sufficient synchronization.
+
+\section use Usage
+
+To use the slab memory allocator you need to include <l4/slab/slab.h> and link 
+libslab to your binaries.
+
+*/

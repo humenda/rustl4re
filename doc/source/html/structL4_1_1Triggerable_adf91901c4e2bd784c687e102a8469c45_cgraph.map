@@ -1,0 +1,7 @@
+<map id="L4::Triggerable::trigger" name="L4::Triggerable::trigger">
+<area shape="rect" id="node2" href="$classL4_1_1Kobject.html#a314161cb755de6fd0c50da0a757eb4c7" title="Return capability selector. " alt="" coords="217,5,336,32"/>
+<area shape="rect" id="node3" href="$group__l4__irq__api.html#ga180cfaf342ce9ff484a6aa7c276e1597" title="Trigger. " alt="" coords="216,56,337,83"/>
+<area shape="rect" id="node4" href="$group__l4__ipc__api.html#ga7de45eb59ce852466362ea85da00299e" title="Send a message to an object (do not wait for a reply). " alt="" coords="385,31,484,57"/>
+<area shape="rect" id="node6" href="$group__l4__msgtag__api.html#ga661d71acad9d096fa990f7c94943bc78" title="Create a message tag from the specified values. " alt="" coords="391,81,478,108"/>
+<area shape="rect" id="node5" href="$group__l4__ipc__api.html#ga0e7e5b18d784b1d3439ea6e5b4bea4e2" title="Generic L4 object invocation. " alt="" coords="532,31,591,57"/>
+</map>

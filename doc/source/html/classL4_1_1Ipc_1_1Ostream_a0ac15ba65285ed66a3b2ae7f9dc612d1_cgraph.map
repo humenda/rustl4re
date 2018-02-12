@@ -1,0 +1,4 @@
+<map id="L4::Ipc::Ostream::send" name="L4::Ipc::Ostream::send">
+<area shape="rect" id="node2" href="$group__l4__ipc__api.html#ga7de45eb59ce852466362ea85da00299e" title="Send a message to an object (do not wait for a reply). " alt="" coords="213,5,312,32"/>
+<area shape="rect" id="node3" href="$group__l4__ipc__api.html#ga0e7e5b18d784b1d3439ea6e5b4bea4e2" title="Generic L4 object invocation. " alt="" coords="360,5,419,32"/>
+</map>

@@ -1,0 +1,31 @@
+/*
+ * Device tree for a virtual machine without any hardware pass-through.
+ */
+
+/dts-v1/;
+/include/ "skeleton.dtsi"
+/include/ "syscon.dtsi"
+/include/ "ic-arm.dtsi"
+/include/ "vmm-devices-arm.dtsi"
+
+/ {
+    model = "L4 VM";
+    compatible = "l4,virt", "linux,dummy-virt";
+
+    interrupt-parent = <&gic>;
+
+    timer {
+      compatible = "arm,cortex-a15-timer", "arm,armv7-timer";
+      interrupts = <1 13 0xf08>,
+                   <1 14 0xf08>,
+                   <1 11 0xf08>,
+                   <1 10 0xf08>;
+      clock-frequency = <6144000>;
+      always-on;
+    };
+
+    icsoc {
+        ranges = <0x0 0x48210000 0x3000>;
+    };
+};
+

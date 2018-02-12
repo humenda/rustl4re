@@ -1,0 +1,843 @@
+
+                          DOpE - user's guide
+
+                             Norman Feske
+
+
+:Note:
+  _The software, described in this document is at a preliminary stage of_
+  _development. Features and Interfaces will change during the further_
+  _development process. Please consider this fact if you intend to_
+  _implement software based on DOpE and its associated components._
+
+
+Running DOpE on L4
+##################
+
+For running DOpE on L4 you need to consider the following things:
+
+* DOpE does not run together with 'l4io' per default. If you need
+  to use 'l4io' together with DOpE, start DOpE with the argument
+  ! --l4io
+* Currently, DOpE uses the VESA frame buffer in 16bit colordepth with
+  the RGB565 pixel layout. The video mode must be configured via the
+  'vbeset' command in 'GRUB'. You can use the 'vbeprobe' command to
+  view a list of video modes supported by your hardware.
+
+
+Introduction to the basic concepts
+##################################
+
+Command interface
+=================
+
+DOpE provides a command interface to create and configure server-side widgets and
+their relationships. The text-command-based approach has the following advantages
+over a conventional API:
+
+* Interface extensions of DOpE are transparent to client applications. No
+  recompilation of client applications is needed.
+* The user interface can be described in very compact expressions.
+* Multiple attribute changes can be expressed as one atomar unit using
+  the tag-value notation.
+* The native (program language level) API is very simple and can easily be
+  ported to other communication schemes than IDL.
+* Prototyping of graphical user interfaces can be done interactively using
+  a simple terminal program.
+* Text based communication can be monitored by a human reader for debugging
+  purpose.
+
+
+Creating widgets
+~~~~~~~~~~~~~~~~
+
+Widgets can be created and assigned to a variable with the 'new' command:
+! <varname> = new <widget type>(<initial attibutes>)
+
+After created, the new widget can be accessed via the assigned variable name.
+A multiple assignment to the same variable makes the previously associated
+widget inaccessable for the client application but does not destroy it
+as long as there exists another reference to it - for example if it is
+referenced as the child of another widget. A *Window* can be
+created this way:
+! w = new Window()
+
+Initial attributes of the newly created widget can be defined at creation
+time by specifying '-tag value' pairs within the parenthesis. For example:
+! b = new Button(-text "Cancel")
+
+
+Attribute and argument types
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Widget attributes and method arguments can be of distinct types.
+
+:Boolean: values are mostly used to enable or disable features. They are
+  specified by using the values 'on' and 'off' (or 'yes' and 'no' alternatively).
+
+:Integer: values are whole numbers and must be specified in decimal form.
+
+:Float: values are fractional numbers specified in a very traditional way: #12.345#
+
+:Strings: are used to specify text. Generally, strings must be quoted. If a string
+  contains only characters that are valid for identifiers, the
+  quoting is not needed (but still recommended). For example:
+  ! "This is a valid string"
+  ! quotes_are_not_needed_here
+
+:Sets of values: are used to express non-boolean feature settings such as 'north', 'south',
+  'east' and 'west'. The valid elements of such a set depend on each case. In fact, sets
+  of values are implemented as strings that contain only valid identifier characters.
+
+
+Setting attributes
+~~~~~~~~~~~~~~~~~~
+
+Attributes can be modified by using the 'set' method that is available for all
+widgets. Each attribute is addressed via its tag followed by the
+desired value. Multiple attributes can be configured as one atomic
+action by chaining multiple tag-value pairs. The following example
+enables both scrollbars of a *Frame* 'f' and sets the widget #a# as
+its content:
+
+! f.set(-scrollx yes -scrolly yes -content a)
+
+
+Requesting attributes
+~~~~~~~~~~~~~~~~~~~~~
+
+Attributes can be requested via the DOpE command:
+! <varname>.<attribute name>
+
+
+Invoking methods
+~~~~~~~~~~~~~~~~
+
+Methods of widgets can be invoked via the DOpE command:
+! <varname>.<method name>(<mandatory args><optional args>)
+
+For example the following command sets the width of the row 5 of a *Grid*
+widget 'g'. The first argument (the row number) is mandatory. All following
+arguments are optional and therefore are expressed via the tag-value notation:
+! g.rowconfig(5, -size 100)
+
+
+Event concept
+=============
+
+
+IDL interface
+=============
+
+!long init_app ([in, string] char *appname,
+!               [in, string] char *listener);
+
+The 'init_app' call is used to start a new DOpE client session.
+An application name must be provided as the 'appname' argument.
+The 'listener' argument is an identifier string that contains
+the description of a thread for receiving events for this session.
+The actual syntax of the listener identifier depends on the
+underlying communication technique. If successful, 'init_app' returns
+a session-id that can be used with session specific calls.
+
+!void deinit_app ([in] long app_id);
+!
+
+!long exec_cmd ([in] long app_id,
+!               [in, string] char *cmd);
+
+!long exec_req ([in] long app_id,
+!               [in, string] char *cmd,
+!               [out, size_is(res_len), max_is(256)] char res[],
+!               [in, out] int *res_len);
+
+
+DOpElib
+#######
+
+For the implementation of DOpE client applications DOpElib provides a
+simple-to-use interface to communicate to the DOpE window server and
+handle events. DOpElib is platform independent and should always be
+used to implement client applications instead of using the IDL interface
+directly.
+
+
+Initializing the library
+========================
+
+Before using DOpElib it must be initialized by calling 'dope_init'.
+This function initially resolves the DOpE server.
+! long dope_init(void);
+This function returns #0# on success.
+
+At the exit of DOpE clients, 'dope_deinit' should be called to release
+all used resources.
+! void dope_deinit(void);
+
+
+(Un-)Register a new DOpE client application
+===========================================
+
+The 'dope_init_app' corresponds with the 'init_app' IDL call. It
+starts a new client session and creates a fresh variable namespace
+for this session. The return value of this function is an identifier
+for later reference to the session. When registering a client session
+an application name must be specified. This name will be the default
+window title for all windows of this session.
+! long dope_init_app(char *appname);
+
+Note that distinct variable name spaces can be established by
+creating multiple client sessions within one application.
+
+A client session can be closed via 'dope_deinit_app' taking the
+desired session identifier as argument. When called, DOpE destroys
+the associated variable name space and closes all windows of the
+session.
+! long dope_deinit_app(long app_id);
+
+
+Executing DOpE commands
+=======================
+
+Once a client session is started via 'dope_init_app' a client application
+can send commands refering to such a session via the 'dope_cmd' function.
+It takes a session identifier and an ASCII command string as arguments. On
+success 0 is returned. With 'dope_cmdf' there exists a simple way to use
+format strings as DOpE commands as well.
+! int dope_cmd(long app_id,char *cmd);
+! int dope_cmdf(long app_id, char *cmdf, ...);
+
+
+Requesting results of DOpE commands
+===================================
+
+While 'dope_cmd' and 'dope_cmdf' allow the execution of DOpE commands
+the result of these commands is not returned (mostly the result is of no
+interest - therefore we can skip the transfer of the result in common case). 
+When the result of a DOpE command is of importance, #dope_req# and #dope_reqf#
+must be utilized to request the result.
+! int dope_req(long app_id, char *dst, int dst_size, char *cmd);
+! int dope_reqf(long app_id, char *dst, int dst_size, char *cmdf, ...);
+This pair of functions takes the
+destination buffer 'dst' and its size for storing the result as argument.
+For example, to request the width of a window as an integer one can do:
+! char req_buf[16];
+! int width;
+! dope_req(app_id, req_buf, 16, "win.w");
+! width = atoi(req_buf);
+
+
+Binding events to callback functions
+====================================
+
+! void dope_bind(long app_id, char *var,
+!                char *event_type,
+!                void (*callback)(dope_event *,void *),
+!                void *arg);
+
+! void dope_bindf(long app_id, char *var,
+!                 char *event_type,
+!                 void (*callback)(dope_event *,void *),
+!                 void *arg,
+!                 ...);
+
+The two functions 'dope_bind' and 'dope_bindf' can be used to bind events
+to widgets. Their common arguments are:
+
+:'app_id':
+  DOpE application id
+
+:'var':
+  Name of the DOpE widget to which the event should be attached.
+
+:'event_type':
+  A DOpE event identifier. There are common identifiers for
+  all widget types. Furthermore some widgets provide custom bindings.
+
+:'callback':
+  Function that should be called when an event of the specified
+  type occurs.
+
+:'arg':
+  Argument that is passed to the registered callback function.
+
+The only difference between 'dope_bind' and 'dope_bindf' is that 'dope_bindf'
+takes the widget name as format string. The format string arguments are passed
+via _varargs_ as the very last parameters of the function.
+
+
+Start event processing
+======================
+
+! void dope_eventloop(long app_id);
+
+
+Widget set
+##########
+
+This section is an introduction into the widget layout concept of DOpE.
+Furthermore, it describes the properties, attributes and methods of the widget
+types implemented in DOpE.
+
+
+Widget layout concept
+=====================
+
+DOpE provides two kinds of widgets, _leaf widgets_ representing data and
+_layout widgets_, which contain other widgets. While the application specifies
+the information that should be represented on screen and the relationships of
+widgets, DOpE decides how to represent the information in the form of pixels.
+For example, an application requests that a number should be represented
+on screen in the form of a Scale widget. It does not define the exact dimensions,
+the color and the used font. This way, the user who finally uses the application
+can choose his/her favorite way of representation by configuring DOpE.
+
+_Note: at the current stage, the configuration options of DOpE are very limited._
+_But this approach enables us to be very flexible in the future._
+
+Every Leaf widget actually knows its way of representing its information and
+tells its parent layout widget about its minimal and maximal size on screen.
+The layout widget in turn, takes the min/max constraints of all children into
+account to define their actual position and size within the layout widget. The
+min/max constrains of the layout widget, again, depend on its children. For
+example, a window cannot get bigger than the maximum size of its content. Each
+time, a min/max constrain of a widget changes (for example, a Label is asked to
+displays another text) the widget reports the change to its parent. This way,
+the parent can update its layout by considering the new constraints.
+
+To summarize, there are two rules:
+* A child widget report its current constraints to its parent.
+* A parent widget defines the actual size of its children while considering
+  their min/max constraints.
+
+
+Generic widget attributes
+=========================
+
+  Attribute | Type      | Access | Default
+ ------------------------------------------------------------------------------
+  x,y       | <integer> | r/w    | 0
+ ------------------------------------------------------------------------------
+  w,h       | <integer> | r/w    | 64
+ ------------------------------------------------------------------------------
+  type      | <string>  | r      | type identifier string
+ ------------------------------------------------------------------------------
+  grabfocus | <boolean> | r/w    | no
+
+[table widget_attributes] generic widget attributes overview
+
+
+Table [widget_attributes] displays common attributes of widgets. The 'x' and
+'y' attributes define the position of a widget relative to its parent widget.
+The values refer to the top-left corner of the widget relative to the top-left
+corner of the parent widget. The current size of a widget can be accessed via
+the 'w' and 'h' attributes. Normaly, the position and size of widgets are
+assigned by their parents so that these attributes should not be modified
+manually.
+
+The 'type' attribute of a widget is the name of its widget type as a string.
+
+By default, the keyboard focus can be switched among widgets by using the tab
+key. However, there are widgets that need to keep the keyboard focus once
+they receive it, for example a text edit field. For such widgets, the
+boolean attribute 'grabfocus' can be enabled to prevent the focus switching
+and thus, let the application handle all key strokes referring the widget by
+itself.
+
+
+Generic widget methods
+======================
+
+  Method | Arguments
+ ------------------------------------------------------------------------------
+  bind   | <string> type,
+         | <string> message
+ ------------------------------------------------------------------------------
+  unbind | <string> type
+ ------------------------------------------------------------------------------
+  focus  |
+
+[table widget_methods] generic widget methods overview
+
+Normally, the user defines the keyboard focus by clicking on the corresponding
+widget with the mouse, or moving the focus among the widgets via the keyboard.
+In some cases though, applications need to define the focus manually to provide
+a more convenient workflow to the user. For this, the widget method 'focus'
+can be used to set the currently active keyboard focus to the widget. If the
+application owns the currently active window, the window holding the widget,
+is activated, too.
+
+
+Built-in base widget set
+########################
+
+
+Background
+==========
+
+  Attribute  | Type       | Access | Default
+ ------------------------------------------------------------------------------
+  content    | <widget>   | w      | none
+
+[table background_attributes] Background attributes overview
+
+
+Button
+======
+
+  Attribute  | Type       | Access | Default
+ ------------------------------------------------------------------------------
+  text       | <string>   | r/w    | ""
+ ------------------------------------------------------------------------------
+  padx       | <int>      | r/w    | 2
+ ------------------------------------------------------------------------------
+  pady       | <int>      | r/w    | 2
+
+[table button_attributes] Button attributes overview
+
+
+The 'padx' and 'pady' attributes of a Button widget specify the vertical
+and horizontal distances between the widget border and the visible button.
+
+
+  Event binding | Short description
+ ------------------------------------------------------------------------------
+  commit        | commit the action that is associated with the button
+ ------------------------------------------------------------------------------
+  click         | user clicks on the button
+ ------------------------------------------------------------------------------
+  clack         | user releases the mouse button
+
+[table button_bindings] Button event bindings
+
+
+Beside the generic bindings 'press' and 'release', Button widgets support the
+higher-level bindings for receiving user input events as displayed in
+table [button_bindings]. Normally, the 'commit' binding should be used for
+all buttons that trigger an action in the application. If the application
+needs to specifically react on the mouse press and release, the bindings 'click'
+and 'clack' can be used. In contrast to 'press' and 'release', these bindings
+make DOpE manage the visible behaviour of the Button when clicked.
+It is recommended to use the 'clack' binding for all critical actions that
+are not easily reversable. For such actions, we want to grant the user some
+more time to decide whether it applies the action (by releasing the mouse
+on the Button) or cancel the action (by moving the mouse away from the Button
+and then releasing the mouse).
+
+
+Entry
+=====
+
+  Attribute  | Type       | Access | Default
+ ------------------------------------------------------------------------------
+  text       | <string>   | r/w    | ""
+ ------------------------------------------------------------------------------
+  blind      | <boolean>  | r/w    | no
+
+[table entry_attributes] Entry attributes overview
+
+
+The Entry widget is a single-line text edit field. DOpE handles all editing
+functions such as cursor movement, insertion and deletion of characters. The
+'text' attribute contains the current text.
+
+When the Entry widget is used to insert passwords, it can be switched to a
+blind mode. When the 'blind' attribute is set, each character is printed as an
+unreadable placeholder.
+
+
+Frame
+=====
+
+  Attribute  | Type       | Access | Default
+ ------------------------------------------------------------------------------
+  content    | <widget>   | w      | none
+ ------------------------------------------------------------------------------
+  background | <boolean>  | r/w    | off
+ ------------------------------------------------------------------------------
+  scrollx    | <boolean>  | r/w    | off
+ ------------------------------------------------------------------------------
+  scrolly    | <boolean>  | r/w    | off
+ ------------------------------------------------------------------------------
+  xview      | <integer>  | r/w    | 0
+ ------------------------------------------------------------------------------
+  yview      | <integer>  | r/w    | 0
+
+[table frame_attributes] Frame attributes overview
+
+
+Grid
+====
+
+  Method       | Arguments
+ ------------------------------------------------------------------------------
+  columnconfig | <integer> index,
+               | -weight <float>
+               | -size <integer>
+ ------------------------------------------------------------------------------
+  rowconfig    | <integer> index,
+               | -weight <float>
+               | -size <integer>
+ ------------------------------------------------------------------------------
+  place        | <widget> child,
+               | -column <integer>
+               | -row <integer>
+               | -padx <integer>
+               | -pady <integer>
+               | -align <string>
+ ------------------------------------------------------------------------------
+  remove       | <widget> child
+
+[table grid_methods] grid methods overview
+
+
+The Grid layout widget manages the layout of child-widgets in rows and colums.
+A child widget 'c' can be placed into a Grid 'g' by using the 'place'
+method:
+! g.place(c, -column 1 -row 1)
+Rows and Columns are created on demand when a child-widget is placed. Additionally,
+the 'place' method can take an alignment as argument. An alignment specifier
+consists of the characters 'n' (north), 's' (south), 'e' (east) and 'w' (west).
+For example, the option '-align ew' can be used to stretch the child widget
+horizontally (from east to west) but center it vertically.
+
+
+Label
+=====
+
+  Attribute  | Type       | Access | Default
+ ------------------------------------------------------------------------------
+  text       | <string>   | r/w    | ""
+ ------------------------------------------------------------------------------
+  variable   | <variable> | r/w    | <undefined>
+
+[table label_attributes] Label attributes overview
+
+
+LoadDisplay
+===========
+
+  Attribute  | Type       | Access | Default
+ ------------------------------------------------------------------------------
+  from       | <float>    | r/w    | 0.0
+ ------------------------------------------------------------------------------
+  to         | <float>    | r/w    | 100.0
+ ------------------------------------------------------------------------------
+  orient     | <string>   | r/w    | horizontal
+
+[table loaddisplay_attributes] LoadDisplay attributes overview
+
+
+The LoadDisplay represents fractions of a defined range of values
+in the shape of bars. It can be used to implement progress bars or load
+bars. Multiple bars per LoadDisplay are supported. The range of values
+can be freely defined via the 'from' and 'to' attributes. Ranges
+including negative values are explicitly supported.
+
+
+  Method       | Arguments
+ ------------------------------------------------------------------------------
+  barconfig    | <string> bar_identifier,
+               | -value <float>
+
+[table loaddisplay_methods] LoadDisplay methods overview
+
+
+A bar can be placed into the LoadDisplay by calling the 'barconfig'
+method. For example:
+! ld = new LoadDisplay()
+! ld.barconfig(load, -value 33.3)
+
+Each bar can be referenced by a dedicated string identifier
+that can freely be assigned via the 'barconfig' method. Bars
+are created on demand - if a bar identifier is not yet known to
+the LoadDisplay, a new bar is created.
+
+The orientation of a LoadDisplay can be defined via the
+'orient' attribute that can hold the values 'horizontal' or 'vertical'.
+
+Per default (if 'from' < 'to') bars grow from left to right (or from
+top to bottom respectively). Reversed ranges ('from' > 'to') reverse
+the direction of bars.
+
+
+Scale
+=====
+
+  Attribute  | Type       | Access | Default
+ ------------------------------------------------------------------------------
+  variable   | <variable> | w      |
+ ------------------------------------------------------------------------------
+  value      | <float>    | r/w    | 50.0
+ ------------------------------------------------------------------------------
+  from       | <float>    | r/w    | 0.0
+ ------------------------------------------------------------------------------
+  to         | <float>    | r/w    | 100.0
+ ------------------------------------------------------------------------------
+  orient     | <set>      | r/w    | horizontal
+
+[table scale_attributes] Scale attributes overview
+
+
+Scrollbar
+=========
+
+  Attribute  | Type       | Access | Default
+ ------------------------------------------------------------------------------
+  realsize   | <integer>  | r/w    | 500
+ ------------------------------------------------------------------------------
+  viewsize   | <integer>  | r/w    | 128
+ ------------------------------------------------------------------------------
+  offset     | <integer>  | r/w    | 0
+ ------------------------------------------------------------------------------
+  orient     | <set>      | r/w    | horizontal
+
+[table scrollbar_attributes] Scrollbar attributes overview
+
+
+The Scrollbar widget type represents a viewport on an object (for example a
+text) that is larger than its actual representation on screen (for example the
+text editor). Table [scrollbar_attributes] displays the attributes of a Scrollbar.
+The 'realsize' attribute defines the real size of the object while the viewport
+on the object is defined by its 'viewsize' and the 'offset'.
+The 'orient' attribute defines whether the Scrollbar widget appears 'vertical' or
+'horizontal'.
+
+
+  Event binding | Short description
+ ------------------------------------------------------------------------------
+  change        | the view offset changed
+
+[table scrollbar_bindings] Scrollbar event bindings
+
+Applications can receive events on the change of the viewport offset via the
+'change' binding.
+
+
+Variable
+========
+
+  Attribute  | Type      | Access | Default
+ ------------------------------------------------------------------------------
+  value      | <string>  | r/w    | "<undefined>"
+
+[table variable_attributes] Variable attributes overview
+
+
+VScreen
+=======
+
+  Attribute      | Type      | Access |  Default
+ ------------------------------------------------------------------------------
+  framerate      | <integer> | r/w    | 0
+ ------------------------------------------------------------------------------
+  mousex, mousey | <integer> | r/w    | 0
+ ------------------------------------------------------------------------------
+  grabmouse      | <boolean> | r/w    | off
+
+[table vscreen_attributes] VScreen attributes overview
+
+VScreen is a virtual screen buffer that contains raw pixel data. It is
+allocated by DOpE and mapped to the client's address space via shared
+memory. Thus, it provides a powerful way to display pixel-based data
+with a very low copying overhead.
+Table [vscreen_attributes] contains the VScreen specific attributes.
+
+After a VScreen is created, a video mode can be probed via the 'probemode'
+method. VScreen supports the pixel formats 'RGB16' and 'YUV420'.
+If 'probemode' returns '1', the specified videomode is supported by DOpE
+and can be set via the 'setmode' method.
+
+The virtual screen buffer can be exported to the client application
+via the 'map' method that returns an identifier for the corresponding
+shared memory block. The identifier depends on the underlying platform -
+a dataspace id on L4, or a mmap filename on Linux. The client application
+can use this identifier to map the shared memory block into its local
+address space. For a platform-independent way of handling this mapping,
+libVScreen can be used.
+
+
+Mouse grabbing
+~~~~~~~~~~~~~~
+
+For applications, which handle a custom mouse cursor, a VScreen widget can
+be configured to grab the mouse cursor via the 'grabmouse' attribute.
+When this attribute is enabled, the mouse gets trapped within the widget
+area as soon as the user clicks on the VScreen. The user can free the
+mouse at any time by pressing the _pause_ key. When the mouse is grabbed,
+its position within the VScreen widget can be requested and defined via
+the 'mousex' and 'mousey' attributes.
+
+
+Real-Time
+~~~~~~~~~
+
+For real-time applications, VScreen features an optional periodic screen
+refresh at a fixed framerate that can be enabled by setting the 'framerate'
+attribute.
+
+
+  Method       | Arguments
+ ------------------------------------------------------------------------------
+  probemode    | <long> width,
+               | <long> height,
+               | <string> mode
+ ------------------------------------------------------------------------------
+  setmode      | <long> width,
+               | <long> height,
+               | <string> mode
+ ------------------------------------------------------------------------------
+  getserver    |
+ ------------------------------------------------------------------------------
+  map          | -thread <string>
+ ------------------------------------------------------------------------------
+  refresh      | -x <integer>
+               | -y <integer>
+               | -w <integer>
+               | -h <integer>
+ ------------------------------------------------------------------------------
+  share        | <widget> from
+
+[table vscreen_methods] VScreen methods overview
+
+
+VTextScreen
+===========
+
+The VTextScreen is the counterpart of VScreen for textual data that can be
+represented by monospaced text. This is the case for Terminal-like applications.
+VTextScreen provides a virtual VGA text console featuring a character buffer
+(ASCII code) and a corresponding attribute buffer that contains foreground and
+background color information for each character.
+
+
+  Method       | Arguments
+ ------------------------------------------------------------------------------
+  probemode    | <long> width,
+               | <long> height,
+               | <string> mode
+ ------------------------------------------------------------------------------
+  setmode      | <long> width,
+               | <long> height,
+               | <string> mode
+ ------------------------------------------------------------------------------
+  map          | -thread <string>
+ ------------------------------------------------------------------------------
+  refresh      | -x <integer>
+               | -y <integer>
+               | -w <integer>
+               | -h <integer>
+
+[table vtextscreen_methods] VTextScreen methods overview
+
+
+As displayed in table [vtextscreen_methods], VTextScreen behaves very similar
+to VScreen. A virtual text mode can be probed and set via the 'probemode' and
+'setmode' methods. The currently supported mode is 'C8A8PLN'. This term describes a
+mode with 8 bit characters, 8 bit attributes, planar --- both buffers are stored
+in succession. The 'width' and 'height' arguments must be specified as number of
+character. The lower bits 0..2 of an attribute value describe the background color
+index and the bits 3..5 describe the foreground color index of the corresponding
+character. Table [vtextscreen_colors] displays the available colors.
+Bits 6..7 define the brightness level. There are 3 brightness levels available.
+
+
+  Color index | Color
+ -------------------------
+       0      | black
+       1      | red
+       2      | green
+       3      | yellow
+       4      | blue
+       5      | purple
+       6      | cyan
+       7      | white
+
+[table vtextscreen_colors] Definitions of color indices
+
+
+After a successful initialization of a virtual text screen mode, the text and
+attribute buffer can be mapped to the client applications in the same way as
+for VScreen widgets. Each time, the client application modifies a portion
+of the shared buffer, the 'refresh' method must be called to inform DOpE to
+update the corresponding text area on screen.
+
+  Attribute        | Type      | Access | Default
+ ------------------------------------------------------------------------------
+  cursorx, cursory | <integer> | w      | 0
+
+[table vtextscreen_attributes] VTextScreen attributes overview
+
+
+Window
+======
+
+  Attribute    | Type      | Access  |  Default
+ ------------------------------------------------------------------------------
+  workx, worky | <integer> | r/w     | position of the work area
+ ------------------------------------------------------------------------------
+  workw, workh | <integer> | r/w     | size of the work area
+ ------------------------------------------------------------------------------
+  title        | <string>  | r/w     | window title text
+
+[table window_attributes] Window attributes overview
+
+
+Window widgets feature additional attributes as presented in
+table [window_attributes]. Since the position and size of widgets
+always refers to the bounding box of widgets the widget attributes
+'x', 'y', 'w' and 'h' of windows refer to the outer boundary of the
+window containing the window elements and window border. For application
+programmers the actual working area of the window is of more interest.
+Thus, the position and size of the actual working area are accessible
+via the window-specific attributes 'workx', 'wworky', 'workw' and 'workh'.
+
+
+  Method       | Arguments
+ ------------------------------------------------------------------------------
+  open         |
+ ------------------------------------------------------------------------------
+  close        |
+ ------------------------------------------------------------------------------
+  top          |
+
+[table window_methods] Window methods overview
+
+
+Frequently Asked Questions
+##########################
+
+How to insert a placeholder with a fixed size?
+==============================================
+
+For defining placeholders between child widgets of a Grid, you can define empty
+rows and columns using the #rowconfig# and #columnconfig# methods of the Grid
+layout widget with a specified #-size# parameter.
+
+
+How to avoid shrinking the size of a Frame when its content shrinks?
+====================================================================
+
+Generally, a Frame cannot get larger than its content. But when using a Grid
+as content you can easily configure the Grid of expand infinitely by inserting
+a row/column with a #-weight# that is far larger than the weight of the other
+rows/columns. For example, you want to place a Button within a Frame but want
+the Frame to expand such that the empty space beyond the bottom of the Button
+gets visible:
+! f = new Frame()
+! g = new Grid()
+! f.set(-content g)
+! b = new Button()
+! g.place(b, -column 1 -row 1)
+! g.rowconfig(9999, -weight 1)
+
+
+How to set a widget to a fixed size?
+====================================
+
+If an application needs to define the actual size of a certain widget in pixels
+(which is not recommended), it must use a layout widget as parent of this widget,
+which enforces this fixed size. For example, rows and columns of a Grid can be
+configured to have a fixed size. Still, the defined size cannot exceed the
+constraints of the widget.
+

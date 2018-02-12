@@ -1,0 +1,21 @@
+uxbench is a hdd performance measuring utility for Linux and BSD and maybe
+others. It is the pendant to l4/pkg/bddf/clients/bddfbench. Both read the
+first n (1..4096) sectors of a disk with a single request. This is done
+repeatedly.
+Results are printed to stderr during measurement and to stdout at the end.
+So you can redirect it to a file using "> blah.txt", but see the progress.
+
+There is a perl script called makestats which reads the output of
+bddfbench and uxbench and calculates the mean and the standard deviation
+per transfer block size. The output of this script can easily be used
+with gnuplot.
+
+You need to patch your Linux/... kernel in order to have rdtsc and rdpmc
+work in userspace, which is needed for uxbench.
+
+
+The content of the directory
+ ./uxbench is the measuring utility uxbench
+ ./patches is the kernel patches for Linux 2.6 and FreeBSD 5.4
+ ./scripts is the script for calculating means and standard deviations
+

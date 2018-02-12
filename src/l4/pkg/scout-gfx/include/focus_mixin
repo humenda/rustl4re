@@ -1,0 +1,79 @@
+// vi:ft=cpp
+/*
+ * Copyright (C) 2012-2014 Kernkonzept GmbH.
+ * Author(s): Johannes Richter <johannes.richter@kernkonzept.com>
+ *
+ * This file is distributed under the terms of the GNU General Public
+ * License, version 2.  Please see the COPYING-GPL-2 file for details.
+ *
+ * As a special exception, you may use this file as part of a free software
+ * library without restriction.  Specifically, if other files instantiate
+ * templates or use macros or inline functions from this file, or you compile
+ * this file and link it with other files to produce an executable, this
+ * file does not by itself cause the resulting executable to be covered by
+ * the GNU General Public License.  This exception does not however
+ * invalidate any other reasons why the executable file might be covered by
+ * the GNU General Public License.
+ */
+#pragma once
+
+#include <l4/scout-gfx/style>
+#include <l4/scout-gfx/widget>
+#include <l4/mag-gfx/canvas>
+
+namespace Scout_gfx {
+
+/**
+ * This mix-in class adds the functionality to a class derived from Widget
+ * to handle the keyboard focus.
+ *
+ * \tparam SUBJECT: the type of class, that is extended with this mixin.
+ */
+//template <class SUBJECT>
+class Focus_mixin: public Widget
+{
+private:
+  bool _focused;
+  Color _focus_color;
+
+public:
+  /**
+   * Creates an instance of a focusable widget.
+   *
+   * By default this object is not focused initially and draws a light-blue
+   * frame if it becomes focused.
+   */
+  Focus_mixin()
+  : _focused(false), _focus_color(Color(0x1C, 0xE8, 0xE8))
+  {}
+
+  /**
+   * \param focused: true if widget is currently focused, otherwise false
+   */
+  void keyb_focus(bool focused) { _focused = focused; }
+
+  /**
+   * This method sets the color of the focused Widget.
+   *
+   * \param fcol: new focus color
+   */
+  void focused_color(Color fcol) { _focus_color = fcol; }
+
+  /// \returns if the widget is focused
+  bool is_keyb_focusable() const { return 1; }
+
+  /**
+   * This method draws a frame to indicate focused widget
+   */
+  void draw_focus(Canvas *c, Point const &p)
+  {
+    //Widget *this_widget = static_cast<Widget *>(this);
+    if (_focused)
+      {
+        Rect n = Rect(p, this->size() );
+        c->draw_rect(n.grow(-2), _focus_color , 2);
+      }
+  }
+};
+
+} //namespace

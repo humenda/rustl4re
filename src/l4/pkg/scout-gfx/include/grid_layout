@@ -1,0 +1,87 @@
+// vi:ft=cpp
+/*
+ * (c) 2010 Alexander Warg <warg@os.inf.tu-dresden.de>
+ *     economic rights: Technische Universität Dresden (Germany)
+ *
+ * This file is part of TUD:OS and distributed under the terms of the
+ * GNU General Public License 2.
+ * Please see the COPYING-GPL-2 file for details.
+ */
+
+#pragma once
+
+#include <l4/scout-gfx/layout>
+
+namespace Scout_gfx {
+
+using Mag_gfx::Alignment;
+using Mag_gfx::Align_left;
+using Mag_gfx::Align_right;
+using Mag_gfx::Align_h_center;
+using Mag_gfx::Align_justify;
+using Mag_gfx::Align_horizontal_m;
+using Mag_gfx::Align_top;
+using Mag_gfx::Align_bottom;
+using Mag_gfx::Align_v_center;
+using Mag_gfx::Align_vertical_m;
+using Mag_gfx::Align_center;
+
+
+class G_layout_d;
+
+class Grid_layout : public Layout
+{
+public:
+  Grid_layout();
+  ~Grid_layout();
+
+  void set_default_positioning(int n, Orientation orient);
+  Area preferred_size() const;
+  Area min_size() const;
+  Area max_size() const;
+
+  void row_stretch(int row, int stretch);
+  void col_stretch(int col, int stretch);
+  int row_stretch(int row) const;
+  int col_stretch(int col) const;
+
+  void row_min_height(int row, int min);
+  void col_min_width(int col, int min);
+  int row_min_height(int row) const;
+  int col_min_width(int col) const;
+
+  int col_count() const;
+  int row_count() const;
+
+  Rect cell_rect(int row, int col) const;
+
+  bool has_height_for_width() const;
+  int height_for_width(int) const;
+  int min_height_for_width(int) const;
+
+  Orientations expanding() const;
+  void invalidate();
+
+  void add_item(Layout_item *, int row, int column, int row_span = 1,
+                int column_span = 1, Alignment = 0);
+
+
+  Layout_item *item(int) const;
+  Layout_item *remove_item(int);
+  int count() const;
+
+  void set_geometry(Rect const &);
+  Rect geometry() const { return _geom; }
+  void get_item_pos(int idx, int *row, int *column,
+                    int *row_span, int *column_span);
+
+  bool empty() const;
+protected:
+  void add_item(Layout_item *);
+
+private:
+  G_layout_d *_d;
+  Rect _geom;
+};
+
+};

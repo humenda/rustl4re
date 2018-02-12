@@ -1,0 +1,4 @@
+<map id="Graphical Class Hierarchy" name="Graphical Class Hierarchy">
+<area shape="rect" id="node1" href="$classcxx_1_1Bits_1_1Bst.html" title="cxx::Bits::Bst\&lt; _Node,\l Bits::Avl_map_get_key\l\&lt; Region \&gt;, cxx::Lt_functor\l\&lt; Region \&gt; \&gt;" alt="" coords="5,5,193,76"/>
+<area shape="rect" id="node2" href="$classcxx_1_1Avl__tree.html" title="cxx::Avl_tree\&lt; _Node,\l Bits::Avl_map_get_key\l\&lt; Region \&gt;, cxx::Lt_functor\l\&lt; Region \&gt; \&gt;" alt="" coords="241,5,429,76"/>
+</map>

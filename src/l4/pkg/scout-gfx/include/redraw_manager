@@ -1,0 +1,93 @@
+// vi:ft=cpp
+/*
+ * (c) 2010 Alexander Warg <warg@os.inf.tu-dresden.de>
+ *     economic rights: Technische Universität Dresden (Germany)
+ *
+ * This file is part of TUD:OS and distributed under the terms of the
+ * GNU General Public License 2.
+ * Please see the COPYING-GPL-2 file for details.
+ */
+#pragma once
+
+#include <l4/mag-gfx/geometry>
+#include <l4/scout-gfx/widget>
+
+namespace Scout_gfx {
+
+using Mag_gfx::Canvas;
+using Mag_gfx::Point;
+using Mag_gfx::Area;
+using Mag_gfx::Rect;
+
+class Screen_update
+{
+public:
+
+  virtual ~Screen_update() { }
+
+  /**
+   * Flip fore and back buffers
+   */
+  virtual void flip_buf_scr() { }
+
+  /**
+   * Copy background buffer to foreground
+   */
+  virtual void copy_buf_to_scr(Rect const &) { }
+
+  /**
+   * Flush pixels of specified screen area
+   */
+  virtual void scr_update(Rect const &r) = 0;
+};
+
+class Redraw_manager
+{
+private:
+
+  Rect _dirty;
+  int            _cnt;           /* nb of requests since last process */
+  Widget       *_root;          /* root element for drawing          */
+  Canvas        *_canvas;        /* graphics backend                  */
+  Screen_update *_scr_update;    /* flushing pixels in backend        */
+  Area _win;                     /* current size of output window     */
+
+public:
+
+  /**
+   * Constructor
+   */
+  Redraw_manager()
+  : _cnt(0), _root(0), _canvas(0), _scr_update(0), _win(Area())
+  {}
+
+  /**
+   * Accessor functions
+   */
+  Canvas *canvas() const { return _canvas; }
+
+  void setup(Canvas *canvas, Screen_update *scr_update, Area const &win)
+  {
+    _canvas = canvas;
+    _scr_update = scr_update;
+    _win = win;
+  }
+
+  
+  /**
+   * Define root element for issueing drawing operations
+   */
+  inline void root(Widget *root) { _root = root; }
+
+  /**
+   * Collect redraw requests
+   */
+  void request(Rect const &r);
+
+  /**
+   * Process redrawing operations
+   */
+  void process(Rect const &view);
+};
+
+}

@@ -1,0 +1,5 @@
+<map id="Graphical Class Hierarchy" name="Graphical Class Hierarchy">
+<area shape="rect" id="node1" href="$classcxx_1_1Bits_1_1Basic__list.html" title="cxx::Bits::Basic_list\l\&lt; Bits::Basic_list_policy\l\&lt; Weak_ref_base, H_list\l_item_t\&lt; Weak_ref_base \&gt; \&gt; \&gt;" alt="" coords="5,13,220,83"/>
+<area shape="rect" id="node2" href="$classcxx_1_1H__list.html" title="cxx::H_list\&lt; Weak_ref\l_base, Bits::Basic_list\l_policy\&lt; Weak_ref_base,\l H_list_item_t\&lt; Weak_ref\l_base \&gt; \&gt; \&gt;" alt="" coords="268,5,448,91"/>
+<area shape="rect" id="node3" href="$structcxx_1_1H__list__t.html" title="cxx::H_list_t\&lt; Weak\l_ref_base \&gt;" alt="" coords="496,27,640,69"/>
+</map>

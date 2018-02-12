@@ -1,0 +1,60 @@
+// vi:ft=cpp
+/*
+ * (c) 2010 Alexander Warg <warg@os.inf.tu-dresden.de>
+ *     economic rights: Technische Universität Dresden (Germany)
+ *
+ * This file is part of TUD:OS and distributed under the terms of the
+ * GNU General Public License 2.
+ * Please see the COPYING-GPL-2 file for details.
+ */
+#pragma once
+
+#include <l4/mag-gfx/factory>
+#include <l4/mag-gfx/mem_canvas>
+#include <l4/mag-gfx/mem_texture>
+
+namespace Mag_gfx {
+namespace Mem {
+
+template< typename Pixel_traits >
+class Factory : public virtual Mag_gfx::Factory
+{
+private:
+  Pixel_info const *_pi;
+
+public:
+  typedef typename Pixel_traits::R R;
+  typedef typename Pixel_traits::G G;
+  typedef typename Pixel_traits::B B;
+  typedef typename Pixel_traits::A A;
+
+  Pixel_info const *pixel_info() { return _pi; }
+
+  Factory() : _pi(Pixel_traits::type())
+  {
+    const_cast<Pixel_info *>(Pixel_traits::type())->factory = this;
+    set.add(this);
+  }
+
+  Mag_gfx::Canvas *create_canvas(void *pixels, Area const &size, unsigned bpl)
+  { return new Canvas<Pixel_traits>(pixels, size, bpl); }
+
+  Mag_gfx::Texture *create_texture(Area const &size, void *buffer,
+                                   bool alpha = false)
+  {
+    typedef typename Pixel_traits::Pixel Pixel;
+    alpha &= Pixel_traits::Need_extra_alpha;
+    Pixel *b = (Pixel*)buffer;
+    if (!b)
+      b = (Pixel*)malloc(size.pixels() * Pixel_traits::bytes_per_pixel(alpha));
+    return new Texture<Pixel_traits>(b, size, alpha);
+  }
+
+  unsigned long get_texture_size(Area const &sz, bool alpha = false)
+  {
+    alpha &= Pixel_traits::Need_extra_alpha;
+    return sz.pixels() * Pixel_traits::bytes_per_pixel(alpha);
+  }
+};
+
+}}

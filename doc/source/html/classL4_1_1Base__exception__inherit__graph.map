@@ -1,0 +1,11 @@
+<map id="L4::Base_exception" name="L4::Base_exception">
+<area shape="rect" id="node3" href="$classL4_1_1Invalid__capability.html" title="Indicates that an invalid object was invoked. " alt="" coords="160,315,320,451"/>
+<area shape="rect" id="node4" href="$classL4_1_1Runtime__error.html" title="Exception for an abstract runtime error. " alt="" coords="345,315,487,451"/>
+<area shape="rect" id="node10" href="$classL4_1_1Unknown__error.html" title="Exception for an unknown condition. " alt="" coords="511,329,662,436"/>
+<area shape="rect" id="node2" href="$classL4_1_1Exception__tracer.html" title="Back&#45;trace support for exceptions. " alt="" coords="341,5,491,112"/>
+<area shape="rect" id="node5" href="$classL4_1_1Bounds__error.html" title="Access out of bounds. " alt="" coords="5,506,144,598"/>
+<area shape="rect" id="node6" href="$classL4_1_1Com__error.html" title="Error conditions during IPC. " alt="" coords="169,506,290,598"/>
+<area shape="rect" id="node7" href="$classL4_1_1Element__already__exists.html" title="Exception for duplicate element insertions. " alt="" coords="315,499,517,605"/>
+<area shape="rect" id="node8" href="$classL4_1_1Element__not__found.html" title="Exception for a failed lookup (element not found). " alt="" coords="542,513,709,591"/>
+<area shape="rect" id="node9" href="$classL4_1_1Out__of__memory.html" title="Exception signalling insufficient memory. " alt="" coords="733,506,886,598"/>
+</map>

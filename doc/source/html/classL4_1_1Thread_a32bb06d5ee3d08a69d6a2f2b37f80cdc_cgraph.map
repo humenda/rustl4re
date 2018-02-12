@@ -1,0 +1,4 @@
+<map id="L4::Thread::vcpu_control_ext" name="L4::Thread::vcpu_control_ext">
+<area shape="rect" id="node2" href="$classL4_1_1Kobject.html#a314161cb755de6fd0c50da0a757eb4c7" title="Return capability selector. " alt="" coords="282,5,401,32"/>
+<area shape="rect" id="node3" href="$group__l4__thread__api.html#ga1015c5500bcfeaa01d209ee116cf57ec" title="Enable or disable the extended vCPU feature for the thread. " alt="" coords="256,57,427,98"/>
+</map>

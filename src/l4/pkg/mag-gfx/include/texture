@@ -1,0 +1,44 @@
+// vi:ft=cpp
+/*
+ * (c) 2010 Alexander Warg <warg@os.inf.tu-dresden.de>
+ *     economic rights: Technische Universität Dresden (Germany)
+ *
+ * This file is part of TUD:OS and distributed under the terms of the
+ * GNU General Public License 2.
+ * Please see the COPYING-GPL-2 file for details.
+ */
+#pragma once
+
+#include <l4/mag-gfx/geometry>
+#include <l4/mag-gfx/gfx_colors>
+
+namespace Mag_gfx {
+
+class Texture
+{
+protected:
+  Area _size;
+  void *_pixels;
+  Pixel_info const *_type;
+
+  bool _extra_alpha;
+
+  Texture(Pixel_info const *type, void *pixels, Area const &size, bool xalpha)
+  : _size(size), _pixels(pixels), _type(type), _extra_alpha(xalpha) {}
+
+public:
+  Pixel_info const *type() const { return _type; }
+  Area const &size() const { return _size; }
+  void size(Area const &s) { _size = s; }
+  void *pixels() { return _pixels; }
+  void const *pixels() const { return _pixels; }
+  void pixels(void *pixels) { _pixels = pixels; }
+
+  virtual void blit(Texture const *src, int start_line = 0) = 0;
+  virtual void blit_line(void const *src, Pixel_info const *st, int line, unsigned *offset_buffer) = 0;
+  bool extra_alpha() const { return _extra_alpha; }
+
+  virtual ~Texture() {}
+};
+
+}

@@ -1,0 +1,86 @@
+// vi:ft=cpp
+/*
+ * \brief   Fading class
+ * \date    2005-11-10
+ * \author  Norman Feske <norman.feske@genode-labs.com>
+ */
+
+/*
+ * Copyright (C) 2005-2009
+ * Genode Labs, Feske & Helmuth Systementwicklung GbR
+ *
+ * This file is part of the Genode OS framework, which is distributed
+ * under the terms of the GNU General Public License version 2.
+ */
+
+#pragma once
+
+
+#include <l4/scout-gfx/tick>
+#include <algorithm>
+
+namespace Scout_gfx {
+
+/**
+ * Class that manages the fading of a derived class.
+ */
+class Fader : private Tick
+{
+protected:
+
+  int _curr_value;   /* current value       */
+  int _dst_value;    /* desired final value */
+  int _step;
+
+public:
+
+  virtual ~Fader() { }
+
+  /**
+   * Fade to specified alpha value
+   */
+  void fade_to(int dst_value, int step = -1)
+  {
+    if (step > 0)
+      _step = step;
+
+    _dst_value  = dst_value;
+    schedule(20);
+  }
+
+  /**
+   * Set fading speed
+   */
+  void step(int step) { _step = step; }
+
+  /**
+   * Assign new current fading value
+   */
+  void curr(int curr)
+  {
+    if (curr == _curr_value)
+      return;
+
+    _curr_value = curr;
+    schedule(20);
+  }
+
+  /**
+   * Tick interface
+   */
+  int on_tick()
+  {
+    if (_curr_value == _dst_value)
+      return 0;
+
+    if (_curr_value < _dst_value)
+      _curr_value = std::min(_curr_value + _step, _dst_value);
+
+    if (_curr_value > _dst_value)
+      _curr_value = std::max(_curr_value - _step, _dst_value);
+
+    return 1;
+  }
+};
+
+}

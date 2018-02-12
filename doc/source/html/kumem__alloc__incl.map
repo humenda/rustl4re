@@ -1,0 +1,50 @@
+<map id="l4/re/util/kumem_alloc" name="l4/re/util/kumem_alloc">
+<area shape="rect" id="node2" href="$env.html" title="Environment interface. " alt="" coords="1537,80,1615,107"/>
+<area shape="rect" id="node3" href="$l4_2sys_2types_8h.html" title="Common L4 ABI Data Types. " alt="" coords="1404,1229,1511,1256"/>
+<area shape="rect" id="node10" href="$rm.html" title="Region mapper interface. " alt="" coords="1726,379,1797,405"/>
+<area shape="rect" id="node31" href="$consts.html" title="Constants. " alt="" coords="2142,453,2237,480"/>
+<area shape="rect" id="node32" href="$env_8h.html" title="Environment interface. " alt="" coords="2181,998,2269,1025"/>
+<area shape="rect" id="node38" href="$parent.html" title="Parent interface. " alt="" coords="1529,453,1623,480"/>
+<area shape="rect" id="node39" href="$mem__alloc.html" title="Memory allocator interface. " alt="" coords="1179,379,1301,405"/>
+<area shape="rect" id="node43" href="$log.html" title="Log interface. " alt="" coords="1133,155,1206,181"/>
+<area shape="rect" id="node4" href="$l4_2sys_2l4int_8h.html" title="Fixed sized integer types, generic version. " alt="" coords="2043,1379,2141,1405"/>
+<area shape="rect" id="node5" href="$compiler_8h.html" title="L4 compiler related defines. " alt="" coords="798,1379,925,1405"/>
+<area shape="rect" id="node7" href="$l4_2sys_2consts_8h.html" title="Common constants. " alt="" coords="2035,1304,2149,1331"/>
+<area shape="rect" id="node8" href="$____l4__fpage_8h_source.html" title="l4/sys/__l4_fpage.h" alt="" coords="1385,1304,1529,1331"/>
+<area shape="rect" id="node9" href="$____timeout_8h_source.html" title="l4/sys/__timeout.h" alt="" coords="1651,1304,1786,1331"/>
+<area shape="rect" id="node11" href="$capability.html" title="L4::Cap related definitions. " alt="" coords="1293,528,1413,555"/>
+<area shape="rect" id="node24" href="$ipc__iface.html" title="Interface Definition Language. " alt="" coords="1409,677,1511,704"/>
+<area shape="rect" id="node28" href="$protocols_8h.html" title="L4Re Protocol Constants (C version) " alt="" coords="1589,528,1712,555"/>
+<area shape="rect" id="node29" href="$pager.html" title="Pager and Io_pager C++ interface. " alt="" coords="1903,453,2001,480"/>
+<area shape="rect" id="node30" href="$ipc__ret__array_source.html" title="l4/sys/cxx/ipc_ret\l_array" alt="" coords="1288,827,1419,868"/>
+<area shape="rect" id="node37" href="$dataspace.html" title="Dataspace interface. " alt="" coords="1749,453,1869,480"/>
+<area shape="rect" id="node12" href="$kobject_source.html" title="l4/sys/kobject" alt="" coords="1265,752,1372,779"/>
+<area shape="rect" id="node22" href="$task_8h.html" title="Common task related definitions. " alt="" coords="1005,998,1104,1025"/>
+<area shape="rect" id="node23" href="$sys_2meta.html" title="Meta interface for getting dynamic type information about objects behind capabilities. " alt="" coords="1168,603,1261,629"/>
+<area shape="rect" id="node13" href="$kernel__object_8h.html" title="Kernel object system calls. " alt="" coords="437,916,555,943"/>
+<area shape="rect" id="node18" href="$____typeinfo_8h.html" title="Type information handling. " alt="" coords="1493,834,1592,861"/>
+<area shape="rect" id="node14" href="$l4_2sys_2utcb_8h.html" title="UTCB definitions. " alt="" coords="812,1155,911,1181"/>
+<area shape="rect" id="node15" href="$____kernel__object__impl_8h.html" title="Low&#45;level kernel debugger functions. " alt="" coords="488,991,651,1032"/>
+<area shape="rect" id="node16" href="$l4_2sys_2ipc_8h.html" title="Common IPC interface. " alt="" coords="643,1080,733,1107"/>
+<area shape="rect" id="node17" href="$err_8h.html" title="Error codes. " alt="" coords="245,1155,336,1181"/>
+<area shape="rect" id="node19" href="$types.html" title="cxx/types" alt="" coords="1194,998,1275,1025"/>
+<area shape="rect" id="node20" href="$ipc__basics_source.html" title="cxx/ipc_basics" alt="" coords="1085,916,1197,943"/>
+<area shape="rect" id="node21" href="$capability_8h_source.html" title="cxx/capability.h" alt="" coords="1521,916,1637,943"/>
+<area shape="rect" id="node26" href="$ipc__string_source.html" title="cxx/ipc_string" alt="" coords="969,677,1077,704"/>
+<area shape="rect" id="node25" href="$ipc__types.html" title="l4/sys/cxx/ipc_types" alt="" coords="1616,834,1763,861"/>
+<area shape="rect" id="node27" href="$ipc__array_source.html" title="ipc_array" alt="" coords="1109,752,1190,779"/>
+<area shape="rect" id="node33" href="$sys_2kip_8h.html" title="Kernel Info Page access functions. " alt="" coords="2115,1080,2205,1107"/>
+<area shape="rect" id="node36" href="$l4_2re_2consts_8h.html" title="Constants. " alt="" coords="2275,1229,2381,1256"/>
+<area shape="rect" id="node35" href="$____kip-64bit_8h_source.html" title="l4/sys/__kip&#45;64bit.h" alt="" coords="1824,1155,1965,1181"/>
+<area shape="rect" id="node40" href="$factory.html" title="Common factory related definitions. " alt="" coords="1043,453,1149,480"/>
+<area shape="rect" id="node41" href="$factory_8h.html" title="Common factory related definitions. " alt="" coords="195,998,311,1025"/>
+<area shape="rect" id="node42" href="$ipc__varg_source.html" title="l4/sys/cxx/ipc_varg" alt="" coords="869,834,1011,861"/>
+<area shape="rect" id="node44" href="$vcon.html" title="Virtual console interface. " alt="" coords="1102,229,1194,256"/>
+<area shape="rect" id="node45" href="$icu.html" title="Interrupt controller. " alt="" coords="1093,304,1171,331"/>
+<area shape="rect" id="node51" href="$vcon_8h.html" title="Virtual console interface. " alt="" coords="345,603,447,629"/>
+<area shape="rect" id="node46" href="$irq.html" title="C++ Irq interface. " alt="" coords="1077,379,1155,405"/>
+<area shape="rect" id="node47" href="$icu_8h.html" title="Interrupt controller. " alt="" coords="488,834,579,861"/>
+<area shape="rect" id="node48" href="$l4_2sys_2irq_8h.html" title="C Irq interface. " alt="" coords="603,834,693,861"/>
+<area shape="rect" id="node50" href="$rcv__endpoint.html" title="The C++ Receive endpoint interface. " alt="" coords="875,453,1019,480"/>
+<area shape="rect" id="node49" href="$rcv__endpoint_8h.html" title="Receive endpoint C interface. " alt="" coords="776,998,931,1025"/>
+</map>

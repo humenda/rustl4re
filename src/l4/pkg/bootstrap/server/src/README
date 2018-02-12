@@ -1,0 +1,70 @@
+
+bootstrap supports different boot modi.
+
+For x86:
+
+  1)
+     boostrap is started by a multiboot compliant bootloader and modules are
+     attached as multiboot modules. GRUB example:
+
+       kernel bootstrap arg1 args2 ...
+       module kernel
+       module sigma0
+       module roottask
+       module task1
+       ...
+
+   2)
+      bootstrap is started by a multiboot compliant bootloader but includes
+      all modules by itself. GRUB example:
+
+       kernel bootstrap_hello args...
+
+      For module specifications looks into modules.list
+
+   3)
+      bootstrap can boot from real-mode, esp. with pxelinux, i.e. it can be
+      booted via PXE. For that it also needs include all images.
+      This should also work with syslinux (e.g. from CDs/DVDs). (Note, grub
+      can also read is9660 filesystems.)
+
+   4)
+      bootstrap starts from protected mode but isn't started by a multiboot
+      compliant loader. Also needs to include all modules.
+
+For arm:
+
+   Just the single image mode, i.e. all modules packed into bootstrap.
+   Anything else doesn't make any sense (currently).
+
+
+Generating bootstrap in single-image-mode:
+
+ Call make with E=entryname, e.g.
+
+ $ make E=hello
+
+
+Local customization:
+
+ You can put a Makeconf.local file right into this directory
+ (bootstrap/server/src) where you can specify your own search paths etc.
+ Note that it is encouraged to have your local configuration in src/conf
+ rather than in this bootstrap directory.
+
+ Makeconf.local could look like this:
+
+  BOOTSTRAP_SEARCH_PATH_x86 := ../stuff:/home/joe/dev/l4/kernel/fiasco/build-ia32
+
+  KERN_ARM := build-arm
+
+  ifneq ($(PXA),)
+  KERN_ARM     := build-pxa
+  ARM_DRV_TYPE  = pxa
+  endif
+
+  KERN_PATH := /home/joe/dev/l4/kernel/fiasco/$(KERN_ARM)
+  BOOTSTRAP_SEARCH_PATH_arm = ../stuff:$(KERN_PATH):../../../../../bin/arm_sa
+
+  BOOTSTRAP_SEARCH_PATH     = $(BOOTSTRAP_SEARCH_PATH_$(ARCH))
+

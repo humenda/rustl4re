@@ -1,0 +1,15 @@
+// vim: ft=cpp
+#pragma once
+
+#include <l4/sys/capability>
+namespace Ankh {
+	
+	struct Svc : L4::Kobject_t<Svc, L4::Kobject, 0>
+	{
+		enum Opcodes
+		{
+			Activate,
+			Deactivate
+		};
+	};
+}

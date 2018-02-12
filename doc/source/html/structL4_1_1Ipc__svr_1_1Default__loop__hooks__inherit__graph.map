@@ -1,0 +1,7 @@
+<map id="L4::Ipc_svr::Default_loop_hooks" name="L4::Ipc_svr::Default_loop_hooks">
+<area shape="rect" id="node2" href="$structL4_1_1Ipc__svr_1_1Ignore__errors.html" title="Mix in for LOOP_HOOKS to ignore IPC errors. " alt="" coords="5,307,143,399"/>
+<area shape="rect" id="node3" href="$structL4_1_1Ipc__svr_1_1Default__timeout.html" title="Mix in for LOOP_HOOKS to use a 0 send and a infinite receive timeout. " alt="" coords="167,307,307,399"/>
+<area shape="rect" id="node4" href="$structL4_1_1Ipc__svr_1_1Compound__reply.html" title="Mix in for LOOP_HOOKS to always use compound reply and wait. " alt="" coords="331,307,495,399"/>
+<area shape="rect" id="node5" href="$classL4_1_1Ipc__svr_1_1Br__manager__no__buffers.html" title="Empty implementation of Server_iface. " alt="" coords="519,263,695,443"/>
+<area shape="rect" id="node6" href="$classL4_1_1Ipc__svr_1_1Server__iface.html" title="Interface for server&#45;loop related functions. " alt="" coords="519,5,695,215"/>
+</map>

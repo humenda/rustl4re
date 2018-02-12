@@ -1,0 +1,24 @@
+// vi:ft=cpp
+
+#pragma once
+
+#include <l4/sys/capability>
+#include <l4/sys/icu>
+#include <l4/sys/cxx/ipc_iface>
+
+namespace L4rtc {
+
+class Rtc : public L4::Kobject_t<Rtc, L4::Icu>
+{
+public:
+  typedef l4_uint64_t Time; ///< in ns, relative to l4_rdtsc()
+
+  L4_INLINE_RPC(long, get_timer_offset, (Time *offset));
+  L4_INLINE_RPC(long, set_timer_offset, (Time offset));
+
+  typedef L4::Typeid::Rpcs<get_timer_offset_t, set_timer_offset_t> Rpcs;
+
+  static Time get_timer();
+};
+
+}

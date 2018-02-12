@@ -1,0 +1,7 @@
+<map id="cxx::min" name="cxx::min">
+<area shape="rect" id="node2" href="$structL4virtio_1_1Svr_1_1Data__buffer.html#a0ae0d4405b3a3ae5aa554b3adece0138" title="Copy contents from this buffer to the destination buffer. " alt="" coords="127,5,257,47"/>
+<area shape="rect" id="node3" href="$classcxx_1_1List__alloc.html#a1fdfc49fafa608f60c191916629b61a4" title="Initializes an empty list allocator. " alt="" coords="124,71,260,112"/>
+<area shape="rect" id="node4" href="$ipc__stream.html#a0b996eb899b325073d3efdd06c5096c6" title="Extract an array of T elements from the stream s. " alt="" coords="146,137,238,163"/>
+<area shape="rect" id="node5" href="$structL4virtio_1_1Svr_1_1Data__buffer.html#aecd5fb1a25657f4a7b3af2362a74433c" title="Skip given number of bytes in this buffer. " alt="" coords="127,188,257,229"/>
+<area shape="rect" id="node6" href="$classcxx_1_1String.html#a6f501d9ccb1c93cf26db6c33c847b5a3" title="Substring of length len starting at idx. " alt="" coords="127,254,257,281"/>
+</map>

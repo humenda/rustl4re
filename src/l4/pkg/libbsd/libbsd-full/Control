@@ -1,0 +1,4 @@
+provides: libbsd-full
+requires: libc libbsd-lite
+source-pkg: libbsd
+maintainer: adam@os.inf.tu-dresden.de

@@ -1,0 +1,9 @@
+<map id="Object Invocation" name="Object Invocation">
+<area shape="rect" id="node1" href="$group__l4__ipc__rt__api.html" title="Realtime API" alt="" coords="325,5,428,32"/>
+<area shape="rect" id="node2" href="$group__l4__utcb__api.html" title="L4 Virtual Registers (UTCB). " alt="" coords="312,57,441,98"/>
+<area shape="rect" id="node3" href="$group__l4__ipc__err__api.html" title="Error handling for L4 object invocation. " alt="" coords="319,123,434,149"/>
+<area shape="rect" id="node4" href="$group__l4__timeout__api.html" title="All kinds of timeouts and time related functions. " alt="" coords="337,173,416,200"/>
+<area shape="rect" id="node5" href="$group__l4__msgitem__api.html" title="Message item related functions. " alt="" coords="317,224,436,251"/>
+<area shape="rect" id="node6" href="$group__l4__api.html" title="Interfaces for all kinds of base functionality. " alt="" coords="5,148,85,175"/>
+<area shape="rect" id="node8" href="$group__l4__msgtag__api.html" title="API related to the message tag data type. " alt="" coords="322,275,431,301"/>
+</map>

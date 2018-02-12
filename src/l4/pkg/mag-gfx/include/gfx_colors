@@ -1,0 +1,632 @@
+// vi:ft=cpp
+/*
+ * (c) 2010 Alexander Warg <warg@os.inf.tu-dresden.de>
+ *     economic rights: Technische Universität Dresden (Germany)
+ *
+ * This file is part of TUD:OS and distributed under the terms of the
+ * GNU General Public License 2.
+ * Please see the COPYING-GPL-2 file for details.
+ */
+#pragma once
+
+#include <l4/sys/types.h>
+#include <l4/re/video/colors>
+
+
+namespace Mag_gfx
+{
+
+/*** PRIVATE Murx */
+namespace _Local
+{
+
+  /*** int-to-type template */
+  template< int X >
+  class IT
+  {};
+
+  /*** Conversion for a single color component */
+  template< typename From, typename To >
+  static inline typename To::Value convert_comp(typename From::Value c, IT<true> const &)
+  {
+    enum { Sh = From::Shift - To::Shift + From::Size - To::Size };
+    return ((c & From::Mask) >> Sh) & To::Mask;
+  }
+
+  template< typename From, typename To >
+  static inline typename To::Value convert_comp(typename From::Value c, IT<false> const &)
+  {
+    enum { Sh = From::Shift - To::Shift + From::Size - To::Size };
+    return (((typename To::Value)(c & From::Mask)) << -Sh) & To::Mask;
+  }
+
+  template< typename From, typename To >
+  static inline typename To::Value convert_comp(typename From::Value c)
+  {
+    enum { Sh = From::Shift - To::Shift + From::Size - To::Size };
+    return convert_comp<From, To>(c, IT<(Sh > 0)>());
+  }
+
+
+  /*** Trivial pixel type with a size of a native data type and size-alignment. */
+  template< typename T >
+  class Trivial_pixel
+  {
+  private:
+    T _v; /* refernece to video memory representation */
+  public:
+    typedef T Value;
+    enum { Bpp = sizeof(T) };
+
+    Trivial_pixel() {}
+    explicit Trivial_pixel(T v) : _v(v) {}
+
+    T v() const { return _v; }
+  } __attribute__((packed));
+}
+
+/*** Encapsulation of properties of a pixel */
+/* A pixel occupies the given number of bytes in video memory and
+ * has a representation in a some machine useable type (byte, short,
+ * unsigned).
+ */
+template< int Bytes >
+class Pixel_traits;
+
+/*** Spezilization for 2byte */
+template<>
+class Pixel_traits<2>
+{
+public:
+  typedef _Local::Trivial_pixel<l4_uint16_t> Pixel;
+};
+
+/*** Spezialization for 4byte */
+template<>
+class Pixel_traits<4>
+{
+public:
+  typedef _Local::Trivial_pixel<l4_uint32_t> Pixel;
+};
+
+
+/*** Spezialization for 3byte */
+template<>
+class Pixel_traits<3>
+{
+public:
+  /*** Encapsulation for 3byte memory references */
+  /* Looks like a pointer to a native data type  */
+  class Pixel
+  {
+  public:
+    enum { Bpp = 3 };
+    typedef l4_uint32_t Value;
+
+  private:
+    struct Data
+    {
+      l4_uint16_t s;
+      char b;
+    } __attribute__((packed));
+
+    Data _d;
+
+    Value get() const 
+    { return (Value)(_d.s) | ((l4_uint32_t)_d.b << 16); }
+
+  public:
+    Pixel() {}
+
+    explicit Pixel(Value c)
+    {
+      _d.s = (l4_uint16_t)c;
+      _d.b = c >> 16;
+    }
+
+    Value v() const { return get(); }
+  } __attribute__((packed));
+};
+
+class Factory;
+
+class Pixel_info : public L4Re::Video::Pixel_info
+{
+public:
+  Factory *factory;
+
+  Pixel_info(char bytes, char r, char rs, char g, char gs,
+             char b, char bs, char a, char as)
+  : L4Re::Video::Pixel_info(bytes, r, rs, g, gs, b, bs, a, as)
+  {}
+
+  struct Color
+  {
+    int r, g, b, a;
+    Color(int r, int g, int b, int a = 0xffff) : r(r), g(g), b(b), a(a) {}
+  };
+
+  Color get(void const *d) const
+  {
+    unsigned v;
+    switch (bytes_per_pixel())
+      {
+      case 2:
+	v = *(unsigned short const *)d;
+	break;
+
+      case 3:
+      case 4:
+	v = *(unsigned const *)d;
+	break;
+
+      default:
+	v = 0;
+	break;
+      }
+    return Color(r().get(v), g().get(v), b().get(v), a().get(v));
+  }
+
+  void set(void *d, Color const &c) const
+  {
+    unsigned v = r().set(c.r) | g().set(c.g) | b().set(c.b) | a().set(c.a);
+    switch (bytes_per_pixel())
+      {
+      case 2:
+	*(unsigned short *)d = v;
+	break;
+
+      case 3:
+	  {
+	    char *_d = (char *)d;
+	    _d[0] = v;
+	    _d[1] = v >> 8; 
+	    _d[2] = v >> 16; 
+	    break;
+	  }
+      case 4:
+	*(unsigned *)d = v;
+	break;
+
+      default:
+	break;
+      }
+  }
+};
+
+
+template<
+	typename PT,
+	int _Rshift, int _Rsize,
+	int _Gshift, int _Gsize,
+	int _Bshift, int _Bsize,
+	int _Ashift = 0, int _Asize = 0
+>
+struct Color_def
+{
+  enum { Extra_alpha = 128 };
+  typedef typename PT::Pixel Pixel;
+  template< int _size, int _shift >
+  struct C { enum { Size = _size, Shift = _shift }; };
+
+  typedef C<_Rsize, _Rshift> R;
+  typedef C<_Gsize, _Gshift> G;
+  typedef C<_Bsize, _Bshift> B;
+  typedef C<_Asize, _Ashift> A;
+
+};
+
+namespace _Local {
+  template< template < class UT > class CT, typename CD, bool AC >
+  struct Alpha_traits;
+
+  template< template < class UT > class CT, typename CD >
+  struct Alpha_traits< CT, CD, true >
+  {
+    typedef CT< Color_def< Pixel_traits< CD::Pixel::Bpp >,
+	    CD::R::Shift, CD::R::Size,
+	    CD::G::Shift, CD::G::Size,
+	    CD::B::Shift, CD::B::Size> > No_alpha;
+
+    typedef CT<CD> Alpha;
+  };
+
+  template< template < class UT > class CT, typename CD >
+  struct Alpha_traits< CT, CD, false >
+  {
+    typedef CT<CD> No_alpha;
+    typedef CT< Color_def<  Pixel_traits< CD::Pixel::Bpp >,
+	    CD::R::Shift, CD::R::Size,
+	    CD::G::Shift, CD::G::Size,
+	    CD::B::Shift, CD::B::Size> > Alpha;
+  };
+}
+
+/*** Encapsulation of color bit fields of any kind */
+/* _Pixel                 must be the Pixel for the mode.
+ * _<X>shift and _<X>size is the bit shift and number of bits used for
+ *                        each color (and alpha)
+ *
+ * Local types are:
+ *   Color   the register representation of a color.
+ *   Pixel   the reference to a pixel in video memory.
+ *   R,G,B,A the traits for the single components
+ *           (define Shift, Size, and Mask for each color component)
+ *   C_space the sorted representation of the color components,
+ *           Used to find the uppermost, middle, and lowermost component
+ *           of a pixel
+ *
+ * Static methods:
+ *   blend   does optimized alpha blending
+ */
+template< typename CD >
+class Color_traits
+{
+public:
+  class Pixel : public CD::Pixel
+  {
+  public:
+    typedef Color_traits<CD> Traits;
+
+    Pixel() {}
+
+    explicit Pixel(typename CD::Pixel::Value v)
+    : CD::Pixel(v)
+    {}
+  } __attribute__((packed));
+
+  typedef Color_traits<CD> This;
+  enum
+  {
+    Bpp = CD::Pixel::Bpp,
+    Bpp_xalpha = Bpp + (CD::A::Size == 0),
+    Need_extra_alpha = (CD::A::Size == 0)
+  };
+
+  static int bytes_per_pixel(bool alpha) { return alpha ? Bpp_xalpha : Bpp; }
+
+  template< int _Shift, int _Size, typename _C = typename CD::Pixel::Value >
+  class Component
+  {
+  public:
+    typedef _C Value;
+    enum
+    {
+      Shift = _Shift,
+      Size  = _Size,
+      Mask  = ((1UL << Size) - 1) << Shift
+    };
+
+    static unsigned get(Value c)
+    { return (c & Mask) >> Shift; }
+  };
+
+  typedef Component<CD::R::Shift, CD::R::Size> R;
+  typedef Component<CD::G::Shift, CD::G::Size> G;
+  typedef Component<CD::B::Shift, CD::B::Size> B;
+  typedef Component<CD::A::Shift, CD::A::Size> A;
+
+  /** Sorting template for color components. */
+  template<
+    typename _R,
+    typename _G,
+    typename _B,
+    bool _RG = ((unsigned)_R::Shift > (unsigned)_G::Shift),
+    bool _RB = ((unsigned)_R::Shift > (unsigned)_B::Shift),
+    bool _BG = ((unsigned)_B::Shift > (unsigned)_G::Shift)
+  >
+  class C_list;
+
+  template< typename _R, typename _G, typename _B >
+  class C_list<_R, _G, _B, true, true, true>
+  {
+  public:
+    typedef _R Msb;
+    typedef _B Mid;
+    typedef _G Lsb;
+  };
+
+  template< typename _R, typename _G, typename _B >
+  class C_list<_R, _G, _B, true, true, false>
+  {
+  public:
+    typedef _R Msb;
+    typedef _G Mid;
+    typedef _B Lsb;
+  };
+
+  template< typename _R, typename _G, typename _B >
+  class C_list<_R, _G, _B, true, false, true>
+  {
+  public:
+    typedef _B Msb;
+    typedef _R Mid;
+    typedef _G Lsb;
+  };
+
+  template< typename _R, typename _G, typename _B >
+  class C_list<_R, _G, _B, false, true, false>
+  {
+  public:
+    typedef _G Msb;
+    typedef _R Mid;
+    typedef _B Lsb;
+  };
+
+  template< typename _R, typename _G, typename _B >
+  class C_list<_R, _G, _B, false, false, false>
+  {
+  public:
+    typedef _G Msb;
+    typedef _B Mid;
+    typedef _R Lsb;
+  };
+
+  template< typename _R, typename _G, typename _B >
+  class C_list<_R, _G, _B, false, false, true>
+  {
+  public:
+    typedef _B Msb;
+    typedef _G Mid;
+    typedef _R Lsb;
+  };
+
+  class C_space : public C_list<R,G,B>
+  {
+  public:
+    enum
+    {
+      Mix_mask = (R::Mask | G::Mask | B::Mask)
+                 & ~((1UL << R::Shift) | (1UL << G::Shift) 
+                      | (1UL << B::Shift))
+    };
+  };
+
+public:
+  typedef typename _Local::Alpha_traits<Mag_gfx::Color_traits, CD, (A::Size > 0)>::No_alpha No_alpha;
+  typedef typename _Local::Alpha_traits<Mag_gfx::Color_traits, CD, (A::Size > 0)>::Alpha Alpha;
+
+  /** Encasulation for a color value of this color mode.
+   * The Color type is an efficient native representation of the color
+   * of a pixel for this color mode.  It is designed to be kept in a
+   * machine register.
+   */
+  class Color
+  {
+  public:
+    /** The value type (native data type to carry the color value. */
+    typedef typename CD::Pixel::Value Value;
+
+    /** The info for the red component of the color. */
+    typedef typename This::R R;
+
+    /** The info for the green component of the color. */
+    typedef typename This::G G;
+
+    /** The info for the blue component of the color. */
+    typedef typename This::B B;
+
+    /** The info for the alpha channel of the color. */
+    typedef typename This::A A;
+
+    /** Reference to the surrounding color traits. */
+    typedef This Traits;
+
+    enum { Mix_mask = C_space::Mix_mask };
+    enum { Amax     = (1UL << A::Size) - 1 };
+
+  private:
+    Value _c;
+
+    static Value _m(unsigned v, int s, unsigned m)
+    {
+      if (s < 0)
+	return (v >> (-s)) & m;
+      else
+	return (v << s) & m;
+    }
+
+  public:
+
+    explicit Color(Value v) : _c(v) {}
+    Color() {}
+    Color(Pixel p) : _c(p.v()) {}
+    Color(Pixel_info::Color const &c)
+    : _c(_m(c.r, R::Shift - 16 + R::Size, R::Mask)
+        |_m(c.g, G::Shift - 16 + G::Size, G::Mask)
+        |_m(c.b, B::Shift - 16 + B::Size, B::Mask)
+        |_m(c.a, A::Shift - 16 + A::Size, A::Mask))
+    {}
+
+    Color(typename No_alpha::Color const &o)
+    : _c(o.v() | ((Value)Amax << A::Shift))
+    {}
+
+    Color(typename No_alpha::Color const &o, int a)
+    : _c(o.v() | ((Value)a << A::Shift))
+    {}
+
+    Color(int r, int g, int b, int a = Amax)
+    : _c((r << R::Shift) | (g << G::Shift) | (b << B::Shift) 
+         | ((Value)a << A::Shift))
+    {}
+
+    int r() const { return (_c & R::Mask) >> R::Shift; }
+    int g() const { return (_c & G::Mask) >> G::Shift; }
+    int b() const { return (_c & B::Mask) >> B::Shift; }
+    int a() const
+    { return A::Size != 0 ? (_c & A::Mask) >> A::Shift : (Value)Amax; }
+
+    Value v() const { return _c; }
+    //operator Value () const { return _c; }
+    operator Pixel () const { return Pixel(_c); }
+
+    Color operator + (Color const &o) const { return Color(_c + o._c); }
+  };
+
+  /** Blend color with alpha value (0-255).
+   * \param color The original color.
+   * \param alpha The alpha value (0 = Transparent, 255 = Opaque)
+   */
+  static Color blend(Color color, int alpha)
+  {
+    enum
+    {
+      AMask = C_space::Msb::Mask | C_space::Lsb::Mask,
+      BMask = C_space::Mid::Mask,
+      Gap   = C_space::Mid::Size,
+      AAs   = 8 - Gap,
+      As    = Gap,
+      Bs    = 8
+    };
+
+    return Color(((((alpha >> AAs) * (color.v() & AMask)) >> As) & AMask)
+           | (((alpha * (color.v() & BMask)) >> Bs) & BMask));
+  }
+
+  /** Mix background and foreground color with alpha blending.
+   * \param bg The background color.
+   * \param fg the foreground color.
+   * \param alpha The alpha value of the foreground (0 = Transparent, 255 = Opaque)
+   */
+  static Color mix(Color bg, Color fg, int alpha)
+  {
+    if (alpha == 255)
+      return fg;
+    else
+      return blend(bg, 256 - alpha) + blend(fg, alpha);
+  }
+
+  /** Calculate the avarage of two colors.
+   * \param c1 The first color.
+   * \param c2 The second color.
+   * \return The average value.
+   */
+  static Color avr(Color c1, Color c2)
+  {
+    return Color(((c1.v() & Color::Mix_mask) >> 1) + ((c2.v() & Color::Mix_mask) >> 1));
+  }
+
+  /** Calculate the avarage of four colors.
+   * \param c1 The first color.
+   * \param c2 The second color.
+   * \param c3 The third color.
+   * \param c4 The fourth color.
+   * \return The average value.
+   */
+  static Color avr(Color c1, Color c2, Color c3, Color c4)
+  { return avr(avr(c1, c2), avr(c3, c4)); }
+
+  typedef Pixel_info const *Type;
+  /** Returns a pointer to the dynamic pixel info for the color mode. */
+  static Type type()
+  {
+    static Pixel_info pixel_info
+      (
+	CD::Pixel::Bpp,
+	CD::R::Size, CD::R::Shift,
+	CD::G::Size, CD::G::Shift,
+	CD::B::Size, CD::B::Shift,
+	CD::A::Size, CD::A::Shift
+      );
+
+    return &pixel_info;
+  }
+
+  /** Often used color black. */
+  static Color const Black;
+
+  /** Otfen used color White. */
+  static Color const White;
+};
+
+
+template< typename CD >
+typename Color_traits<CD>::Color const Color_traits<CD>::Black(0);
+
+template< typename CD >
+typename Color_traits<CD>::Color const Color_traits<CD>::White(~0, ~0, ~0);
+
+
+
+namespace _Local {
+
+  /* Provides:
+   *   convert   to convert a single color from one color space to another
+   *   blit      paints the given color to the given pixel, does color
+   *             conversion if necessary, and considers alpha values if
+   *             available
+   */
+  template< typename From, typename To >
+  class Conv
+  {
+  public:
+    typedef typename To::Color T_color;
+    typedef typename To::Pixel T_pixel;
+    typedef typename From::Color F_color;
+
+    static T_color convert(F_color c)
+    {
+      typedef typename To::R TR;
+      typedef typename To::G TG;
+      typedef typename To::B TB;
+      typedef typename From::R FR;
+      typedef typename From::G FG;
+      typedef typename From::B FB;
+      return T_color(convert_comp<FR, TR>(c.v())
+	  | convert_comp<FG, TG>(c.v())
+	  | convert_comp<FB, TB>(c.v()));
+    }
+
+    static void blit(F_color c, T_pixel *d)
+    {
+      if (From::A::Size > 0)
+	*d = To::blend(convert(c), From::A::get(c))
+	  + To::blend(*d, 255 - From::A::get(c));
+      else
+	*d = convert(c);
+    }
+
+  };
+
+  /*** Specialized conversion if source and target color space are equal */
+  template< typename T >
+  class Conv<T,T>
+  {
+  public:
+    typedef typename T::Color T_color;
+    typedef typename T::Pixel T_pixel;
+    typedef typename T::Color F_color;
+
+    static T_color convert(F_color c) { return c; }
+    static void blit(F_color c, T_pixel *d)
+    {
+      if (T::A::Size > 0)
+	*d = T::blend(c, T::A::get(c)) + T::blend(*d, 255 - T::A::get(c));
+      else
+	*d = c;
+    }
+  };
+
+} // _Local
+
+template< typename C1, typename C2 >
+C1 color_conv(C2 c)
+{ return _Local::Conv<typename C2::Traits, typename C1::Traits>::convert(c); }
+
+template< typename C >
+C color_50(C const &c)
+{ return C((c.v() & (typename C::Value)C::Mix_mask) >> 1); }
+
+
+/*** Typical instances for color spaces */
+typedef Color_traits<Color_def<Pixel_traits<2>, 10,5,5,5,0,5> >      Rgb15;
+typedef Color_traits<Color_def<Pixel_traits<2>, 0,5,5,5,10,5> >      Bgr15;
+typedef Color_traits<Color_def<Pixel_traits<2>, 11,5,5,6,0,5> >      Rgb16;
+typedef Color_traits<Color_def<Pixel_traits<2>, 0,5,5,6,11,5> >      Bgr16;
+typedef Color_traits<Color_def<Pixel_traits<3>, 16,8,8,8,0,8> >      Rgb24;
+typedef Color_traits<Color_def<Pixel_traits<4>, 16,8,8,8,0,8> >      Rgb32;
+typedef Color_traits<Color_def<Pixel_traits<4>, 0,8,8,8,16,8> >      Bgr32;
+typedef Color_traits<Color_def<Pixel_traits<4>, 16,8,8,8,0,8,24,8> > Rgba32;
+
+}

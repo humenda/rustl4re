@@ -1,0 +1,5 @@
+<map id="L4vbus::Gpio_module" name="L4vbus::Gpio_module">
+<area shape="rect" id="node2" href="$classL4vbus_1_1Device.html" title="Device on a L4vbus::Vbus. " alt="" coords="17,301,152,540"/>
+<area shape="rect" id="node3" href="$classL4vbus_1_1Pm.html" title="{L4vbus::Pm\&lt; Device \&gt;\n||+ pm_suspend()\l+ pm_resume()\l}" alt="" coords="5,160,164,252"/>
+<area shape="rect" id="node4" href="$classL4vbus_1_1Pm.html" title="Power&#45;management API mixin. " alt="" coords="12,5,157,97"/>
+</map>

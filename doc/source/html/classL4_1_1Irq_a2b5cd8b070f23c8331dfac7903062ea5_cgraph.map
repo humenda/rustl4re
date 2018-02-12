@@ -1,0 +1,4 @@
+<map id="L4::Irq::receive" name="L4::Irq::receive">
+<area shape="rect" id="node2" href="$classL4_1_1Kobject.html#a314161cb755de6fd0c50da0a757eb4c7" title="Return capability selector. " alt="" coords="171,5,289,32"/>
+<area shape="rect" id="node3" href="$group__l4__irq__api.html#ga430999e1f8f6eb5f7e3f957b854b7446" title="Unmask and wait for this IRQ. " alt="" coords="167,56,293,83"/>
+</map>

@@ -1,0 +1,3 @@
+CONFIG_BUILD_ARCH_arm64=y
+CONFIG_PLATFORM_TYPE_rv_vexpress_a15=y
+# CONFIG_BID_GCC_OMIT_FP is not set

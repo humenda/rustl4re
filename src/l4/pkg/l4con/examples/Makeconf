@@ -1,0 +1,10 @@
+# -*- makefile -*-
+
+#link addresses
+export DEMO1_LINKADDR	= 0x00800000
+export DEMO2_LINKADDR	= 0x00900000
+export DEMO3_LINKADDR	= 0x00a00000
+export EVDEMO_LINKADDR	= 0x00c00000
+export TIMING_LINKADDR	= 0x00e00000
+export CONTXT_LINKADDR	= 0x00f00000
+

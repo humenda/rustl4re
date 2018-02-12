@@ -1,0 +1,10 @@
+This is a copy of the March 16, 1994 release of RSAREF 2.0 from RSA Data
+Security, Inc.  Please read *carefully* the file "license.txt" in this
+directory; it is the RSAREF 2.0 license and describes your obligations
+when using RSAREF 2.0 in any application.
+
+Furthermore, in accordance with clause 1(c) of the RSAREF license, we
+hereby inform you that MIT modified the file "nn.c" in the "source"
+directory to improve the overall performance of the RSAREF 2.0 package
+on MSDOS machine when used in conjunction with PGP 2.5.  See the comment
+at the top of the file "nn.c" for more information.

@@ -1,0 +1,68 @@
+# This file is a shell script that caches the results of configure
+# tests run on this system so they can be shared between configure
+# scripts and configure runs.  It is not useful on other systems.
+# If it contains results you don't want to keep, you may remove or edit it.
+#
+# By default, configure uses ./config.cache as the cache file,
+# creating it if it does not exist already.  You can give configure
+# the --cache-file=FILE option to use a different cache file; that is
+# what configure does when it calls configure scripts in
+# subdirectories, so they share the cache.
+# Giving --cache-file=/dev/null disables caching, for debugging configure.
+# config.status only pays attention to the cache file if you give it the
+# --recheck option to rerun configure.
+#
+ac_cv_func_lstat=${ac_cv_func_lstat=yes}
+ac_cv_func_memmove=${ac_cv_func_memmove=yes}
+ac_cv_func_putenv=${ac_cv_func_putenv=yes}
+ac_cv_func_select=${ac_cv_func_select=yes}
+ac_cv_func_setenv=${ac_cv_func_setenv=yes}
+ac_cv_func_setlocale=${ac_cv_func_setlocale=yes}
+ac_cv_func_strcasecmp=${ac_cv_func_strcasecmp=yes}
+ac_cv_func_strcoll_works=${ac_cv_func_strcoll_works=yes}
+ac_cv_func_tcgetattr=${ac_cv_func_tcgetattr=yes}
+ac_cv_header_dirent_dirent_h=${ac_cv_header_dirent_dirent_h=yes}
+ac_cv_header_locale_h=${ac_cv_header_locale_h=yes}
+ac_cv_header_minix_config_h=${ac_cv_header_minix_config_h=no}
+ac_cv_header_stat_broken=${ac_cv_header_stat_broken=no}
+ac_cv_header_stdarg_h=${ac_cv_header_stdarg_h=yes}
+ac_cv_header_stdlib_h=${ac_cv_header_stdlib_h=yes}
+ac_cv_header_string_h=${ac_cv_header_string_h=yes}
+ac_cv_header_sys_file_h=${ac_cv_header_sys_file_h=yes}
+ac_cv_header_sys_pte_h=${ac_cv_header_sys_pte_h=no}
+ac_cv_header_sys_ptem_h=${ac_cv_header_sys_ptem_h=no}
+ac_cv_header_sys_select_h=${ac_cv_header_sys_select_h=yes}
+ac_cv_header_sys_stream_h=${ac_cv_header_sys_stream_h=no}
+ac_cv_header_termcap_h=${ac_cv_header_termcap_h=yes}
+ac_cv_header_termio_h=${ac_cv_header_termio_h=yes}
+ac_cv_header_termios_h=${ac_cv_header_termios_h=yes}
+ac_cv_header_unistd_h=${ac_cv_header_unistd_h=yes}
+ac_cv_header_varargs_h=${ac_cv_header_varargs_h=yes}
+ac_cv_lib_dir_opendir=${ac_cv_lib_dir_opendir=no}
+ac_cv_lib_termcap_tgetent=${ac_cv_lib_termcap_tgetent=yes}
+ac_cv_path_install=${ac_cv_path_install='/usr/bin/install -c'}
+ac_cv_prog_AR=${ac_cv_prog_AR=ar}
+ac_cv_prog_CC=${ac_cv_prog_CC=gcc}
+ac_cv_prog_CPP=${ac_cv_prog_CPP='gcc -E'}
+ac_cv_prog_RANLIB=${ac_cv_prog_RANLIB=ranlib}
+ac_cv_prog_cc_cross=${ac_cv_prog_cc_cross=no}
+ac_cv_prog_cc_g=${ac_cv_prog_cc_g=yes}
+ac_cv_prog_cc_works=${ac_cv_prog_cc_works=yes}
+ac_cv_prog_gcc=${ac_cv_prog_gcc=yes}
+ac_cv_prog_gcc_traditional=${ac_cv_prog_gcc_traditional=no}
+ac_cv_type_signal=${ac_cv_type_signal=void}
+bash_cv_can_redecl_getpw=${bash_cv_can_redecl_getpw=yes}
+bash_cv_dirent_has_d_fileno=${bash_cv_dirent_has_d_fileno=yes}
+bash_cv_dirent_has_dino=${bash_cv_dirent_has_dino=yes}
+bash_cv_fionread_in_ioctl=${bash_cv_fionread_in_ioctl=yes}
+bash_cv_func_lstat=${bash_cv_func_lstat=yes}
+bash_cv_func_sigsetjmp=${bash_cv_func_sigsetjmp=present}
+bash_cv_func_strcoll_broken=${bash_cv_func_strcoll_broken=no}
+bash_cv_must_reinstall_sighandlers=${bash_cv_must_reinstall_sighandlers=no}
+bash_cv_signal_vintage=${bash_cv_signal_vintage=posix}
+bash_cv_speed_t_in_sys_types=${bash_cv_speed_t_in_sys_types=no}
+bash_cv_struct_winsize_header=${bash_cv_struct_winsize_header=ioctl_h}
+bash_cv_termcap_lib=${bash_cv_termcap_lib=libtermcap}
+bash_cv_tiocgwinsz_in_ioctl=${bash_cv_tiocgwinsz_in_ioctl=yes}
+bash_cv_tiocstat_in_ioctl=${bash_cv_tiocstat_in_ioctl=no}
+bash_cv_void_sighandler=${bash_cv_void_sighandler=yes}

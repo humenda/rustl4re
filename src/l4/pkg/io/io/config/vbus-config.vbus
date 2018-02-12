@@ -1,0 +1,41 @@
+-- vim:set ft=lua:
+--
+-- Create a virtual BUS named 'bus'
+--
+-- This BUS is registered in io's name space under the name 'bus'.
+--
+
+local hw = Io.hw_bus
+
+Io.add_vbus("bus", Io.Vi.System_bus
+{
+  -- Scan the hw-root bus for devices that have a compatibility ID (CID)
+  -- match for a keyboard or mouse. And add them with virtual
+  -- device wrappers to the BUS.
+  ps2 = wrap(hw:match("PNP0[3F]??"));
+})
+
+
+-- Create a virtual BUS 'bus1'
+Io.add_vbusses
+{
+  bus1 = Io.Vi.System_bus
+  {
+    -- Add the RTC (PNP0B00) as a virtual device
+    rtc = wrap(hw:match("PNP0B00"));
+
+    -- Add a new virtual PCI root bridge
+    PCI0 = Io.Vi.PCI_bus
+    {
+      -- Add all real PCI devices that match the CIDs to the virtual PCI bus
+      -- NOTE: PCI/CC_xx means PCI class code == xx.
+      --       CC_01 => storage devices
+      --       CC_02 => network devices
+      --       CC_04 => multimedia devices
+      --       CC_0c => serial bus devices (USB)
+      pci = wrap(hw:match("PCI/CC_01","PCI/CC_02","PCI/CC_04","PCI/CC_0c"));
+      -- human-readable version (also supported):
+      -- pci = wrap(hw:match("PCI/storage","PCI/network","PCI/media","PCI/usb");
+    }
+  }
+}

@@ -1,0 +1,13 @@
+<map id="l4_round_page" name="l4_round_page">
+<area shape="rect" id="node2" href="$classL4Re_1_1Rm.html#ac85c7b70e1b4cbdd34a9b2399d6bf985" title="Attach a data space to a region. " alt="" coords="760,24,888,50"/>
+<area shape="rect" id="node3" href="$group__l4__memory__api.html#ga792959ba1e87fecf90018876f32d7bc9" title="Round an address down to the next lower flex page with size bits. " alt="" coords="171,154,276,181"/>
+<area shape="rect" id="node6" href="$classL4Re_1_1Dataspace.html#a089936bd4f23665cb8c968c8679d3ab2" title="Map a part of a dataspace completely. " alt="" coords="549,88,712,130"/>
+<area shape="rect" id="node8" href="$classL4Re_1_1Dataspace.html#a01f1c1c3511f0a802313113f661ee94d" title="Request a flex&#45;page mapping from the dataspace. " alt="" coords="549,154,712,181"/>
+<area shape="rect" id="node4" href="$classcxx_1_1List__alloc.html#a6add9811cb611b9a1e7ee21c92809131" title="Allocate a memory block of min &lt;= size &lt;=max. " alt="" coords="324,285,501,312"/>
+<area shape="rect" id="node7" href="$group__l4__fpage__api.html#ga960465b596caf60adc6c5042e9257f0a" title="Determine maximum flex page size of a region. " alt="" coords="336,154,489,181"/>
+<area shape="rect" id="node9" href="$group__l4__memory__api.html#ga70b72ae96c18cb49a3445198711bba0d" title="Round an address down to the next lower page boundary. " alt="" coords="357,205,469,232"/>
+<area shape="rect" id="node5" href="$classcxx_1_1List__alloc.html#a1fdfc49fafa608f60c191916629b61a4" title="Initializes an empty list allocator. " alt="" coords="563,307,699,348"/>
+<area shape="rect" id="node10" href="$group__l4util__api.html#gac1e88025beb28c8f090592bf2f046080" title="Touch data area to force mapping (read&#45;only) " alt="" coords="583,256,679,282"/>
+<area shape="rect" id="node12" href="$group__l4util__api.html#ga8e840257faffbb57a49003cfb7d41594" title="Touch data areas to force mapping (read&#45;write) " alt="" coords="581,205,680,232"/>
+<area shape="rect" id="node11" href="$group__l4util__api.html#ga3a74b4dee439a339ed5a6368845cad37" title="Go sleep and never wake up. " alt="" coords="760,230,888,257"/>
+</map>

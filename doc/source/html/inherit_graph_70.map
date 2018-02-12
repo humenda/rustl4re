@@ -1,0 +1,12 @@
+<map id="Graphical Class Hierarchy" name="Graphical Class Hierarchy">
+<area shape="rect" id="node1" href="$classL4_1_1Exception__tracer.html" title="Back&#45;trace support for exceptions. " alt="" coords="5,115,156,141"/>
+<area shape="rect" id="node2" href="$classL4_1_1Base__exception.html" title="Base class for all exceptions, thrown by the L4Re framework. " alt="" coords="204,115,349,141"/>
+<area shape="rect" id="node3" href="$classL4_1_1Invalid__capability.html" title="Indicates that an invalid object was invoked. " alt="" coords="397,64,548,91"/>
+<area shape="rect" id="node4" href="$classL4_1_1Runtime__error.html" title="Exception for an abstract runtime error. " alt="" coords="405,115,540,141"/>
+<area shape="rect" id="node10" href="$classL4_1_1Unknown__error.html" title="Exception for an unknown condition. " alt="" coords="401,165,544,192"/>
+<area shape="rect" id="node5" href="$classL4_1_1Bounds__error.html" title="Access out of bounds. " alt="" coords="614,5,745,32"/>
+<area shape="rect" id="node6" href="$classL4_1_1Com__error.html" title="Error conditions during IPC. " alt="" coords="623,56,735,83"/>
+<area shape="rect" id="node7" href="$classL4_1_1Element__already__exists.html" title="Exception for duplicate element insertions. " alt="" coords="604,107,755,149"/>
+<area shape="rect" id="node8" href="$classL4_1_1Element__not__found.html" title="Exception for a failed lookup (element not found). " alt="" coords="596,173,763,200"/>
+<area shape="rect" id="node9" href="$classL4_1_1Out__of__memory.html" title="Exception signalling insufficient memory. " alt="" coords="607,224,751,251"/>
+</map>

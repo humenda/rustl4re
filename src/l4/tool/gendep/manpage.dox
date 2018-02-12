@@ -1,0 +1,110 @@
+/*! \page libgendep.so dependency file generator
+
+\section SYNOPSIS SYNOPSIS
+<br>LD_PRELOAD=\b libgendep.so GENDEP_TARGET=<i>target</i> 
+    GENDEP_BINARY=<i>compiler</i> 
+    [ GENDEP_<i>cmd</i>=<i>compiler</i> ]
+    [ GENDEP_DEPFILE=<i>depfilename</i> ]
+    cmd [options]
+
+<br>LD_PRELOAD=\b libgendep.so GENDEP_SOURCE=<i>watchfile</i> 
+    GENDEP_OUTPUT=<i>outfilename</i> cmd [options]
+
+\section DESCRIPTION DESCRIPTION
+
+<br>libgendep is a library to build dependency files. By preloading
+\b libgendep.so with the dynamic linker \b ld.so, the <b>open</b>(2)
+and <b>fopen</b>(3) functions of libc are overloaded. \b libgendep.so
+logs all calls to <b>open</b>(2) and <b>fopen</b>(3) and creates an
+according dependency file.
+
+In its alternative form, libgendep can be used to determine the name
+of the binary that is used to open a specific file. Use this
+to determine a specific element within your compiler tool chain.
+
+In the first form, the name of a file is added to the dependency list, if:
+<ul>
+<li> the file is opened read-only
+<li> and the name of the file does not match the environment variable
+    <i>GENDEP_TARGET</i>
+<li> and the name of the binary currently executed matches the
+    environment variable <i>GENDEP_BINARY</i>.
+<li> and the filename matches the regex given in the envirnoment variable
+     <i>GENDEP_[cmd]</i>, with [cmd] beeing substituted by the value of
+     <i>GENDEP_BINARY</i>.
+     <ul>
+     <li> some special regexps for exclusion are predefined (see below) </li>
+     </ul>
+</ul>
+
+If <i>GENDEP_[cmd]</i> is not set, the last condition is not checked.
+
+As the current libc for Linux looks into /proc/meminfo and /etc/mtab for
+some internal management, gendep ignores accesses to /etc/mtab and /proc/*.
+
+In the second form, all <b>open</b>(2)- and <b>fopen</b>(3)-calls are
+checked for the filename specified in the GENDEP_SOURCE variable. If the
+given file is opened, the name of the currently executed binary is written
+into the filename specified in GENDEP_OUTPUT.
+
+\section ENVIRONMENT ENVIRONMENT
+<br>\b libgendep.so is controlled by the following environment variables.
+
+For the first form:
+
+<DL>
+<DT>GENDEP_TARGET</DT>
+<DD>The target, the dependency has to be build for. This string is used
+    as the target within the make-rule in the dependency file.
+    Unless GENDEP_DEPFILE is set, the name of the dependency file
+    is build by prepending then name portion of the target with '.',
+    and suffixing this with '.d'. </DD>
+
+<DT>GENDEP_BINARY</DT>
+<DD>The name portion of the command that actually builds the target.</DD>
+
+<DT>GENDEP_DEPFILE</DT>
+<DD>The name of the dependency file. If this variable is unset,
+    <b>.</b><i>GENDEP_TARGET</i><b>.d</b> will be used.
+
+<DT>GENDEP_[cmd] ([cmd]=$<i>GENDEP_BINARY</i>)</DT>
+<DD>Optional. If set, the value is interpreted as an regex. A file is
+    included within the dependency list only if its name matches this 
+    regex.</DD>
+</DL>
+
+For the second form:
+
+<DL>
+<DT>GENDEP_SOURCE</DT>
+<DD>The source file to be watched. If this file is opened in read-only
+    mode, the name of the currently executed binary is written into
+    $(GENDEP_OUTPUT).</DD>
+<DT>GENDEP_OUTPUT</DT>
+<DD>The name of the output file for the binary name.</DD>
+</DL>
+
+\section EXAMPLES EXAMPLES
+
+LD_PRELOAD=libgendep.so GENDEP_TARGET=main.o GENDEP_BINARY=cpp gcc main.c -o main.o
+
+This creates a dependency file ".main.o.d" containing all header
+files opened by the C preprocessor <b>cpp</b>(1) during the compilation of
+main.o.
+ 
+LD_PRELOAD=libgendep.so GENDEP_SOURCE=main.c GENDEP_OUTPUT=cppname.txt gcc -c main.c
+
+This creates the file "cppname.txt" containing the name of the binary that
+opened "main.c". If "main.c" was not opened, "cppname.txt" will not be
+created.
+ 
+\section AUTHOR AUTHORS
+<BR>Han-Wen Nienhuys <hanwen@cs.uu.nl>
+<BR>Jork Loeser <jork.loeser@inf.tu-dresden.de>
+
+\section SEE SEE ALSO
+<br>ld.so(1) - dynamic linker/loader
+<br>open(2) - open and possibly create a file or device
+<br>cpp(1) - The GNU C-Compatible Compiler Preprocessor
+
+*/

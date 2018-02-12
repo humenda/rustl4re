@@ -1,0 +1,8 @@
+#! /bin/sh
+
+# install default directory hierarchy and default Makefiles
+#
+# Call this script from a newly created package directory.
+
+set -e
+tar c -C "${0%/*}" -f- --exclude=.svn --exclude=inst . | tar xvf -

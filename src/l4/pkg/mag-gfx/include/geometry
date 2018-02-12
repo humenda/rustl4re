@@ -1,0 +1,340 @@
+// vi:ft=cpp
+/*
+ * (c) 2010 Alexander Warg <warg@os.inf.tu-dresden.de>
+ *     economic rights: Technische Universität Dresden (Germany)
+ *
+ * This file is part of TUD:OS and distributed under the terms of the
+ * GNU General Public License 2.
+ * Please see the COPYING-GPL-2 file for details.
+ */
+#pragma once
+
+#include <algorithm>
+
+namespace Mag_gfx {
+
+class Vector_2d_base
+{
+protected:
+  int _x, _y;
+  Vector_2d_base(int x, int y) : _x(x), _y(y) {}
+};
+
+template< typename R >
+class Vector_2d : public Vector_2d_base
+{
+public:
+  Vector_2d(int x, int y) : Vector_2d_base(x, y) {}
+  explicit Vector_2d(Vector_2d_base const &o) : Vector_2d_base(o) {}
+
+  R operator + (R const &o) const
+  { return R(_x + o._x, _y + o._y); }
+
+  R operator - (R const &o) const
+  { return R(_x - o._x, _y - o._y); }
+
+  bool operator == (R const &o) const
+  { return _x == o._x && _y == o._y; }
+
+  R &operator += (R const &o)
+  { _x += o._x; _y += o._y; return *static_cast<R*>(this); }
+
+  R &operator -= (R const &o)
+  { _x -= o._x; _y -= o._y; return *static_cast<R*>(this); }
+
+  bool operator != (R const &o) const
+  { return !operator == (o); }
+
+  bool operator >= (R const &o) const
+  { return _x >= o._x && _y >= o._y; }
+
+  bool operator <= (R const &o) const
+  { return _x <= o._x && _y <= o._y; }
+
+  bool operator < (R const &o) const
+  { return _x < o._x && _y < o._y; }
+
+  R max(R const &o) const
+  { return R(std::max<int>(_x, o._x), std::max<int>(_y, o._y)); }
+
+  R min(R const &o) const
+  { return R(std::min<int>(_x, o._x), std::min<int>(_y, o._y)); }
+
+  R operator / (int d) const
+  { return R(_x / d, _y / d); }
+
+  R operator * (int d) const
+  { return R(_x * d, _y * d); }
+
+  R operator / (R const &o) const
+  { return R(_x / o._x, _y / o._y); }
+
+  R operator * (R const &o) const
+  { return R(_x * o._x, _y * o._y); }
+};
+
+class Point : public Vector_2d<Point>
+{
+private:
+  typedef Vector_2d<Point> B;
+public:
+  Point(int x, int y) : B(x, y) {}
+  Point() : B(0, 0) {}
+
+  explicit Point(Vector_2d_base const &o) : B(o) {}
+
+  int x() const { return _x; }
+  int y() const { return _y; }
+
+  void x(int x) { _x = x; }
+  void y(int y) { _y = y; }
+
+};
+
+class Area : public Vector_2d<Area>
+{
+private:
+  typedef Vector_2d<Area> B;
+
+public:
+  enum { Max_w = 0x100000, Max_h = Max_w };
+
+  Area(int w, int h) : B(w, h) {}
+  Area() : B(0, 0) {}
+
+  int w() const { return _x; }
+  int h() const { return _y; }
+
+  void w(int w) { _x = w; }
+  void h(int h) { _y = h; }
+
+  bool valid() const { return _x > 0 && _y > 0; }
+  int pixels() const { return _x * _y; }
+
+  Area grow(Point const &diff) const
+  { return Area(_x + diff.x(), _y + diff.y()); }
+};
+
+class Rect
+{
+private:
+  Point _p1, _p2;
+
+public:
+  Rect(Point const &p1, Point const &p2) : _p1(p1), _p2(p2) {}
+  Rect(Point const &p1, Area const &a)
+  : _p1(p1), _p2(p1.x() + a.w() - 1, p1.y() + a.h() - 1)
+  {}
+
+  explicit Rect(Area const &a) : _p1(0, 0), _p2(a.w() - 1, a.h() - 1) {}
+
+  Rect() {}
+
+  Rect operator = (Rect const &o) { _p1 = o._p1; _p2 = o._p2; return *this; }
+  bool operator == (Rect const &o) const
+  { return _p1 == o._p1 && _p2 == o._p2; }
+
+  bool operator != (Rect const &o) const
+  { return !operator == (o); }
+
+  Point const &p1() const { return _p1; }
+  Point const &p2() const { return _p2; }
+
+  int x1() const { return _p1.x(); }
+  int y1() const { return _p1.y(); }
+  int x2() const { return _p2.x(); }
+  int y2() const { return _p2.y(); }
+  void x1(int v) { _p1.x(v); }
+  void y1(int v) { _p1.y(v); }
+  void x2(int v) { _p2.x(v); }
+  void y2(int v) { _p2.y(v); }
+  int w() const  { return x2() - x1() + 1; }
+  int h() const  { return y2() - y1() + 1; }
+
+  Area area() const { return Area(w(), h()); }
+
+  bool valid() const { return x1() <= x2() && y1() <= y2(); }
+  bool fits(Area const &a) const  { return w() >= a.w() && h() >= a.h(); }
+
+  /** intersection */
+  Rect operator & (Rect const &o) const
+  {
+    return Rect(Point(std::max(x1(), o.x1()), std::max(y1(), o.y1())),
+                Point(std::min(x2(), o.x2()), std::min(y2(), o.y2())));
+  }
+
+  Rect &operator &= (Rect const &o)
+  {
+    *this = *this & o;
+    return *this;
+  }
+
+  Rect operator | (Rect const &o) const
+  {
+    return Rect(Point(std::min(x1(), o.x1()), std::min(y1(), o.y1())),
+                Point(std::max(x2(), o.x2()), std::max(y2(), o.y2())));
+  }
+
+  Rect &operator |= (Rect const &o)
+  {
+    *this = *this | o;
+    return *this;
+  }
+
+  Rect grow(int x) const
+  { return Rect(Point(x1() - x, y1() - x), Point(x2() + x, y2() + x)); }
+
+  Rect top(int h) const
+  {
+    Rect n = *this;
+    n._p2 = Point(_p2.x(), _p1.y() + h - 1);
+    return n;
+  }
+
+  Rect left(int w) const
+  {
+    Rect n = *this;
+    n._p2 = Point(_p1.x() + w - 1, _p2.y());
+    return n;
+  }
+
+  Rect bottom(int h) const
+  {
+    Rect n = *this;
+    n._p1 = Point(_p1.x(), _p2.y() - h + 1);
+    return n;
+  }
+
+  Rect right(int w) const
+  {
+    Rect n = *this;
+    n._p1 = Point(_p2.x() - w + 1, _p1.y());
+    return n;
+  }
+
+  Rect offset(int _x1, int _y1, int _x2, int _y2) const
+  { return Rect(Point(x1() + _x1, y1() + _y1), Point(x2() + _x2, y2() + _y2)); }
+
+  Point center(Area const &a) const
+  { return Point((w() - a.w()) / 2, (h() - a.h()) / 2); }
+
+  bool contains(Point const &p) const
+  { return p >= p1() && p <= p2(); }
+
+  bool contains(Rect const &o) const
+  { return x1() <= o.x1() && y1() <= o.y1() && x2() >= o.x2() && y2() >= o.y2(); }
+
+  Rect operator - (Point const &p) const
+  { return Rect(p1() - p, p2() - p); }
+
+  Rect operator + (Point const &p) const
+  { return Rect(p1() + p, p2() + p); }
+
+  Rect &operator += (Point const &p)
+  { _p1 += p; _p2 += p; return *this; }
+
+  Rect &operator -= (Point const &p)
+  { _p1 -= p; _p2 -= p; return *this; }
+
+  Rect move_to(Point const &p1) const
+  { return Rect(p1, area()); }
+
+  bool overlaps(Rect const &o) const
+  {
+    return    o.x2() >= x1() && o.x1() <= x2()
+           && o.y2() >= y1() && o.y1() <= y2();
+  }
+};
+
+struct Rect_tuple
+{
+  Rect _r[4];
+  Rect_tuple() {}
+  Rect_tuple(Rect const &t, Rect const &l, Rect const &r, Rect const &b)
+  { _r[0] = t; _r[1] = l; _r[2] = r; _r[3] = b; }
+
+  Rect const &operator [] (unsigned i) const { return _r[i]; }
+  Rect const &t() const { return _r[0]; }
+  Rect const &l() const { return _r[1]; }
+  Rect const &r() const { return _r[2]; }
+  Rect const &b() const { return _r[3]; }
+};
+
+inline
+Rect_tuple operator - (Rect const &lh, Rect const &rh)
+{
+  Rect re = rh & lh;
+  return Rect_tuple(
+      Rect(Point(lh.x1(), lh.y1()), Point(lh.x2(), re.y1() - 1)),
+      Rect(Point(lh.x1(), re.y1()), Point(re.x1() - 1, re.y2())),
+      Rect(Point(re.x2() + 1, re.y1()), Point(lh.x2(), re.y2())),
+      Rect(Point(lh.x1(), re.y2() + 1), Point(lh.x2(), lh.y2())));
+}
+
+
+template< typename E >
+class Flags
+{
+private:
+  unsigned _v;
+
+  Flags(unsigned v, bool) : _v(v) {}
+
+  struct Private_bool;
+
+public:
+  typedef E Enum;
+
+  Flags(int z = 0) : _v(z) {} //Private_bool const * = 0) : _v(0) {}
+  Flags(E e) : _v(e) {}
+  Flags(Flags const &o) : _v(o._v) {}
+
+  operator Private_bool * () const { return (Private_bool *)(long)_v; }
+  bool operator ! () const { return !_v; }
+  Flags operator | (Flags const &o) const { return Flags(_v | o._v, true); }
+  Flags operator | (Enum e) const { return Flags(_v | (unsigned)e, true); }
+  Flags &operator |= (Flags const &o) { _v |= o._v; return *this; }
+  Flags &operator |= (Enum e) { _v |= (unsigned)e; return *this; }
+  Flags operator & (Flags const &o) const { return Flags(_v & o._v, true); }
+  Flags operator & (Enum e) const { return Flags(_v & (unsigned)e, true); }
+  Flags &operator &= (Flags const &o) { _v &= o._v; return *this; }
+  Flags &operator &= (Enum e) { _v &= (unsigned)e; return *this; }
+  Flags operator ~ () const { return Flags(~_v, true); }
+
+  unsigned value() const { return _v; }
+};
+
+enum Orientation
+{
+  Horizontal = 0x1,
+  Horz       = Horizontal,
+  Vertical   = 0x2,
+  Vert       = Vertical,
+};
+
+typedef Flags<Orientation> Orientations;
+
+
+enum Alignment_flag
+{
+  Align_left     = 0x0001,
+  Align_right    = 0x0002,
+  Align_h_center = 0x0004,
+  Align_justify  = 0x0008,
+
+  Align_horizontal_m = Align_left | Align_right | Align_h_center,
+
+  Align_top      = 0x0020,
+  Align_bottom   = 0x0040,
+  Align_v_center = 0x0080,
+
+  Align_vertical_m = Align_top | Align_bottom | Align_v_center,
+
+  Align_center   = Align_h_center | Align_v_center,
+};
+
+typedef Flags<Alignment_flag> Alignment;
+
+
+
+}

@@ -1,0 +1,10 @@
+Standard configuration files for test setups.
+
+Test configurations expect a number of environment variables to be set up.
+Within the test framework this is done by the test execution script,
+which creates a second lua config with the variables.
+
+The following variables are defined:
+
+TEST_PROG     - name of executable containing test
+REQUIRED_MODULES - list of additional modules loaded (filename only)

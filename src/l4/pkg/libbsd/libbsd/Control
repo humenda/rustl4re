@@ -1,0 +1,3 @@
+provides: libbsd-lite
+requires: libc
+maintainer: adam@os.inf.tu-dresden.de

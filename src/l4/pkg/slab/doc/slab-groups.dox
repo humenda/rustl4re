@@ -1,0 +1,26 @@
+/* -*- c -*- */
+
+/**
+ * \defgroup api Slab Memory Allocator API
+ *
+ * Documentation of the Slab Memory Allocator API
+ */
+
+/**
+ * \defgroup api_init Initialization
+ * \ingroup api
+ * \brief Slab cache initialization
+ */
+
+/**
+ * \defgroup api_alloc Memory Allocation
+ * \ingroup api
+ * \brief Memory allocation / deallocation
+ */
+
+/**
+ * \defgroup api_debug Debugging
+ * \ingroup api
+ * \brief Debug functions
+ */
+

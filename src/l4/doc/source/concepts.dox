@@ -1,0 +1,343 @@
+// vi:ft=c
+/**
+
+\page l4re_concepts Programming for L4Re
+
+This part of the documentation discusses the concept of microkernel-based
+programming in more detail. You should have already a basic understanding
+of the L4Re programming environment from the tutorial.
+
+\todo All subpages need cleaning. Level of detail here?
+
+- \subpage l4re_concepts_naming
+- \subpage l4re_concepts_env_and_start
+- \subpage l4re_concepts_ds_rm
+- \subpage l4re_concepts_stdio
+- \subpage l4re_concepts_memalloc
+- \subpage l4re_concepts_apps_svr
+- \subpage l4re_pthreads
+- tasks and threads
+- communication channels
+- server loops
+- \subpage l4_cxx_ipc_iface
+- hardware access
+- \subpage l4re_build_system
+
+
+\page l4re_concepts_ds_rm Memory management - Data Spaces and the Region Map
+
+\section l4re_concept_pagers User-level paging
+
+Memory management in L4-based systems is done by user-level applications, the
+role is usually called \em pager. Tasks can give other tasks full or
+restricted access rights to parts of their own memory. The kernel offers means
+to grant the memory in a secure way, often referred to as *memory* mapping.
+
+The described mechanism can be used to construct a memory hierarchy among
+tasks.  The root of the hierarchy is `sigma0`, which initially gets all
+system resources and hands them out once on a first-come-first-served basis.
+Memory resources can be mapped between tasks at a page-size granularity. This
+size is predetermined by the CPU's memory management unit and is commonly set
+to 4 kB.
+
+\subsection l4re_concept_data_spaces Data spaces
+
+A data space is the L4Re abstraction for objects which may be
+accessed in a memory mapped fashion (i.e., using normal memory
+read and write instructions). Examples include the sections of a
+binary which the loader attaches to the application's address
+space, files in the ROM or on disk provided by a file server, the
+registers of memory-mapped devices and anonymous memory such as
+the heap or the stack.
+
+Anonymous memory data spaces in particular (but in general all
+data spaces except memory mapped IO) can either be constructed
+entirely from a portion of the RAM or the current working set may
+be multiplexed on some portion of the RAM. In the first case it
+is possible to eagerly insert all pages (more precisely
+page-frame capabilities) into the application's address space
+such that no further page faults occur when this data space is
+accessed. In general, however, only the pages for the some
+portion are provided and further pages are inserted by the pager
+as a result of page faults.
+
+\subsection l4re_concept_regions Virtual Memory Handling
+
+The virtual memory of each task is constructed from data spaces, backing
+virtual memory regions (VMRs). The management of the VMRs is provided by an
+object called *region map*. A dedicated region-map object is associated
+with each task, it allows to attach and detach data spaces to an address space
+as well as to reserve areas of virtual memory. Since the region-map object
+possesses all knowledge about virtual memory layout of a task, it also serves
+as an application's default pager.
+
+\subsection l4re_concept_mem_alloc Memory Allocation
+
+Operating systems commonly use anonymous memory for implementing dynamic
+memory allocation (e.g., using `malloc` or `new`). In an
+L4Re-based system, each task gets assigned a memory allocator providing
+anonymous memory using data spaces.
+
+
+\see L4Re::Dataspace and L4Re::Rm.
+
+
+\page l4re_concepts_naming Capabilities and Naming
+
+The L4Re system is a capability based system which uses and offers
+capabilities to implement fine-grained access control.
+
+Generally, owning a capability means to be allowed to communicate with the
+object the capability points to. All user-visible kernel objects, such as
+tasks, threads, and IRQs, can be accessed only through a capability.
+Please refer to the \ref l4_kernel_object_api
+documentation for details. Capabilities are stored in per-task capability
+tables (the object space) and are referenced by capability selectors or
+object flex pages. In a simplified view, a capability selector is a natural
+number indexing into the capability table of the current task.
+
+As a matter of fact, a system designed solely based on capabilities, uses
+so-called 'local names', because each task can only access those objects made
+available to this task. Other objects are not visible to and accessible by the
+task.
+
+\image html l4-caps-basic.png "Capabilities and Local Naming in L4"
+\image latex l4-caps-basic.pdf "Capabilities and Local Naming in L4
+
+So how does an application get access to a service?
+In general all applications are started with an initial set of objects
+available.  This set of objects is predetermined by the creator of a new
+application process and granted directly to into the new task before starting
+the first application thread.  The application can then use these initial objects
+to request access to further objects or to transfer capabilities to own objects
+to other applications.  A central L4Re object for exchanging capabilities at
+runtime is the name-space object, implementing a store of named capabilities.
+
+From a security perspective, the set of initial capabilities (access rights to
+objects) completely define the execution environment of an application.
+Mandatory security policies can be defined by well known properties of the
+initial objects and carefully handled access rights to them.
+
+
+\page l4re_concepts_env_and_start Initial Environment and Application Bootstrapping
+
+New applications that are started by a loader conforming to L4Re get
+provided an \ref api_l4re_env. This environment
+comprises a set of capabilities to initial L4Re objects that are
+required to bootstrap and run this application. These
+capabilities include:
+
+- A capability to an initial memory allocator for obtaining memory in the
+  form of data spaces
+- A capability to a factory which can be used to create additional kernel
+  objects
+- A capability to a Vcon object for debugging output and maybe input
+- A set of named capabilities to application specific objects
+
+During the bootstrapping of the application, the loader establishes data
+spaces for each individual region in the ELF binary. These include data spaces
+for the code and data sections, and a data space backed with RAM for the stack
+of the program's first thread.
+
+One loader implementation is the `moe` root task. Moe usually starts an *init*
+process that is responsible for coordinating the further boot
+process. The default *init* process is `ned`, which implements a
+script-based configuration and startup of other processes.  Ned uses Lua
+(http://www.lua.org) as its scripting language, see \ref l4re_servers_ned
+"Ned Script example" for more details.
+
+
+\section l4re_ns_config Configuring an application before startup
+
+The default L4Re init process (Ned) provides a Lua script based configuration
+of initial capabilities and application startup.  Ned itself also has a set of
+initial objects available that can be used to create the environment for an
+application.  The most important object is a kernel object factory that allows
+creation of kernel objects such as IPC gates (communication channels), tasks,
+threads, etc.  Ned uses Lua tables (associative arrays) to represent sets of
+capabilities that shall be granted to application processes.
+~~~
+local caps = {
+    name = some_capability
+}
+~~~
+The L4 Lua package in Ned also has support functions to create application
+tasks, region-map objects, etc. to start an ELF binary in a new task.
+The package also contains Lua bindings for basic L4Re objects, for example, to
+generic factory objects, which are used to create kernel objects and also
+user-level objects provided by user-level servers.
+~~~
+L4.default_loader:start({ caps = { some_service = service } }, "rom/program --arg");
+~~~
+
+\section l4re_config_connection Connecting clients and servers
+
+In general, a connection between a client and a server is represented by a
+communication channel (IPC gate).  That is available to the client and the
+server.  You can see the simplest connection between a client and a server
+in the following example.
+~~~
+local loader = L4.default_loader; -- which is Moe
+local svc = loader:new_channel();  -- create an IPC gate
+loader:start({ caps = { service = svc:svr() }}, "rom/my_server");
+loader:start({ caps = { service = svc:m("rw") }}, "rom/my_client");
+~~~
+As you can see in the snippet, the first action is to create a new channel
+(IPC gate) using `loader:new_channel()`.  The capability to the gate is stored
+in the variable `svc`. Then the binary `my_server` is started in a new task,
+and full (`:svr()`) access to the IPC gate is granted to the server as initial
+object.  The gate is accessible to the server application as "service" in the set of
+its initial capabilities.  Virtually in parallel a second task, running the client
+application, is started and also given access to the IPC gate with less rights
+(`:m("rw")`, note, this is essential).  The server can now receive messages via the
+IPC gate and provide some service and the client can call operations on the IPC gate
+to communicate with the server.
+
+Services that keep client specific state need to implement per-client server
+objects.  Usually it is the responsibility of some authority (e.g., Ned) to
+request such an object from the service via a generic factory object that the
+service provides initially.
+~~~
+local loader = L4.default_loader; -- which is Moe
+local svc = loader:new_channel():m("rws");  -- create an IPC gate with rws rights
+loader:start({ caps = { service = svc:svr() } }, "rom/my-service");
+loader:start({ caps = { foo_service = svc:create(object_to_create, "param") }}, "rom/client");
+~~~
+This example is quite similar to the first one, however, the difference is that
+Ned itself calls the create method on the factory object provided by the server and
+passes the returned capability of that request as "foo_service" to the client process.
+
+\note The `svc:create(..)` call blocks on the server. This means the script execution
+blocks until the my-service application handles the create request.
+
+
+\page l4re_concepts_stdio Program Input and Output
+
+
+The initial environment provides a Vcon capability used as the standard
+input/output stream. Output is usually connected to the parent of the
+program and displayed as debugging output. The standard output is also used
+as a back end to the C-style printf functions and the C++ streams.
+
+Vcon services are implemented in Moe and the loader as well as by the Fiasco
+kernel and connected either to the serial line or to the screen if
+available.
+
+\see \ref l4_vcon_api
+
+
+\page l4re_concepts_memalloc Initial Memory Allocator and Factory
+
+The purpose of the memory allocator and of the factory is to provide
+the application with the means to allocate memory (in the form of data spaces)
+and kernel objects respectively.
+An initial memory allocator and an initial factory are accessible via the
+allocation L4Re environment.
+
+\see L4Re::Mem_alloc
+
+
+The factory is a kernel object that provides the ability to create new
+kernel objects dynamically. A factory imposes a resource limit for
+kernel memory, and is thus a means to prevent denial of service attacks on
+kernel resources.  A factory can also be used to create new factory objects.
+
+\see \ref l4_factory_api
+
+
+
+\page l4re_concepts_apps_svr Application and Server Building Blocks
+
+So far we have discussed the environment of applications in which a single
+thread runs and which may invoke services provided through their initial objects.
+In the following we describe some building blocks to extend the
+application in various dimensions and to eventually implement a server which
+implements user-level objects that may in turn be accessed by other
+applications and servers.
+
+\section l4re_concepts_app_thread Creating Additional Application Threads
+
+To create application threads, one must allocate a stack on which
+this thread may execute, create a thread kernel object and setup
+the information required at startup time (instruction pointer,
+stack pointer, etc.). In L4Re this functionality is encapsulated in the
+pthread library.
+
+\section l4re_concepts_service Providing a Service
+
+In capability systems, services are typically provided by
+transferring a capability to those applications that are
+authorised to access the object to which the capability refers to.
+
+Let us discuss an example to illustrate how two parties can communicate with
+each other:
+Assume a simple file server, which implements an interface for accessing
+individual files: read(pos, buf, length) and write(pos, data, length).
+
+L4Re provides support for building servers based on the class
+L4::Server_object.  L4::Server_object provides an abstract interface to be
+used with the L4::Server class. Specific server objects such as, in our
+case, files inherit from L4::Server_object. Let us call this class
+File_object.  When invoked upon receiving a message, the L4::Server will
+automatically identify the corresponding server object based on the
+capability that has been provided to its clients and invoke this object's
+\em dispatch function with the incoming message as a parameter.  Based on
+this message, the server must then decide which of the protocols it
+implements was invoked (if any). Usually, it will evaluate a protocol
+specific opcode that clients are required to transmit as one of the first
+words in the message. For example, assume our server assigns the following
+opcodes: Read = 0 and Write = 1. The `dispatch` function calls the
+corresponding server function (i.e., `File_object::read()` or
+`File_object::write()`), which will in turn parse additional
+parameters given to the function.  In our case, this would be the position
+and the amount of data to be read or written. In case the write function was
+called the server will now update the contents of the file with the data
+supplied. In case of a read it will store the requested part of the file in
+the message buffer. A reply to the client finishes the client request.
+
+*/
+
+
+/* This is some text we currently do not use:
+
+\link api_l4re_dataspace Data spaces\endlink and the purpose of the \link
+api_l4re_rm Region Map\endlink are explained in more detail in the following
+section.
+
+
+In Fiasco.OC capabilities are addressed in two different
+ways.
+
+A capability can be addressed with the help of a capability
+descriptor \XXX Ref which identifies the position of one single
+capability in the application's address space.
+
+The second means to address a bunch of capabilities at once are
+flexpages. A flexpage describes a region of the application's
+address space that is of a power 2 size and size aligned. Thus
+the name flexpage. When capabilities are to be transferred (see
+IPC / MapItem) the flexpage decleared by the sender --- the send
+flexpage --- specifies which capabilities are to be transferred.
+These are at most those capabilities that are located within the
+region described by the flexpage and precisely those in the
+region that results from adjusting the flexpage with a possibly
+smaller flexpage on the receiver side (see \XXX for more details
+on how sender and receiver declared flexpages are adjusted). The
+receiver declared flexpage --- the receive flexpage --- defines
+where in the address space of the application capabilities are to
+be received.
+
+The key insight here is that applications are able to restrict
+an invoked server such that it can only modify a part of the
+applications address space --- the receive flexpage.
+
+When invoking servers and when creating new objects one is faced
+with the task to find not yet used parts in the address space of
+the application at which the kernel or other servers may insert
+capabilities. L4Re assists this task with the help of a capability
+allocator.
+
+
+
+
+*/

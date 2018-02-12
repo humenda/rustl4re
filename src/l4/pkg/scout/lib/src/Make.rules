@@ -1,0 +1,32 @@
+# vi:ft=make
+
+TARGET		= libscout.a libscout.so
+LINK_INCR       := libscout.a
+SRC_CC		= factory.cc main.cc platform.cc \
+		  platform_fb.cc \
+		  about.cc browser_window.cc
+
+
+SRC_RGBA  =     sizer.rgba \
+             titlebar.rgba \
+            kill_icon.rgba \
+          opened_icon.rgba \
+          closed_icon.rgba
+
+SRC_DATA += $(SRC_RGBA)
+
+SRC_DATA +=    cover.rgba \
+            forward.rgba \
+           backward.rgba \
+               home.rgba \
+              index.rgba \
+              about.rgba \
+            pointer.rgba
+
+SRC_DATA += ior.map
+
+SRC_DATA_VPATH := $(SRC_DIR)/../data
+
+REQUIRES_LIBS := mag-gfx scout-gfx libpng libpthread
+
+

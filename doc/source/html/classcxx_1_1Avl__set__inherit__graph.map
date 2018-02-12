@@ -1,0 +1,4 @@
+<map id="cxx::Avl_set&lt; ITEM_TYPE, COMPARE, ALLOC &gt;" name="cxx::Avl_set&lt; ITEM_TYPE, COMPARE, ALLOC &gt;">
+<area shape="rect" id="node2" href="$classcxx_1_1Bits_1_1Base__avl__set.html" title="{cxx::Bits::Base_avl\l_set\&lt; ITEM_TYPE, COMPARE,\l ALLOC, Bits::Avl_set_get\l_key\&lt; ITEM_TYPE \&gt; \&gt;\n||+ Base_avl_set()\l+ Base_avl_set()\l+ ~Base_avl_set()\l+ insert()\l+ remove()\l+ erase()\l+ find_node()\l+ lower_bound_node()\l+ lower_bound_node()\l+ begin()\land 8 more...\l}" alt="" coords="5,351,224,619"/>
+<area shape="rect" id="node3" href="$classcxx_1_1Bits_1_1Base__avl__set.html" title="Internal: AVL set with internally managed nodes. " alt="" coords="5,5,224,259"/>
+</map>

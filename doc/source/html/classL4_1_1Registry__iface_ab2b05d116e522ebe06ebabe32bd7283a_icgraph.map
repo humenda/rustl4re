@@ -1,0 +1,4 @@
+<map id="L4::Registry_iface::register_irq_obj" name="L4::Registry_iface::register_irq_obj">
+<area shape="rect" id="node2" href="$classL4Re_1_1Util_1_1Object__registry.html#a9093b28711f4feb8e0eeea66d718dfd7" title="Register a handler for an interrupt. " alt="" coords="190,5,321,61"/>
+<area shape="rect" id="node3" href="$classL4virtio_1_1Svr_1_1Block__dev.html#a9a96e928470518780132b45397e8ad35" title="Attach device to an object registry. " alt="" coords="188,86,323,127"/>
+</map>

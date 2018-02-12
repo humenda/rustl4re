@@ -1,0 +1,6 @@
+<map id="cxx::Bitmap_base::bit_index" name="cxx::Bitmap_base::bit_index">
+<area shape="rect" id="node2" href="$classcxx_1_1Bitmap__base.html#a90b85625fab909f4bfa3cad35ccfba77" title="Set the value of bit bit to on. " alt="" coords="223,5,374,32"/>
+<area shape="rect" id="node4" href="$classcxx_1_1Bitmap__base.html#a141862ab924ef2580d1f73d7f55e7e8d" title="Clear bit bit. " alt="" coords="204,56,393,83"/>
+<area shape="rect" id="node5" href="$classcxx_1_1Bitmap__base.html#a67b5fac835cd7e13de70e191e487d3c5" title="Set bit bit. " alt="" coords="210,107,387,133"/>
+<area shape="rect" id="node3" href="$classcxx_1_1Bitmap__base.html#a15db5e4d5366a13cb5a49aeb357635a7" title="Get the bit at index bit. " alt="" coords="441,5,640,32"/>
+</map>

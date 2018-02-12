@@ -1,0 +1,9 @@
+<map id="Graphical Class Hierarchy" name="Graphical Class Hierarchy">
+<area shape="rect" id="node1" href="$classL4vbus_1_1Pm.html" title="L4vbus::Pm\&lt; Device \&gt;" alt="" coords="5,107,164,133"/>
+<area shape="rect" id="node2" href="$classL4vbus_1_1Device.html" title="Device on a L4vbus::Vbus. " alt="" coords="212,107,327,133"/>
+<area shape="rect" id="node3" href="$classL4vbus_1_1Gpio__module.html" title="A Gpio_module groups multiple GPIO pins together. " alt="" coords="384,5,539,32"/>
+<area shape="rect" id="node4" href="$classL4vbus_1_1Gpio__pin.html" title="A GPIO pin. " alt="" coords="397,56,526,83"/>
+<area shape="rect" id="node5" href="$classL4vbus_1_1Icu.html" title="Vbus Interrupt controller API. " alt="" coords="416,107,507,133"/>
+<area shape="rect" id="node6" href="$classL4vbus_1_1Pci__dev.html" title="A PCI device. " alt="" coords="400,157,523,184"/>
+<area shape="rect" id="node7" href="$classL4vbus_1_1Pci__host__bridge.html" title="A Pci host bridge. " alt="" coords="375,208,548,235"/>
+</map>

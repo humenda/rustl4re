@@ -1,0 +1,77 @@
+// vim: ft=cpp
+#pragma once
+
+/*
+ * exceptions --
+ *
+ *     Romain exception definitions.
+ *
+ * (c) 2011-2013 Björn Döbel <doebel@os.inf.tu-dresden.de>,
+ *     economic rights: Technische Universität Dresden (Germany)
+ * This file is part of TUD:OS and distributed under the terms of the
+ * GNU General Public License 2.
+ * Please see the COPYING-GPL-2 file for details.
+ */
+
+#include <l4/sys/kdebug.h>
+#include <cstdio> // snprintf etc.
+#include <l4/cxx/exceptions> // L4::Base_error
+
+class Romain_error : public L4::Base_exception
+{
+	public:
+		enum {data_size = 100};
+
+	protected:
+		char _func[data_size];
+		l4_umword_t _line;
+
+	public:
+		Romain_error(char const *func, l4_umword_t line)
+			: _line(line)
+		{
+			snprintf(_func, data_size, "At \033[34m%s:%ld\033[0m: ", func, line);
+			_func[data_size-1] = 0;
+		}
+
+		virtual const char *str() const throw() { return _func; }
+};
+
+
+/*
+ * XXX: Meh ... the use of the condition is actually opposite to what one would expect
+ *      for a standard ASSERT. This drives me nuts. Need to fix it some day.
+ */
+#define _check(cond, message) \
+	do { \
+		if (cond) { \
+			void *pc[10]; \
+			l4_mword_t cnt; \
+			ERROR() << __FILE__ << " " << __func__ << " " << message << "\n"; \
+			cnt = l4util_backtrace(pc, 10); \
+			for (l4_mword_t i = 0; i < cnt; ++i) { \
+				ERROR() << std::hex << l4_umword_t(pc[i]) << "\n"; \
+			} \
+			enter_kdebug(message); \
+		} \
+	} while (0);
+
+
+/*
+ * Argument error exception. Contains a description about
+ * the missing argument and the location where it occurred.
+ */
+class Argument_error : public Romain_error
+{
+	char _data[Romain_error::data_size*2];
+
+	public:
+		Argument_error(char const *func, l4_umword_t line, char const *msg)
+			: Romain_error(func, line)
+		{
+			snprintf(_data, sizeof(_data), "%s%s\n", _func, msg);
+		}
+
+		virtual const char *str() const throw()
+		{ return _data; }
+};

@@ -1,0 +1,4 @@
+provides: ferret-common ferret-producer ferret-consumer
+requires: l4sys log l4util libc l4re_c libboost-lite zlib stdlibs
+          dope libstdc++ libpthread
+Maintainer: doebel@os.inf.tu-dresden.de

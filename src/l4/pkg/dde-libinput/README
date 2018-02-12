@@ -1,0 +1,14 @@
+Input driver library with dde -- L4INPUT.
+
+This package provides an API to input device drivers. The drivers are part of a
+library, i.e. colocated with the application using it. Packages using L4INPUT
+are CON and DOpE. L4INPUT supports PS/2 aux and kbd.
+
+It's a bad idea to use two applications linked with input in one system as
+there should only be one device driver per specific device.
+
+HINT: Fiasco must not be started with deprecated "-esc" command line switch;
+use "-serial_esc" instead. Otherwise, L4INPUT cannot initialize i8042 or
+behaves really strange because Fiasco also programs input ports.
+
+ALL Linux 2.6 sources included in this package are GPLed (as you know).

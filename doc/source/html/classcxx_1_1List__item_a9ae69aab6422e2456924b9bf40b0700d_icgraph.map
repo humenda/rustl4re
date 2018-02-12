@@ -1,0 +1,5 @@
+<map id="cxx::List_item::push_back" name="cxx::List_item::push_back">
+<area shape="rect" id="node2" href="$classcxx_1_1List__item.html#a242fb5c7f48eeea6c4117c213f2d0120" title="Remove item from a list. " alt="" coords="645,7,804,33"/>
+<area shape="rect" id="node3" href="$classcxx_1_1List__item.html#a3881b562fd2ed8708a96112fe2057f47" title="Remove this item from the list. " alt="" coords="232,32,417,59"/>
+<area shape="rect" id="node4" href="$classcxx_1_1List__item_1_1Iter.html#a0ef357e10b4f813b7289fbe689688f6e" title="Remove item pointed to by iterator, and return pointer to element. " alt="" coords="465,29,597,70"/>
+</map>

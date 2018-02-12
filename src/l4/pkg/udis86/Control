@@ -1,0 +1,6 @@
+provides: libudis86
+# for the lib
+requires: libc
+# for the program
+requires: stdlibs
+Maintainer: adam@os.inf.tu-dresden.de

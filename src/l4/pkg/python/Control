@@ -1,0 +1,4 @@
+provides: libpython python
+requires: libc l4re l4re_c-util libsupc++ readline libpthread stdlibs-sh
+          libc_be_file_stdin
+maintainer: adam@os.inf.tu-dresden.de

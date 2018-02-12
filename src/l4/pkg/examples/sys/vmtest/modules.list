@@ -1,0 +1,11 @@
+# vim: set ft=l4mods:
+# Module configuration file for ex_vmtest
+# include this into your main modules.list, so that your
+# default-kernel and default-bootstrap and modaddr options are being used
+
+entry ex_vmtest
+roottask moe --init=rom/ex_vmtest
+module l4re
+module moe
+module ex_vmtest
+

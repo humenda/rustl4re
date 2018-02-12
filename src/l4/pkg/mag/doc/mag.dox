@@ -1,0 +1,118 @@
+// vi:ft=c
+/**
+ * \page l4re_servers L4Re Servers
+ *
+ *  - \subpage l4re_servers_mag
+ *
+ *    Our default multiplexer for the graphics hardware is Mag.  Mag is a
+ *    Nitpicker (TODO: ref) derivate that allows secure multiplexing of
+ *    the graphics and input hardware among multiple applications and multiple
+ *    complete windowing environments.
+ *
+ * \page l4re_servers_mag Mag, the GUI Multiplexer
+ *
+ * Mag is the default multiplexer for graphics hardware. It is not, and does
+ * not attempt to be, a fully-fledged window manager.
+ *
+ * Command Line Options
+ * --------------------
+ * As Mag's only command line option it supports loading additional plugins via
+ * the application's command line. Plugins must be either a Lua file or a
+ * shared library. Shared libraries must be named `libmag-$LIBNAME.so`.
+ *
+ * Mag Sessions
+ * ------------
+ * Mag provides two types of sessions which a client can create via the Factory
+ * interface.
+ *
+ * 1. Mag client session
+ *
+ *    A client with a mag client session gets access to the whole screen. The
+ *    client has to allocate and manage it's own buffers and has to position
+ *    them on the screen on its own. Mag provides the factory to create client
+ *    sessions via the capability named `mag`.
+ *
+ * 2. Client framebuffer session
+ *
+ *    For a client framebuffer session mag allocates a view of the requested
+ *    size and displays it at the requested coordinates on the screen. Mag
+ *    provides the factory to create framebuffer sessions via the capability
+ *    named `svc`.
+ *
+ * The options described below are options the client provides to the
+ * L4::Factory::create() call. These options influence the appearance and
+ * behaviour of the newly created session.
+ *
+ * ### Session Factory Options ###
+ * As a simple nitpicker clone Mag supports the so-called Xray mode. This mode
+ * displays all session labels and draws a colored frame around them. The
+ * session that currently has the input focus is highlighted. The Xray mode is
+ * actived via the special keys _Scroll_ or _NEXTSONG_.
+ *
+ * Mag allows to define a text label and a color for all client session types.
+ * The label and the color are displayed when Mag enters the Xray mode.
+ *
+ * - Label Option: **label**
+ *
+ *   `l=LABEL`, `label=LABEL` Set the session's text label to LABEL. The
+ *   label is restricted to a length of 256 characters.
+ *
+ * - Color Option: **col**
+ *
+ *   `col=COLOR` Set the session's color which is used in Xray mode to tint
+ *   the session's screen area and the border drawn around it. The argument can
+ *   be either one of the following letters or a hexdecimal representation of
+ *   the RGB values.
+ *
+ *   + `r, R` Red color
+ *   + `g, G` Green color
+ *   + `b, B` Blue color
+ *   + `w, W` White color
+ *   + `y, Y` Yellow color
+ *   + `v, V` Magenta color
+ *
+ * Example
+ *
+ *     -- set label to "Linux" and use a light blue color
+ *     fb = mag_client:create(L4.Proto.Goos, "l=Linux", "col=98d9ff");
+ *
+ * ### Mag Client Session Options ###
+ * These options only apply to Mag client sessions.
+ *
+ * - Default Background Option: **default-background**
+ *
+ *   `dfl-bg`, `default-background` Marks this session as the default
+ *   background.
+ *
+ * ### Mag Client Framebuffer Session Options ###
+ * These options only apply to Mag client framebuffer sessions.
+ *
+ * - Geometry Option: **geometry**
+ *
+ *   `g=GEOMETRY`, `geometry=GEOMETRY` Set the session's geometry and
+ *   position on the screen. GEOMETRY is provided in an X11-style format, e.g.
+ *   `g=WIDTHxHEIGHT+X_OFFSET+Y_OFFSET`.
+ *
+ * - Focus Option: **focus**
+ *
+ *   `focus` Set the focus to this session.
+ *
+ * - Collapsed Option: **shaded**
+ *
+ *   `shaded` The window is collapsed and only the title bar is visible. The
+ *   window can be expanded by clicking into the title bar with the middle
+ *   mouse button. Collapsing and expanding works also independently of this
+ *   option.
+ *
+ * - Fixed Option: **fixed**
+ *   `fixed` The window cannot be moved on the screen.
+ *
+ * - Barheight Option: **barheight**
+ *
+ *   `barheight=X` Set the height of the title bar in pixels.
+ *
+ * Example
+ *
+ *     -- create a window of 640x480 pixels at position (100,100) on the screen.
+ *     fb = mag_fb:create(L4.Proto.Goos, "g=640x480+100+100");
+ */

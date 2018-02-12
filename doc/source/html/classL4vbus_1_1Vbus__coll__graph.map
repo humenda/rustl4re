@@ -1,0 +1,15 @@
+<map id="L4vbus::Vbus" name="L4vbus::Vbus">
+<area shape="rect" id="node2" href="$structL4_1_1Kobject__3t.html" title="{L4::Kobject_3t\&lt; Vbus,\l L4Re::Dataspace, L4Re\l::Inhibitor, L4Re::Event \&gt;\n||+ operator Kobject const &amp;()\l+ dec_refcnt()\l# cap()\l# c()\l# __check_protocols__()\l}" alt="" coords="282,1388,483,1553"/>
+<area shape="rect" id="node3" href="$classL4Re_1_1Dataspace.html" title="Interface for memory&#45;like objects. " alt="" coords="276,607,407,831"/>
+<area shape="rect" id="node4" href="$classL4_1_1Kobject__t.html" title="{L4::Kobject_t\&lt; Dataspace,\l L4::Kobject, L4RE_PROTO\l_DATASPACE, L4::Type_info\l::Demand_t\&lt; 1 \&gt; \&gt;\n||# c()\l# __check_protocols__()\l}" alt="" coords="239,204,444,340"/>
+<area shape="rect" id="node5" href="$classL4_1_1Kobject.html" title="Base class for all kinds of kernel objects and remote objects, referenced by capabilities. " alt="" coords="5,13,117,105"/>
+<area shape="rect" id="node8" href="$classL4_1_1Kobject__t.html" title="{L4::Kobject_t\&lt; Inhibitor,\l L4::Kobject, L4RE_PROTO\l_INHIBITOR \&gt;\n||# c()\l# __check_protocols__()\l}" alt="" coords="20,211,215,333"/>
+<area shape="rect" id="node6" href="$classL4_1_1Kobject__t.html" title="Helper class to create an L4Re interface class that is derived from a single base class..." alt="" coords="348,5,559,112"/>
+<area shape="rect" id="node10" href="$classL4_1_1Kobject__t.html" title="{L4::Kobject_t\&lt; Event,\l L4::Icu, L4RE_PROTO\l_EVENT \&gt;\n||# c()\l# __check_protocols__()\l}" alt="" coords="477,855,656,976"/>
+<area shape="rect" id="node12" href="$classL4_1_1Kobject__t.html" title="{L4::Kobject_t\&lt; Icu,\l Irq_eoi, L4_PROTO_IRQ,\l Type_info::Demand_t\&lt; 1 \&gt; \&gt;\n||# c()\l# __check_protocols__()\l}" alt="" coords="626,211,830,333"/>
+<area shape="rect" id="node7" href="$classL4Re_1_1Inhibitor.html" title="Set of inhibitor locks, which inhibit specific actions when held. " alt="" coords="117,1000,253,1107"/>
+<area shape="rect" id="node9" href="$classL4Re_1_1Event.html" title="Event class. " alt="" coords="378,1138,577,1289"/>
+<area shape="rect" id="node11" href="$classL4_1_1Icu.html" title="C++ Icu interface. " alt="" coords="639,417,745,583"/>
+<area shape="rect" id="node13" href="$classL4_1_1Irq__eoi.html" title="Interface for sending an acknowledge message to an object. " alt="" coords="745,20,839,97"/>
+<area shape="rect" id="node14" href="$structL4_1_1Kobject__3t.html" title="Helper class to create an L4Re interface class that is derived from three base classes (see L4::Kobje..." alt="" coords="601,1131,802,1296"/>
+</map>

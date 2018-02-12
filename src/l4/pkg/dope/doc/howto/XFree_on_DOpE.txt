@@ -1,0 +1,257 @@
+
+                          How to run XFree86 with DOpE
+
+                                  Norman Feske
+
+
+Introducion
+###########
+
+:Note:
+  _This document is provided for the people at the OS group at the TU Dresden._
+  _Some packages that are mentioned within this text are not available to the_
+  _public, yet._
+
+In the past,  several people struggled to run XFree under L4Linux inside a DOpE
+window.   Such attempts were  doomed to fail  because there  did  not  exist an
+officially working set of drivers in the CVS. This changed recently.
+
+There is an complete example configuration of L4Linux + DOpE + X11 available at
+~nf2/boot/demo.lst.  You can try it out  from within the  OS net  via the  Grub
+command: 'configfile (nd)/tftpboot/nf2/demo.lst'
+
+This document describes the official way of how to get  XFree to run on L4Linux
+and DOpE.
+
+
+Overlay Window Server
+#####################
+
+There exists no  XFree screen driver that uses DOpE directly but there exists a
+driver for the  Overlay Window Server (OvlWM).  So what the heck is this? OvlWM
+provides an abstraction layer for a framebuffer, input devices and views at the
+framebuffer.  In turn,  it uses DOpE to implement these interfaces  so  that an
+OvlWM client application is presented as a DOpE application.
+
+The three interfaces (subsequentially called screen, input and view) can can be
+connected to different components of the system.  In the past, we needed Kernel
+support to pass input events through the L4Linux kernel  (via the l4lx_stub) to
+the X-Server (via /dev/input/mice and a /proc interface). Now we do have native
+XFree drivers for the screen output as well as for mouse and keyboard input. No
+special support by the L4Linux kernel is needed anymore.
+
+
+Compiling L4Linux
+#################
+
+Although we do not need special kernel support to run XFree on L4Linux, we need
+a way to see the boot messages of the Linux kernel  and to login into the Linux
+console.  For this, there exist different solution for different L4Linux kernel
+versions.
+
+For L4Linux-2.2,  there exists  a console driver stub  that is available within
+the Console package. This stub can also be used under DOpE via a Console  proxy
+called 'Proxygon'. Proxygon speaks the pSLIM protocol that is normally provided
+by the Console. With Proxygon, you can start an L4Linux kernel that is built to
+run under the Console, directly under DOpE.
+
+For the versions 2.4 and 2.6 of the L4Linux kernel,  I recommend you to use the
+built-in framebuffer driver for DOpE.  You just need to enable the option  "Use
+frame buffer driver for con/DOpE" in the section "L4Linux options".
+
+There are several  L4Linux config options  to set up to build a  L4Linux kernel
+that works with DOpE.
+
+:Disable VGA Console: (Console drivers) If switched on,  L4Linux tries to drive
+  the display and accesses  VGA registers.  This causes a big mess because DOpE
+  already serves the screen. Thus, this option must be switched off.
+
+:Disable serial interfaces: When driven by the L4Linux kernel, the serial ports
+  can cause problems with Fiasco using the serial connection for debugging.
+
+
+Boot L4Linux with DOpE
+######################
+
+There are two different ways to boot L4Linux with DOpE, via the Grub bootloader
+or via the L4Loader.
+
+I assume you are using L4Linux on a RAM-disk  (e.g. drops-x.rd).  The following
+conditions must be met to successfully boot your Setup:
+
+* 'dm_phys' must have a boot priority  higher than L4Linux to allocate the part
+  of physical memory that should be managed by  'dm_phys'.  This can be achived
+  by telling 'rmgr' the command line option:
+  ! task modname "dm_phys" boot_priority 0xb0
+
+* The mouse and  keyboard interrupts  must not be used by L4Linux  because DOpE
+  needs to serve them. This can be enforced via the a 'rmgr' option:
+  ! task modname "glinux" irq mask 0xeffd
+
+
+Booting with Grub only
+======================
+
+The following GRUB  configuration  boots L4Linux  together  with DOpE.  L4Linux
+boots from a RAM-disk  (DROPS-X).  The backslashes at the  end of the lines are
+not present in the configfile - they are only here for readability.
+
+! title DOpE + L4Linux on RAM-disk + X11
+! kernel (nd)/tftpboot/rmgr -sigma0 -serial task modname "dm_phys" boot_priority 0xb0 \
+!                                           task modname "l4ovlwm" boot_priority 0xb1 \
+!                                           task modname "l4dope" boot_priority 0xb0 \
+!                                           task modname "glinux" irq mask 0xeffd module
+! modaddr 0x03000000
+! module (nd)/tftpboot/fiasco nowait -nokdb
+! module (nd)/tftpboot/sigma0
+! module (nd)/tftpboot/names
+! module (nd)/tftpboot/log --prio 0xC0
+! module (nd)/tftpboot/dm_phys --mem=0x01400000,0x0a000000,0xffffffff
+! module (nd)/tftpboot/l4dope
+! module (nd)/tftpboot/l4ovlwm
+! module (nd)/tftpboot/glinux mem=80M load_ramdisk=1 ramdisk_size=32768 \
+!                             root=/dev/ram [uconfig=/home/...] no-scroll
+! module (nd)/tftpboot/drops-x.rd
+! vbeset 0x117
+
+
+Booting with L4Loader
+=====================
+
+Here is an example Grub configuration and a  Loader config file to boot L4Linux
+with L4Loader:
+
+
+menu.lst
+--------
+
+! title  DOpE + L4Linux
+! kernel (nd)/tftpboot/rmgr -sigma0 -serial  task modname "dm_phys" boot_priority 0xb0 \
+!                           task modname "l4dope" boot_priority 0xb1
+! modaddr 0x01c00000
+! module (nd)/tftpboot/fiasco nowait -nokdb
+! module (nd)/tftpboot/sigma0
+! module (nd)/tftpboot/names -verbose 1
+! module (nd)/tftpboot/dm_phys --pool=1,0x00401000,0x003ff000,0x00800000,linux \
+!                              --isa=0x00800000,0x00800000,0x01000000
+! module (nd)/tftpboot/tftp
+! module (nd)/tftpboot/simple_ts
+! module (nd)/tftpboot/l4exec
+! module (nd)/tftpboot/loader (nd)/tftpboot/cfg_l4lx (nd)/tftpboot/dopelog
+! module (nd)/tftpboot/l4dope
+! vbeset 0x117
+
+The weird options of 'dm_phys'  are needed to preserve  the memory pools needed
+by  L4Linux  (ask Frank for more details).  OvlWM is started  together with the
+L4Linux kernel via a Loader config file:
+
+
+cfg_l4lx
+--------
+
+! # cfg_linux
+!
+!  verbose 0
+!  fiasco_symbols 1
+!  fiasco_lines 1
+!
+!  modpath "(nd)/tftpboot"
+!
+!  task "l4ovlwm"
+!
+!  task "glinux" "mem=128M load_ramdisk=1 ramdisk_size=32768 root=/dev/ram" direct_mapped
+!    memory  4 MB is [ dmaable ]
+!    memory 64 MB is [ contiguous ]
+!
+!    module "drops-x.rd"
+
+
+Make XFree to use Overlay WM
+############################
+
+There exists a custom display driver for XFree86 that uses the Screen interface
+of OvlWM. It is available at 'l4/pkg/overlay_wm/examples/xf86screen' and can be
+compiled for XFree86 4.2 and  4.3.  For compiling,  you need the source code of
+XFree86 and specify the location of the XFree86 source tree when calling make:
+! make XF86TREE=/where/your/xfree/sources/reside/xc
+
+If you are pissed  because of the installation of the  XFree86 sources,  ask me
+for a compiled driver module. The resulting driver is called 'ovlscreen_drv.o'.
+
+For passing user input to XFree,  we use two programs --- an XFree input driver
+that speaks the Linux Input Event protocol (as provided by '/dev/input/event*')
+and a mediator program ('lxevent')  that receives input messages from the input
+interface of the  Overlay server as  IPC messages and  forwards  them as  Linux
+Input events to a named pipe.  This names pipe is then  simply connected to the
+XFree input driver. This technique has the following advantages over a stand-
+alone input driver for XFree:
+
+* The Linux Input Event driver can also be used on normal Linux systems. As the
+  Linux kernel has now support for a lot of input devices such as  USB mice and
+  keyboard etc, there is (in theory)  no need to device-specific drivers within
+  XFree. One driver that speaks the Event protocol should be enough.
+
+* Once, when there is native support for the Linux Event Interface in XFree, we
+  simply can drop our LxEvent driver module and only keep the Mediator program.
+
+You find the lxevent driver in  'l4/pkg/overlay_wm/examples/xf86input'.  Please
+make sure that you compile the driver modules with the same versions of GCC and
+the XFree header files  as used for the X-Server.  The input and screen drivers
+must be copied to XFree's driver directory '/usr/X11R6/lib/modules/drivers.'
+
+The input event mediator resides in 'l4/pkg/overlay_wm/examples/lxevent'. It is
+a plain L4Linux user level program.
+
+
+Configuring XFree
+#################
+
+You need to configure XFree to use our custom drivers by modifying the  XFree86
+config file (e.g. /etc/X11/XF86Config-4'). The following section makes XFree to
+use our LxEvent driver. The 'Device' option specifies the name of the device or
+pipe to receive the input events from. We need to specify the same file as used
+later for the mediator program ('l4event').  Note, that we do *not* specify the
+option  'CoreKeyboard'  as we want to use the  native keyboard driver to manage
+things such as the keyboard focus.  Anyway,  our  LxEvent driver generates key-
+board events as well.
+
+! Section "InputDevice"
+!   Identifier "LxEvent"
+!   Driver     "lxevent"
+!   Option     "CorePointer"
+!   Option     "Device"      "/dev/lxevent"
+! EndSection
+
+The following section tells XFree to use our custom screen driver module:
+
+! Section "Device"
+!   Identifier  "Overlay Screen"
+!   Driver      "ovlscreen"
+! EndSection
+
+Finally, we must mention the new sections within the 'ServerLayout' section:
+
+! Section "ServerLayout"
+!   Identifier    "Default Layout"
+!   Screen        "Overlay Screen"
+!   InputDevice   "Generic Keyboard"
+!   InputDevice   "LxEvent"
+! EndSection
+
+
+Starting the X Server
+#####################
+
+Before starting the X-Server,  you need to execute the  'lxevent' program  with
+the filename of the named pipe to which to forward the input events as argument.
+According to the XFree configuration above, this is:
+
+! lxevent /dev/lxevent
+
+Now you can start XFree by typing 'startx'.
+
+
+Frequently Asked Questions
+##########################
+
+_please ask frequently_

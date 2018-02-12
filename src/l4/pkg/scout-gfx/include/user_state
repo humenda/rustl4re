@@ -1,0 +1,77 @@
+// vi:ft=cpp
+/*
+ * \brief   User state manager
+ * \date    2005-11-16
+ * \author  Norman Feske <norman.feske@genode-labs.com>
+ */
+
+/*
+ * Copyright (C) 2005-2009
+ * Genode Labs, Feske & Helmuth Systementwicklung GbR
+ *
+ * This file is part of the Genode OS framework, which is distributed
+ * under the terms of the GNU General Public License version 2.
+ */
+
+#pragma once
+
+#include <l4/scout-gfx/widget>
+
+namespace Scout_gfx {
+
+class User_state : public Parent_widget
+{
+private:
+
+  Widget *_mfocus;    /* element that owns the current mouse focus */
+//  Widget *_dst;       /* current link destination                  */
+  Widget *_active;    /* currently activated element               */
+  Point _am;
+  Point    _v;   /* current view offset                       */
+
+  /**
+   * Assign new mouse focus element
+   */
+  void _assign_mfocus(Widget *e, int force = 0);
+
+public:
+
+  /**
+   * Constructor
+   */
+  User_state()
+  : _mfocus(0),/* _dst(0),*/ _active(0), _v(Point(0, 0))
+  {}
+
+  /**
+   * Accessor functions
+   */
+  //Point m() const { return _m; }
+  //Point v() const { return _v; }
+
+  /**
+   * Apply input event to mouse focus state
+   */
+  Widget *handle_event(Event const &ev);
+
+  /********************
+   ** Parent element **
+   ********************/
+
+  void forget(Widget *e)
+  {
+    if (_mfocus == e) _mfocus = 0;
+//    if (_dst    == e) _dst    = 0;
+    if (_active == e) _active = 0;
+  }
+
+  void draw(Mag_gfx::Canvas *c, Mag_gfx::Point const &p)
+  {
+    //Rect r = geometry() + p;
+    Parent_widget::draw(c, p);
+  }
+
+  void size(Mag_gfx::Area const &s) { _size = s; }
+};
+
+}

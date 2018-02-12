@@ -1,0 +1,17 @@
+- check all lines with XXXY
+
+- check all thread exits: free mem
+
+- make ddekit (lib/include/{dde_gate,dde_intern} lib/common/dde)
+  a package (l4/pkg/ddekit); dde_gate should be called ddekit then
+
+- ddekit: provide function to disconnect from an interrupt
+
+- fbsd condition variables (lib/common/bsd/modified/kern/kern_condvar.c)
+  can also be used from contrib; self-implementation not neccessary
+  -> performance impact?
+
+- fbsd semaphores (lib/common/bsd/contrib/kern/kern_sema.c):
+  is direct mapping to dde semaphores faster?
+
+- check performance: inline vs called ddekit semaphores

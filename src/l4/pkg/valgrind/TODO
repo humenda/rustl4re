@@ -1,0 +1,6 @@
+* check aspacemem combinations:
+    attach_area -> detach
+  for Node use (if there is no Node, it may not always be an orig_rm
+  mapping, but it can also be a reserved area without any ds attached
+  to it)
+* check use of own elf parser vs. Valgrind's

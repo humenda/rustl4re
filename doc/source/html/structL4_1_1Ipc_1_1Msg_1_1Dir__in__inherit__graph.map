@@ -1,0 +1,5 @@
+<map id="L4::Ipc::Msg::Dir_in" name="L4::Ipc::Msg::Dir_in">
+<area shape="rect" id="node2" href="$structL4_1_1Ipc_1_1Msg_1_1Do__in__data.html" title="Marker for Input data. " alt="" coords="5,138,180,215"/>
+<area shape="rect" id="node3" href="$structL4_1_1Ipc_1_1Msg_1_1Do__in__items.html" title="Marker for Input items. " alt="" coords="205,131,343,223"/>
+<area shape="rect" id="node4" href="$structL4_1_1Ipc_1_1Msg_1_1Do__rcv__buffers.html" title="Marker for receive buffers. " alt="" coords="367,131,514,223"/>
+</map>

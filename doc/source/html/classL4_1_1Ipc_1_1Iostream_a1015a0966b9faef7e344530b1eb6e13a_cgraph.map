@@ -1,0 +1,6 @@
+<map id="L4::Ipc::Iostream::reset" name="L4::Ipc::Iostream::reset">
+<area shape="rect" id="node2" href="$classL4_1_1Ipc_1_1Istream.html#af4d28aa64235c822f624891154109a0c" title="Copy out an array of type T with size elements. " alt="" coords="193,5,336,32"/>
+<area shape="rect" id="node3" href="$classL4_1_1Ipc_1_1Ostream.html#a0bb12677e48b2b08456b30a928aed8e7" title="Put an array with size elements of type T into the stream. " alt="" coords="191,56,339,83"/>
+<area shape="rect" id="node4" href="$classL4_1_1Ipc_1_1Istream.html#a5f859ec603799261a88885307ae062ed" title="Reset the stream to empty, and ready for receive()/wait(). " alt="" coords="187,107,342,133"/>
+<area shape="rect" id="node5" href="$classL4_1_1Ipc_1_1Ostream.html#afaf2794226d026e500ead0757069ea7c" title="Reset the stream to empty, same state as a newly created stream. " alt="" coords="184,157,345,184"/>
+</map>

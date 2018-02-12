@@ -1,0 +1,4 @@
+<map id="L4::Ipc::Call" name="L4::Ipc::Call">
+<area shape="rect" id="node2" href="$structL4_1_1Ipc_1_1Call__t.html" title="RPC attribute for an RPC call with required rights. " alt="" coords="5,138,188,215"/>
+<area shape="rect" id="node3" href="$structL4_1_1Ipc_1_1Call__zero__send__timeout.html" title="RPC attribute for an RPC call, with zero send timeout. " alt="" coords="212,131,341,223"/>
+</map>

@@ -1,0 +1,105 @@
+// vi:ft=cpp
+/*
+ * (c) 2009 Adam Lackorzynski <adam@os.inf.tu-dresden.de>
+ *     economic rights: Technische Universität Dresden (Germany)
+ *
+ * This file is part of TUD:OS and distributed under the terms of the
+ * GNU General Public License 2.
+ * Please see the COPYING-GPL-2 file for details.
+ */
+
+/****
+ _______  ______  _____ ____  ___ __  __ _____ _   _ _____  _    _
+| ____\ \/ /  _ \| ____|  _ \|_ _|  \/  | ____| \ | |_   _|/ \  | |
+|  _|  \  /| |_) |  _| | |_) || || |\/| |  _| |  \| | | | / _ \ | |
+| |___ /  \|  __/| |___|  _ < | || |  | | |___| |\  | | |/ ___ \| |___
+|_____/_/\_\_|   |_____|_| \_\___|_|  |_|_____|_| \_| |_/_/   \_\_____|
+                                                                       
+ ************/
+
+
+#include <l4/re/util/object_registry>
+
+
+namespace L4Re { namespace Util {
+
+class Object_registry_gc : public Object_registry
+{
+public:
+  Object_registry_gc(L4::Ipc_svr::Server_iface *sif,
+                     L4::Cap<L4::Thread> server,
+                     L4::Cap<L4::Factory> factory)
+   : Object_registry(sif, server, factory)
+  {}
+
+  L4::Cap<void> register_obj_with_gc(L4::Epiface *o, int refcnt)
+  {
+    int idx = get_free_slot();
+    if (idx == -1)
+      return L4::Cap<void>::Invalid;
+
+    L4::Cap<void> c = Object_registry::register_obj(o);
+
+    if (!c.is_valid())
+      return c;
+
+    objs[idx] = o;
+    ref_cnt[idx] = refcnt;
+
+    return c;
+  }
+
+  void gc_run(unsigned int min_delta_in_ms)
+  {
+    l4_cpu_time_t now = l4_kip_clock(l4re_kip());
+
+    if (last_gc_run + (min_delta_in_ms * 1000) > now)
+      return;
+
+    last_gc_run = now;
+
+    for (int i = 0; i < SLOTS; ++i)
+      if (objs[i])
+        {
+          l4_msgtag_t tag =
+            L4Re::Env::env()->task()->cap_has_child(objs[i]->obj_cap());
+          if (!tag.label() && ref_cnt[i] == 0)
+            {
+              printf("Deleting %d %lx\n", i, objs[i]->obj_cap().cap());
+              delete objs[i]; // XXX: wrong because we do not create the object at open time
+              objs[i] = 0;
+            }
+        }
+  }
+
+  void ref_cnt_add(L4::Epiface *o, int d)
+  {
+    int idx;
+    if ((idx = find_obj(o)) != -1)
+      ref_cnt[idx] += d;
+  }
+
+private:
+  enum { SLOTS = 100 };
+  L4::Epiface *objs[SLOTS];
+  int ref_cnt[SLOTS];
+  l4_cpu_time_t last_gc_run;
+
+  int get_free_slot()
+  {
+    for (int i = 0; i < SLOTS; ++i)
+      if (!objs[i])
+        return i;
+    return -1;
+  }
+
+  int find_obj(L4::Epiface *o)
+  {
+    for (int i = 0; i < SLOTS; ++i)
+      if (objs[i] == o)
+        return i;
+    return -1;
+  }
+};
+
+}}

@@ -1,0 +1,74 @@
+# Format: (all on one line)
+#   Source file : Copyright Owner(s)
+# Please use "TUD" when referring to TU Dresden.
+# If sole owner is TUD, the license field defaults to GPL and can be
+# left empty.
+# Source-file spec can be a directory name or a wildcard like "src/*.c".
+doc : TUD
+examples/bench : TUD
+examples/contxtdemo : TUD, Mathias Noack : Student
+examples/demo1 : TUD
+examples/demo2 : TUD
+examples/demo3 : TUD
+examples/dropsshot : TUD
+examples/evdemo : TUD
+examples/exit : TUD
+examples/linux_stub : TUD
+examples/linux_stub_lib : TUD
+examples/linux24_stub_lib : TUD
+examples/logcon : TUD
+examples/xf86_stub : XFree86 before 2003-12-31
+idl : TUD
+include : TUD, Mathias Noack : Student
+lib/client_con : TUD
+lib/contxt : TUD
+lib/idl : TUD
+lib/include : TUD
+# GPL because lib/src/doprnt.c from oskit10
+lib/src : GPL
+lib/server_stream : TUD
+server/Makefile : TUD
+server/include : TUD
+server/src/Make.rules
+server/src/Makefile
+server/src/ev.c : TUD
+server/src/events.c : TUD
+server/src/input.txt : GPL
+server/src/lat0-12.psf : GPL
+server/src/lat0-14.psf : GPL
+server/src/lat0-16.psf : GPL
+server/src/main.c : TUD
+server/src/pslim.c : TUD
+server/src/vc.c : TUD
+server/src/con_hw/ati.c : GPL
+server/src/con_hw/ati.h : GPL
+server/src/con_hw/ati128.c : GPL
+server/src/con_hw/ati128.h : GPL
+server/src/con_hw/ati128_vid.c : GPL
+server/src/con_hw/fourcc.h : GPL
+server/src/con_hw/init-ux.c : TUD
+server/src/con_hw/init.c : TUD
+server/src/con_hw/init.h : TUD
+server/src/con_hw/intel.c : GPL
+server/src/con_hw/intel.h : GPL
+server/src/con_hw/iomem.c : TUD
+server/src/con_hw/iomem.h : TUD
+server/src/con_hw/matrox.c : GPL
+server/src/con_hw/matrox.h : GPL
+server/src/con_hw/matrox_vid.c : GPL
+server/src/con_hw/matrox_regs.h : GPL
+server/src/con_hw/pci.c : TUD
+server/src/con_hw/pci.h : TUD
+server/src/con_hw/radeon.c : GPL
+server/src/con_hw/radeon_reg.h : GPL
+server/src/con_hw/riva.c : nVidia (liberal)
+server/src/con_hw/riva.h : TUD
+server/src/con_hw/riva_tbl.h : nVidia (liberal)
+server/src/con_hw/savage.c : GPL
+server/src/con_hw/savage.h : GPL
+server/src/con_hw/savage_vid.c : GPL
+server/src/con_hw/vidix.h : GPL
+server/src/con_hw/vmware.c : TUD
+server/src/con_hw/vmware.h : TUD
+server/src/con_yuv2rgb : GPL
+

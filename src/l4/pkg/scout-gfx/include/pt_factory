@@ -1,0 +1,51 @@
+// vi:ft=cpp
+/*
+ * (c) 2010 Adam Lackorzynski <adam@os.inf.tu-dresden.de>,
+ *          Alexander Warg <warg@os.inf.tu-dresden.de>
+ *     economic rights: Technische Universität Dresden (Germany)
+ *
+ * This file is part of TUD:OS and distributed under the terms of the
+ * GNU General Public License 2.
+ * Please see the COPYING-GPL-2 file for details.
+ */
+#pragma once
+
+#include <l4/scout-gfx/factory>
+#include <l4/scout-gfx/fade_icon>
+#include <l4/scout-gfx/horizontal_shadow>
+#include <l4/scout-gfx/pt_sky_texture>
+#include <l4/mag-gfx/mem_factory>
+
+namespace Scout_gfx { namespace Pt {
+
+template<typename PT>
+class Factory :
+  public virtual Scout_gfx::Factory,
+  public Mag_gfx::Mem::Factory<PT>
+{
+public:
+  Scout_gfx::Icon *create_icon(void const *rgba, Area const &size, bool fade)
+  {
+    Icon<PT> *i;
+    if (fade)
+      i = new Fade_icon<PT>();
+    else
+      i = new Icon<PT>();
+
+    if (rgba)
+      i->rgba(rgba, size);
+    return i;
+  }
+
+  Widget *create_shadow(int height, int intensity) 
+  {
+    return new Horizontal_shadow<PT>(height, intensity);
+  }
+
+  Scout_gfx::Sky_texture *create_sky()
+  {
+    return new Sky_texture<PT>();
+  }
+};
+
+}}

@@ -1,0 +1,5 @@
+<map id="l4util_splitlog2_hdl" name="l4util_splitlog2_hdl">
+<area shape="rect" id="node2" href="$group__l4util__api.html#ga4b64c17b6e4392997addc015b4ed53ab" title="Return log2 base and size aligned length of a range. " alt="" coords="191,31,333,57"/>
+<area shape="rect" id="node3" href="$group__l4util__bitops.html#ga3906818d29569abd0c82fc7ec35687f7" title="Bit scan forward. " alt="" coords="382,5,458,32"/>
+<area shape="rect" id="node4" href="$group__l4util__bitops.html#ga530be11fa91000db4c4539558e115bd2" title="Bit scan reverse. " alt="" coords="381,56,459,83"/>
+</map>

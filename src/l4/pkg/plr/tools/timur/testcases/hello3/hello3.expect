@@ -1,0 +1,69 @@
+MOE: cmdline: /home/doebel/src/tudos/src/build/bin/x86_586/l4f/moe rom/hello3.lua
+MOE: Starting: rom/ned rom/hello3.lua
+MOE: loading 'rom/ned'
+Ned says: Hi World!
+Ned: loading file: 'rom/hello3.lua'
+[34mromain  |   INFO            main[0m 0x80007ed0[0m
+[34mromain  |   INFO            main[0m startup[0m
+[34mromain  |   INFO           _main[0m FILE: rom/hello[0m
+[34mromain  | flags 0x30a8[0m
+[34mromain  |   none[0m
+[34mromain  | Flags: 00000000[0m
+[34mromain  |   INFO TrapLimitObserver_priv[0m Limit: 100[0m
+[34mromain  |   INFO configure_redundancy[0m red: 'triple'[0m
+[34mromain  |   INFO count_online_cpus[0m Found 1 CPUs.[0m
+[34mromain  |   INFO          launch[0m launch[0m
+[34mromain  |    DBG   STACK: 80000000 (8000)    KIP: affff000[0m
+[34mromain  |    DBG   PHDRs: type  offset	paddr	vaddr	filesz	memsz	rights[0m
+[34mromain  |    DBG    [PHDR        ][0m
+[34mromain  |    DBG  0x34	0x1000034	0x1000034	0xa0	0xa0	r--[0m
+[34mromain  |    DBG    [LOAD        ][0m
+[34mromain  |    DBG  0x0	0x1000000	0x1000000	0x18c38	0x18c38	r-x[0m
+[34mromain  |    DBG    [LOAD        ][0m
+[34mromain  |    DBG  0x19000	0x1019000	0x1019000	0x1fc	0x1e30	rw-[0m
+[34mromain  |    DBG    [TLS         ][0m
+[34mromain  |    DBG  0x19000	0x1019000	0x1019000	0x0	0x10	rw-[0m
+[34mromain  |    DBG    [L4_AUX      ][0m
+[34mromain  |    DBG  0x121c0	0x10121c0	0x10121c0	0xc	0xc	r--[0m
+[34mromain  |   INFO push_trampoline[0m trampoline ptr 0x10afbc 0x80007fbc[0m
+[34mromain  |    DBG  done...[0m
+[34mromain  |   INFO InstanceManager[0m Program entry point at 0x10001a0[0m
+[34mromain  |   INFO InstanceManager[0m               stack at 0x80008000[0m
+[34mromain  | vcpu=0x127200 state=0 savedstate=af label=0[0m
+[34mromain  | sticky=0 user_task=1e000000[0m
+[34mromain  | entry_sp=7fec entry_ip=101da50[0m
+[34mromain  | ip=010001a0 sp=80007ed0 trapno=00000000[0m
+[34mromain  | ax=00000000 dx=00000000 bx=00000000 cx=00000000[0m
+[34mromain  | si=00000000 di=00000000 bp=00000000 flags=00000000[0m
+[34mromain  | ds=00000023 es=00000023 gs=00000000 fs=00000023[0m
+[34mromain  |   INFO    VCPU_startup[0m [33;1mStarting[0m[0m
+[34mromain  | vcpu=0x327200 state=0 savedstate=af label=0[0m
+[34mromain  | sticky=0 user_task=1f000000[0m
+[34mromain  | entry_sp=efec entry_ip=101da50[0m
+[34mromain  | ip=010001a0 sp=80007ed0 trapno=00000000[0m
+[34mromain  | ax=00000000 dx=00000000 bx=00000000 cx=00000000[0m
+[34mromain  | si=00000000 di=00000000 bp=00000000 flags=00000000[0m
+[34mromain  | ds=00000023 es=00000023 gs=00000000 fs=00000023[0m
+[34mromain  |   INFO    VCPU_startup[0m [33;1mStarting[0m[0m
+[34mromain  | vcpu=0x528200 state=0 savedstate=af label=0[0m
+[34mromain  | sticky=0 user_task=20000000[0m
+[34mromain  | entry_sp=13fec entry_ip=101da50[0m
+[34mromain  | ip=010001a0 sp=80007ed0 trapno=00000000[0m
+[34mromain  | ax=00000000 dx=00000000 bx=00000000 cx=00000000[0m
+[34mromain  | si=00000000 di=00000000 bp=00000000 flags=00000000[0m
+[34mromain  | ds=00000023 es=00000023 gs=00000000 fs=00000023[0m
+[34mromain  |   INFO    VCPU_startup[0m [33;1mStarting[0m[0m
+[34mromain  | Hello World![0m
+[34mromain  | Hello World![0m
+[34mromain  | Hello World![0m
+[34mromain  | Hello World![0m
+[34mromain  | Hello World![0m
+[34mromain  | Hello World![0m
+[34mromain  | Hello World![0m
+[34mromain  | Hello World![0m
+[34mromain  | Hello World![0m
+[34mromain  | Hello World![0m
+[34mromain  | Hello World![0m
+[34mromain  | Hello World![0m
+[1;127r[25;1f[127;1H
+Return reboots, "k" enters L4 kernel debugger...

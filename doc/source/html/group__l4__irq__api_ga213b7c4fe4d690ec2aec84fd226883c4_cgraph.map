@@ -1,0 +1,4 @@
+<map id="l4_irq_unmask" name="l4_irq_unmask">
+<area shape="rect" id="node2" href="$group__l4__irq__api.html#ga1dd27341b8d2a6cd09e9784188109b7c" title="Unmask IRQ. " alt="" coords="167,5,295,32"/>
+<area shape="rect" id="node3" href="$group__l4__utcb__api.html#gadc099b4a59e1d99638c72c11a8c8b644" title="Get the UTCB address. " alt="" coords="197,56,264,83"/>
+</map>

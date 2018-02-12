@@ -1,0 +1,5 @@
+<map id="L4::Ipc::Array_ref&lt; ELEM_TYPE, LEN_TYPE &gt;" name="L4::Ipc::Array_ref&lt; ELEM_TYPE, LEN_TYPE &gt;">
+<area shape="rect" id="node2" href="$structL4_1_1Ipc_1_1Array.html" title="Array data type for dynamically sized arrays in RPCs. " alt="" coords="5,211,161,333"/>
+<area shape="rect" id="node4" href="$structL4_1_1Ipc_1_1Array__ref.html" title="{L4::Ipc::Array_ref\l\&lt; CHAR, LEN \&gt;\n|+ length\l+ data\l|+ Array_ref()\l+ Array_ref()\l+ Array_ref()\l}" alt="" coords="186,204,314,340"/>
+<area shape="rect" id="node3" href="$structL4_1_1Ipc_1_1Array.html" title="{L4::Ipc::Array\&lt; CHAR,\l LEN \&gt;\n||+ Array()\l+ Array()\l+ Array()\l}" alt="" coords="93,403,250,524"/>
+</map>

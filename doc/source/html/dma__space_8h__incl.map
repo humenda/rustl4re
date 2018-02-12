@@ -1,0 +1,9 @@
+<map id="l4/re/c/dma_space.h" name="l4/re/c/dma_space.h">
+<area shape="rect" id="node2" href="$l4_2sys_2types_8h.html" title="Common L4 ABI Data Types. " alt="" coords="219,155,326,181"/>
+<area shape="rect" id="node9" href="$dataspace_8h.html" title="Data space C interface. " alt="" coords="256,80,399,107"/>
+<area shape="rect" id="node3" href="$l4_2sys_2l4int_8h.html" title="Fixed sized integer types, generic version. " alt="" coords="129,304,227,331"/>
+<area shape="rect" id="node4" href="$compiler_8h.html" title="L4 compiler related defines. " alt="" coords="361,304,488,331"/>
+<area shape="rect" id="node6" href="$l4_2sys_2consts_8h.html" title="Common constants. " alt="" coords="215,229,330,256"/>
+<area shape="rect" id="node7" href="$____l4__fpage_8h_source.html" title="l4/sys/__l4_fpage.h" alt="" coords="354,229,498,256"/>
+<area shape="rect" id="node8" href="$____timeout_8h_source.html" title="l4/sys/__timeout.h" alt="" coords="5,229,140,256"/>
+</map>

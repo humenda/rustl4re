@@ -1,0 +1,22 @@
+#! /bin/sh
+
+set -x
+
+TMPDIR=$(mktemp -d)
+
+exithandler()
+{
+  rm -r $TMPDIR
+}
+
+trap exithandler EXIT
+
+cd ..
+
+for i in mk/defconfig/config.*; do
+  cp $i $TMPDIR/.kconfig
+  make O=$TMPDIR oldconfig savedefconfig
+  diff -u $i $TMPDIR/defconfig
+  grep -v '^CONFIG_DROPS_' $TMPDIR/defconfig > $i
+  rm $TMPDIR/.kconfig $TMPDIR/.config.all $TMPDIR/.config
+done

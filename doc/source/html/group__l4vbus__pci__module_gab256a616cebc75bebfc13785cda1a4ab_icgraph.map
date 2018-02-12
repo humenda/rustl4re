@@ -1,0 +1,3 @@
+<map id="l4vbus_pci_cfg_read" name="l4vbus_pci_cfg_read">
+<area shape="rect" id="node2" href="$classL4vbus_1_1Pci__host__bridge.html#a4441432f00e007ee3a738866238938f0" title="Read from the vPCI configuration space using the PCI root bridge. " alt="" coords="204,5,377,47"/>
+</map>

@@ -1,0 +1,3 @@
+provides: sqlite
+requires: libc libdl libpthread
+maintainer: adam@os.inf.tu-dresden.de

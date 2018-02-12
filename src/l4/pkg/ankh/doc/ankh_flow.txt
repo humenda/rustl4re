@@ -1,0 +1,37 @@
+ankh_flow.svg shows the control flow between Ankh and a client -- we use
+L4Linux for complexity reasons.
+
+A) Ankh starts up and creates an IRQ thread for each NIC found.
+B) The loader opens an Ankh session and thereafter starts the client.
+C) The client attaches to the Ankh shared memory area and initializes
+   the send chunk. Thereafter it activates the Ankh connection.
+D) Upon activation, Ankh attaches to the SHM area and creates the
+   info and receive chunks. Thereafter, the xmit thread (for sending
+   client packets) is started.
+E) The client initializes the receive buffer, creates rx and tx
+   signals and then creates a dedicated Linux IRQ for Ankh.
+F) Ankh's xmit thread waits for sent packets, copies them out of
+   the shared memory area, tries to deliver them to other local
+   Ankh clients and then sends the packet through the NIC.
+G) Ankh's IRQ thread waits for IRQs from the NIC and then copies
+   received packets into the SHM receive area. Thereafter the client
+   receive thread is signalled.
+H) The client-side receive thread copies data out of the SHM area
+   and hands the packet over to higher layers for further use --
+   in case of Linux this is done by calling netif_rx().
+
+
+3 Notable dependencies during setup:
+
+(1) The client needs to initialize the send chunk _before_ calling
+    activate(), because Ankh will startup the xmit thread immediately
+    and this one will block waiting for the first message.
+(2) The thread sending a packet may differ from the thread creating
+    the connection. However, the sender needs to be attached to the
+    tx signal. Therefore, initialization of the send buffer (which
+    must be done early, due to (1)), must be split from attaching to
+    the tx IRQ.
+(3) As well, the packet recipient may differ from the thread opening
+    the connection and for the same reasons as (2) we therefore need
+    to separate receive buffer creating from attaching to the receive
+    IRQ.

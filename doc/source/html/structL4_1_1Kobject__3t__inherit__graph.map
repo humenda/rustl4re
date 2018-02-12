@@ -1,0 +1,4 @@
+<map id="L4::Kobject_3t&lt; Derived, Base1, Base2, Base3, PROTO, S_DEMAND &gt;" name="L4::Kobject_3t&lt; Derived, Base1, Base2, Base3, PROTO, S_DEMAND &gt;">
+<area shape="rect" id="node2" href="$structL4_1_1Kobject__3t.html" title="{L4::Kobject_3t\&lt; Vbus,\l L4Re::Dataspace, L4Re\l::Inhibitor, L4Re::Event \&gt;\n||+ operator Kobject const &amp;()\l+ dec_refcnt()\l# cap()\l# c()\l# __check_protocols__()\l}" alt="" coords="5,263,207,428"/>
+<area shape="rect" id="node3" href="$classL4vbus_1_1Vbus.html" title="The virtual bus (Vbus) interface. " alt="" coords="19,477,193,613"/>
+</map>

@@ -1,0 +1,3 @@
+
+The contrib/ directory contains the unmodified contents of libgfortran
+from gcc7 (r249719).

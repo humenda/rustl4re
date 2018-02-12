@@ -1,0 +1,5 @@
+<map id="Fiasco extensions" name="Fiasco extensions">
+<area shape="rect" id="node1" href="$group__api__calls__rt__sched.html" title="Real time scheduling extension for the Fiasco L4 implementation. " alt="" coords="316,5,508,47"/>
+<area shape="rect" id="node2" href="$group__l4__api.html" title="Interfaces for all kinds of base functionality. " alt="" coords="5,42,85,69"/>
+<area shape="rect" id="node4" href="$group__l4__debugger__api.html" title="Kernel debugger related functionality. " alt="" coords="348,71,476,98"/>
+</map>

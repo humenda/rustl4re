@@ -1,0 +1,75 @@
+#! /usr/bin/perl -w
+#
+# (c) 2009 Technische Universität Dresden
+# This file is part of TUD:OS and distributed under the terms of the
+# GNU General Public License 2.
+# Please see the COPYING-GPL-2 file for details.
+#
+# Adam Lackorzynski <adam@os.inf.tu-dresden.de>
+#
+
+use strict;
+
+BEGIN { unshift @INC, $ENV{L4DIR}.'/tool/lib'
+           if $ENV{L4DIR} && -d $ENV{L4DIR}.'/tool/lib/L4';}
+
+use L4::ModList;
+use File::Temp qw/tempdir/;
+
+my $qemu         = $ENV{QEMU}         || 'qemu';
+my $kernelname   = $ENV{KERNEL}       || 'bootstrap';
+my $module_path  = $ENV{SEARCHPATH}   || ".";
+my $qemu_options = $ENV{QEMU_OPTIONS} || "";
+my $modulesfile  = shift;
+my $entryname    = shift;
+my $tmpdir       = tempdir(CLEANUP => 1); 
+
+sub qemu_get_file($$)
+{
+  my $command = shift;
+  my $cmdline = shift;
+
+  my $fp = L4::ModList::get_file_uncompressed_or_die($command, $module_path,
+                                                     $tmpdir);
+
+  (my $arguments = $cmdline) =~ s/^\S+\s*//;;
+  (my $fname = $cmdline) =~ s/^(\S+).*/$1/;
+
+  if ($fname ne $command)
+    {
+      my $link = "$tmpdir/$fname";
+      symlink $fp, $link;
+      $fp = $link;
+    }
+
+  $arguments =~ s/,/,,/g;
+  $fp.' '.$arguments;
+}
+
+
+die "No entry name given" unless defined $entryname;
+
+my %entry = L4::ModList::get_module_entry($modulesfile, $entryname);
+
+my @mods = @{$entry{mods}};
+my $kernel = L4::ModList::search_file_or_die($entry{bootstrap}{command}, $module_path);
+my $initrd = join(',', map { qemu_get_file($_->{command}, $_->{cmdline}) } @mods);
+
+my $qemu_cmd =
+      "$qemu -kernel $kernel -append \"$entry{bootstrap}{cmdline}\" ".
+      "-initrd \"$initrd\" $qemu_options";
+
+# check installed qemu version
+my $o = `$qemu -version 2>&1`;
+if ($?)
+  {
+    print "Failed to launch QEmu ($qemu)\n";
+    exit $?;
+  }
+if ($o !~ /\s(\d+)\.(\d+)/ || ($1 == 0 && $2 < 13))
+  {
+    print "\nYour installed Qemu is too old, please upgrade to at least version 0.13.\n\n";
+    exit 1;
+  }
+print "$qemu_cmd\n";
+system("$qemu_cmd");

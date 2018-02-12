@@ -1,0 +1,3 @@
+Provides: scout
+Requires: scout-gfx mag-gfx libmag stdlibs-sh
+Maintainer: warg@os.inf.tu-dresden.de

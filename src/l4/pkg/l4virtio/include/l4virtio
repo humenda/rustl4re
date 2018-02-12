@@ -1,0 +1,101 @@
+// vi:ft=cpp
+/*
+ * (c) 2013-2014 Alexander Warg <warg@os.inf.tu-dresden.de>
+ *               Matthias Lange <matthias.lange@kernkonzept.com>
+ *
+ * This file is part of TUD:OS and distributed under the terms of the
+ * GNU General Public License 2.
+ * Please see the COPYING-GPL-2 file for details.
+ *
+ * As a special exception, you may use this file as part of a free software
+ * library without restriction.  Specifically, if other files instantiate
+ * templates or use macros or inline functions from this file, or you compile
+ * this file and link it with other files to produce an executable, this
+ * file does not by itself cause the resulting executable to be covered by
+ * the GNU General Public License.  This exception does not however
+ * invalidate any other reasons why the executable file might be covered by
+ * the GNU General Public License.
+ */
+
+#pragma once
+
+#include "virtio.h"
+#include <l4/sys/capability>
+#include <l4/sys/cxx/ipc_client>
+#include <l4/re/dataspace>
+#include <l4/sys/irq>
+#include <l4/cxx/utils>
+
+namespace L4virtio {
+class Device :
+  public L4::Kobject_t<Device, L4::Kobject, L4VIRTIO_PROTOCOL,
+                       L4::Type_info::Demand_t<1> >
+{
+public:
+  typedef l4virtio_config_queue_t Config_queue;
+  struct Config_hdr : l4virtio_config_hdr_t
+  {
+    Config_queue *queues() const
+    { return l4virtio_config_queues(this); }
+
+    template <typename T>
+    T *device_config() const
+    {
+      return static_cast<T*>(l4virtio_device_config(this));
+    }
+
+    int config_queue(unsigned num, L4::Cap<L4::Triggerable> out_notify,
+                     L4::Cap<L4::Triggerable> in_notify,
+                     l4_timeout_s to = L4_IPC_TIMEOUT_NEVER)
+    {
+      return send_cmd(L4VIRTIO_CMD_CFG_QUEUE | num,
+                      out_notify, in_notify, to);
+    }
+
+    int set_status(unsigned new_status, L4::Cap<L4::Triggerable> out_notify,
+                   L4::Cap<L4::Triggerable> in_notify,
+                   l4_timeout_s to = L4_IPC_TIMEOUT_NEVER)
+    {
+      return send_cmd(L4VIRTIO_CMD_SET_STATUS | new_status,
+                      out_notify, in_notify, to);
+    }
+
+    int send_cmd(unsigned command, L4::Cap<L4::Triggerable> out_notify,
+                 L4::Cap<L4::Triggerable> in_notify,
+                 l4_timeout_s to = L4_IPC_TIMEOUT_NEVER)
+    {
+      cxx::write_now(&cmd, command);
+
+      if (out_notify)
+        out_notify->trigger();
+
+      auto utcb = l4_utcb();
+      auto ipc_to = l4_timeout(L4_IPC_TIMEOUT_0, to);
+
+      do
+        {
+          if (in_notify)
+            if (l4_ipc_error(l4_ipc_receive(in_notify.cap(), utcb, ipc_to),
+                             utcb) == L4_IPC_RETIMEOUT)
+              break;
+        }
+      while (cxx::access_once(&cmd));
+
+      return cxx::access_once(&cmd) ? -L4_EBUSY : L4_EOK;
+    }
+  };
+
+  L4_INLINE_RPC(long, set_status, (unsigned status));
+  L4_INLINE_RPC(long, config_queue, (unsigned queue));
+  L4_INLINE_RPC(long, register_ds, (L4::Ipc::Cap<L4Re::Dataspace> ds_cap,
+                                    l4_uint64_t base, l4_umword_t offset,
+                                    l4_umword_t size));
+
+  L4_INLINE_RPC(long, register_iface, (L4::Ipc::Cap<L4::Triggerable> guest_irq,
+                                       L4::Ipc::Out<L4::Cap<L4::Triggerable> > host_irq,
+                                       L4::Ipc::Out<L4::Cap<L4Re::Dataspace> > config_ds));
+
+  typedef L4::Typeid::Rpcs<set_status_t, config_queue_t, register_iface_t, register_ds_t> Rpcs;
+};
+
+}

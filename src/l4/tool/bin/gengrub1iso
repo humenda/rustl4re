@@ -1,0 +1,57 @@
+#! /usr/bin/perl -w
+#
+# (c) 2009 Technische Universität Dresden
+# This file is part of TUD:OS and distributed under the terms of the
+# GNU General Public License 2.
+# Please see the COPYING-GPL-2 file for details.
+#
+# Adam Lackorzynski <adam@os.inf.tu-dresden.de>
+#
+
+use strict;
+
+BEGIN { unshift @INC, $ENV{L4DIR}.'/tool/lib'
+           if $ENV{L4DIR} && -d $ENV{L4DIR}.'/tool/lib/L4';}
+
+use L4::ModList;
+use L4::Grub;
+use File::Temp qw/tempdir/;
+
+my $module_path  = $ENV{SEARCHPATH} || ".";
+my %opts         = L4::Grub::parse_gengrub_args();
+my $modulesfile  = shift;
+my $isofilename  = shift;
+
+unless (defined $isofilename) {
+  print "usage: $0 MODULESFILE ISOFILENAME entry1 [entry2] ...\n";
+  exit(1);
+}
+
+my $tmpdir    = tempdir(CLEANUP => 1); 
+
+system("mkdir -p \"$tmpdir\"");
+
+L4::Grub::prepare_grub1_dir($tmpdir);
+
+open(A, ">$tmpdir/boot/grub/menu.lst")
+  || die "Cannot create '$tmpdir/boot/grub/menu.lst': $!!";
+
+delete $opts{timeout}
+  if @ARGV > 1 and defined $opts{timeout} and $opts{timeout} == 0;
+
+print A L4::Grub::grub1_config_prolog(%opts);
+
+my %files;
+
+foreach my $entryname (@ARGV)
+  {
+    print "Processing entry '$entryname'\n";
+    my %entry = L4::ModList::get_module_entry($modulesfile, $entryname);
+    print A L4::ModList::generate_grub1_entry($entryname, '', %entry);
+    $files{$_} = 1 foreach map {  L4::ModList::search_file_or_die($_, $module_path) } @{$entry{files}};
+  }
+close A;
+
+#system("cat $tmpdir/boot/grub/menu.lst");
+system("cp -v ".join(' ', keys %files)." $tmpdir");
+L4::Grub::grub1_mkisofs($isofilename, $tmpdir);

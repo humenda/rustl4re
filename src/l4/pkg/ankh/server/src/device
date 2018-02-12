@@ -1,0 +1,110 @@
+// vim: ft=cpp
+
+#pragma once
+
+#include "linux_glue.h"
+#include <list>
+#include <l4/ankh/lock>
+#include <pthread.h>
+#include <cassert>
+#include <iostream>
+
+namespace Ankh
+{
+	/*
+	 * Device class.
+	 *
+	 * Basically a wrapper around the underlying Linux data structure.
+	 */
+	class Device
+	{
+		private:
+			void *_netdev_ptr;
+			bool _phys_mac_assigned;
+
+			// xmit lock
+            Ankh::Lock _lock;
+
+		public:
+			Device(void *ptr) 
+				: _netdev_ptr(ptr),
+				  _phys_mac_assigned(false),
+                  _lock()
+			{ }
+
+			bool phys_mac_assigned() { return _phys_mac_assigned; }
+
+			bool get_phys_mac() 
+			{
+				if (_phys_mac_assigned == false)
+				{
+					_phys_mac_assigned = true;
+					return true;
+				}
+				return false;
+			}
+
+			void put_phys_mac()
+			{
+				_phys_mac_assigned = false;
+			}
+
+			void lock() { _lock.lock(); }
+			void unlock() { _lock.unlock(); }
+
+			int irq() const 
+			{ return netdev_irq(_netdev_ptr); }
+			
+			char const *name()	
+			{ return netdev_name(_netdev_ptr); }
+
+			bool promiscuous() const
+			{ return netdev_get_promisc(_netdev_ptr) != 0; }
+
+			char *hw_addr()
+			{ return netdev_dev_addr(_netdev_ptr); }
+
+			void switch_promiscuous(bool on)
+			{
+				if (on)
+					netdev_set_promisc(_netdev_ptr);
+				else
+					netdev_unset_promisc(_netdev_ptr);
+			}
+
+			int mtu() const
+			{ return netdev_mtu(_netdev_ptr); }
+
+
+            int transmit(char *addr, unsigned size)
+            {
+                Ankh::Lock_guard(this->_lock);
+                return netdev_xmit(_netdev_ptr, addr, size);
+            }
+	};
+
+
+	class Device_manager
+	{
+		private:
+			std::list<Ankh::Device*> _devices;
+
+		public:
+			static Device_manager *dev_mgr()
+			{
+				static Device_manager *dev = 0;
+				if (!dev)
+					dev = new Device_manager();
+				return dev;
+			}
+
+			Device_manager()
+			{ }
+
+			void add_device(void *netdev);
+			void dump_devices();
+
+			Device *find_device_by_name(char const * const name, bool verbose=false);
+			Device *find_device_by_mac(char const * const mac, bool verbose=false);
+	};
+}

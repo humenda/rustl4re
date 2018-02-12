@@ -1,0 +1,937 @@
+#!/usr/bin/env perl
+# ft:perl
+
+use strict;
+use warnings;
+
+use File::Basename;
+
+my $progname = basename($0);
+
+my @non_pc_args; # arguments from non pkg-config mode
+my %global_vars; # global variables from the command line
+my %all_files;   # all files loaded
+my @pc_files;    # all pc files loaded
+my %pkgs;        # pkg-config packages
+
+
+# command line options
+my $silence = 0;  # do not generate any error for warning output
+my $errout = *STDERR{IO}; # fd to print error messages to
+my $libdir = $ENV{PKG_CONFIG_LIBDIR} || '.'; # search directory in pkg-config mode
+my $debug = 0;          # --debug
+my $trace_pc_files = 0; # --trace-pc-files | --debug
+my $trace_exec = 0;     # --trace-exec | --debug
+my $template;           # template argument to evaluate
+my $action;             # action to do nothing
+
+# regexp for variable names and option names
+my $tag = qr/(?:[a-zA-Z0-9,+~\$._-]+)/;
+my $opt_tag = qr/(?:[a-zA-Z0-9,+~\$._=-]+)/;
+
+sub error
+{
+  print $errout "error: ", @_ unless $silence;
+  exit(1);
+}
+
+sub warn
+{
+  print $errout "warning: ", @_ unless $silence;
+}
+
+# search_file(context, file_name, paths...)
+# search the given file in the given search paths and return the first
+# match.
+#
+# The search paths are a list of paths, where each path may also contain
+# a colon separated list of paths.
+sub search_file
+{
+  my ($ctxt, $file, @path) = @_;
+  @path = map { split(':', $_) } @path;
+  print $errout "search $file in ".join(' ', @path)."\n" if $debug;
+  foreach my $f (@path) {
+    (my $p = $f) =~ s|/$||;
+    my $f = "$p/$file";
+    return $f if -e $f;
+  }
+  print $errout "file $file not found\n" if $debug;
+  return $file;
+}
+
+# if-exists/if-exists-else callback
+sub if_exists
+{
+  my ($ctxt, $f, $e) = @_;
+  return $f if -e $f;
+  return $e if defined $e;
+  return '';
+}
+
+# read given spec file, variables are added to %global_vars
+# the file is registered in %all_files and push to the @pc_files
+# array.
+#
+# This function does not read pc files recursively (Requires:
+# directives if present are ignored)
+sub read_spec_file
+{
+  my $name = shift;
+  open(my $f, "$name") || error("spec file '$name' not found\n");
+  $all_files{$name} = 1;
+  push @pc_files, Pc_file->read($f, __vars__ => { %global_vars });
+}
+
+# functions accessible in the templates as
+# %:func(args)
+my %funcs = (
+  # %:() consumes the arguments and returns nothing
+  ''          => sub { return ''; },
+
+  # %:all-specs() takes no arguments and returns a list of all
+  # files used
+  'all-specs' => sub {
+    return join(' ', keys(%all_files));
+  },
+
+  # %:arg-option(S) marks -S as option taking an argument
+  'arg-option' => sub {
+    my $ctxt = shift;
+    foreach my $opt (@_) {
+      $ctxt->{opt}->make_arg_option($opt);
+    }
+    return '';
+  },
+
+  # %:echo() print the arguments to stdout
+  echo => sub {
+    my $ctxt = shift;
+    my $cmd = join(' ', @_);
+    print STDOUT "$cmd\n";
+    return '';
+  },
+
+  # %:echo-file(file args) print the arguments to the given file
+  'echo-file' => sub {
+    my $ctxt = shift;
+    my $file = shift;
+    my $cmd = join(' ', @_);
+    print $errout "write to file '$file': $cmd\n" if $debug;
+    open(my $f, "$file") or error("could not open output file '$file': $!\n");
+    print $f "$cmd\n";
+    close $f;
+    return '';
+  },
+
+  # %:error(args) print error message and exit with error code 1
+  'error' => sub {
+    my $ctxt = shift;
+    error(join(' ', @_)."\n");
+    return '';
+  },
+
+  # error out if there are unknown command line options
+  'error-unused-options' => sub {
+    my $c = shift;
+    my @u = $c->{opt}->unused;
+    error("the following options are unused: " . join(' ', @u) ."\n") if @u;
+    return '';
+  },
+
+  # exec the given command (will not return)
+  exec => sub {
+    my $ctxt = shift;
+    my $cmd = join(' ', @_);
+    print $errout "$cmd\n" if $trace_exec;
+    exec($cmd) or die("could not execute '$cmd'");
+    return '';
+  },
+
+  # %:foreach(spec args) evaluate spec for each arg and replace
+  # %* in spec with the current arg
+  'foreach' => sub {
+    my $ctxt = shift;
+    my $spec = shift;
+    my $r = '';
+
+    foreach my $a (@_) {
+      next unless (my $s = $spec) =~ s/%\*/$a/;
+      $r .= eval_spec($ctxt, $s);
+    }
+    return $r;
+  },
+
+  # %:getenv(ENV) get the value of environment variable ENV
+  getenv       => sub {
+    my $ctxt = shift;
+    my $v = shift;
+    return $ENV{$v}.join('', @_);
+  },
+
+  # %:if-exists(file E) returns file if a file named 'file' exists
+  # or E if not.
+  'if-exists'      => \&if_exists,
+
+  # %:if-exists(file E) returns file if a file named 'file' exists
+  # or E if not.
+  'if-exists-else' => \&if_exists,
+
+  # %:output-option(X) add options matching X to the output args (%o)
+  'output-option' => sub {
+    my $ctxt = shift;
+    foreach my $opt (@_) {
+      $ctxt->{opt}->flag_output($opt, 1);
+    }
+    return '';
+  },
+
+  # %:read-pc-file(pkgs) read all pc files for the given packages
+  # and all requirements defined in the files
+  'read-pc-file'   => sub {
+    my ($ctxt, $dir, @f) = @_;
+    read_pc_files($dir, \@pc_files, @f); return '';
+  },
+
+  # %:read-spec(file) read the given spec file
+  'read-spec'      => sub {
+    read_spec_file($_[1]);
+    return '';
+  },
+
+  # %:search(file paths) search the given file in the given paths
+  # and returns the first path/file name where the file exists
+  # or just the file if the file was not found.
+  search           => \&search_file,
+
+  # %:set-var(VAR VALUE) set VAR to the evaluation of VALUE
+  # x = %:set-var(x <complex expression>) might be used to evaluate
+  # the complex expression only once
+  'set-var' => sub {
+    my ($ctxt, $var, @values) = @_;
+    my $value = join(' ', @values);
+    $ctxt->{var}->set_val($var, $value);
+    return $value;
+  },
+
+  # %:split(DELIM ARGS) split ARGS at DELIM and return space separated
+  # list of split ARGS
+  'split' => sub {
+    my ($ctxt, $delim, @values) = @_;
+    my @r;
+    foreach my $v (@values) {
+      push @r, split(/$delim/, $v);
+    }
+    return join(' ', @r);
+  },
+
+  # %:strip(ARG) strip all leading and trailing spaces from ARG
+  'strip' => sub {
+    my $r = $_[1];
+    $r =~ s/^\s*(.*?)\s*$/$1/;
+    return $r;
+  },
+
+  # %:warn-unused-options() print a warning for all unknown (unused)
+  # command line options
+  'warn-unused-options' => sub {
+    my $c = shift;
+    my @u = $c->{opt}->unused;
+    ::warn("the following options are unused: " . join(' ', @u) . "\n") if @u;
+    return '';
+  },
+);
+
+# regexp's for matching balanced () and {}
+my $paren_group;
+my $brace_group;
+my $group;
+
+$paren_group = qr{\((?:(?>[^()]+)|(??{$paren_group}))*\)}x;
+$brace_group = qr{\{(?:(?>[^{}]+)|(??{$brace_group}))*\}}x;
+$group = qr{$paren_group|$brace_group}x;
+
+# strip the outermost () from the argument
+sub strip_parens
+{
+  return unless $_[0] =~ /^\((.*)\)$/;
+  return $1;
+}
+
+# strip the outermost {} from the argument
+sub strip_braces
+{
+  return unless $_[0] =~ /^\{(.*)\}$/;
+  return $1;
+}
+
+# evaluate a function-call expression (%:func(....))
+sub eval_function_call
+{
+  my ($l, $s) = @_;
+  print $errout "eval_function_call: '$s'\n" if $debug;
+  error("syntax error in function call '$s'\n")
+    unless $s =~ /^\s*([A-Za-z0-9_-]*)\s*($paren_group)(.*)/;
+
+  my $n = $1;
+  my $f = $funcs{$n};
+  my $r = $3;
+  error("unknown function '$n'\n") unless defined $f;
+
+  my $a = strip_parens($2);
+  print $errout "function call: $n($a)\n" if $debug;
+  print $errout "eval_function_call: '$s'\n" if $debug;
+  my $args = eval_spec($l, $a);
+  print $errout "call function: $n args: $args\n" if $debug;
+  return ($f->($l, $args =~ /(?:[^(){}\s]*$group[^(){}\s]*)|[^(){}\s]+/g), $r);
+}
+
+# evaluate variable or option expressions.
+# %{O... %(X...
+# evaluates (!)xxx| expressions from left to right and stops at the first
+# expression that is true and returns its list of values
+sub eval_var_expr
+{
+  my ($l, $scope, $exp) = @_;
+  print $errout "eval_var_expr: '$exp'\n" if $debug;
+  while ($exp =~ /^((?:[^|]|$group)*)(?:([|])(.*))?$/) {
+    print $errout "eval_var_expr: subexpr '$exp' => '$1' ".
+                  "'", $2 ? $2 : "", "', '", $3 ? $3 : "", "'\n" if $debug;
+    my $o = $2;
+    my $s2 = $3;
+    my $t = eval_spec($l, $1);
+    my @v = (1);
+    my $n = ($t =~ s/^!\s*//);
+    @v = () if $n;
+    if ($t !~ /^\s*$/) {
+      @v = map { eval_spec($l, $_) } ($scope->resolve($t));
+      print $errout "  value = ".join('', map { "'$_', " } @v) ."\n" if $debug;
+
+      # negate list: empty list => (1) and non-empty list => ()
+      @v = !@v || () if $n;
+    }
+
+    return @v if defined $o && $o eq '|' && @v;
+    return @v if defined $o && $o eq '&' && !@v;
+    return @v if !$s2;
+    $exp = $s2;
+  }
+  error("internal error parsing '$exp'\n");
+  return ();
+}
+
+# evaluate option or variable expression, including conditions
+# %(O...:xxx;...) and %{O...:xxx;...}
+sub eval_expression
+{
+  my ($l, $scope, $exp) = @_;
+  print $errout "eval_expression: '$exp'\n" if $debug;
+  while ($exp =~ /^((?:[^:]|$group)*)((?:\:)((?:[^;({})]|$group)*))?(.*)$/) {
+    print $errout "eval var expr: sub='$1' cond='", $2 ? $2 : "", "' ".
+                  "if='", $3 ? $3 : "", "' else='", $4 ? $4 : "", "'\n"
+      if $debug;
+    my $cond = $2;
+    my $cval = $3;
+    my $else = $4;
+    my $t = eval_spec($l, $1);
+    my @v = eval_var_expr($l, $scope, $t);
+    print $errout "eval_var_expr($t)='".join('', @v)."'\n" if $debug;
+
+    # pass the list of values as result
+    return $scope->pass(\@v) unless $cond;
+    # replace the expression by the value after the ':', including possible
+    # %* replacements
+    return $scope->replace($cval, $t, @v) if @v;
+    # return false/empty if the condition is false and there is no else
+    return () unless $else =~ /\s*;\s*(.*)/;
+    # loop for the 'else' part of the condition
+    $exp = $1;
+  }
+  return ();
+}
+
+# create the result for a piece of evaluated spec string
+# possibly removing pre-space if the particular result is empty
+# and the remainder starts with spaces.
+sub _res
+{
+  my ($pre, $pre_space, $res, $rem) = @_;
+  return ($pre . $pre_space . $res, $rem) if defined $res && $res ne '';
+  return ($pre, $rem) if $rem =~ /^\s+/;
+  return ($pre . $pre_space, $rem);
+}
+
+# evaluate the next % expression in $s returning
+# (pre-text + result, remaining-text)
+sub eval_single_spec
+{
+  my ($l, $s) = @_;
+  print $errout "eval_single_spec: '$s'\n" if $debug;
+  return () unless $s;
+  return ($s) unless !ref $s && $s =~ /^(.*?)(\s*)\%(.)(.*)$/;
+
+  my $p = $1;
+  my $pre_space = $2;
+  my $o = $3;
+  my $r = $4;
+
+  if ('%' eq $o) {
+    return ( $p . $pre_space . $o, $r );
+  } elsif (':' eq $o) {
+    my ($re, $rr) = eval_function_call($l, $r);
+    return _res($p, $pre_space, $re, $rr);
+  } elsif ('(' eq $o) {
+    my $x = $o . $r;
+    error("missing closing ')' in '$x'\n") unless $x =~ /^($paren_group)(.*)/;
+    my $r = $2;
+    my $a = strip_parens($1);
+    return _res($p, $pre_space, join(' ', eval_expression($l, $l->{var}, $a)), $r);
+  } elsif ('{' eq $o) {
+    my $x = $o . $r;
+    error("missing closing '}' in '$x'\n") unless $x =~ /^($brace_group)(.*)/;
+    my $r = $2;
+    my $a = strip_braces($1);
+    return _res($p, $pre_space, join(' ', eval_expression($l, $l->{opt}, $a, 1)), $r);
+  } elsif ('o' eq $o) {
+    return _res($p, $pre_space, join(' ', $l->{opt}->output()), $r);
+  } elsif ('<' eq $o) {
+    error("syntax error in '%<$r'\n") unless $r =~ s/^($opt_tag\*?)(\s+|$)//;
+    $l->{opt}->remove($1);
+    return _res($p, $pre_space, '', $r);
+  }
+
+  return ($p);
+}
+
+# evaluate a spec string from left to right, replacing all % substitutions
+sub eval_spec
+{
+  my ($l, $s) = @_;
+  print $errout "eval_spec: '$s'\n" if $debug;
+  return () if !$s && wantarray;
+  return '' unless $s;
+  my @r;
+
+  while (defined $s) {
+    my $a;
+    ($a, $s) = eval_single_spec($l, $s);
+    push @r, $a if defined $a;
+  }
+
+  print $errout "eval_spec => '".join(' ', @r)."'\n" if $debug;
+  return @r if wantarray;
+  return join('', @r);
+}
+
+#
+# class Pc_file for a single PC or spec file
+#
+package ::Pc_file;
+
+sub new
+{
+  my ($class, $vars) = @_;
+  my $n = { __vars__ => $vars, __keys__ => {} };
+  return bless $n, $class;
+}
+
+sub _read_stmt
+{
+  my ($p, $txt) = @_;
+  my $keys = $p->{__keys__};
+  my $locals = $p->{__vars__};
+
+  if ($txt =~ /^($tag)\s*=\s*(.*?)\s*$/) {
+    $locals->{$1} = $p->eval_value($2) unless defined $locals->{$1};
+    print $errout "SET VAR: $1 $2 -> ($locals->{$1})\n" if $debug;
+  } elsif ($txt =~ /^($tag)\s*:\s*(.*?)\s*$/) {
+    $keys->{$1} = $p->eval_value($2);
+    print $errout "SET KEY: $1 $2 -> ($keys->{$1})\n" if $debug;
+  } else {
+    ::error("invalid input: '$txt'\n");
+  }
+}
+
+sub read
+{
+  my ($class, $file, @opts) = @_;
+
+  my $p = { __vars__ => {}, __keys__ => {}, @opts };
+  bless $p, $class;
+
+  my $txt = '';
+  my $nl = '';
+  while ($nl = <$file>) {
+    chomp $nl;
+    next if $nl =~ /^\s*#/;
+
+    if ($nl =~ /^(?:\s+(.*?)\s*)?$/) {
+      $txt .= ' ' . $1 if $1;
+    } else {
+      # process $txt
+      $p->_read_stmt($txt) if $txt;
+      $txt = $nl;
+    }
+  }
+
+  $p->_read_stmt($txt) if $txt;
+
+  return $p;
+}
+
+sub replace_var
+{
+  my ( $loc, $var, $may_be_undef ) = @_;
+  print $errout "lookup var: '$var'\n" if $debug;
+  return $loc->{__vars__}{$var} if defined $loc->{__vars__}{$var};
+  return '' if $var eq '';
+  ::warn("use of undefined varaible: '$var'\n") unless $may_be_undef;
+  return 0 if $may_be_undef;
+  return;
+}
+
+sub eval_value
+{
+  my ($l, $txt) = @_;
+  return unless defined $txt;
+  print $errout "eval_value: '$txt'\n" if $debug;
+  while ($txt =~ s/\$\{($tag)\}/$l->replace_var($1)/e) { }
+  print $errout "eval_value => '$txt'\n" if $debug;
+  return $txt;
+}
+
+sub get_val
+{
+  my ($p, $k, $use_var) = @_;
+  my $f;
+  if ($use_var) {
+    $f = $p->{__vars__}{$k};
+    $f = $p->{__keys__}{$k} unless defined $f;
+  } else {
+    $f = $p->{__keys__}{$k};
+  }
+  return unless defined $f;
+  $f =~ s/^\s*(.*?)\s*$/$1/;
+  return $f;
+}
+
+#
+# Class for handling command-line options
+#
+# This class handles command-line options and their arguments as well as
+# lookups and replacements in %{} expressions.
+#
+package ::Opt_scope;
+
+sub new
+{
+  my $class = shift;
+  my $n = {
+    opts => [ map {
+      my $x = { k => $_ };
+      $x->{output} = 1 if $_ !~ /^-/;
+      $x
+    } @_ ],
+  };
+
+  return bless $n, $class;
+}
+
+sub _get_opt
+{
+  my $o = shift;
+  my $use = shift;
+  $o->{used} = $use;
+  return $o;
+}
+
+sub _get_opt_regexp
+{
+  my ($x, $prefix_only) = @_;
+  my @o;
+  while ($x =~ s/^($opt_tag)(\*?)(\&?)//) {
+    my $n = "(?:$1";
+    $n .= ".*" if $2 && !$prefix_only;
+    $n .= ')';
+    push @o, $n;
+    last unless $3;
+  }
+  ::error("invalid option expression '$_[0]'\n") unless @o;
+  my $o = '^-(?:' . join('|', @o) .')';
+  $o .= '$' unless $prefix_only;
+  print $errout "option regexp ($_[0]): $o\n" if $debug;
+  return $o;
+}
+
+sub resolve
+{
+  my $s = $_[0];
+  my $v = $_[1];
+  my $o = _get_opt_regexp($v);
+  my @m = map { !$_->{output} && $_->{k} =~ /$o/ ? (_get_opt($_, 1)) : () } @{$s->{opts}};
+  return @m;
+}
+
+sub _opt_n_arg
+{
+  my $o = shift;
+  my $a = $o->{k};
+  $a .= ' ' . $o->{arg}->{k} if $o->{arg};
+  return $a;
+}
+
+sub pass
+{
+  my ($self, $values) = @_;
+  return map { _opt_n_arg($_) } @$values;
+}
+
+sub replace
+{
+  my ($self, $expr, $orig, @values) = @_;
+  print $errout "replace var: orig='$orig' -> values=[".
+    join(', ', map { "'$_'" } @values)."]\n" if $debug;
+
+  # check for %* replacements
+  if ($orig =~ /\*/ && $expr =~ /%\*/) {
+    my $or = _get_opt_regexp($orig, 1);
+    # process
+    return (map {
+      my $a = _opt_n_arg($_);
+      (my $r = $a) =~ s/$or//;
+      $r =~ s/,/ /g;
+      (my $v = $expr) =~ s/%\*/$r/g; # replace all %*-s
+      print $errout "  replace: '$expr' with '$v'\n" if $debug;
+      # test for %w and add the replacement to the output (%o) options
+      my $output = ($v =~ s/%w//);
+      my @res = ::eval_spec($self->{ctxt}, $v);
+      if ($output) {
+        $_->{k} = join(' ', @res);
+        $_->{arg} = undef;
+        $_->{output} = 1;
+      }
+      @res
+    } @values);
+  } else {
+    # simple replacement
+    return ::eval_spec($self->{ctxt}, $expr);
+  }
+}
+
+sub make_arg_option
+{
+  my ($s, $v) = @_;
+  my $o = '^-' . $v . '$';
+  if ($v =~ /^([^*]+)\*$/) {
+    $o = '^-' . $1;
+  }
+  my @n;
+  my $opts = $s->{opts};
+  for (my $i = 0; $i < @$opts; $i++) {
+    next unless $$opts[$i]->{k} =~ /$o/;
+    $$opts[$i]->{arg} = $$opts[$i + 1];
+    splice @$opts, $i + 1, 1;
+  }
+}
+
+sub get_arg
+{
+  my ($s, $o) = @_;
+
+}
+
+sub flag_output
+{
+  my ($s, $v, $is_output) = @_;
+  my $o = '^-' . $v . '$';
+  if ($v =~ /^([^*]+)\*$/) {
+    $o = '^-' . $1;
+  }
+  my @n;
+  my $opts = $s->{opts};
+  return unless defined $opts;
+  foreach my $x (@$opts) {
+    next unless $x->{k} =~ /$o/;
+    $x->{output} = $is_output;
+  }
+}
+
+sub output
+{
+  my $s = shift;
+  return () unless defined $s->{opts};
+  return map {
+    $_->{used} = 1 if $_->{output};
+    $_->{output} ? $_->{k} : ()
+  } @{$s->{opts}};
+}
+
+sub unused
+{
+  my $s = shift;
+  return map { $_->{used} ? () : _opt_n_arg(_get_opt($_)) } @{$s->{opts}};
+}
+
+sub remove
+{
+  my ($s, $opt) = @_;
+  my $r;
+  $r = qr {^-$opt$} unless $opt =~s/\*//g;
+  $r = qr {^-$opt} unless $r;
+  @{$s->{opts}} = grep { $_->{k} !~ /$r/ } @{$s->{opts}};
+  return;
+}
+
+#
+# Class to handle PC file variables and command line variables
+#
+package ::Var_scope;
+
+sub new
+{
+  my ( $class, $pkgs, $vals ) = @_;
+  my $n = {
+    pkgs => $pkgs,
+    vals => $vals,
+  };
+
+  return bless $n, $class;
+}
+
+sub set_val
+{
+  my ($s, $var, $value) = @_;
+  print $errout "SET VAR (s): $var= $value\n" if $debug;
+  $s->{vals}{$var} = $value;
+}
+
+# compute combined value over all pc files for a given variable
+sub compute_vals
+{
+  my ($self, $name) = @_;
+  return $self->{vals}{$name} if defined $self->{vals}{$name};
+  my @v;
+  foreach my $p (@{$self->{pkgs}}) {
+    push @v, $p->get_val($name, 1);
+  }
+  return $self->{vals}{$name} = join(' ', @v);
+}
+
+# return the value for the given variable
+sub resolve
+{
+  ::error("invalid variable expression '$_[1]'\n") unless $_[1] =~ /^$tag?$/;
+  return ( $_[0]->compute_vals($_[1]) );
+}
+
+# just pass the value of a variable, for symmetry with the Opt_scope
+sub pass
+{
+  my ($self, $values) = @_;
+  return @$values;
+}
+
+# replace the original variable with the evaluation of expr
+sub replace
+{
+  my ($self, $expr, $orig, @values) = @_;
+  return ::eval_spec($self->{ctxt}, $expr);
+}
+
+package ::main;
+
+sub read_pc_files
+{
+  my ( $dir, $recurse, @names ) = @_;
+
+  # read pc files for all given packages.
+  # we start with the last one to keep the order of independent packages
+  # the same as given in @names, because read_pc_file will add new
+  # packages at the front of the $recurse list.
+  while (my $name = pop @names) {
+    read_pc_file($dir, $name, $recurse);
+  }
+}
+
+sub read_pc_file
+{
+  my ( $dir, $name, $recurse ) = @_;
+
+  return $pkgs{$name} if defined $pkgs{$name}{__done__};
+
+  print STDOUT "read pc file: '$dir/$name.pc'\n" if $trace_pc_files;
+  my $pc_file = "$dir/$name.pc";
+  open(my $f, $pc_file) || do {
+    print $errout "error: package '$name', not found\n" unless $silence;
+    exit (1);
+  };
+
+  $all_files{$pc_file} = 1;
+
+  $pkgs{$name} = Pc_file->read($f, __vars__ => { %global_vars });
+  my $p = $pkgs{$name};
+  return $p unless defined $recurse;
+
+  $p->{__done__} = 1;
+  my $keys = $p->{__keys__};
+  $keys->{Requires} = '' unless defined $keys->{Requires};
+  if ($keys->{Requires} eq '') {
+    print " add pkg: $name\n" if $trace_pc_files;
+    unshift @$recurse, $p;
+    return $p;
+  }
+
+  print $errout "recurse...\n" if $debug;
+
+  my @req = split(/\s*(?:,|\s)\s*/, $keys->{Requires});
+  @req = map { /^\s*(\S+)\s*$/; $1 } @req;
+  read_pc_files($dir, $recurse, @req);
+  print " add pkg: $name\n" if $trace_pc_files;
+  unshift @$recurse, $p;
+  return $p;
+}
+
+sub list_all
+{
+  opendir(L, $libdir) || die "error: could not open directory: '$libdir': $!";
+
+  foreach my $file (readdir(L)) {
+    next if -d $file;
+    next if $file =~ /^\./;
+    next if $file !~ /(.*)\.pc$/;
+    read_pc_file($libdir, $1);
+  }
+
+  close(L);
+
+  while(my ($k, $v) = each %pkgs) {
+    print STDOUT "$k:\t\t$v->{__keys__}{Name} - $v->{__keys__}{Description}\n";
+  }
+}
+
+sub print_template
+{
+  my $t = $template;
+  my %keys;
+  while ($t =~ s/[\*\$]\{($tag)\}/$keys{$1} = 1/e) { }
+
+  my %vars;
+  foreach my $p (@pc_files) {
+    foreach my $k (keys %keys) {
+      push @{$vars{$k}}, get_val($p, $k, 1);
+    }
+  }
+
+  foreach my $k (keys %keys) {
+    $vars{$k} = join(' ', @{$vars{$k}}) if defined $vars{$k};
+  }
+
+  %vars = (%vars, %global_vars);
+
+  my $var_scope = Var_scope->new(\@pc_files, \%vars);
+  my $opt_scope = Opt_scope->new(@non_pc_args);
+
+  my $ctxt = {
+    var => $var_scope,
+    opt => $opt_scope
+  };
+
+  $var_scope->{ctxt} = $ctxt;
+  $opt_scope->{ctxt} = $ctxt;
+
+  my $r = eval_spec($ctxt, $template);
+  print STDOUT "$r\n";
+}
+
+sub define_template
+{
+  $template = $_[0];
+  print $errout "template: '$template'\n" if $debug;
+  $action = \&print_template;
+}
+
+sub define_variable
+{
+  my ($def) = @_;
+  if ($def =~ /^([^=]+)=(.*)$/) {
+    $global_vars{$1} = $2;
+  } else {
+    error("invalid variable definition: '$def'\n");
+  }
+}
+
+my %arg_opts = (
+  'define-variable' => \&define_variable,
+  'template'        => \&define_template,
+  'spec'            => \&read_spec_file,
+);
+
+sub check_arg_opt
+{
+  my $o = $_[0];
+  if ($o =~ /^--($tag)(=(.*))?$/) {
+    my $f = $arg_opts{$1};
+    return unless defined $f;
+    my $arg = $3 if defined $2;
+    $arg = (shift @ARGV) unless $2;
+    $f->($arg);
+    return 1;
+  }
+  return;
+}
+
+my $mode_pkg_config = 1;
+
+while (@ARGV) {
+  my $o = shift @ARGV;
+  next unless $o;
+
+  if (!$mode_pkg_config && $o !~ s/^-Wu,//) {
+    push @non_pc_args, $o;
+    next;
+  }
+
+  if (check_arg_opt($o)) {
+  } elsif ($o =~ /^-t$/) {
+    $template = "%(". shift(@ARGV) . ")";
+    print $errout "template: '$template'\n" if $debug;
+    $action = \&print_template;
+  } elsif ($o =~ /^--pkg-config$/) {
+    $mode_pkg_config = 1;
+  } elsif ($o =~ /^(?:--no-pkg-config)|(?:--)$/) {
+    $mode_pkg_config = 0;
+  } elsif ($o =~ /^-D(.*)$/) {
+    define_variable($1);
+  } elsif ($o eq '--silence-errors') {
+    $silence = 1;
+  } elsif ($o eq '--print-errors') {
+    $silence = 0;
+  } elsif ($o eq '--errors-to-stdout') {
+    $errout = *STDOUT{IO};
+  } elsif ($o eq '--libs') {
+    push @non_pc_args, $o;
+  } elsif ($o eq '--cflags') {
+    push @non_pc_args, $o;
+  } elsif ($o eq '--list-all') {
+    $action = \&list_all;
+  } elsif ($o eq '--debug') {
+    $debug = 1;
+    $trace_pc_files = 1;
+    $trace_exec = 1;
+  } elsif ($o eq '--trace-exec') {
+    $trace_exec = 1;
+  } elsif ($o eq '--trace-pc-files') {
+    $trace_pc_files = 1;
+  } elsif ($o =~ /^-/) {
+    die "error: unknown option '$o'\n";
+  } else {
+    push @non_pc_args, $o;
+  }
+}
+
+# the default template emulates pkg-config --cflags and --libs options
+$template = "%:read-pc-file($libdir %o)%{-cflags:%(Cflags)} %{-libs:%(Libs)}" unless $template;
+$action = \&print_template unless $action;
+
+$action->();
+

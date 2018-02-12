@@ -1,0 +1,11 @@
+#define GFC_FPE_INVALID      1
+#define GFC_FPE_DENORMAL     2
+#define GFC_FPE_ZERO         4
+#define GFC_FPE_OVERFLOW     8
+#define GFC_FPE_UNDERFLOW   16
+#define GFC_FPE_INEXACT     32
+#define GFC_FPE_DOWNWARD   1
+#define GFC_FPE_TONEAREST  2
+#define GFC_FPE_TOWARDZERO 3
+#define GFC_FPE_UPWARD     4
+#define GFC_FPE_STATE_BUFFER_SIZE 32

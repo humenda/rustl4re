@@ -1,0 +1,12 @@
+/*!\mainpage con - Graphical Console Server Internals
+
+\section sec_about About this documentation
+
+Additional information can be found at http://os/~ch12/con/con.xml .
+
+\author		Christian Helmuth
+\reviewer	Lars Reuther, Michael Hohmuth
+\witness	Lars Reuther
+\date		March 2001
+\version	Preliminary 0.3
+*/

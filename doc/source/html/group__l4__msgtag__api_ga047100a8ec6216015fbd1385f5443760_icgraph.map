@@ -1,0 +1,9 @@
+<map id="l4_msgtag_is_sigma0" name="l4_msgtag_is_sigma0">
+<area shape="rect" id="node2" href="$structl4__msgtag__t.html#a26b13889368ed62ec4c85682e29c0dd4" title="Test if flags indicate an error. " alt="" coords="212,107,379,133"/>
+<area shape="rect" id="node3" href="$namespaceL4.html#aba0849c4b92afdccbe110489e18dadbd" title="Throw an L4 IPC error as exception. " alt="" coords="427,5,601,32"/>
+<area shape="rect" id="node5" href="$namespaceL4Re.html#ae0dd5d25abdc1d195edd8ab6b744334c" title="Generate C++ exception on error. " alt="" coords="461,56,567,83"/>
+<area shape="rect" id="node6" href="$namespaceL4Re.html#ae21329b88c6ffc4917048e8d9564ea99" title="Test a message tag for IPC errors. " alt="" coords="463,107,565,133"/>
+<area shape="rect" id="node7" href="$classL4_1_1Server.html#a4333dc750dee494087ee92ab058718a1" title="Internal implementation for reply and wait. " alt="" coords="428,157,600,184"/>
+<area shape="rect" id="node8" href="$classL4_1_1Server.html#ac0965dc536f1df5dfe0be1b224feab89" title="The server loop. " alt="" coords="427,208,601,235"/>
+<area shape="rect" id="node4" href="$namespaceL4.html#a54f8da0e02ff2496f1ad935e38ab17c4" title="Throw an L4 IPC error as exception. " alt="" coords="649,5,824,32"/>
+</map>

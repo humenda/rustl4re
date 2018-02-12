@@ -1,0 +1,29 @@
+--- i386/i386/initcpu.c	2003-11-10 16:48:30.000000000 +0100
++++ /home/yaron/diplom/bsdpatch/initcpu.c	2005-11-22 13:36:01.000000000 +0100
+@@ -581,7 +581,26 @@
+ 				init_mendocino();
+ 				break;
+ 			}
++			switch (cpu_id & 0xf00) {
++			case 0x600:
++				// allow rdpmc from userland
++				load_cr4(rcr4() | CR4_PCE);
++				// CPU load for P6
++				wrmsr(0x186, 0x430079);
++				break;
++			case 0xF00:
++				// allow rdpmc from userland
++				load_cr4(rcr4() | CR4_PCE);
++				// CPU load for P4
++				wrmsr(0x3a2, 0x2600020c);
++				wrmsr(0x360, 0x3d000);
++				break;
++			}
+ 		} else if (strcmp(cpu_vendor, "AuthenticAMD") == 0) {
++			// allow rdpmc from userland
++			load_cr4(rcr4() | CR4_PCE);
++			// CPU load for K7
++			wrmsr(0xC0010000, 0x430076);
+ #if defined(I686_CPU) && defined(CPU_ATHLON_SSE_HACK)
+ 			/*
+ 			 * Sometimes the BIOS doesn't enable SSE instructions.

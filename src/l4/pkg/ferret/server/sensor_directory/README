@@ -1,0 +1,7 @@
+The coordinator has the following purposes:
+ - It acts as well known instance for monitored software (to be more
+   precise: for the used client library), it receives dataspace ids
+   and read right on the dataspaces.
+ - It acts as well known instance for the monitoring software, it
+   should list available dataspaces, and allows the request access to
+   certain dataspaces

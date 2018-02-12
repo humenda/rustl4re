@@ -1,0 +1,110 @@
+// vim:set ft=cpp:
+/*
+ * (c) 2009-2010 Adam Lackorzynski <adam@os.inf.tu-dresden.de>,
+ *               Alexander Warg <warg@os.inf.tu-dresden.de>
+ *     economic rights: Technische Universität Dresden (Germany)
+ *
+ * This file is part of TUD:OS and distributed under the terms of the
+ * GNU General Public License 2.
+ * Please see the COPYING-GPL-2 file for details.
+ *
+ * As a special exception, you may use this file as part of a free software
+ * library without restriction.  Specifically, if other files instantiate
+ * templates or use macros or inline functions from this file, or you compile
+ * this file and link it with other files to produce an executable, this
+ * file does not by itself cause the resulting executable to be covered by
+ * the GNU General Public License.  This exception does not however
+ * invalidate any other reasons why the executable file might be covered by
+ * the GNU General Public License.
+ */
+#pragma once
+
+#include <l4/sys/semaphore>
+#include <l4/sys/factory>
+#include <l4/re/env>
+#include <l4/re/util/cap_alloc>
+#include <pthread-l4.h>
+
+namespace Event {
+
+class Event_base
+{
+public:
+  L4::Cap<L4::Semaphore> irq() const { return _irq; }
+  bool attached() const { return _irq.is_valid(); }
+
+protected:
+  L4::Cap<L4::Semaphore> _irq;
+  L4::Cap<L4::Thread> _l4thread;
+
+  explicit Event_base(L4::Cap<L4::Semaphore> irq) : _irq(irq) {}
+};
+
+class Event : public Event_base
+{
+public:
+  explicit Event(L4::Cap<L4::Semaphore> irq) : Event_base(irq)
+  {
+  }
+
+  int wait();
+
+protected:
+  Event() : Event_base(L4::Cap<L4::Semaphore>::Invalid)
+  {
+  }
+};
+
+class Event_cap : public Event
+{
+public:
+
+  template < typename GI >
+  explicit Event_cap(GI *gi) : Event()
+  {
+    _irq = L4Re::Util::cap_alloc.alloc<L4::Semaphore>();
+    if (!_irq.is_valid())
+      return;
+
+    if (l4_error(L4Re::Env::env()->factory()->create(_irq)) < 0)
+      {
+	L4Re::Util::cap_alloc.free(_irq);
+	_irq.invalidate();
+	return;
+      }
+
+    if (gi->bind_irq(0, _irq) < 0)
+      {
+	L4Re::Util::cap_alloc.free(_irq, L4Re::This_task, L4_FP_DELETE_OBJ);
+	_irq.invalidate();
+	return;
+      }
+  }
+
+  ~Event_cap()
+  {
+    // TODO: canditate for Auto_cap
+    if (_irq)
+      L4Re::Util::cap_alloc.free(_irq, L4Re::This_task, L4_FP_DELETE_OBJ);
+  }
+};
+
+class Event_loop : public Event_base
+{
+public:
+
+
+  Event_loop(L4::Cap<L4::Semaphore> irq, int prio);
+
+  void start();
+
+  virtual void handle() = 0;
+  virtual ~Event_loop();
+
+private:
+  pthread_t           _pthread;
+
+  static void *event_loop(void *);
+};
+
+}

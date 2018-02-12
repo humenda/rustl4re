@@ -1,0 +1,1 @@
+Taken and generated from QEmu's vgafont.h

@@ -1,0 +1,647 @@
+// vi:ft=cpp
+/*
+ * (c) 2014 Alexander Warg <warg@os.inf.tu-dresden.de>
+ *
+ * This file is part of TUD:OS and distributed under the terms of the
+ * GNU General Public License 2.
+ * Please see the COPYING-GPL-2 file for details.
+ *
+ * As a special exception, you may use this file as part of a free software
+ * library without restriction.  Specifically, if other files instantiate
+ * templates or use macros or inline functions from this file, or you compile
+ * this file and link it with other files to produce an executable, this
+ * file does not by itself cause the resulting executable to be covered by
+ * the GNU General Public License.  This exception does not however
+ * invalidate any other reasons why the executable file might be covered by
+ * the GNU General Public License.
+ */
+
+#include <l4/re/util/debug>
+#include <l4/sys/types.h>
+#include <l4/sys/err.h>
+#include <l4/cxx/bitfield>
+#include <l4/cxx/exceptions>
+#include <cstdint>
+
+#pragma once
+
+namespace L4virtio {
+
+#ifdef __ARM_ARCH_7A__
+static inline void wmb() { asm volatile ("dmb" : : : "memory"); }
+static inline void rmb() { asm volatile ("dmb" : : : "memory"); }
+#elif defined(__ARM_ARCH_8A)
+static inline void wmb() { asm volatile ("dsb ishst" : : : "memory"); }
+static inline void rmb() { asm volatile ("dsb ishld" : : : "memory"); }
+#elif defined(__mips__)
+static inline void wmb() { asm volatile ("sync" : : : "memory"); }
+static inline void rmb() { asm volatile ("sync" : : : "memory"); }
+#elif defined(__amd64__) || defined (__i686__)
+static inline void wmb() { asm volatile ("sfence" : : : "memory"); }
+static inline void rmb() { asm volatile ("lfence" : : : "memory"); }
+#else
+#warning Missing proper memory write barrier
+static inline void wmb() { asm volatile ("" : : : "memory"); }
+static inline void rmb() { asm volatile ("" : : : "memory"); }
+#endif
+
+
+/**
+ * Pointer used in virtio descriptors.
+ *
+ * As the descriptor contain guest addresses these pointers cannot be
+ * dereferenced directly.
+ */
+template< typename T >
+class Ptr
+{
+public:
+  /// Type for making an invalid (NULL) Ptr.
+  enum Invalid_type { Invalid /**< Use to set a Ptr to invalid (NULL) */ };
+
+  Ptr() = default;
+
+  /// Make and invalid Ptr
+  Ptr(Invalid_type) : _p(~0ULL) {}
+
+  /// Make a Ptr from a raw 64bit address
+  explicit Ptr(l4_uint64_t vm_addr) : _p(vm_addr) {}
+
+  /// \return The raw 64bit address of the pointer.
+  l4_uint64_t get() const { return _p; }
+
+  /// \return true if the pointer is invalid (NULL).
+  bool is_valid() const { return _p != ~0ULL; }
+
+private:
+  l4_uint64_t _p;
+};
+
+
+/**
+ * Low-level Virtqueue.
+ *
+ * This class represents a single virtqueue, with a local running available
+ * index.
+ */
+class Virtqueue
+{
+public:
+  /**
+   * Descriptor in the descriptor table.
+   */
+  class Desc
+  {
+  public:
+    /**
+     * Type for descriptor flags.
+     */
+    struct Flags
+    {
+      l4_uint16_t raw;  ///< raw flags value of a virtio descriptor.
+      Flags() = default;
+
+      /// Make Flags from raw 16bit value.
+      explicit Flags(l4_uint16_t v) : raw(v) {}
+
+      /// Part of a descriptor chain which is continued with the next field.
+      CXX_BITFIELD_MEMBER( 0,  0, next, raw);
+      /// Block described by this descriptor is writeable.
+      CXX_BITFIELD_MEMBER( 1,  1, write, raw);
+      /// Indirect descriptor, block contains a list of descriptors.
+      CXX_BITFIELD_MEMBER( 2,  2, indirect, raw);
+    };
+
+    Ptr<void> addr;   ///< Address stored in descriptor.
+    l4_uint32_t len;  ///< Length of described buffer.
+    Flags flags;      ///< Descriptor flags.
+    l4_uint16_t next; ///< Index of the next chained descriptor.
+
+    /**
+     * Dump a single descriptor.
+     */
+    void dump(unsigned idx) const
+    {
+      L4Re::Util::Dbg().printf("D[%04x]: %08llx (%x) f=%04x n=%04x\n",
+                               idx, addr.get(),
+                               len, (unsigned)flags.raw, (unsigned)next);
+    }
+  };
+
+  /**
+   * Type of available ring, this is read-only for the host.
+   */
+  class Avail
+  {
+  public:
+    /**
+     * Flags of the available ring.
+     */
+    struct Flags
+    {
+      l4_uint16_t raw; ///< raw 16bit flags value of the available ring.
+      Flags() = default;
+
+      /// Make Flags from the raw value.
+      explicit Flags(l4_uint16_t v) : raw(v) {}
+
+      /// Guest does not want to receive interrupts when requests are finished.
+      CXX_BITFIELD_MEMBER( 0,  0, no_irq, raw);
+    };
+
+    Flags flags;         ///< flags of available ring
+    l4_uint16_t idx;     ///< available index written by guest
+    l4_uint16_t ring[];  ///< array of available descriptor indexes.
+  };
+
+  /**
+   * Type of an element of the used ring.
+   */
+  struct Used_elem
+  {
+    Used_elem() = default;
+
+    /**
+     * Initialize a used ring element.
+     *
+     * \param id  The index of the descriptor to be marked as used.
+     * \param len The total bytes written into the buffer of the
+     *            descriptor chain.
+     */
+    Used_elem(l4_uint16_t id, l4_uint32_t len) : id(id), len(len) {}
+    l4_uint32_t id;  ///< descriptor index
+    l4_uint32_t len; ///< length field
+  };
+
+  /**
+   * Used ring.
+   */
+  class Used
+  {
+  public:
+    /**
+     * flags for the used ring.
+     */
+    struct Flags
+    {
+      l4_uint16_t raw;  ///< raw flags value as specified by virtio.
+      Flags() = default;
+
+      /// make Flags from raw value
+      explicit Flags(l4_uint16_t v) : raw(v) {}
+
+      /// host does not want to be notified when new requests have been queued.
+      CXX_BITFIELD_MEMBER( 0,  0, no_notify, raw);
+    };
+
+    Flags flags;       ///< flags of the used ring.
+    l4_uint16_t idx;   ///< index of the last entry in the ring.
+    Used_elem ring[];  ///< array of used descriptors.
+  };
+
+protected:
+  Desc *_desc;   ///< pointer to descriptor table, NULL if queue is off.
+  Avail *_avail; ///< pointer to available ring.
+  Used *_used;         ///< pointer to used ring.
+
+  /** The life counter for the queue */
+  l4_uint16_t _current_avail;
+
+  /**
+   * mask used for indexing into the descriptor table
+   * and the rings.
+   */
+  l4_uint16_t _idx_mask;
+
+  /**
+   * Create a disabled virtqueue.
+   */
+  Virtqueue() : _desc(0), _idx_mask(0) {}
+  Virtqueue(Virtqueue const &) = delete;
+
+public:
+  /**
+   * Completely disable the queue.
+   *
+   * setup() must be used to enable the queue again.
+   */
+  void disable()
+  { _desc = 0; }
+
+  /**
+   * Fixed alignment values for different parts of a virtqueue.
+   */
+  enum
+  {
+    Desc_align  = 4, //< Alignment of the descriptor table.
+    Avail_align = 1, //< Alignment of the available ring.
+    Used_align  = 2, //< Alignment of the used ring.
+  };
+
+  /**
+   * Calculate the total size for a virtqueue of the given dimensions.
+   *
+   * \param num    The number of entries in the descriptor table, the
+   *               available ring, and the used ring (must be a power of 2).
+   *
+   * \return The total size in bytes of the queue data structures.
+   */
+  static unsigned long total_size(unsigned num)
+  {
+    static_assert(Desc_align >= Avail_align,
+                  "virtqueue alignment assumptions broken");
+    return l4_round_size(desc_size(num) + avail_size(num), Used_align)
+           + used_size(num);
+  }
+
+  /**
+   * Calculate the size of the descriptor table for `num` entries.
+   *
+   * \param num  The number of entries in the descriptor table.
+   *
+   * \returns  The size in bytes needed for a descriptor table with
+   *           `num` entries.
+   */
+  static unsigned long desc_size(unsigned num)
+  { return num * 16; }
+
+  /**
+   * Get the alignment in zero LSBs needed for the descriptor table.
+   *
+   * \returns  The alignment in zero LSBs needed for a descriptor table.
+   */
+  static unsigned long desc_align()
+  { return Desc_align; }
+
+  /**
+   * Calculate the size of the available ring for `num` entries.
+   *
+   * \param num  The number of entries in the available ring.
+   * \returns  The size in bytes needed for an available ring with
+   *           `num` entries.
+   */
+  static unsigned long avail_size(unsigned num)
+  { return 2 * num + 6; }
+
+  /**
+   * Get the alignment in zero LSBs needed for the available ring.
+   *
+   * \returns  The alignment in zero LSBs needed for an available ring.
+   */
+  static unsigned long avail_align()
+  { return Avail_align; }
+
+  /**
+   * Calculate the size of the used ring for `num` entries.
+   *
+   * \param num  The number of entries in the used ring.
+   *
+   * \returns  The size in bytes needed for an used ring with
+   *           `num` entries.
+   */
+  static unsigned long used_size(unsigned num)
+  { return 8 * num + 6; }
+
+  /**
+   * Get the alignment in zero LSBs needed for the used ring.
+   *
+   * \returns  The alignment in zero LSBs needed for an used ring.
+   */
+  static unsigned long used_align()
+  { return Used_align; }
+
+  /**
+   * Calculate the total size of this virtqueue.
+   *
+   * \pre The queue has been set up.
+   */
+  unsigned long total_size() const
+  {
+    return ((char *) _used - (char *) _desc)
+            + used_size(num());
+  }
+
+  /**
+   * Get the offset of the available ring from the descriptor table.
+   */
+  unsigned long avail_offset() const
+  { return (char const *)_avail - (char const *)_desc; }
+
+  /**
+   * Get the offset of the used ring from the descriptor table.
+   */
+  unsigned long used_offset() const
+  { return (char const *)_used - (char const *)_desc; }
+
+  /**
+   * Enable this queue.
+   *
+   * \param num    The number of entries in the descriptor table, the
+   *               available ring, and the used ring (must be a power of 2).
+   * \param desc   The address of the descriptor table. (Must be
+   *               Desc_align aligned and at least `desc_size(num)` bytes
+   *               in size.)
+   * \param avail  The address of the available ring. (Must be
+   *               Avail_align aligned and at least `avail_size(num)` bytes
+   *               in size.)
+   * \param used   The address of the used ring. (Must be Used_align aligned
+   *               and at least `used_size(num)` bytes in size.)
+   *
+   * Due to the data type of the descriptors, the queue can have a
+   * maximum size of 2^16.
+   */
+  void setup(unsigned num, void *desc, void *avail, void *used)
+  {
+    if (num > 0x10000)
+      throw L4::Runtime_error(-L4_EINVAL, "Queue too large.");
+
+    _idx_mask = num - 1;
+    _desc = (Desc*)desc;
+    _avail = (Avail*)avail;
+    _used = (Used*)used;
+
+    _current_avail = 0;
+
+    L4Re::Util::Dbg().printf("VQ[%p]: num=%d d:%p a:%p u:%p\n",
+                             this, num, _desc, _avail, _used);
+  }
+
+  /**
+   * Enable this queue.
+   *
+   * \param num    The number of entries in the descriptor table, the
+   *               available ring, and the used ring (must be a power of 2).
+   * \param ring   The base address for the queue data structure. The memory
+   *               block at `ring` must be at least `total_size(num)` bytes
+   *               in size and have an alignment of Desc_align
+   *               (desc_align()) bits.
+   *
+   * Due to the data type of the descriptors, the queue can have a
+   * maximum size of 2^16.
+   */
+  void setup_simple(unsigned num, void *ring)
+  {
+    l4_addr_t desc = reinterpret_cast<l4_addr_t>(ring);
+    l4_addr_t avail = l4_round_size(desc + desc_size(num), Avail_align);
+    l4_addr_t used = l4_round_size(avail + avail_size(num), Used_align);
+    setup(num, (void *)desc, (void *)avail, (void *)used);
+  }
+
+  /**
+   * Dump descriptors for this queue.
+   *
+   * \pre the queue must be in working state.
+   */
+  void dump(Desc const *d) const
+  { d->dump(d - _desc); }
+
+  /**
+   * Test if this queue is in working state.
+   *
+   * \return true when the queue is in working state, false else.
+   */
+  bool ready() const
+  { return L4_LIKELY(_desc != 0); }
+
+  /// \return The number of entries in the ring.
+  unsigned num() const
+  { return _idx_mask + 1; }
+
+   /**
+   * Get the no IRQ flag of this queue.
+   *
+   * \pre queue must be in working state.
+   *
+   * \return true if the guest does not want to get IRQs (currently).
+   */
+  bool no_notify_guest() const
+  {
+    return _avail->flags.no_irq();
+  }
+
+   /**
+   * Get the no notify flag of this queue.
+   *
+   * \pre queue must be in working state.
+   *
+   * \return true if the host does not want to get IRQs (currently).
+   */
+  bool no_notify_host() const
+  {
+    return _used->flags.no_notify();
+  }
+
+  /**
+   * Set the no-notify flag for this queue
+   *
+   * \pre Queue must be in a working state.
+   */
+  void no_notify_host(bool value)
+  {
+    _used->flags.no_notify() = value;
+  }
+
+  /**
+   * Get available index from available ring (for debugging).
+   *
+   * \pre Queue must be in a working state.
+   *
+   * \return current index in the available ring (shared
+   *         between device model and device driver).
+   */
+  l4_uint16_t get_avail_idx() const { return _avail->idx; }
+
+  /**
+   * Get tail-available index stored in local state (for debugging).
+   *
+   * \return current tail index for the the available ring.
+   */
+  l4_uint16_t get_tail_avail_idx() const { return _current_avail; }
+
+};
+
+namespace Driver {
+
+/**
+ * Driver-side implementation of a Virtqueue.
+ *
+ * Adds function for managing the descriptor list, enqueueing new
+ * and dequeueing finished requests.
+ */
+class Virtqueue : public L4virtio::Virtqueue
+{
+private:
+  /// Index of next free entry in the descriptor table.
+  l4_uint16_t _next_free;
+
+public:
+  enum End_of_queue
+  {
+    // Indicates the end of the queue.
+    Eoq = 0xFFFF
+  };
+
+  Virtqueue() : _next_free(Eoq) {}
+
+ /**
+   * Initialize the descriptor table and the index structures
+   * of this queue.
+   *
+   * \param num    The number of entries in the descriptor table, the
+   *               available ring, and the used ring (must be a power of 2).
+   *
+   * \pre The queue must be set up correctly with setup() or setup_simple().
+   */
+  void initialize_rings(unsigned num)
+  {
+    _used->idx = 0;
+    _avail->idx = 0;
+
+    // setup the freelist
+    for (l4_uint16_t d = 0; d < num - 1; ++d)
+      _desc[d].next = d + 1;
+    _desc[num - 1].next = Eoq;
+    _next_free = 0;
+  }
+
+  /**
+   * Initialize this virtqueue.
+   *
+   * \param num    The number of entries in the descriptor table, the
+   *               available ring, and the used ring (must be a power of 2).
+   * \param desc   The address of the descriptor table. (Must be
+   *               Desc_align aligned and at least `desc_size(num)` bytes
+   *               in size.)
+   * \param avail  The address of the available ring. (Must be
+   *               Avail_align aligned and at least `avail_size(num)` bytes
+   *               in size.)
+   * \param used   The address of the used ring. (Must be Used_align aligned
+   *               and at least `used_size(num)` bytes in size.)
+   *
+   * This function sets up the memory and initializes the freelist.
+   */
+  void init_queue(unsigned num, void *desc, void *avail, void *used)
+  {
+    setup(num, desc, avail, used);
+    initialize_rings(num);
+  }
+
+  /**
+   * Initialize this virtqueue.
+   *
+   * \param num    The number of entries in the descriptor table, the
+   *               available ring, and the used ring (must be a power of 2).
+   * \param base   The base address for the queue data structure.
+   *
+   * This function sets up the memory and initializes the freelist.
+   */
+  void init_queue(unsigned num, void *base)
+  {
+    setup_simple(num, base);
+    initialize_rings(num);
+  }
+
+
+  /**
+   * Allocate and return an unused descriptor from the descriptor table.
+   *
+   * The descriptor will be removed from the free list, the content
+   * should be considered undefined. After use, it needs to be freed
+   * using free_descriptor().
+   *
+   * \return The index of the reserved descriptor or Virtqueue::Eoq if
+   *         no free descriptor is available.
+   *
+   * Note: the implementation uses (2^16 - 1) as the end of queue marker.
+   *       That means that the final entry in the queue can not be allocated
+   *       iff the queue size is 2^16.
+   */
+  l4_uint16_t alloc_descriptor()
+  {
+    // XXX needs to be locked
+    l4_uint16_t idx = _next_free;
+    if (idx == Eoq)
+      return Eoq;
+
+    _next_free = _desc[idx].next;
+
+    return idx;
+  }
+
+  /**
+   * Enqueue a descriptor in the available ring.
+   *
+   * \param descno Index of the head descriptor to enqueue.
+   */
+  void enqueue_descriptor(l4_uint16_t descno)
+  {
+    if (descno > _idx_mask)
+      throw L4::Bounds_error();
+
+    // TODO lock required
+    _avail->ring[_avail->idx & _idx_mask] = descno; // _avail->idx expected to wrap
+    wmb();
+    ++_avail->idx;
+  }
+
+  /**
+   * Return a reference to a descriptor in the descriptor table.
+   *
+   * \param descno  Index of the descriptor,
+   *                expected to be in correct range.
+   */
+  Desc &desc(l4_uint16_t descno)
+  {
+    if (descno > _idx_mask)
+      throw L4::Bounds_error();
+
+    return _desc[descno];
+  }
+
+  /**
+   * Return the next finished block.
+   *
+   * \param[out] len  (optional) Size of valid data in finished block.
+   *                  Note that this is the value reported by the device,
+   *                  which may set it to a value that is larger than the
+   *                  original buffer size.
+   *
+   * \return Index of the head or Virtqueue::Eoq
+   *         if no used element is currently available.
+   */
+  l4_uint16_t find_next_used(l4_uint32_t *len = nullptr)
+  {
+    // TODO lock required
+    if (_current_avail == _used->idx)
+      return Eoq;
+
+    auto elem = _used->ring[_current_avail++ & _idx_mask];
+
+    if (len)
+      *len = elem.len;
+
+    return elem.id;
+  }
+
+  /**
+   * Free a chained list of descriptors in the descriptor queue.
+   *
+   * \param head Index of the first element in the descriptor chain.
+   * \param tail Index of the last element in the descriptor chain.
+   *
+   * Simply takes the descriptor chain and prepends it to the beginning
+   * of the free list. Assumes that the list has been correctly chained.
+   */
+  void free_descriptor(l4_uint16_t head, l4_uint16_t tail)
+  {
+    if (head > _idx_mask || tail > _idx_mask)
+      throw L4::Bounds_error();
+
+    // TODO lock required
+    _desc[tail].next = _next_free;
+    _next_free = head;
+  }
+};
+
+}
+} // namespace L4virtio

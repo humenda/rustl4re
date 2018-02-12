@@ -1,0 +1,5 @@
+<map id="L4::Icu::unbind" name="L4::Icu::unbind">
+<area shape="rect" id="node2" href="$classL4_1_1Cap__base.html#a6181bad79c41cdbf5c030877b94e25bf" title="Return capability selector. " alt="" coords="163,5,300,32"/>
+<area shape="rect" id="node3" href="$classL4_1_1Kobject.html#a314161cb755de6fd0c50da0a757eb4c7" title="Return capability selector. " alt="" coords="172,56,291,83"/>
+<area shape="rect" id="node4" href="$group__l4__icu__api.html#gae74204b8f2101e176add646ec2958182" title="Remove binding of an interrupt line from the interrupt controller object. " alt="" coords="170,107,293,133"/>
+</map>

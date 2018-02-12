@@ -1,0 +1,16 @@
+##----------------------------------------------------------------------##
+# Accesses to L4 KUMEM in libpthread -- this is dynamically allocated but
+# Valgrind does not know anything about KUMEM
+
+{
+   L4-KUMEM-in-pthread
+   Memcheck:Addr4
+   fun:__l4_add_utcbs
+   fun:__pthread_manager
+}
+
+{  
+   L4-KUMEM-in-pthread2
+   Memcheck:Addr4
+   fun:__pthread_manager
+}  

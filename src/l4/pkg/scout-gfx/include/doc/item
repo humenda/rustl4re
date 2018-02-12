@@ -1,0 +1,89 @@
+// vi:ft=cpp
+/*
+ * (c) 2010 Alexander Warg <warg@os.inf.tu-dresden.de>
+ *     economic rights: Technische Universität Dresden (Germany)
+ *
+ * This file is part of TUD:OS and distributed under the terms of the
+ * GNU General Public License 2.
+ * Please see the COPYING-GPL-2 file for details.
+ */
+#pragma once
+
+#include <l4/scout-gfx/widget>
+
+namespace Scout_gfx {
+
+class Style;
+
+/**
+ * An iten consists of a item tag and a list of blocks
+ */
+class Item : public Parent_widget
+{
+public:
+
+  int         _indent;
+  const char *_tag;
+  Style      *_style;
+
+  /**
+   * Constructor
+   */
+  Item(Style *style, const char *str, int indent);
+
+  /**
+   * Element interface
+   */
+  void draw(Canvas *c, Point const &p);
+
+  Area min_size() const
+  { return child_layout()->min_size() + Area(_indent, 0); }
+
+  Area preferred_size() const
+  { return child_layout()->preferred_size() + Area(_indent, 0); }
+
+  Area max_size() const
+  { return child_layout()->max_size() + Area(_indent, 0); }
+
+  bool empty() const { return false; }
+
+  Orientations expanding() const
+  { return child_layout()->expanding(); }
+
+  Rect geometry() const
+  { return Rect(_pos, _size); }
+
+  void set_geometry(Rect const &s)
+  {
+    _pos = s.p1();
+    _size = s.area().min(max_size()).max(min_size());
+    child_layout()->set_geometry(Rect(Point(_indent, 0), _size - Area(_indent, 0)));
+  }
+
+  bool has_height_for_width() const
+  { return child_layout()->has_height_for_width(); }
+
+  int height_for_width(int w) const
+  { return child_layout()->height_for_width(w - _indent); }
+
+  int min_height_for_width(int w) const
+  { return child_layout()->min_height_for_width(w - _indent); }
+
+  void append(Widget *c)
+  {
+    Parent_widget::append(c);
+    child_layout()->add_item(c);
+  }
+
+  void remove(Widget *c)
+  {
+    Parent_widget::remove(c);
+    child_layout()->remove_item(c);
+  }
+
+
+};
+
+
+
+}

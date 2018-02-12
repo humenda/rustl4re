@@ -1,0 +1,177 @@
+// vim: ft=cpp
+#pragma once
+
+/*
+ * emulation --
+ *
+ *     Basic definition of an instruction emulator. Used
+ *     by the framework to emulate memory write instructions.
+ *
+ * (c) 2011-2013 Björn Döbel <doebel@os.inf.tu-dresden.de>,
+ *     economic rights: Technische Universität Dresden (Germany)
+ * This file is part of TUD:OS and distributed under the terms of the
+ * GNU General Public License 2.
+ * Please see the COPYING-GPL-2 file for details.
+ */
+
+#include <l4/vcpu/vcpu>
+#include "log"
+
+namespace Romain {
+/*
+ * Address translation abstraction.
+ */
+struct AddressTranslator
+{
+	virtual l4_addr_t translate(l4_addr_t orig) const = 0;
+	virtual ~AddressTranslator() {}
+};
+
+struct IdentityTranslator : public AddressTranslator
+{
+	virtual l4_addr_t translate(l4_addr_t orig) const { return orig; }
+};
+
+}
+//#include "app_loading"
+
+#include <libudis86/types.h>
+#include <libudis86/extern.h>
+#include <libudis86/itab.h>
+
+namespace Romain {
+
+enum X86Eflags {
+	CarryFlag     =   0x1,
+	ParityFlag    =   0x4,
+	AuxCarryFlag  =  0x10,
+	ZeroFlag      =  0x40,
+	SignFlag      =  0x80,
+	TrapFlag      = 0x100,
+	InterruptFlag = 0x200,
+	DirectionFlag = 0x400,
+	OverflowFlag  = 0x800,
+};
+
+class Emulator_base
+{
+	protected:
+		enum {
+			UD_MAX_OPERANDS = 3,
+		};
+		L4vcpu::Vcpu           *_vcpu;
+		Romain::AddressTranslator const * _translator;
+		l4_addr_t               _local_ip;   // XXX: abstraction fault
+		ud_t                    _ud;
+
+		void value_to_operand(l4_umword_t val, ud_operand *op);
+		l4_mword_t offset_from_operand(ud_operand *op);
+
+		l4_umword_t register_to_value(ud_type op);
+		void value_to_register(l4_umword_t val, ud_type op);
+
+	public:
+		virtual l4_addr_t ip()    { return _vcpu->r()->ip; }
+		l4_addr_t         local() { return _local_ip; }
+		l4_umword_t       ilen()  { return ud_insn_len(&_ud); }
+
+	protected:
+		l4_umword_t operand_to_value(ud_operand *op);
+		void write_target(l4_addr_t address, l4_umword_t value, l4_size_t size)
+		{
+			switch(size) {
+				case 8:
+					*(l4_uint8_t*)address = (l4_uint8_t)value;
+					break;
+				case 16:
+					*(l4_uint16_t*)address = (l4_uint16_t)value;
+					break;
+				case 32:
+					*(l4_umword_t*)address = value;
+					break;
+				// XXX: case 64:
+				//     break;
+				default:
+					ERROR() << std::hex << address << ", "
+					        << value << ", " << size << "\n";
+					break;
+			}
+		}
+		void init_ud();
+
+	public:
+		Emulator_base(L4vcpu::Vcpu *, Romain::AddressTranslator const *);
+#if 1
+		Emulator_base() // XXX: needed?
+			: _vcpu(0), _translator(new IdentityTranslator()), _local_ip(0)
+		{}
+#endif
+		void print_instruction();
+};
+
+
+class InstructionPrinter : public Emulator_base
+{
+	l4_addr_t _remote;
+	public:
+		InstructionPrinter(l4_addr_t local, l4_addr_t remote)
+			: _remote(remote)
+		{
+			_local_ip = local;
+			init_ud();
+			print_instruction();
+		}
+
+		virtual l4_addr_t ip() { return _remote; }
+};
+
+
+class WriteEmulator : public Emulator_base
+{
+	protected:
+		void handle_push();
+		void handle_call();
+		void handle_mov();
+		void handle_movsd();
+		void handle_movsb();
+		void handle_stos();
+
+		enum ArithmeticOperations {
+			ADD,
+			SUB,
+			MULT,
+			DIV,
+			MOD,
+			DEC,
+		};
+
+		void handle_arithmetics(ArithmeticOperations o);
+
+	public:
+		WriteEmulator(L4vcpu::Vcpu *vcpu,
+		              Romain::AddressTranslator const *trans)
+			: Emulator_base(vcpu, trans)
+		{
+		}
+
+		void emulate(/*l4_addr_t remote_addr*/);
+};
+
+#include "instruction_length.h"
+
+struct CopyAndExecute
+{
+	L4vcpu::Vcpu *_vcpu;
+	l4_addr_t     _local_ip;
+	l4_umword_t   _ilen;
+	char _instbuf[32];
+
+	public:
+		CopyAndExecute(L4vcpu::Vcpu *vcpu)
+			: _vcpu(vcpu)
+		{ }
+
+		void emulate(Romain::AddressTranslator *at);
+};
+
+}

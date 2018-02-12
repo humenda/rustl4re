@@ -1,0 +1,83 @@
+L4Re
+====
+* sensors: list, histo
+* libs
+        client
+        comm
+        fpages
+        gcc_instrument
+        local_names
+        Makefile
+        monitor
+        sensors
+  [x]   util
+* demos
+        gcc_instrument
+        histo_demo
+        l4linux_user
+        list_demo
+        list_demo_re
+        Makefile
+        scalar_demo
+   [x]  scalar_demo_re
+        test
+        ulist_demo
+* monitors
+        common
+        dope_control
+        idle_switch_mon
+        l4lx_control
+        l4lx_histo_mon
+        l4lx_verify_tamed_mon
+        Makefile
+        merge_mon
+        simple_mon
+* server
+
+
+Ferret
+======
+ - try to optimize commit even more by using power of 2 sizes for
+   sensor buffers
+ - Remote Control:
+    - start now + send in x seconds to xyz.dat
+ - maybe use a cyclic buffer?
+ - support merging of several events to a larger one
+ - restructure client libs to use structs of function pointers for
+   common stuff
+ - define some error constants for the return cases
+ - check whether kernel buffer memory could be forwarded using a
+   dataspace, if so, do it this way, as clients do not depend so much
+   on the kernel debugger and monitor libs get simpler
+ - instrument something (e.g., DOpE)
+ - all list functions need a method to set their 'read_next' to now
+   and their lost count to 0
+ - map different thread / task ID schemes
+ - Merge_mon:
+    - Fix: update transfer progress after stopping receiving data
+    - Fix: Init. network transfer of data after STOP
+    - add support for stopping and starting tracing certain events in jdb
+ - Change all memory allocation in ferret client libs to something
+   else, which does not use the same heap as the other code (prevent
+   influencing the system by monitoring it)
+
+DONE:
+ - We need a conversion function to transform kernel events to a
+   common event format, or change the layout of kernel events to a
+   common format
+ - support reopen
+ - support super-pages to speed up performance (fewer TLB misses)
+ - We need a monitor which can merge several event streams and forward
+   them over network, serial cable, or dump them to disk  [-> MergeMon]
+ - provide L4VFS interface for sensor_directory
+ - care for malloc problem (different environments may not have a
+   malloc impl.)
+ - exchange position of index and element area for lists
+ - support instance in directory
+ - Support non-L4Env Tasks via dm_* clientlibs (function map_ds),
+   there should be no dependency on other L4Env stuff
+ - verify algorithms' correctnes using Spin or similar model checker
+   tools
+ - Remote Control:
+    - dump stats
+    - dump

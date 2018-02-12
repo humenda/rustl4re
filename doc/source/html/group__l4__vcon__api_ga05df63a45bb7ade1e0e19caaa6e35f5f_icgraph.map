@@ -1,0 +1,7 @@
+<map id="l4_vcon_send_u" name="l4_vcon_send_u">
+<area shape="rect" id="node2" href="$group__l4__vcon__api.html#gabbc45ad5d795d46d1edbf8118957ecb2" title="Send data to virtual console. " alt="" coords="185,5,296,32"/>
+<area shape="rect" id="node3" href="$group__l4__vcon__api.html#ga899728ba23baf18f59f62142534e039c" title="Write data to this virtual console. " alt="" coords="179,56,303,83"/>
+<area shape="rect" id="node6" href="$classL4_1_1Vcon.html#a7f3af2e912eddfae6b0fd8505beec77f" title="Send data to this virtual console. " alt="" coords="184,107,297,133"/>
+<area shape="rect" id="node4" href="$classL4_1_1Vcon.html#acb9a53b77487d644212030c27d642f1e" title="Write data to this virtual console. " alt="" coords="351,31,463,57"/>
+<area shape="rect" id="node5" href="$group__l4__vcon__api.html#ga9f083a69c2c51329da6778a3af0331bc" title="Write data to virtual console. " alt="" coords="352,81,461,108"/>
+</map>

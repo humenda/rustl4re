@@ -1,0 +1,6 @@
+L4 input library implementation
+
+Files in this subtree were taken from Linux 2.6 sources (drivers/ directory)
+and slightly modified to permit easy integration into L4INPUT library.
+
+Current version: linux-2.6.11.8

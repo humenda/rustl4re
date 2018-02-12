@@ -1,0 +1,2 @@
+requires: stdlibs libpthread l4re_c-util l4util
+maintainer: doebel@os.inf.tu-dresden.de

@@ -1,0 +1,6 @@
+<map id="L4::Io_pager" name="L4::Io_pager">
+<area shape="rect" id="node2" href="$classL4_1_1Kobject__t.html" title="{L4::Kobject_t\&lt; Pager,\l Io_pager, L4_PROTO_PAGE\l_FAULT \&gt;\n||# c()\l# __check_protocols__()\l}" alt="" coords="5,131,216,252"/>
+<area shape="rect" id="node3" href="$classL4_1_1Pager.html" title="Pager interface including the Io_pager interface. " alt="" coords="55,300,166,377"/>
+<area shape="rect" id="node4" href="$classL4_1_1Kobject__t.html" title="{L4::Kobject_t\&lt; Rm,\l L4::Pager, L4RE_PROTO\l_RM, L4::Type_info::Demand\l_t\&lt; 1 \&gt; \&gt;\n||# c()\l# __check_protocols__()\l}" alt="" coords="9,425,212,561"/>
+<area shape="rect" id="node5" href="$classL4Re_1_1Rm.html" title="Region map. " alt="" coords="45,609,176,877"/>
+</map>

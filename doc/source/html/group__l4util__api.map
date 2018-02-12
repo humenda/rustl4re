@@ -1,0 +1,16 @@
+<map id="Utility Functions" name="Utility Functions">
+<area shape="rect" id="node1" href="$group__l4util__parse__cmd.html" title="Comfortable Command\l Line Parsing" alt="" coords="190,5,357,47"/>
+<area shape="rect" id="node2" href="$group__l4util__random.html" title="Random number support" alt="" coords="185,71,361,98"/>
+<area shape="rect" id="node4" href="$group__l4util__thread.html" title="Low&#45;Level Thread Functions" alt="" coords="173,122,373,149"/>
+<area shape="rect" id="node5" href="$group__l4util__internal.html" title="Internal functions" alt="" coords="208,173,339,199"/>
+<area shape="rect" id="node6" href="$group__l4util__reboot.html" title="Machine Restarting\l Function" alt="" coords="201,224,346,265"/>
+<area shape="rect" id="node7" href="$group__l4util__tsc.html" title="Timestamp Counter" alt="" coords="201,290,346,317"/>
+<area shape="rect" id="node8" href="$group__l4util__portio.html" title="IA32 Port I/O API" alt="" coords="208,341,339,367"/>
+<area shape="rect" id="node9" href="$group__api__gfxbitmap.html" title="This library provides some functions for bitmap handling in frame buffers. " alt="" coords="198,392,349,433"/>
+<area shape="rect" id="node10" href="$group__l4util__idt.html" title="Functions to manipulate\l the local IDT" alt="" coords="188,457,359,499"/>
+<area shape="rect" id="node11" href="$group__l4util__kip__api.html" title="Kernel Interface Page API" alt="" coords="180,523,367,550"/>
+<area shape="rect" id="node12" href="$group__l4util__atomic.html" title="Atomic Instructions" alt="" coords="203,574,343,601"/>
+<area shape="rect" id="node13" href="$group__l4util__bitops.html" title="Bit Manipulation" alt="" coords="212,625,335,651"/>
+<area shape="rect" id="node14" href="$group__l4util__cpu.html" title="CPU related functions" alt="" coords="194,675,353,702"/>
+<area shape="rect" id="node15" href="$group__l4util__elf.html" title="Functions and types related to ELF binaries. " alt="" coords="207,726,340,753"/>
+</map>

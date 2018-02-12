@@ -1,0 +1,2 @@
+requires: drivers_uart l4util stdlibs libio
+maintainer: adam@os.inf.tu-dresden.de

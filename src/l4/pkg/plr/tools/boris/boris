@@ -1,0 +1,302 @@
+#!/usr/bin/python
+
+# BORIS (Binary Object analyzeR for Injection experimentS)
+#
+#    Tool for parsing binaries and finding the relevant instrumentation
+#    points for a fault injection campaign (which is then coordinated by
+#    IGOR).
+#
+# (c) 2011-2013 Björn Döbel <doebel@os.inf.tu-dresden.de>,
+#     economic rights: Technische Universität Dresden (Germany)
+#
+#  This file is part of TUD:OS and distributed under the terms of the
+#  GNU General Public License 2.
+#  Please see the COPYING-GPL-2 file for details.
+
+import sys, os
+import udis86
+import subprocess
+from pylibelf import libelf
+import random
+import argparse
+
+#################################################
+### Running external programs                 ###
+#################################################
+
+class ProgramRunner:
+
+    def __init__(self, tool, options):
+        self.tool    = tool
+        self.options = [tool] + options
+
+    def output(self):
+        try:
+            r        = subprocess.check_output(self.options)
+        except subprocess.CalledProcessError:
+            print "Could not exec %s" % self.tool
+            return None
+        return r
+
+
+class NMRunner(ProgramRunner):
+
+    def __init__(self, binary):
+        ProgramRunner.__init__(self, "nm", ["-C", binary])
+
+
+#################################################
+### Data classes                              ###
+#################################################
+class Function:
+
+    def __init__(self, nmline):
+        (self.address, self.symtype, self.name) = nmline.split(" ", 3)
+        if self.symtype not in ["T", "t"]:
+            raise ValueError()
+        
+        self.address = int(self.address, 16)
+        self.end     = self.address # don't know better yet
+
+
+    def bounds(self):
+        return (self.address, self.end)
+
+
+    def __str__(self):
+        return "[0x%08lx - 0x%08lx] %s" % (self.address, self.end, self.name)
+
+    def __repr__(self):
+        return "[0x%08lx - 0x%08lx] %s" % (self.address, self.end, self.name)
+
+
+#################################################
+### Specific FI generators                    ###
+#################################################
+class FunctionList:
+    def create(self):
+        for line in NMRunner(self.binary).output().split("\n"):
+            try:
+                self.funcs.append(Function(line))
+            except ValueError:
+                pass
+
+            self.funcs.sort(key = lambda f : f.address)
+
+        # Now we can go and fix up the end address
+        for i in range(len(self.funcs) - 1):
+            self.funcs[i].end = self.funcs[i+1].address - 1
+
+
+    def __init__(self, binary):
+        self.binary = binary
+        self.funcs  = []
+        self.create()
+
+
+    def run_filter(self, funcnames=[]):
+        """
+        Filter out non-interesting functions
+        """
+        if funcnames == ["*"]:
+            pass
+        else:
+            self.funcs = [x for x in self.funcs if x.name in funcnames]
+
+
+class BinaryObject:
+    """
+    Representation of all executable segments of a file.
+
+    This object's main structure is a list of (segment, buffer) tuples
+    that contain a libELF segment descriptor and the respective binary
+    buffer read from the file.
+    """
+    def __init__(self, binary):
+        self.lib           = libelf.Library(binary)
+        self.exec_segments = []
+
+        f = file(binary, "rb")
+        for s in self.lib.segments:
+            if s.executable:
+                f.seek(s.offset)
+                self.exec_segments.append((s, f.read(s.filesize)))
+
+        self.ud_obj      = udis86.init()
+        self.ud_obj.set_mode(udis86.MOD_32)
+        self.ud_obj.set_syntax(udis86.UD_SYN_ATT)
+
+    def segment_for_address(self, address):
+        for (s, b) in self.exec_segments:
+            if s.virtual_address <= address <= (s.virtual_address + s.filesize):
+                return (s,b)
+        raise ValueError("No segment containing address 0x%08lx" % address)
+
+
+    def gen_single_func(self, start, end):
+        ret = []
+        (seg, buf)   = self.segment_for_address(start)
+
+        pc     = start
+        start -= seg.virtual_address # idx used for iterating the input buffer
+        end   -= seg.virtual_address # upper limit of the input buffer
+
+        self.ud_obj.set_pc(pc)
+
+        # udis python bindings seem weirdly broken: initially, i set buf[start:end]
+        # as the input buffer. however, at some point this broke the input stream,
+        # as the python bindings read something different from what was actually in
+        # the buffer. i figured this is somehow related to the udis input buffer
+        # being too large. therefore we use smaller 32byte chunks now
+        self.ud_obj.set_input_buffer(buf[start:start+32])
+        while start < end and self.ud_obj.disassemble() > 0:
+            if (self.filter_instruction()):
+                ret.append("0x%08lx    < %s >" % (pc, self.ud_obj.insn_asm()))
+                #print hex(pc), self.ud_obj.insn_hex(), self.ud_obj.insn_asm()
+            pc    += self.ud_obj.insn_len()
+            start += self.ud_obj.insn_len()
+            self.ud_obj.set_pc(pc)
+            self.ud_obj.set_input_buffer(buf[start:start+32])
+
+        return ret
+
+
+    def generate(self):
+        ret = []
+        for f in self.functions.funcs:
+            (start, end) = f.bounds()
+            ret += self.gen_single_func(start, end)
+
+        return [r for r in ret if random.randint(0,99) < self.probability]
+
+
+
+class ValidInstructionList(BinaryObject):
+    """
+    Generates a list of all valid instruction pointers within the binary
+    """
+    def __init__(self, funclist, rand_percentage = 20):
+        BinaryObject.__init__(self, funclist.binary)
+        self.functions   = funclist
+        self.probability = rand_percentage
+
+
+    def filter_instruction(self):
+        """
+        Filter out non-interesting operations
+        """
+        return self.ud_obj.insn_asm() not in ("nop ", "ret ", "leave ", "invalid ")
+
+
+class ArithInstructionList(ValidInstructionList):
+
+    def __init__(self, funclist, rand_percentage = 20):
+        ValidInstructionList.__init__(self,funclist,rand_percentage)
+        self.invalidops ="""
+        adc adcb andb addb aaa aad aam aas arpl
+        call clc cld cli cmpb cmpsd cmc cmpsb cmp cdq
+        cmovae cmovbe cmovnz cmovz cwde daa das div divb
+        fmul fdiv fild fldcww fistpw  fdivp fldz fucomp fnstsw fld fsub fadd
+        fistp fnstcww fucompp fstp fxch imul idiv in fmulp fidiv fchs fstpq fcomp ficompw
+        fldq fucom fsqrt fiaddw fdivr fcom fsubr fdivrq fnstsww fistpq fistp fimul
+        fimulw fisttpq fmulq fld1
+        int into iretd int1 insd mul mulb
+        ja jae jb jbe jecxz jg jge jl jle jmp jnz jns jo js jz jnp jp jno
+        hlt int3 insb lea lret lock lodsb lodsd ljmp loopnz lcall les lds lahf
+        loop
+        mov movb movsd movsb movsx movsxb movzx movzxb movzxw movw
+        maskmovq
+        o16 out outsb outsd pop popad push pushad popfd pushfd
+        sbb seta setbe setg setle setnz setz stc sti sgdt scasb scasd sbbb
+        shrb shlb sldt sahf std sarb subb rorb orb ror rcl salc
+        rclb rcr rep repne ret stosb stosd test testb rol
+        xorb rolb loope rcrb xchg wait xlatb
+        """
+
+    def filter_instruction(self):
+        if not ValidInstructionList.filter_instruction(self):
+            return False
+
+        opcode = self.ud_obj.insn_asm().split()[0]
+
+        if opcode in ["add", "sub", "inc", "incb", "dec", "shl", "shr", "and", "or", "xor",
+                      "sar", "neg"]:
+            return True
+        elif opcode in self.invalidops.split():
+            return False
+        else:
+            print opcode
+            return False
+
+
+class Configuration:
+    def __init__(self):
+        self.mode = "gpr" # alu, rat, instr
+        self.functions = []
+        self.probability = 100 # percent
+        self.filename = ""
+
+
+class ArgumentParser:
+    def __init__(self):
+        self.conf = Configuration()
+        self.parser = argparse.ArgumentParser(description="Generate list of relevant instructions that can be used to start IGOR runs.")
+        self.parser.add_argument("file", help="binary file", default=None)
+        self.parser.add_argument("-m", "--mode", dest="mode",
+                                  help="gpr|alu|rat|instr", default = None)
+        self.parser.add_argument("-p", "--prob", dest="probability",
+                                 default=None, help="fraction of instructions that get selected finally")
+        self.parser.add_argument("-f", "--functions", dest="functions",
+                                 help="select only a subset of functions (comma-separated list)",
+                                 default="")
+
+    def parse(self, args = sys.argv[1:]):
+        ns = self.parser.parse_args(args)
+        assert ns.file is not None
+        self.conf.filename = ns.file
+        if ns.mode is not None:
+            self.conf.mode = ns.mode
+        if ns.probability is not None:
+            self.conf.probability = int(ns.probability)
+        if ns.functions != "":
+            self.conf.functions=ns.functions.split(",")
+
+
+def run_gpr(conf):
+    ff = FunctionList(conf.filename)
+    ff.run_filter(conf.functions)
+    lst = ValidInstructionList(ff,conf.probability).generate()
+    for l in lst:
+        print l
+
+def run_alu(conf):
+    ff = FunctionList(conf.filename)
+    ff.run_filter(conf.functions)
+    lst = ArithInstructionList(ff,conf.probability).generate()
+    for i in lst:
+        print i
+
+
+def nop(conf):
+    print "UNIMPLEMENTED:", conf.mode
+
+generators = {
+    "gpr"   : run_gpr,
+    "instr" : run_gpr,
+    "rat"   : nop,
+    "alu"   : run_alu,
+}
+
+def main():
+    if len(sys.argv) < 2:
+        sys.exit(1)
+
+    ap = ArgumentParser()
+    ap.parse()
+    try:
+        generators[ap.conf.mode](ap.conf)
+    except KeyError:
+        print "Unknown mode:", ap.conf.mode
+
+if __name__ == "__main__":
+    main()

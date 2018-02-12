@@ -1,0 +1,174 @@
+// vi:ft=cpp
+/*
+ * (c) 2011 Alexander Warg <warg@os.inf.tu-dresden.de>
+ *     economic rights: Technische Universität Dresden (Germany)
+ *
+ * This file is part of TUD:OS and distributed under the terms of the
+ * GNU General Public License 2.
+ * Please see the COPYING-GPL-2 file for details.
+ */
+
+#pragma once
+
+namespace Mag_server {
+
+template<typename V>
+class Value
+{
+public:
+  Value() : _v(0) {}
+  Value(V v) : _v((v << 1) | 1) {}
+  Value(bool, V v) :_v(v) {}
+
+  void set(V v) { _v = (v << 1) | 1; }
+  void inv() { _v = 0; }
+  bool valid() const { return _v & 1; }
+  V val() const { return _v >> 1; }
+
+private:
+  V _v;
+};
+
+template< typename V >
+class Valuator
+{
+private:
+  Valuator(Valuator const &o); // cannot copy
+  void operator = (Valuator const &o);
+
+  void reset()
+  { _d.v = 0; _d.size = 0; _d.offset = 0; }
+
+public:
+  Valuator(Valuator &o) : _d(o._d)
+  { o.reset(); }
+
+  void swap(Valuator &o)
+  {
+    if (&o == this)
+      return;
+
+    Data d = _d;
+    _d = o._d;
+    o._d = d;
+  }
+
+  void operator = (Valuator &o)
+  {
+    if (&o == this)
+      return;
+
+    if (_d.size)
+      delete [] _d.v;
+
+    _d = o._d;
+
+    o.reset();
+  }
+
+  Valuator() : _d() {}
+
+  void create(unsigned size, unsigned offset)
+  {
+    if (_d.size)
+      delete [] _d.v;
+
+    _d.size = size;
+    _d.offset = offset;
+    if (size)
+      _d.v = new V[size];
+    clear();
+  }
+
+  explicit Valuator(unsigned size, unsigned offset)
+  : _d(size, offset, size ? new V[size] : 0)
+  { clear(); }
+
+  ~Valuator() { if (_d.size) delete [] _d.v; }
+
+  void clear()
+  {
+    if (!_d.size)
+      return;
+    for (unsigned i = 0; i < _d.size; ++i)
+      _d.v[i] = 0;
+  }
+
+  bool valid(unsigned idx) const
+  {
+    if (idx < _d.offset)
+      return false;
+
+    idx -= _d.offset;
+
+    if (idx >= _d.size)
+      return false;
+
+    // the lsb is used for validity
+    return _d.v[idx] & 1;
+  }
+
+  Value<V> get(unsigned idx) const
+  {
+    if (idx < _d.offset)
+      return Value<V>();
+
+    idx -= _d.offset;
+
+    if (idx >= _d.size)
+      return Value<V>();
+
+    return Value<V>(true, _d.v[idx]);
+  }
+
+  Value<V> operator [] (unsigned idx) const
+  { return get(idx); }
+
+  void set(unsigned idx, V v)
+  {
+    if (idx < _d.offset)
+      return;
+
+    idx -= _d.offset;
+
+    if (idx >= _d.size)
+      return;
+
+    _d.v[idx] = (v << 1) | 1;
+  }
+
+  void inv(unsigned idx)
+  {
+    if (idx < _d.offset)
+      return;
+
+    idx -= _d.offset;
+
+    if (idx >= _d.size)
+      return;
+
+    _d.v[idx] = 0;
+  }
+
+  unsigned size() const
+  { return _d.size; }
+
+  unsigned offset() const
+  { return _d.offset; }
+
+private:
+  struct Data
+  {
+    Data() : size(0), offset(0), v(0) {}
+    Data(unsigned size, unsigned offset, V *v)
+    : size(size), offset(offset), v(v)
+    {}
+    unsigned size;
+    unsigned offset;
+    V *v;
+  } _d;
+};
+
+
+
+};

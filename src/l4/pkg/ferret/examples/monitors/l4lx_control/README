@@ -1,0 +1,4 @@
+This is a small L4Linux command line tool which can insert special
+control events (start/stop recording, dump, clear buffers, ping etc.) 
+into the L4Linux userland sensor.  Monitors can listen to these control
+events and react accordingly.

@@ -1,0 +1,10 @@
+<map id="L4Re::Util::Event_buffer_consumer_t::process" name="L4Re::Util::Event_buffer_consumer_t::process">
+<area shape="rect" id="node2" href="$classL4_1_1Rcv__endpoint.html#aa7c0ce106003a272299888c2573331dd" title="Bind a thread to an IPC receive endpoint. " alt="" coords="220,5,383,47"/>
+<area shape="rect" id="node3" href="$classL4_1_1Cap__base.html#a6181bad79c41cdbf5c030877b94e25bf" title="Return capability selector. " alt="" coords="233,71,370,98"/>
+<area shape="rect" id="node4" href="$group__l4__ipc__err__api.html#ga05c11e3e10b6c2aa941396ac2018899f" title="Return error code of a system call return message tag. " alt="" coords="265,122,337,149"/>
+<area shape="rect" id="node5" href="$group__l4__ipc__err__api.html#gad40f404217497793e95a10d77a47db39" title="Get the error code for an object invocation. " alt="" coords="252,173,351,199"/>
+<area shape="rect" id="node7" href="$group__l4__irq__api.html#ga997f18b89d6235214d2f9c381ed6c6a5" title="Unmask and wait for specified IRQ. " alt="" coords="246,223,357,250"/>
+<area shape="rect" id="node9" href="$group__l4__utcb__api.html#gadc099b4a59e1d99638c72c11a8c8b644" title="Get the UTCB address. " alt="" coords="476,274,543,301"/>
+<area shape="rect" id="node6" href="$group__l4__msgtag__api.html#ga52e71bb66855f4d78fa5c82b5f0c5a87" title="Test for error indicator flag. " alt="" coords="431,173,588,199"/>
+<area shape="rect" id="node8" href="$group__l4__irq__api.html#ga430999e1f8f6eb5f7e3f957b854b7446" title="Unmask and wait for this IRQ. " alt="" coords="446,223,573,250"/>
+</map>

@@ -1,0 +1,111 @@
+// vim: ft=cpp
+
+/*
+ * gdb_stub/connection --
+ *
+ *     Definition of external connectivity for the GDB server stub
+ *
+ * (c) 2011-2013 Björn Döbel <doebel@os.inf.tu-dresden.de>,
+ *     economic rights: Technische Universität Dresden (Germany)
+ * This file is part of TUD:OS and distributed under the terms of the
+ * GNU General Public License 2.
+ * Please see the COPYING-GPL-2 file for details.
+ */
+
+#pragma once
+
+#include <l4/sys/compiler.h>
+
+EXTERN_C_BEGIN
+#include <l4/ankh/client-c.h>
+#include <l4/ankh/lwip-ankh.h>
+
+#include "arch/cc.h"
+#include "netif/etharp.h"
+#include "lwip/tcpip.h"
+#include "lwip/inet.h"
+#include "lwip/sockets.h"
+#include "lwip/netdb.h"
+
+#include <semaphore.h>
+EXTERN_C_END
+
+class Uart_x86
+{
+	private:
+		unsigned long _base;
+
+	public:
+		Uart_x86();
+		bool startup(unsigned long base);
+		void shutdown_uart();
+		int get_char(bool blocking = true) const;
+		int char_avail() const;
+		void out_char(char c) const;
+		int write_uart(char const* s, unsigned long count) const;
+};
+
+namespace Romain {
+	class Connection
+	{
+		public:
+			virtual ~Connection() { }
+
+			virtual void setup_and_wait() = 0;
+			virtual void disconnect() = 0;
+			virtual int wait_for_cmd(char * const buf, unsigned bufsize) = 0;
+			virtual int senddata(char const * const buf, unsigned bufsize) = 0;
+	};
+
+
+	class TCPConnection : public Connection
+	{
+		private:
+			unsigned  _port;                 // local port to listen on
+			struct sockaddr_in _inet, _clnt; // connection info - mine and the client's
+			int       _socket;               // socket id
+			int       _socket_fd;            // socket fd
+
+		public:
+
+			TCPConnection(unsigned port)
+				: Connection(),
+				  _port(port),
+				  _inet(),
+				  _clnt(),
+				  _socket(-1), 
+				  _socket_fd(-1)
+			{ }
+
+			unsigned port() const { return _port; }
+
+			/*
+			 * remote connection handling
+			 */
+			virtual void setup_and_wait();
+			virtual void disconnect();
+			virtual int wait_for_cmd(char * const packetbuf, unsigned bufsize);
+			virtual int senddata(char const * const buf, unsigned size);
+	};
+
+
+	class SerialConnection : public Connection
+	{
+		Uart_x86 _uart;
+
+		void get_vbus_resources();
+
+		public:
+			SerialConnection()
+				: _uart()
+			{
+				get_vbus_resources();
+			}
+
+			virtual void setup_and_wait();
+			virtual void disconnect();
+			virtual int wait_for_cmd(char * const buf, unsigned bufsize);
+			virtual int senddata(char const * const buf, unsigned bufsize);
+	};
+}
+

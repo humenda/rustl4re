@@ -1,0 +1,98 @@
+// vi:ft=cpp
+/*
+ * (c) 2010 Alexander Warg <warg@os.inf.tu-dresden.de>
+ *     economic rights: Technische Universität Dresden (Germany)
+ *
+ * This file is part of TUD:OS and distributed under the terms of the
+ * GNU General Public License 2.
+ * Please see the COPYING-GPL-2 file for details.
+ */
+#pragma once
+
+#include <l4/scout-gfx/document>
+#include <l4/scout-gfx/doc/token>
+#include <l4/scout-gfx/fader>
+
+namespace Scout_gfx {
+
+
+
+/**
+ * Link that references an anchor within the document
+ */
+class Link
+{
+protected:
+
+  Anchor *_dst;  /* link destination */
+
+public:
+
+  /**
+   * Constructor
+   */
+  explicit Link(Anchor *dst) : _dst(dst) { }
+
+  /**
+   * Accessor function
+   */
+  Anchor *dst() { return _dst; }
+};
+
+
+/**
+ * Textual link
+ */
+class Link_token : public Token, public Link, private Fader
+{
+private:
+  enum { _MAX_ALPHA = 50 };
+
+public:
+
+  /**
+   * Constructor
+   */
+  Link_token(Style *style, const char *str, int len, Anchor *dst)
+    : Token(style, str, len), Link(dst)
+  {
+    _flags.takes_focus = 1;
+    _curr_value        = 0;
+  }
+
+  /**
+   * Element interface
+   */
+  void draw(Canvas *c, Point const &p)
+  {
+    _outline = Color(_style->color.r(),
+	_style->color.g(),
+	_style->color.b(), _curr_value);
+
+    Token::draw(c, p);
+  }
+
+  /**
+   * Event handler interface
+   */
+  Widget *handle_event(Event const &e);
+
+  void mfocus(int flag);
+
+  /**
+   * Tick interface
+   */
+  int on_tick()
+  {
+    /* call on_tick function of the fader */
+    if (Fader::on_tick() == 0)
+      return 0;
+
+    refresh();
+    return 1;
+  }
+
+  Browser *browser() const;
+};
+
+}

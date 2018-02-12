@@ -1,0 +1,28 @@
+-- vi:ft=lua
+
+local Res = Io.Res
+local Hw = Io.Hw
+
+Io.hw_add_devices
+{
+  P80 = Hw.Device
+  {
+    hid = "P80",
+    Res.io(0x80),
+  },
+
+  BIOS = Hw.Device
+  {
+    hid = "BIOS";
+    Res.mmio(0x0, 0xfff, 0xc000);
+    Res.mmio(0x9f000, 0x9ffff, 0xc000);
+    Res.mmio(0xc0000, 0xfffff, 0xc000);
+  },
+
+  RTC = Hw.Device
+  {
+    hid = "PNP0B00";
+    Res.io(0x70, 0x71);
+  }
+}
+

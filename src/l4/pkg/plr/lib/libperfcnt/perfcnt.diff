@@ -1,0 +1,65 @@
+diff --git a/src/kern/thread_object.cpp b/src/kern/thread_object.cpp
+index 4c24387..7efc871 100644
+--- a/src/kern/thread_object.cpp
++++ b/src/kern/thread_object.cpp
+@@ -681,6 +681,60 @@ Thread_object::sys_thread_stats(L4_msg_tag const &/*tag*/, Utcb *utcb)
+     drq(handle_sys_thread_stats_remote, &value, 0, Drq::Any_ctxt);
+   else
+     {
++	  if (utcb->values[1] == 12)
++		{
++		  //printf("KERN STATS TIME ");
++		  //printf("%lx %lx %lx\n", utcb->values[2], utcb->values[3], utcb->values[4]);
++		  if (utcb->values[2] == 0x1E) // TEST
++		    {
++			  Mword a, b, c, d;
++
++			  a = 0; b = 0; c = 0; d = 0;
++			  asm volatile ("cpuid"
++			      : "=a" (a), "=b" (b), "=c" (c), "=d" (d)
++			      : "a" (a), "b" (b), "c" (c), "d" (d)
++			  );
++			  //printf("::CPUID.MAX: %08lx\n", a);
++
++			  a = 0x0A;
++			  asm volatile ("cpuid"
++			      : "=a" (a), "=b" (b), "=c" (c), "=d" (d)
++			      : "a" (a), "b" (b), "c" (c), "d" (d)
++			  );
++			  //printf("::Perfmon capabilities:\n");
++			  //printf("::A %08lx B %08lx C %08lx D %08lx\n", a, b, c, d);
++			}
++		  else if (utcb->values[2] == 0x5E) // SETUP
++		    {
++			  //printf("SETUP\n");
++			  Cpu::wrmsr(utcb->values[3], 0x186);
++			  Cpu::wrmsr(utcb->values[4], 0x187);
++			  Cpu::wrmsr(utcb->values[5], 0x188);
++			  Cpu::wrmsr(utcb->values[6], 0x189);
++
++			  Cpu::wrmsr(0, 0xC1);
++			  Cpu::wrmsr(0, 0xC2);
++			  Cpu::wrmsr(0, 0xC3);
++			  Cpu::wrmsr(0, 0xC4);
++		    }
++		  else if (utcb->values[2] == 0xAE) // READ
++			{
++			  //printf("READ\n");
++			  Unsigned64 v1, v2, v3, v4;
++			  v1 = Cpu::rdmsr(0xC1);
++			  v2 = Cpu::rdmsr(0xC2);
++			  v3 = Cpu::rdmsr(0xC3);
++			  v4 = Cpu::rdmsr(0xC4);
++			  utcb->values[0] = v1 & 0xFFFFFFFF;
++			  utcb->values[1] = (v1 >> 32) & 0xFFFFFFFF;
++			  utcb->values[2] = v2 & 0xFFFFFFFF;
++			  utcb->values[3] = (v2 >> 32) & 0xFFFFFFFF;
++			  utcb->values[4] = v3 & 0xFFFFFFFF;
++			  utcb->values[5] = (v3 >> 32) & 0xFFFFFFFF;
++			  utcb->values[6] = v4 & 0xFFFFFFFF;
++			  utcb->values[7] = (v4 >> 32) & 0xFFFFFFFF;
++			}
++		}
+       // Respect the fact that the consumed time is only updated on context switch
+       if (this == current())
+         update_consumed_time();

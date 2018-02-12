@@ -1,0 +1,16 @@
+#ifndef __ASM_L4__GENERIC__IRQ_VECTORS_H__
+#define __ASM_L4__GENERIC__IRQ_VECTORS_H__
+
+#ifndef L4X_NR_IRQS_V_DYN
+#define L4X_NR_IRQS_V_DYN 72
+#endif
+
+#ifndef L4X_NR_IRQS_V_STATIC
+#define L4X_NR_IRQS_V_STATIC 0
+#endif
+
+#define NR_IRQS                (NR_IRQS_HW + L4X_NR_IRQS_V_DYN + L4X_NR_IRQS_V_STATIC)
+#define L4X_IRQS_V_DYN_BASE    NR_IRQS_HW
+#define L4X_IRQS_V_STATIC_BASE (L4X_IRQS_V_DYN_BASE + L4X_NR_IRQS_V_DYN)
+
+#endif /* __ASM_L4__GENERIC__IRQ_VECTORS_H__ */

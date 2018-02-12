@@ -1,0 +1,56 @@
+// vim: ft=cpp et
+
+/*
+ * This file is part of the Valgrind port to L4Re.
+ *
+ * (c) 2009-2010 Aaron Pohle <apohle@os.inf.tu-dresden.de>,
+ *               Bjoern Doebel <doebel@os.inf.tu-dresden.de>
+ *     economic rights: Technische Universitaet Dresden (Germany)
+ */
+
+void *operator new(unsigned size) L4_NOTHROW
+{
+    VG_(debugLog)(5, "vcap", "op new(size = %u)\n", size);
+
+    return VG_(malloc)((char *)"op::new", size);
+}
+
+
+void *operator new(unsigned size, void *addr) L4_NOTHROW
+{
+    return addr;
+}
+
+
+void operator delete(void *p) L4_NOTHROW
+{
+    VG_(free)(p);
+}
+
+
+namespace Vcap
+{
+/* VG_(malloc)/VG_(free)-based allocator for cxx:: data types */
+template <typename TYPE>
+class Valgrind_allocator
+{
+    public:
+        enum { can_free = true };
+
+        Valgrind_allocator() throw() { }
+        Valgrind_allocator(Valgrind_allocator const &) throw() { }
+
+        ~Valgrind_allocator() throw() { }
+
+        TYPE *alloc() throw()
+        {
+            return static_cast<TYPE*>(VG_(malloc)((HChar*)"vg::alloc", sizeof(TYPE)));
+        }
+
+        //void free(TYPE* ptr) throw()
+        void free(void* ptr) throw()
+        {
+            VG_(free)(ptr);
+        }
+};
+}

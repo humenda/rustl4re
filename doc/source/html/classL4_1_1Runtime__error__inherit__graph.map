@@ -1,0 +1,9 @@
+<map id="L4::Runtime_error" name="L4::Runtime_error">
+<area shape="rect" id="node4" href="$classL4_1_1Bounds__error.html" title="Access out of bounds. " alt="" coords="5,506,144,598"/>
+<area shape="rect" id="node5" href="$classL4_1_1Com__error.html" title="Error conditions during IPC. " alt="" coords="169,506,290,598"/>
+<area shape="rect" id="node6" href="$classL4_1_1Element__already__exists.html" title="Exception for duplicate element insertions. " alt="" coords="315,499,517,605"/>
+<area shape="rect" id="node7" href="$classL4_1_1Element__not__found.html" title="Exception for a failed lookup (element not found). " alt="" coords="542,513,709,591"/>
+<area shape="rect" id="node8" href="$classL4_1_1Out__of__memory.html" title="Exception signalling insufficient memory. " alt="" coords="733,506,886,598"/>
+<area shape="rect" id="node2" href="$classL4_1_1Base__exception.html" title="Base class for all exceptions, thrown by the L4Re framework. " alt="" coords="339,160,493,267"/>
+<area shape="rect" id="node3" href="$classL4_1_1Exception__tracer.html" title="Back&#45;trace support for exceptions. " alt="" coords="341,5,491,112"/>
+</map>

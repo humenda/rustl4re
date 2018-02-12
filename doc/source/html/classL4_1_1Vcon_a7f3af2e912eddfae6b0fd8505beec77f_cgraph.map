@@ -1,0 +1,4 @@
+<map id="L4::Vcon::send" name="L4::Vcon::send">
+<area shape="rect" id="node2" href="$classL4_1_1Kobject.html#a314161cb755de6fd0c50da0a757eb4c7" title="Return capability selector. " alt="" coords="170,5,289,32"/>
+<area shape="rect" id="node3" href="$group__l4__vcon__api.html#ga05df63a45bb7ade1e0e19caaa6e35f5f" title="Send data to this virtual console. " alt="" coords="167,56,292,83"/>
+</map>

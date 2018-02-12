@@ -1,0 +1,8 @@
+<map id="L4vbus::Device::bus_cap" name="L4vbus::Device::bus_cap">
+<area shape="rect" id="node2" href="$classL4vbus_1_1Pci__host__bridge.html#a4441432f00e007ee3a738866238938f0" title="Read from the vPCI configuration space using the PCI root bridge. " alt="" coords="232,5,405,47"/>
+<area shape="rect" id="node3" href="$classL4vbus_1_1Pci__dev.html#a20658b5eb70c4773b369a0a3c8c88582" title="Read from the device&#39;s vPCI configuration space. " alt="" coords="227,71,411,98"/>
+<area shape="rect" id="node4" href="$classL4vbus_1_1Pci__host__bridge.html#ad316f6aeb09ecd36bc7aafa988dd272e" title="Write to the vPCI configuration space using the PCI root bridge. " alt="" coords="232,123,405,164"/>
+<area shape="rect" id="node5" href="$classL4vbus_1_1Pci__dev.html#a1cc8e109638d49502d08484d05c7b244" title="Write to the device&#39;s vPCI configuration space. " alt="" coords="245,188,392,229"/>
+<area shape="rect" id="node6" href="$classL4vbus_1_1Pci__host__bridge.html#a4f405f52b078609d885e5331922447f1" title="Enable PCI interrupt for a specific device using the PCI root bridge. " alt="" coords="232,253,405,295"/>
+<area shape="rect" id="node7" href="$classL4vbus_1_1Pci__dev.html#ace3784b8e44e44dc14c1cee121500b89" title="Enable the device&#39;s PCI interrupt. " alt="" coords="247,319,391,360"/>
+</map>

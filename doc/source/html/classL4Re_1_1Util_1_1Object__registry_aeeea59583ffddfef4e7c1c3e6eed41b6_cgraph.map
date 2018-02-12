@@ -1,0 +1,10 @@
+<map id="L4Re::Util::Object_registry::unregister_obj" name="L4Re::Util::Object_registry::unregister_obj">
+<area shape="rect" id="node2" href="$classL4_1_1Thread_1_1Modify__senders.html#a35a34644e889ca50cefe6f6e59f7a282" title="Add a rule. " alt="" coords="228,5,367,47"/>
+<area shape="rect" id="node3" href="$classL4Re_1_1Util_1_1Counting__cap__alloc.html#aecd7d5744bae1cbdc6da24a9c443f8bb" title="Free the capability. " alt="" coords="225,71,369,112"/>
+<area shape="rect" id="node5" href="$classL4_1_1Thread.html#a61ecf8a06d2b4996ebb67180b1d5d35c" title="Apply sender modifiction rules. " alt="" coords="229,153,366,195"/>
+<area shape="rect" id="node4" href="$group__l4__task__api.html#gaa5558855716b35c1790b61249cf2974b" title="Revoke rights from the task. " alt="" coords="418,69,535,95"/>
+<area shape="rect" id="node6" href="$classL4_1_1Kobject.html#a314161cb755de6fd0c50da0a757eb4c7" title="Return capability selector. " alt="" coords="417,119,536,146"/>
+<area shape="rect" id="node7" href="$group__l4__ipc__api.html#gab96d1669dcd54657237ee27b7f6862c6" title="Object call (usual invocation). " alt="" coords="433,170,521,197"/>
+<area shape="rect" id="node9" href="$group__l4__msgtag__api.html#ga661d71acad9d096fa990f7c94943bc78" title="Create a message tag from the specified values. " alt="" coords="433,221,520,247"/>
+<area shape="rect" id="node8" href="$group__l4__ipc__api.html#ga0e7e5b18d784b1d3439ea6e5b4bea4e2" title="Generic L4 object invocation. " alt="" coords="584,170,643,197"/>
+</map>

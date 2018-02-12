@@ -1,0 +1,86 @@
+/*!\mainpage CON - Graphical Console Server Reference Manual
+
+\section sec_intro Introduction
+
+Con is graphical console server for DROPS. The hardware is hidden behind a
+``virtual'' framebuffer abstraction and accesses from multiple clients are
+synchronized. We denote the implemented protocol as pSLIM (``pseudo''
+[S]tateless [L]ow level [I]nterface [M]achine as proposed by SUN at SOSP 1999).
+
+Con clients may receive input events (currently only from keyboard and mouse)
+by implementing the \c stream server interface. There are stubs available for
+L<sup>4</sup>Linux and XFree86 4.1.0.
+
+Con offers limited hardware acceleration for the following graphics cards:
+- ATI Mach64 (also \e backend \e scaler)
+- Matrox G100, G200, G400, G450 (also \e backend \e scaler)
+- S3 Savage/IX{-MX} (also \e backend \e scaler)
+- VMware
+- NVIDIA
+
+The console server supports also fast YUV-to-RGB conversion using MMX
+functions of newer x86 processors. Supported graphics cards with \e backend
+\e scaler (see previous list) do the YUV-to-RGB conversion in hardware.
+
+
+\section sec_usage Usage
+
+For most purposes, starting con without any arguments should be sufficient.
+Possible command line arguments are:
+<dl>
+<dt><tt> -a | --noaccel </tt></dt>
+  <dd> Disable autodetection of accelerated graphics cards and use
+       none-accelerated mode. Try this if you encounter problems with
+       not/wrong detected graphics cards.</dd>
+
+<dt><tt> -i | --l4io </tt></dt>
+  <dd> Use l4io to scan the PCI bus and to map I/O memory. Use this
+       option if you also load the l4io server.</dd>
+
+<dt><tt> -l | --nolog </tt></dt>
+  <dd> Don't use the logserver as output but use the kernel debugger
+       interface for direct log output. This is useful if the log
+       server is logs to a virtual console itself.</dd>
+
+<dt><tt> -o | --omega0 </tt></dt>
+  <dd> Allocate interrupts using Omega0 server.</dd>
+
+<dt><tt> -p | --pan </tt></dt>
+  <dd> Try to pan the graphics memory so that the status line begins at
+       4MB page granularity. This prevents an application from overwriting
+       the statusline if it has mapped the graphics memory.</dd>
+</dl>
+
+Con expects the Common L4 Environment (L4env). The following servers are
+expected at runtime:
+- \c rmgr (resource manager)
+- \c names (name server)
+- \c log (log server)
+- \c dm_phys (dataspace manager)
+
+A GRUB menu file resides in con/doc (menu.lst) and you should read
+con/doc/README.
+
+
+\section sec_interface Interface
+
+As mentioned before, con supports an interface we denoted as pSLIM. See
+- \ref idl_con_if
+- \ref idl_con_vc
+- \ref idl_stream_if
+
+There is a client library available allowing text output using pSLIM:
+- \ref contxt_if
+
+
+
+\section sec_about About this documentation
+
+Additional information can be found at 
+http://os.inf.tu-dresden.de/~ch12/con/con.xml (in German, outdated).
+
+\author		Christian Helmuth, Frank Mehnert
+*/
+
+
+

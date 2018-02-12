@@ -1,0 +1,656 @@
+# -*- Makefile -*-
+# vim:set ft=make:
+#
+# Make configuration file
+#
+# This file is included by all Makefile-templates. This file defines macros
+# for div commands, sets general DROPS-Makefile variables, ensures the
+# dependencies from the various Makeconf.locals, defines the messages for
+# div actions, and permits the dependency-creation on clean-rules.
+#
+# The macros BUILD_MULTIPLE_ARCHITECTURES and BUILD_ONE_ARCHITECTURE are
+# defined here.
+#
+# BUILD_MULTIPLE_ARCHITECTURES is set if ARCHS is set to multiple
+# architectures in the Makefile. If ARCHS is not set, the default value
+# l4_i386 will be assumed, not defining BUILD_MULTIPLE_ARCHITECTURES.
+# In the muli-arch case, binary.inc triggers build the files into subdirs,
+# dir-name is the architecture. Then, make is called recursively with ARCH
+# set to one architecture.
+#
+# BUILD_ONE_ARCHITECTURE is set if ARCH contains one architecture, and we
+# actually build files (in subdirs for multi-arch case, in the same dir in
+# the single-arch case).
+
+ifeq ($(origin _L4DIR_MK_MAKECONF),undefined)
+_L4DIR_MK_MAKECONF=y
+
+MAKEFLAGS        += --no-print-directory -Rr
+
+# the default target is all
+all::
+
+# make .general.d dependent on the role-file
+$(if $(ROLE),$(OBJ_DIR)/.general.d: $(L4DIR)/mk/$(ROLE))
+
+-include $(wildcard $(L4DIR)/mk/arch/Makeconf.*)
+
+ifneq ($(SYSTEM_TARGET),) # Added late 2015
+  CROSS_COMPILE=$(SYSTEM_TARGET)
+  $(info The variable SYSTEM_TARGET has been deprecated in favor of CROSS_COMPILE.)
+endif
+
+CROSS_COMPILE    ?= $(CROSS_COMPILE_$(ARCH))
+
+
+OFORMAT           = $(OFORMAT_$(ARCH))
+BFD_ARCH          = $(BFD_ARCH_$(ARCH))
+L4_KIP_ADDR         ?= $(L4_KIP_ADDR_$(ARCH))
+
+L4_KIP_OFFS_SYS_INVOKE   = 0x800
+L4_KIP_OFFS_SYS_DEBUGGER = 0x900
+L4_STACK_ADDR           ?= $(L4_STACK_ADDR_$(ARCH))
+L4_STACK_SIZE           ?= $(if $(L4_STACK_SIZE_MAIN_THREAD),$(L4_STACK_SIZE_MAIN_THREAD),0x8000)
+
+CC_WHITELIST-gcc     := 4.7 4.8 4.9 5 6 7 8
+CC_WHITELIST-clang   := 3.5 3.6 3.7 3.8 3.9
+
+# This is quite bad: There is no other chance to disable the page-alignedment
+# of the linker. The linker aligns the first section at 0x100000 for AMD64!
+# We don't want this. Be careful for interactions with objcopy -S!
+#LDNMAGIC           ?= -n
+#LDFLAGS_amd64      += $(LDNMAGIC)
+
+VERBOSE          = $(if $(CONFIG_VERBOSE),,@)
+DEPEND_VERBOSE   = $(if $(CONFIG_DEPEND_VERBOSE),,@)
+DROPS_STDDIR     = $(patsubst "%",%,$(CONFIG_DROPS_STDDIR))
+DROPS_INSTDIR    = $(patsubst "%",%,$(CONFIG_DROPS_INSTDIR))
+RAM_SIZE_MB      = $(CONFIG_RAM_SIZE_MB)
+PLATFORM_TYPE    = $(patsubst "%",%,$(CONFIG_PLATFORM_TYPE))
+CPU              = $(patsubst "%",%,$(CONFIG_CPU))
+CPU_ABI          = $(patsubst "%",%,$(CONFIG_CPU_ABI))
+BUILD_ABI        = $(patsubst "%",%,$(CONFIG_BUILD_ABI))
+BUILD_ARCH       = $(patsubst "%",%,$(CONFIG_BUILD_ARCH))
+MAKECONFS_ADD    = $(patsubst "%,%,$(patsubst %",%,$(CONFIG_MAKECONFS_ADD))) #"
+
+CCXX_FLAGS        = $(CCXX_FLAGS_$(BUILD_ARCH))
+
+dv               = $(if $(filter-out default undefined,$(origin $(1))),$(1)-default,$(1))
+
+$(call dv,AR)	 = $(CROSS_COMPILE)ar
+$(call dv,AS)	 = $(CROSS_COMPILE)as
+$(call dv,CPP)	 = $(CROSS_COMPILE)cpp
+AWKP		?= gawk --posix
+CCACHE          ?= ccache
+$(call dv,CC)    = $(if $(USE_CCACHE),$(CCACHE) )$(CC_$(BUILD_ARCH))
+$(call dv,CXX)   = $(if $(USE_CCACHE),$(CCACHE) )$(CXX_$(BUILD_ARCH))
+$(call dv,FC)    = $(if $(USE_CCACHE),$(CCACHE) )$(FC_$(BUILD_ARCH))
+CP		?= cp
+DICE_SRCDIR	?= $(L4DIR)/../dice
+DICE_OBJDIR	?= $(DICE_SRCDIR)
+DICE		?= $(firstword $(wildcard $(DICE_OBJDIR)/src/dice \
+				$(DROPS_STDDIR)/tool/bin/dice \
+				 $(shell which dice 2>/dev/null) ) \
+				 did_not_find_dice___please_install_dice )
+DICE_CPP_NAME	= cpp0
+
+DICE_INCDIR	?= $(DICE_SRCDIR)/include
+
+DOXYGEN		?= doxygen
+ECHO		?= echo
+ELF_PATCHER     = $(OBJ_BASE)/tool/elf-patcher/elf-patcher
+
+GENOFFSETS	= $(L4DIR)/tool/bin/genoffsets.pl
+GOSH		= $(firstword $(wildcard $(L4DIR)/../tools/gosh/gosh \
+				$(DROPS_STDDIR)/tool/bin/gosh \
+				 $(shell which gosh 2>/dev/null) ) \
+				 did_not_find_gosh___please_install_gosh )
+HOST_CC		?= gcc
+HOST_CXX	?= g++
+HOST_LD		?= ld
+INSTALL		= install
+$(call dv,LD)   = $(CROSS_COMPILE)ld -m $(LD_EMULATION)
+DTC		?= dtc
+LATEX		= latex
+PDFLATEX	= pdflatex
+GREP		= GREP_OPTIONS= grep
+LN		= ln
+MKDIR		= mkdir -p
+MKFLAGS		+=$(MKFLAGS_$@)
+NM		?= $(CROSS_COMPILE)nm
+OBJCOPY		?= $(CROSS_COMPILE)objcopy
+OBJDUMP		?= $(CROSS_COMPILE)objdump
+PKG_CONFIG      = pkg-config
+PWDCMD		= pwd -P
+RANLIB		?= $(CROSS_COMPILE)ranlib
+$(call dv,RM)   = rm -f
+SCRUB		= $(RM) $(wildcard *.old) $(wildcard *~) $(wildcard *.bak) \
+		        $(wildcard \#*\#)
+SED		= sed
+SHELL		= bash
+SIZE		?= $(CROSS_COMPILE)size
+STRIP		?= $(CROSS_COMPILE)strip
+SVN		= svn
+TR		= tr
+GEN_DOPECODE	= $(L4DIR)/tool/gen_dopecode/gen_dopecode
+ABS2REL		= $(L4DIR)/tool/bin/abs2rel.sh
+# it is optional to be able to set it as environment variable
+FIASCOUX	?= $(L4DIR)/../kernel/fiasco/build-ux/fiasco
+PAGER		?= less
+DISASM_CMD      ?= $(OBJDUMP) -lCSd $(1) | $(PAGER)
+IMAGES_DIR      ?= $(OBJ_BASE)/images
+
+# functions that are handy
+absfilename_target_dir_needs_to_exist = $(foreach w,$(1),$(addsuffix /$(notdir $(w)),$(shell cd $(dir $(w)) 2>/dev/null&&$(PWDCMD))))
+absfilename     = $(shell PWD=$$($(PWDCMD)) $(L4DIR)/mk/rel2abs.sh $(1))
+findfile	= $(firstword $(wildcard $(addsuffix /$(1),$(2))) $(1)_NOT_FOUND)
+is_dir          = $(shell test -d '$(1)' && echo yes)
+define create_dir
+  $(VERBOSE)$(if $(wildcard $(1)),:,$(INSTALL) -d $(1))
+endef
+
+# Move $(2) to $(1) if content of both files differ
+define move_if_changed
+  if test ! -r "$(1)" || ! cmp -s $(1) $(2); then \
+    mv $(2) $(1); \
+  else \
+    rm $(2); \
+  fi
+endef
+
+ifneq ($(PT),)
+  PLATFORM_TYPE := $(PT)
+endif
+
+# include this one early to be able to set OBJ_BASE
+-include $(L4DIR)/Makeconf.local
+-include $(L4DIR)/conf/Makeconf.local
+
+ifeq ($(filter $(IGNORE_OBJDIR_TARGETS),$(MAKECMDGOALS)),)
+# output directory
+ ifeq ($(O)$(OBJ_BASE),)
+  $(error need to give builddir with O=.../builddir)
+ else
+  ifneq ($(O),)
+   ifeq ($(filter-out undefined environment,$(origin OBJ_BASE)),)
+    OBJ_BASE := $(call absfilename, $(O))
+    export OBJ_BASE
+    # prevent passing O to sub-makes, because it may be a relative path
+    # not valid there
+    override O =
+    MAKEOVERRIDES := $(filter-out O=%,$(MAKEOVERRIDES))
+   endif
+  endif
+ endif
+endif
+
+ifeq ($(origin L4DIR_ABS),undefined)
+L4DIR_ABS      := $(call absfilename,$(L4DIR))
+endif
+ifeq ($(origin PKGDIR_ABS),undefined)
+PKGDIR_ABS     := $(call absfilename,$(PKGDIR))
+endif
+ifeq ($(origin SRC_DIR),undefined)
+SRC_DIR        := $(shell $(PWDCMD))
+endif
+ifeq ($(origin SRC_BASE_ABS),undefined)
+SRC_BASE     ?= $(L4DIR)
+SRC_BASE_ABS := $(call absfilename,$(SRC_BASE))
+export SRC_BASE_ABS
+endif
+ifeq ($(origin OBJ_DIR),undefined)
+OBJ_DIR        := $(subst $(SRC_BASE_ABS),$(OBJ_BASE),$(SRC_DIR))
+endif
+ifeq ($(origin PKGDIR_OBJ),undefined)
+PKGDIR_OBJ     := $(call absfilename,$(OBJ_DIR)/$(PKGDIR))
+endif
+
+# if PKGDIR is not in L4DIR, we have an external package, so make up some
+# build-dir for it
+ifneq ($(patsubst $(L4DIR_ABS)/%,,$(PKGDIR_ABS)),)
+ifneq ($(filter-out $(OBJ_BASE)/ext-pkg%,$(PKGDIR_OBJ)),)
+PKGDIR_OBJ     := $(OBJ_BASE)/ext-pkg$(PKGDIR_OBJ)
+OBJ_DIR        := $(OBJ_BASE)/ext-pkg$(OBJ_DIR)
+endif
+endif
+
+# sanity check the object dir
+ifneq ($(SRC_BASE_ABS),$(OBJ_BASE))
+ifeq ($(SRC_DIR),$(OBJ_DIR))
+$(warning Sorry, your object or source path became garbled.)
+$(warning OBJ_BASE: $(OBJ_BASE))
+$(warning SRC_BASE_ABS: $(SRC_BASE_ABS))
+$(warning SRC_DIR: $(SRC_DIR))
+$(warning OBJ_DIR: $(OBJ_DIR))
+$(warning PKGDIR: $(PKGDIR))
+$(warning L4DIR_ABS: $(L4DIR_ABS))
+$(warning PKGDIR_ABS: $(PKGDIR_ABS))
+$(warning PKGDIR_OBJ: $(PKGDIR_OBJ))
+$(error Please investigate.)
+endif
+endif
+
+
+OBJ_DIR_EXPORT = $(OBJ_DIR)
+export OBJ_DIR_EXPORT
+
+VPATH_SRC_BASE ?= $(SRC_DIR)
+
+# Makeconf.local handling
+# dont use -include here, as we have special build conditions in $(L4DIR)/
+ifeq ($(origin BID_ROOT_CONF),undefined)
+BID_ROOT_CONF := $(call absfilename, $(OBJ_BASE))/.config.all
+endif
+ifeq ($(filter $(IGNORE_OBJDIR_TARGETS),$(MAKECMDGOALS)),)
+ifeq ($(wildcard $(BID_ROOT_CONF)),)
+ifeq ($(BID_IGN_ROOT_CONF),)
+$(error No configuration file found in build directory "$(OBJ_BASE)". Please run "make O=/path/to/objdir config" in "$(L4DIR_ABS)" or specify a valid build directory)
+endif
+else
+include $(BID_ROOT_CONF)
+endif
+endif
+
+# if we're working on a program that wants the RAM_BASE be considered in its
+# linking address, source a possible privately configured one
+ifneq ($(RELOC_PHYS),)
+INCLUDE_BOOT_CONFIG := required
+endif
+
+ifneq ($(INCLUDE_BOOT_CONFIG),)
+ -include $(L4DIR)/conf/Makeconf.boot
+ -include $(OBJ_BASE)/conf/Makeconf.boot
+ PLATFORM_CONF_FILE := $(firstword $(wildcard $(L4DIR)/conf/platforms/$(PLATFORM_TYPE).conf $(L4DIR)/mk/platforms/$(PLATFORM_TYPE).conf))
+ ifneq ($(PLATFORM_TYPE),$(patsubst "%",%,$(CONFIG_PLATFORM_TYPE)))
+  include $(PLATFORM_CONF_FILE)
+ else
+  ifneq ($(CONFIG_PLATFORM_TYPE_custom),)
+   PLATFORM_RAM_BASE=$(CONFIG_PLATFORM_RAM_BASE)
+   PLATFORM_RAM_SIZE_MB=$(CONFIG_PLATFORM_RAM_SIZE_MB)
+   PLATFORM_UART_NR=$(CONFIG_PLATFORM_UART_NR)
+  else
+   ifeq ($(INCLUDE_BOOT_CONFIG),optional)
+    -include $(PLATFORM_CONF_FILE)
+   else
+    include $(PLATFORM_CONF_FILE)
+   endif
+  endif
+ endif
+ -include $(OBJ_BASE)/Makeconf.ram_base
+ BID_RAM_BASE_DEP := $(if $(wildcard $(OBJ_BASE)/Makeconf.ram_base),$(OBJ_BASE)/Makeconf.ram_base)
+ ifeq ($(RAM_BASE),)
+  RAM_BASE := 0
+ endif
+ RAM_SIZE_MB := $(if $(RAM_SIZE_MB),$(RAM_SIZE_MB),$(PLATFORM_RAM_SIZE_MB))
+endif
+
+INCLUDE_MAKE_RULES += $(foreach m,$(MAKECONFS_ADD),$(SRC_DIR)/Makeconf.$(m))
+
+INCLUDE_MAKE_RULES_EXPANDED := $(foreach m,$(INCLUDE_MAKE_RULES),$(wildcard $(m)))
+ifneq ($(strip $(INCLUDE_MAKE_RULES_EXPANDED)),)
+-include $(INCLUDE_MAKE_RULES_EXPANDED)
+endif
+
+-include $(OBJ_BASE)/Makeconf.local
+-include $(OBJ_BASE)/conf/Makeconf.local
+ifneq ($(PKGDIR_ABS),)
+-include $(PKGDIR_ABS)/Makeconf.local
+endif
+# if it is not already set, we use this in the local dir
+MAKECONFLOCAL ?= Makeconf.local
+-include $(MAKECONFLOCAL)
+
+DROPS_STDDIR	?= /home/drops
+
+# a nasty workaround for make-3.79/make-3.80. The former needs an additional
+# $$ for $-quotation when calling a function.
+BID_IDENT	= $(1)
+ifeq ($(call BID_IDENT,$$),)
+BID_DOLLARQUOTE	= $$
+endif
+BID_COMMA	= ,
+
+ifneq ($(PL),)
+PL_j := -j $(PL)
+export PL
+endif
+
+include $(L4DIR)/mk/config.inc
+
+ifneq ($(CONFIG_HAVE_LDSO),)
+# MAKEDEP-call:
+# arg1 - compiler binary name
+# arg2 - [opt] compiler target. Will be written as target within the
+# 	       dependency file
+# arg3 - [opt] name of the dependency file. If unset, .<arg2>.d will be used.
+# arg4 - [opt] alternative binary name
+ifeq ($(origin BID_LIBGENDEP_PATHS), undefined)
+ ifeq ($(HOST_SYSTEM),linux)
+   BID_LIBGENDEP_PATHS_fn = \
+     $(firstword $(wildcard $(call absfilename, $(OBJ_BASE)/tool/gendep$(1) \
+                                                $(DROPS_STDDIR)/tool/lib$(1))))
+   BID_LIBGENDEP_PATHS := \
+     $(call BID_LIBGENDEP_PATHS_fn,/64):$(call \
+            BID_LIBGENDEP_PATHS_fn,/32):$(call BID_LIBGENDEP_PATHS_fn)
+ endif
+
+ ifeq ($(HOST_SYSTEM),darwin)
+   BID_LIBGENDEP_PATHS := \
+     $(firstword $(wildcard $(call absfilename, $(OBJ_BASE)/tool/gendep \
+                                                $(DROPS_STDDIR)/tool/lib)))
+ endif
+endif
+
+ifeq ($(HOST_SYSTEM),linux)
+  LD_GENDEP_PREFIX = LD_PRELOAD=libgendep.so LD_LIBRARY_PATH=$(if $(LD_LIBRARY_PATH),$(LD_LIBRARY_PATH):)$(BID_LIBGENDEP_PATHS)
+endif
+ifeq ($(HOST_SYSTEM),darwin)
+  LD_GENDEP_PREFIX = DYLD_FORCE_FLAT_NAMESPACE=1 DYLD_INSERT_LIBRARIES=$(BID_LIBGENDEP_PATHS)/libgendep.so
+endif
+MAKEDEP=$(LD_GENDEP_PREFIX) \
+		GENDEP_TARGET=$(if $(2),$(2),$@) \
+		GENDEP_BINARY=$(firstword $(1)) $(if $(3),GENDEP_DEPFILE=$(3)) \
+		$(if $(4),GENDEP_BINARY_ALT1=$(4))
+endif
+
+# We recognize the following Fortran file extensions.
+FORTRAN_FILE_EXTENSIONS = .f .F .f90 .F90 .f95 .F95
+
+# We recognize the following file extensions for assembly.
+BID_ASM_FILE_EXTENSIONS ?= .S
+BID_ASM_CPP_FILE_EXTENSIONS ?= .S
+
+# macros used here and in packages
+checkcc   = $(shell if $(CC)  $(CCXX_FLAGS) $(1) -o /dev/null -c -x c \
+                    /dev/null > /dev/null 2>&1; then echo "$(1)"; fi)
+checkcxx  = $(shell if $(CXX) $(CCXX_FLAGS) $(1) -o /dev/null -c -x c++ \
+                    /dev/null > /dev/null 2>&1; then echo "$(1)"; fi)
+checkdtc  = $(shell if $(DTC) $(1) --version /dev/null > /dev/null 2>&1; \
+                    then echo "$(1)"; fi)
+
+callcc    = LC_ALL=C $(CC)  $(CCXX_FLAGS)
+callcxx   = LC_ALL=C $(CXX) $(CCXX_FLAGS)
+callfc    = LC_ALL=C $(FC)  $(CCXX_FLAGS)
+
+define get_gccversion
+  v=$$($(callcc) -dumpversion); \
+  first=$${v%%.*}; \
+  if [ $$first -ge 5 ]; then \
+    echo $$first; \
+  else \
+    echo $$v | sed -e 's/\([^.]\+\.[^.]\+\).*/\1/'; \
+  fi
+endef
+
+get_cc_version_part = $(shell echo $(1) | $(callcc) -E -x c - | tail -1)
+
+# the gcc specific variables: version, base dir, include dir, gcc lib, ...
+# note: determining these variables is slow, and the values should
+#       be set in .config.all. However, this is the place were
+#       they are determined on a 'make config' in $(L4DIR)
+BID_COMPILER_TYPE_f = $(if $(findstring clang, $(shell $(callcc) --version)),clang,gcc)
+
+GCCVERSION_f_clang = 4.9
+GCCMAJORVERSION_f_clang = 4
+GCCMINORVERSION_f_clang = 9
+GCCPATCHLEVEL_f_clang   = 0
+
+GCCVERSION_f_gcc      =$(shell $(get_gccversion))
+GCCMAJORVERSION_f_gcc =$(call get_cc_version_part, __GNUC__)
+GCCMINORVERSION_f_gcc =$(call get_cc_version_part, __GNUC_MINOR__)
+GCCPATCHLEVEL_f_gcc   =$(call get_cc_version_part, __GNUC_PATCHLEVEL__)
+
+GCCVERSION_f     =$(GCCVERSION_f_$(BID_COMPILER_TYPE_f))
+GCCMAJORVERSION_f=$(GCCMAJORVERSION_f_$(BID_COMPILER_TYPE_f))
+GCCMINORVERSION_f=$(GCCMINORVERSION_f_$(BID_COMPILER_TYPE_f))
+GCCPATCHLEVEL_f  =$(GCCPATCHLEVEL_f_$(BID_COMPILER_TYPE_f))
+
+LDVERSION_f     = $(shell $(firstword $(LD)) -v | sed -e 's/.* \([0-9]\)\.\([^. ]*\).*/\1\2/')
+GCCSYSLIBDIRS_f = $(shell $(callcc) -print-search-dirs | sed '/^libraries:/{s/^libraries: =\?/-L/;s/:/ -L/g;q;};d')
+GCCDIR_f	= $(shell $(callcc) -print-search-dirs | sed -ne 's+^install: \(.*[^/][^/]*\)/+\1+p' )
+GCCLIB_file_f   = $(shell $(callcc) -print-file-name=$(1))
+GCCLIB_HOST_f	= $(shell $(callcc) -print-libgcc-file-name)
+GCCLIB_S_SO_f	= $(filter /%,$(shell $(callcc) -print-file-name=libgcc_s.so))
+GCCLIB_EH_f	= $(filter /%,$(shell $(callcc) -print-file-name=libgcc_eh.a))
+GCCNOSTACKPROTOPT_f= $(call checkcc,-fno-stack-protector)
+GCCSTACKPROTOPT_f = $(call checkcc,-fstack-protector)
+GCCSTACKPROTALLOPT_f = $(call checkcc,-fstack-protector-all)
+GCCFORTRANAVAIL_f = $(shell echo | $(callfc) -dD -E - 2>&1 | grep -q __GNUC__ && echo y)
+GCC_HAS_ATOMICS_f = $(shell if echo '\#include <bits/c++config.h>' | \
+		               $(callcxx) -dD -E -x c++ - | \
+			       grep -q _GLIBCXX_ATOMIC_BUILTINS; then \
+			         echo y; fi)
+GCCINCFIXEDPATH_f = $(patsubst %/limits.h,%,$(strip $(firstword $(wildcard \
+                      $(addsuffix /limits.h, \
+                        $(call GCCDIR_f)/include-fixed$(if $(filter .,$(shell $(callcc) -print-multi-directory)),,/$(shell $(callcc) -print-multi-directory)) \
+                        $(call GCCDIR_f)/include-fixed)))))
+
+BID_NOSTDINC_clang ?= #-nostdlibinc
+BID_NOSTDINC_gcc   ?= -nostdinc
+BID_NOSTDINC       ?= $(BID_NOSTDINC_$(BID_COMPILER_TYPE))
+ifneq ($(strip $(GCCDIR)),)
+GCCINCDIR	= $(GCCDIR)/include $(GCCINCFIXEDPATH)
+I_GCCINCDIR	= $(addprefix -isystem ,$(GCCINCDIR))
+endif
+
+GCCLIB          = $(OBJ_BASE)/lib/$(subst -,/,$(SYSTEM))/libgcc.a
+GCCLIB_SO       = $(OBJ_BASE)/lib/$(subst -,/,$(SYSTEM))/libgcc.$(if $(filter %l4f,$(SYSTEM)),so,a)
+
+PKGNAME_DIRNAME := $(notdir $(abspath $(if $(PKGDIR),$(PKGDIR),.)))
+ifneq ($(PKGDIR),)
+  ifeq ($(origin PKGNAME),undefined)
+    PKGNAME := $(PKGNAME_DIRNAME)
+  endif
+endif
+
+ifeq ($(V),1)
+  VERBOSE =
+endif
+ifeq ($(V),0)
+  VERBOSE = @
+endif
+
+ifeq ($(D),1)
+  DEBUG_MODE = y
+endif
+
+ifeq ($(CONFIG_RELEASE_MODE),y)
+DEFINES		+= -DL4BID_RELEASE_MODE -DNDEBUG
+endif
+
+ifneq ($(filter linux host,$(MODE)),)
+HOST_LINK        := 1
+HOST_LINK_HOST   := 1
+endif
+
+ifneq ($(filter l4linux targetsys,$(MODE)),)
+HOST_LINK        := 1
+HOST_LINK_TARGET := 1
+endif
+
+#
+# SUBDIR handling, not within the OBJ-*/ dirs
+#
+ifeq ($(SYSTEM),)
+ifneq ($(SUBDIRS),)
+.PHONY: $(SUBDIRS)
+$(SUBDIRS):
+	$(VERBOSE)PWD=$(PWD)/$@ $(MAKE) -C $@ all
+
+# we know that SUBDIRS isn't empty, hence we can avoid the dir-test
+scrub clean cleanall::
+	$(VERBOSE)set -e; $(foreach i,$(SUBDIRS), \
+		PWD=$(PWD)/$(i) $(MAKE) -C $(i) $@ $(MKFLAGS) $(MKFLAGS_$(i));)
+
+install:: $(SUBDIRS)
+	$(VERBOSE)set -e; $(foreach i,$(SUBDIRS), \
+		PWD=$(PWD)/$(i) $(MAKE) -C $(i) $@ $(MKFLAGS) $(MKFLAGS_$(i));)
+
+endif
+
+all:: $(OBJ_DIR)/Makefile
+
+$(OBJ_DIR)/Makefile: $(L4DIR)/mk/Makeconf
+	$(call build_obj_redir_Makefile,$@)
+
+else
+# we are within an OBJ-*/ dir, create dummy target
+$(SUBDIRS):
+endif
+
+#
+# Dependency section
+#
+#
+
+# the general dependencies: All generated files depend on ".general.d".
+# ".general.d" itself depends on the mk-Makeconf, the optional
+# Makeconf.local, the .config.all, the packet-Makeconf.local and the
+# Makeconf.local. This ensures a rebuilt if any of the configuration-
+# or make-files changes.
+#
+# We have this nasty if-readable-magic to allow the files to disappear
+# or to appear. Depending on if the according makeconf exists now, the
+# if-readable magic .general.d is used on existance or non-existence.
+
+BID_DEPEND_GENERAL_D_COND = \
+	if [ -r $(1) ] ; then echo -e '$@: $(strip $(1))\n$(strip $(1)):\n' >>$@ ; \
+	  else echo '$$(if $$(wildcard $(strip $(1))), $@: FORCE)' >>$@; fi
+
+ifeq ($(SYSTEM),)
+GENERAL_D_LOC := $(OBJ_DIR)/.general.d
+else
+GENERAL_D_LOC := .general.d
+endif
+
+$(GENERAL_D_LOC): $(L4DIR)/mk/Makeconf $(EXTRA_GENERAL_D_DEP)
+	@$(BUILD_MESSAGE)
+	@install -d $(dir $@)
+	$(DEPEND_VERBOSE)$(RM) $(DEPS)
+	$(DEPEND_VERBOSE)echo '$@: $(SRC_DIR)/Makefile ' > $@
+	$(DEPEND_VERBOSE)$(call BID_DEPEND_GENERAL_D_COND,\
+		$(OBJ_BASE)/.config.all)
+	$(DEPEND_VERBOSE)$(call BID_DEPEND_GENERAL_D_COND,\
+		$(OBJ_BASE)/Makeconf.local)
+	$(DEPEND_VERBOSE)$(call BID_DEPEND_GENERAL_D_COND,\
+		$(L4DIR)/Makeconf.local)
+	$(DEPEND_VERBOSE)$(call BID_DEPEND_GENERAL_D_COND,\
+		$(L4DIR)/conf/Makeconf.local)
+	$(DEPEND_VERBOSE)$(foreach m,$(wildcard $(INCLUDE_MAKE_RULES)),\
+	        $(call BID_DEPEND_GENERAL_D_COND,$(m)); )
+	$(if $(PKGDIR_ABS),$(DEPEND_VERBOSE)$(call BID_DEPEND_GENERAL_D_COND,\
+		$(PKGDIR_ABS)/Makeconf.local))
+	$(DEPEND_VERBOSE)$(call BID_DEPEND_GENERAL_D_COND,\
+		$(MAKECONFLOCAL))
+
+DEPS	+= $(GENERAL_D_LOC)
+
+
+#
+# Messages
+#
+
+# coloring on color-capable terminals
+# enabled by setting CONFIG_BID_COLORED_PHASES to y
+ifeq ($(CONFIG_BID_COLORED_PHASES),y)
+  ifneq ($(BID_COLORS_TESTED),y)
+    BID_COLORS_TESTED := y
+    BID_COLORS_SUPPORTED := $(shell tput colors 1>&2 2 > /dev/null; [ $$? -eq 0 ] && echo -n 'y' || echo -n 'n')
+    export BID_COLORS_TESTED
+    export BID_COLORS_SUPPORTED
+  endif
+  ifeq ($(BID_COLORS_SUPPORTED), y)
+    EMPHSTART = '\033[34;1m'
+    EMPHSTOP  = '\033[0m'
+  else
+    EMPHSTART =
+    EMPHSTOP  =
+  endif
+endif
+
+AR_MESSAGE                 ?= echo -e "  [$(PKGNAME_DIRNAME)] ==> Archiving into $@"
+BUILD_MESSAGE              ?= echo -e "  [$(PKGNAME_DIRNAME)] ... Building $(if $(filter $(GENERAL_D_LOC),$@),Dependencies,$@)"
+BUILT_MESSAGE              ?= echo -e $(EMPHSTART)'  [$(PKGNAME_DIRNAME)] ==> $@ built'$(EMPHSTOP)
+COMP_MESSAGE               ?= echo -e "  [$(PKGNAME_DIRNAME)] ... Compiling $@"
+COMP_P_MESSAGE             ?= echo -e "  [$(PKGNAME_DIRNAME)] ... Compiling PIC $@"
+COMP_PR_MESSAGE            ?= echo -e "  [$(PKGNAME_DIRNAME)] ... Compiling PROFILE $@"
+GEN_MESSAGE                ?= echo -e "  [$(PKGNAME_DIRNAME)] ... Generating $(if $(1),$(1),$@)"
+LINK_MESSAGE               ?= echo -e "  [$(PKGNAME_DIRNAME)] ==> Linking $@"
+LINK_SHARED_MESSAGE        ?= echo -e "  [$(PKGNAME_DIRNAME)] ==> Linking to shared $@"
+LINK_PARTIAL_MESSAGE       ?= echo -e "  [$(PKGNAME_DIRNAME)] ==> Partial linking to $@"
+DEP_MESSAGE                ?= echo -e "  [$(PKGNAME_DIRNAME)] ... Building dependencies for $<"
+CLEAN_MESSAGE              ?= echo -e "  [$(PKGNAME_DIRNAME)] ... Removing created files"
+CLEANALL_MESSAGE           ?= echo -e "  [$(PKGNAME_DIRNAME)] ... Removing all created files"
+INSTALL_LINK_MESSAGE       ?= echo -e "  [$(PKGNAME_DIRNAME)] ==> Updating symlinks"
+INSTALL_DOC_MESSAGE        ?= echo -e "  [$(PKGNAME_DIRNAME)] ==> Installing $(if $(1),$(1),$(<)) documentation"
+INSTALL_DOC_LOCAL_MESSAGE  ?= echo -e "  [$(PKGNAME_DIRNAME)] ==> Installing $(if $(1),$(1),$(<)) documentation locally"
+INSTALL_MESSAGE            ?= echo -e "  [$(PKGNAME_DIRNAME)] ==> Installing $(if $(1),$(1),$^)"
+INSTALL_LOCAL_MESSAGE      ?= echo -e "  [$(PKGNAME_DIRNAME)] ==> Installing $(if $(1),$(1),$(<)) to local build-tree"
+
+# allows an include $(DEPSVAR) at the end of the makefile
+# but prevents rebuilding them on a scrub, clean, cleanall and help
+ifneq ($(filter scrub clean cleanall help,$(MAKECMDGOALS)),)
+DEPSVAR	=
+else
+DEPSVAR	= $(DEPS)
+endif
+
+#
+# Some rules
+#
+
+# addfileheader-rule: allows "make addfileheader main.c server.c"-like
+# commands and automatically inserts the path within the package
+# options may be passed with $(ADDFILEHEADER_OPTIONS)
+ADDFILEHEADER_PREFIX = $(patsubst $(call absfilename,$(PKGDIR)/)%,\
+				  $(PKGNAME)/%,$(call absfilename,./))
+ADDFILEHEADER_FILES = $(filter-out addfileheader,$(MAKECMDGOALS))
+addfileheader:
+	addfileheader $(ADDFILEHEADER_OPTIONS) -p $(ADDFILEHEADER_PREFIX) $(ADDFILEHEADER_FILES)
+
+
+.PHONY: FORCE
+
+#
+# Common functions
+#
+
+define newline
+
+
+endef
+
+# 1: name
+# 2: output file
+# 3: inc path (one only)
+# 4: libs
+# 5: requires_libs
+# 6: PC_CFLAGS
+generate_pcfile =                                                            \
+	[ -d $(dir $(2)) ] || mkdir -p $(dir $(2))                           \
+	;echo -n                                                    > $(2)   \
+	$(if $(3),;echo "incdir=/empty_incdir"                     >> $(2))  \
+	;echo "Name: $(1)"                                         >> $(2)   \
+	;echo "Version: 0"                                         >> $(2)   \
+	;echo "Description: L4 library"                            >> $(2)   \
+	$(if $(3),;echo -n "Cflags: $(addprefix -I\$${incdir}/,$(3)) ">> $(2))\
+	$(if $(6),$(if $(3),,;echo -n "Cflags:" >> $(2)))                    \
+	$(if $(6),;echo " $(6)" >> $(2),;echo "" >> $(2))                    \
+	$(if $(4),;echo "Libs: $(4)"                               >> $(2))  \
+	$(if $(5),;echo "Requires: $(5)"                           >> $(2))  \
+	$(if $(7),;echo -e '$(subst $(newline),\n,$(7))' >> $(2)) \
+	$(if $(BID_GEN_CONTROL),;echo "Provides: $(1)"             >> $(PKGDIR)/Control) \
+	$(if $(BID_GEN_CONTROL),;echo "Requires: $(5)"             >> $(PKGDIR)/Control) ;
+
+define build_obj_redir_Makefile
+	$(VERBOSE)install -d $(dir $(1))
+	$(VERBOSE)echo '# automatically created -- modifications will be lost' > $(1)
+	$(VERBOSE)echo 'SRC := $(if $(2),$(2),$(SRC_DIR))'                    >> $(1)
+	$(VERBOSE)echo 'OBJ := $(OBJ_BASE)'                                   >> $(1)
+	$(VERBOSE)echo '.PHONY: $$(MAKECMDGOALS) do-all-make-goals'           >> $(1)
+	$(VERBOSE)echo 'do-all-make-goals:'                                   >> $(1)
+	$(VERBOSE)echo '	@PWD=$$(SRC) $$(MAKE) -C $$(SRC) O=$$(OBJ) $$(MAKECMDGOALS)'>> $(1)
+	$(VERBOSE)echo '$$(MAKECMDGOALS): do-all-make-goals'                  >> $(1)
+endef
+
+endif	# _L4DIR_MK_MAKECONF undefined

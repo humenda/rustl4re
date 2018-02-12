@@ -1,0 +1,12 @@
+Lightweight L4 console.
+
+This packages provides a simple L4 console. Clients communicate with the
+console server using the pSLIM protocol as proposed by SUN at the 17th SOSP
+1999. SLIM is the abbreviation [S]tateless [L]ow level [I]nterface [M]achine).
+The 'p' in pSLIM stays for 'pseudo' because we had no access to the original
+SUN implementation.
+
+There exist stubs for L4Linux and XFree86 4.1. The console is able to use
+some basic hardware acceleration and supports Matrox Gxx, ATI Mach64, S3
+Savage cards and the VMware's builtin display driver. The video mode has
+to be set by the GRUB bootloader.

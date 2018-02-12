@@ -1,0 +1,85 @@
+// vim: ft=cpp et
+
+/*
+ * This file is part of the Valgrind port to L4Re.
+ *
+ * (c) 2009-2010 Aaron Pohle <apohle@os.inf.tu-dresden.de>,
+ *               Bjoern Doebel <doebel@os.inf.tu-dresden.de>
+ *     economic rights: Technische Universitaet Dresden (Germany)
+ */
+
+#include <l4/re/util/icu_svr>
+#include <l4/re/util/vcon_svr>
+#include <l4/sys/cxx/ipc_epiface>
+
+namespace Vcap
+{
+/*
+ * Explanation:
+ *   L4Re's VCon server could have been declared as:
+ *     class vcon_svr {
+ *        virtual int dispatch() = 0;
+ *        virtual int read() = 0;
+ *        vitrual int write() = 0;
+ *     };
+ *
+ *  However, someone disliked the idea of having these virtual
+ *  functions for performance reasons (vtable lookup). Therefore,
+ *  the class is now declared as
+ *
+ *    class vcon_svr<SVR> {
+ *       SVR* self() { return static_cast<SVR*>(this); }
+ *    };
+ *
+ *  So in order to implement a valid VCon server class, we need to
+ *  inherit from this server class _and_ pass our class name as the
+ *  template parameter at the same time.
+ */
+class vcon_srv : public L4Re::Util::Vcon_svr<Vcap::vcon_srv>,
+                 public L4Re::Util::Icu_cap_array_svr<Vcap::vcon_srv>
+{
+    public:
+        L4_RPC_LEGACY_DISPATCH(L4::Vcon);
+        vcon_srv() : Icu_cap_array_svr<Vcap::vcon_srv>(0, 0) {}
+
+        // this is not a real server object, but the ICU needs
+        // this interface. However, the ICU is configured for 0
+        // IRQs and so never calls this function, this means
+        // returning 0 is OK here.
+        L4::Ipc_svr::Server_iface *server_iface() const { return 0; }
+
+        int vcon_write(const char *buffer, unsigned size)
+        {
+            static char const *prefix = "\033[35m";
+            static char const *suffix = "\033[0m";
+            Char buf[L4_VCON_WRITE_SIZE] = {0, };
+
+            VG_(sprintf)(buf, "%s", prefix);
+            VG_(memcpy)(buf + VG_(strlen)((Char const*)prefix), buffer, size);
+            VG_(sprintf)(buf + VG_(strlen)((Char const *)prefix) + size,
+                         "%s", suffix);
+
+            VG_(printf)("%s", buf);
+
+            return 0;
+        }
+
+        int vcon_read(char *buffer, unsigned size)
+        {
+            enter_kdebug("vcon_read");
+            return 0;
+        }
+
+        L4::Cap<void> vcon_get_irq()
+        {
+            enter_kdebug("vcon_get_irq");
+            return L4::Cap<void>(L4_INVALID_CAP);
+        }
+
+        bool  vcon_end()
+        {
+            enter_kdebug("vcon_end");
+            return false;
+        }
+};
+};

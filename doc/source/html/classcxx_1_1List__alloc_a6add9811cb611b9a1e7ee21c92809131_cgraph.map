@@ -1,0 +1,6 @@
+<map id="cxx::List_alloc::alloc_max" name="cxx::List_alloc::alloc_max">
+<area shape="rect" id="node2" href="$group__l4__memory__api.html#gae8aa66c17956ac2dfc2a6d5788fd97a9" title="Round value up to the next alignment with bits size. " alt="" coords="549,5,660,32"/>
+<area shape="rect" id="node3" href="$group__l4__memory__api.html#ga792959ba1e87fecf90018876f32d7bc9" title="Round an address down to the next lower flex page with size bits. " alt="" coords="231,31,336,57"/>
+<area shape="rect" id="node5" href="$group__cxx__api.html#ga1d7a566ab5b06016155d693f91a7ee2d" title="Get the maximum of a and b. " alt="" coords="246,81,321,108"/>
+<area shape="rect" id="node4" href="$group__l4__memory__api.html#ga96e3b2d8e69308aecbb11d1d24f61662" title="Round address up to the next page. " alt="" coords="384,31,501,57"/>
+</map>

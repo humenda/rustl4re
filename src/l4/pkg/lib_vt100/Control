@@ -1,0 +1,3 @@
+provides: lib_vt100
+requires: l4sys libc
+Maintainer: adam@os.inf.tu-dresden.de

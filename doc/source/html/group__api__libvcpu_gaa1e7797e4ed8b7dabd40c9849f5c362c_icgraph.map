@@ -1,0 +1,3 @@
+<map id="l4vcpu_irq_disable_save" name="l4vcpu_irq_disable_save">
+<area shape="rect" id="node2" href="$classL4vcpu_1_1Vcpu.html#a05a251f7ecc0852035f2db1cd8b23188" title="Disable the vCPU for event delivery and return previous state. " alt="" coords="229,5,445,32"/>
+</map>

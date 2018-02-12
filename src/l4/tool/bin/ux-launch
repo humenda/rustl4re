@@ -1,0 +1,77 @@
+#! /usr/bin/perl -w
+#
+# (c) 2009 Technische Universität Dresden
+# This file is part of TUD:OS and distributed under the terms of the
+# GNU General Public License 2.
+# Please see the COPYING-GPL-2 file for details.
+#
+# Adam Lackorzynski <adam@os.inf.tu-dresden.de>
+#
+
+use strict;
+
+BEGIN { unshift @INC, $ENV{L4DIR}.'/tool/lib'
+           if $ENV{L4DIR} && -d $ENV{L4DIR}.'/tool/lib/L4';}
+
+use L4::ModList;
+use File::Temp qw/tempdir/;
+
+my $module_path  = $ENV{SEARCHPATH} || ".";
+my $modulesfile  = shift;
+my $entryname    = shift;
+
+sub get_file($$)
+{
+  my $command = shift;
+  my $cmdline = shift;
+
+  my $fp = L4::ModList::search_file_or_die($command, $module_path);
+
+  $cmdline =~ s/^\S+\s*/ /;
+  $cmdline =~ s/\s*$//;
+  $fp.$cmdline;
+}
+
+
+die "No entry name given" unless defined $entryname;
+
+my %entry = L4::ModList::get_module_entry($modulesfile, $entryname);
+
+my @mods = @{$entry{mods}};
+
+my $fiasco_ux = L4::ModList::search_file_or_die('fiasco', $module_path);
+my $irq0      = L4::ModList::search_file_or_die('irq0', $module_path);
+
+my $fbprog;
+if (defined $ENV{UX_GFX})
+  {
+    $fbprog = defined $ENV{UX_GFX_CMD} ? $ENV{UX_GFX_CMD} : 'ux_con';
+    $fbprog = L4::ModList::search_file($fbprog, $module_path);
+  }
+
+my $netprog;
+if (defined $ENV{UX_NET})
+  {
+    $netprog = defined $ENV{UX_NET_CMD} ? $ENV{UX_NET_CMD} : 'ux_net';
+    $netprog = L4::ModList::search_file($netprog, $module_path);
+  }
+
+@mods = map { get_file($_->{command}, $_->{cmdline}) } @mods;
+
+# skip fiasco binary together with its params, for UX launch there are just
+# ignored
+shift @mods;
+
+my $ux_cmd = $fiasco_ux." ";
+$ux_cmd .= join(' ', @ARGV);
+$ux_cmd .= " -I $irq0";
+$ux_cmd .= " -G $ENV{UX_GFX} -F $fbprog" if defined $fbprog;
+$ux_cmd .= " -N -E $netprog"             if defined $netprog;
+$ux_cmd .= " -S '".shift(@mods)."'";
+$ux_cmd .= " -R '".shift(@mods)."'";
+$ux_cmd .= ' '.join(' ', map { "-l $_" } @mods);
+
+$ux_cmd = "$ENV{UX_GDB_CMD} --args $ux_cmd" if defined $ENV{UX_GDB_CMD};
+
+print "$ux_cmd\n";
+system("$ux_cmd");

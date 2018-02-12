@@ -1,0 +1,82 @@
+/* vim:set ft=c: */
+
+
+/**
+ * \example hello/server/src/main.c
+ * This is the famous "Hello World!" program.
+ *
+ * \example examples/sys/ipc/ipc_example.c
+ * This example shows how two threads can exchange data using the L4 IPC
+ * mechanism. One thread is sending an integer to the other thread which
+ * is returning the square of the integer. Both values are printed.
+ *
+ * \example examples/sys/ipc/ipc.cfg
+ * Sample configuration file for the IPC example.
+ *
+ * \example examples/sys/start-with-exc/main.c
+ * This example shows how to start a newly created thread with a defined set
+ * of CPU registers.
+ *
+ * \example examples/sys/singlestep/main.c
+ * This example shows how a thread can be single stepped on the x86
+ * architecture.
+ *
+ * \example examples/sys/aliens/main.c
+ * This example shows how system call tracing can be done.
+ *
+ * \example examples/sys/utcb-ipc/main.c
+ * This example shows how to send IPC using the UTCB to store payload.
+ *
+ * \example examples/sys/ux-vhw/main.c
+ * This example shows how to iterate the virtual hardware descriptors under
+ * Fiasco-UX.
+ *
+ * \example examples/sys/isr/main.c
+ * Example of an interrupt service routine.
+ *
+ * \example examples/clntsrv/server.cc
+ * Client/Server example using C++ infrastructure -- Server implementation.
+ * \example examples/clntsrv/client.cc
+ * Client/Server example using C++ infrastructure -- Client implementation.
+ * \example examples/clntsrv/clntsrv.cfg
+ * Sample configuration file for the client/server example.
+ *
+ * \example examples/libs/l4re/c/ma+rm.c
+ * Coarse grained memory allocation, in C.
+ * \example examples/libs/l4re/c++/mem_alloc/ma+rm.cc
+ * Coarse grained memory allocation, in C++.
+ *
+ * \example examples/libs/l4re/c++/shared_ds/ds_clnt.cc
+ * Sharing memory between applications, client side.
+ * \example examples/libs/l4re/c++/shared_ds/ds_srv.cc
+ * Sharing memory between applications, server/creator side.
+ * \example examples/libs/l4re/c++/shared_ds/shared_ds.cfg
+ * Sharing memory between applications, configuration file.
+ *
+ * \example examples/libs/l4re/streammap/server.cc
+ * Client/Server example showing how to map a page to another task -- Server
+ * implementation. Note that there's also a shared memory library that
+ * supplies this functionality in more convenient way.
+ * \example examples/libs/l4re/streammap/client.cc
+ * Client/Server example showing how to map a page to another task -- Client
+ * implementation. Note that there's also a shared memory library that
+ * supplies this functionality in more convenient way.
+ * \example examples/libs/l4re/streammap/streammap.cfg
+ * Sample configuration file for the client/server map example.
+ *
+ *
+ * \example examples/libs/libirq/loop.c
+ * libirq usage example using a self-created thread.
+ *
+ * \example examples/libs/libirq/async_isr.c
+ * libirq usage example using asynchronous ISR handler functionality.
+ *
+ * \example examples/sys/migrate/thread_migrate.cc
+ * Thread migration example.
+ *
+ * \example examples/sys/migrate/thread_migrate.cfg
+ * Sample configuration file for the thread migration example.
+ *
+ * \example tmpfs/lib/src/fs.cc
+ * Example file system for L4Re::Vfs.
+ */

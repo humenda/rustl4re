@@ -1,0 +1,19 @@
+CROSS_COMPILE_mips        = mips-linux-
+ELF_BINARY_TYPE_mips_32   = elf32
+ELF_BINARY_TYPE_mips_64   = elf64
+LD_EMULATION_CHOICE_mips  = $(ELF_BINARY_TYPE_mips_$(CPU_ABI))ltsmip
+OFORMAT_mips              = $(ELF_BINARY_TYPE_mips_$(CPU_ABI))-tradlittlemips
+BFD_ARCH_mips             = mips:isa$(CPU)
+L4_KIP_ADDR_mips         ?= 0x7fff0000
+L4_STACK_ADDR_mips       ?= 0x70000000
+CCXX_FLAGS_mips          += -march=mips$(CPU) -mabi=$(CPU_ABI) -EL
+CC_mips                   = $(CROSS_COMPILE)gcc
+CXX_mips                  = $(CROSS_COMPILE)g++
+FC_mips                   = $(CROSS_COMPILE)gfortran
+
+SYSTEMS_ABI              += mips-l4f
+SYSTEMS_PLAIN            += mips
+
+QEMU_ARCH_MAP_mips_64     = qemu-system-mips64el
+QEMU_ARCH_MAP_mips_32     = qemu-system-mipsel
+QEMU_ARCH_MAP_mips        = $(QEMU_ARCH_MAP_mips_$(CPU_ABI))

@@ -1,0 +1,88 @@
+// vi:ft=cpp
+/*
+ * (c) 2010 Alexander Warg <warg@os.inf.tu-dresden.de>
+ *     economic rights: Technische Universität Dresden (Germany)
+ *
+ * This file is part of TUD:OS and distributed under the terms of the
+ * GNU General Public License 2.
+ * Please see the COPYING-GPL-2 file for details.
+ */
+#pragma once
+
+#include <l4/mag-gfx/gfx_colors>
+
+#include <l4/cxx/string>
+#include <l4/cxx/dlist>
+#include <l4/cxx/observer>
+
+namespace Mag_server {
+
+class View;
+
+class Session : public cxx::D_list_item
+{
+private:
+  unsigned _flags;
+  View *_bg;
+  Mag_gfx::Rgb32::Color _color;
+  char *_label;
+
+  cxx::Notifier *_ntfy;
+
+protected:
+  void flags(unsigned setmask, unsigned clearmask)
+  {
+    _flags = (_flags & ~clearmask) | setmask;
+  }
+
+public:
+  enum Flags
+  {
+    F_ignore = 0x01,
+    F_default_background = 0x02,
+  };
+
+  struct Property_handler
+  {
+    char const *tag;
+    bool value_property;
+    void (*handler)(Session *, Property_handler const *h, cxx::String const &value);
+  };
+
+  Session()
+  : _flags(0), _bg(0), _color(Mag_gfx::Rgb32::Black), _label(0), _ntfy(0)
+  {}
+
+  void set_notifier(cxx::Notifier *n) { _ntfy = n; }
+
+  bool ignore() const { return _flags & F_ignore; }
+  void ignore(bool ign)
+  {
+    if (ign)
+      _flags |= F_ignore;
+    else
+      _flags &= ~F_ignore;
+  }
+
+  unsigned flags() const { return _flags; }
+
+  char const *label() const { return _label; }
+  Mag_gfx::Rgb32::Color color() const { return _color; }
+  View *background() const { return _bg; }
+
+  void color(Mag_gfx::Rgb32::Color color) { _color = color; }
+  void background(View *bg) { _bg = bg; }
+
+  static void set_label_prop(Session *s, Property_handler const *, cxx::String const &v);
+  static void set_color_prop(Session *s, Property_handler const *, cxx::String const &v);
+
+  virtual void put_event(l4_umword_t stream, int type, int code, int value,
+                         l4_uint64_t time) = 0;
+
+  virtual ~Session();
+
+};
+
+typedef cxx::D_list<Session> Session_list;
+
+}

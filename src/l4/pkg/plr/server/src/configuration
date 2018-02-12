@@ -1,0 +1,153 @@
+// vim: ft=cpp
+#pragma once
+
+/*
+ * configuration --
+ *
+ * Handling of Romain config stuff
+ *
+ * (c) 2011-2013 Björn Döbel <doebel@os.inf.tu-dresden.de>,
+ *     economic rights: Technische Universität Dresden (Germany)
+ * This file is part of TUD:OS and distributed under the terms of the
+ * GNU General Public License 2.
+ * Please see the COPYING-GPL-2 file for details.
+ */
+
+#include <map>
+#include "manager"
+#include "log"
+#include "exceptions"
+EXTERN_C_BEGIN
+#include "iniparser.h"
+EXTERN_C_END
+
+namespace Romain
+{
+
+class Configuration
+{
+	std::map<char const *, dictionary*> _files;
+	public:
+		Configuration() { }
+
+		dictionary *get(char const* filename)
+		{
+			dictionary* d = _files[filename];
+			if (!d) {
+				d = iniparser_load(filename);
+				_check(!d, "INI file error");
+				_files[filename] = d;
+			}
+			return d;
+		}
+};
+
+extern Configuration globalconfig;
+
+
+struct ConfigValue
+{
+	dictionary *_dict;
+	ConfigValue()
+	{
+		_dict = globalconfig.get("rom/romain.ini");
+		_check(!_dict, "romain.ini not found?");
+	}
+};
+
+
+struct ConfigIntValue : public ConfigValue
+{
+	l4_mword_t _val;
+	ConfigIntValue(char const * const key, l4_mword_t _default = -1)
+		: ConfigValue()
+	{
+		_val = iniparser_getint(_dict, key, _default);
+	}
+	
+	operator l4_mword_t() { return _val; }
+	operator l4_umword_t() { return _val; }
+	//operator l4_addr_t() { return static_cast<l4_addr_t>(_val); }
+};
+
+
+struct ConfigStringValue : public ConfigValue
+{
+	char const *_val;
+	ConfigStringValue(char const * const key, char const *_default = 0)
+		: ConfigValue()
+	{
+		_val = iniparser_getstring(_dict, key, const_cast<char*>(_default));
+	}
+
+	operator char const *() { return _val; }
+};
+
+
+struct ConfigBoolValue : public ConfigValue
+{
+	bool _val;
+	ConfigBoolValue(char const * const key, bool _default = false)
+		: ConfigValue()
+	{
+		_val = iniparser_getboolean(_dict, key, _default);
+	}
+
+	operator bool () { return _val; }
+};
+
+
+/*
+ * Simple observer configuration
+ *
+ * Takes a string and an IM and creates and registers an
+ * observer of the same name with the IM.
+ */
+class ObserverConfig
+{
+	public:
+		ObserverConfig() { }
+
+		ObserverConfig(Romain::InstanceManager *im,
+		               char const *observerName)
+		{
+			configure(im, observerName);
+		}
+
+	protected:
+		void configure(Romain::InstanceManager *im,
+		               char const *observerName)
+		{
+			im->register_fault_observer(
+				Romain::ObserverFactory::CreateObserver(observerName));
+		}
+};
+
+
+class StringObserverConfig : public ObserverConfig
+{
+	public:
+	StringObserverConfig(char const * const key,
+	                     Romain::InstanceManager *im)
+	{
+		char const *c = ConfigStringValue(key);
+		if (c)
+			configure(im, c);
+	}
+};
+
+
+class BoolObserverConfig : public ObserverConfig
+{
+	public:
+	BoolObserverConfig(char const * const key,
+	                   Romain::InstanceManager *im,
+	                   char const * const observer)
+	{
+		bool b = ConfigBoolValue(key);
+		if (b)
+			configure(im, observer);
+	}
+};
+
+}
