@@ -165,6 +165,7 @@ BID_LDFLAGS_FOR_LINKING = $(call BID_mode_var,NOPIEFLAGS) -MD -MF $(call BID_lin
                           $(if $(HOST_LINK_TARGET),$(CCXX_FLAGS)) $(BID_LDFLAGS_FOR_LINKING_GCC)
 endif
 
+ifeq ($(SRC_RS),)
 $(TARGET): $(OBJS) $(LIBDEPS)
 	@$(LINK_MESSAGE)
 	$(VERBOSE)$(call MAKEDEP,$(INT_LD_NAME),,,ld) $(LINK_PROGRAM) -o $@ $(BID_LDFLAGS_FOR_LINKING) $(OBJS) $(LIBS) $(EXTRA_LIBS)
@@ -172,6 +173,35 @@ $(TARGET): $(OBJS) $(LIBDEPS)
 	$(if $(BID_POST_PROG_LINK_MSG_$@),@$(BID_POST_PROG_LINK_MSG_$@))
 	$(if $(BID_POST_PROG_LINK_$@),$(BID_POST_PROG_LINK_$@))
 	@$(BUILT_MESSAGE)
+else # rust target rule
+# ToDo if (HOST_LINK_TARGET),(CCXX_FLAGS)) (BID_LDFLAGS_FOR_LINKING_GCC
+$(strip $(TARGET)).a: $(SRC_RS) $(LIBDEPS)
+	@echo Building binary...
+	@echo ToDo, currently not including LIBDEPS: $(LIBDEPS)
+	$(RUSTC) $(RSFLAGS) \
+		--target=x86_64-unknown-l4re-uclibc \
+		-L $(OBJ_BASE)/lib/rustlib \
+		-L $(OBJ_BASE)/ \
+		--crate-type staticlib \
+		-o $@ $<
+	@$(BUILT_MESSAGE)
+
+$(strip $(TARGET)): $(strip $(TARGET)).a
+	@$(LINK_MESSAGE)
+	$(VERBOSE)$(call MAKEDEP,$(INT_LD_NAME),,,ld) $(LINK_PROGRAM) -o $@ $(BID_LDFLAGS_FOR_LINKING) $< $(LIBS) $(EXTRA_LIBS)
+	$(if $(BID_GEN_CONTROL),$(VERBOSE)echo "Requires: $(REQUIRES_LIBS)" >> $(PKGDIR)/Control)
+	$(if $(BID_POST_PROG_LINK_MSG_$@),@$(BID_POST_PROG_LINK_MSG_$@))
+	$(if $(BID_POST_PROG_LINK_$@),$(BID_POST_PROG_LINK_$@))
+	@$(BUILT_MESSAGE)
+
+
+
+# linker wrapper - currently not used
+#$(TARGET): $(addprefix $(SRC_DIR)/,$(SRC_RS)) $(LIBDEPS)
+#	@$(LINK_MESSAGE)
+#	$(VERBOSE)$(call MAKEDEP,$(INT_LD_NAME),,,ld) $(L4DIR)/tool/bin/rustc_linkerwrapper.py $(LINK_PROGRAM) -o $@ $(BID_LDFLAGS_FOR_LINKING) $< $(LIBS) $(EXTRA_LIBS)
+#	@$(BUILT_MESSAGE)
+endif
 
 endif	# architecture is defined, really build
 

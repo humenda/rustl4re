@@ -127,7 +127,7 @@ $(foreach sys,$(TARGET_SYSTEMS),$(OBJ_DIR)/OBJ-$(sys)/$(BID_OBJ_Makefile)):$(OBJ
 	@echo 'ARCH=$(call SYSTEM_TO_ARCH,$*)'>>$@
 	@echo 'CPU=$(call SYSTEM_TO_CPU,$*)'>>$@
 	@echo 'L4API=$(call SYSTEM_TO_L4API,$*)'>>$@
-	@for ext in .c .cc .cpp $(FORTRAN_FILE_EXTENSIONS) $(BID_ASM_FILE_EXTENSIONS) .y .l .ld .dpe .dts; \
+	@for ext in .c .cc .cpp $(FORTRAN_FILE_EXTENSIONS) $(RUST_FILE_EXTENSIONS) $(BID_ASM_FILE_EXTENSIONS) .y .l .ld .dpe .dts; \
 	  do echo "vpath %$$ext $(VPATH_SRC_BASE)">>$@ ; done
 	@echo '.general.d: $(SRC_DIR)/$(if $(wildcard Make.rules),Make.rules,Makefile)'>>$@
 	@echo 'include $(SRC_DIR)/$(if $(wildcard Make.rules),Make.rules,Makefile)'>>$@
@@ -220,9 +220,10 @@ endif
 # CXXFLAGS	- options for the c++ compiler
 # FFLAGS	- options for the fortran compiler
 # ASFLAGS	- options for the assembler
+# RSFLAGS   - options for the Rustc compiler
 #
 # Additionally, the following variables are supported:
-# SRC_C, SRC_CC, SRC_F, SRC_S - .c, .cc, .f90, .S source files
+# SRC_C, SRC_CC, SRC_F, SRC_S, SRC_RS - .c, .cc, .f90, .S, .rs source files
 # LIBS		- additional libs to link (with -l), including paths (-L)
 # IDL		- interface definition files
 # TARGET	- targets to be built
@@ -231,8 +232,8 @@ endif
 # file types. More specific description is possible by using variables with
 # added specifications. These specifications include a referred element and
 # the architecture, both optional but in this order, separated by
-# underscores. The referred element for CPPFLAGS, CFLAGS, CXXFLAGS and
-# ASFLAGS is the source file. For the other variables, it is one of the
+# underscores. The referred element for CPPFLAGS, CFLAGS, CXXFLAGS, ASFLAGS and
+# RSFLAGS is the source file. For the other variables, it is one of the
 # target files. The TARGET variable can only be postfixed by an
 # architecture.
 # The specific variables will be used for the target and the referred element
@@ -598,6 +599,9 @@ get_target_var = $(strip                                     \
 #      2 - infix between the basename and the .o
 convert_f_to_o_file = $(foreach e,$(FORTRAN_FILE_EXTENSIONS),$(patsubst %$e,%$(2).o,$(filter %$e,$(1))))
 
+# convert .rs to .o, see fortran doc above
+convert_rs_to_o_file = $(foreach e,$(RUST_FILE_EXTENSIONS),$(patsubst %$e,%$(2).o,$(filter %$e,$(1))))
+
 convert_asm_to_o_file = $(foreach e,$(BID_ASM_FILE_EXTENSIONS),$(patsubst %$e,%$(2).o,$(filter %$e,$(1))))
 
 #
@@ -609,6 +613,7 @@ gen_SRC_CC_obj = $(call convert_cc_to_o_file,$(1),$(2))
 gen_SRC_C_obj  = $(1:.c=$(2).o)
 gen_SRC_S_obj  = $(call convert_asm_to_o_file,$(1),$(2))
 gen_SRC_F_obj  = $(call convert_f_to_o_file,$(1),$(2))
+gen_SRC_RS_obj  = $(call convert_rs_to_o_file,$(1),$(2))
 gen_SRC_DATA_obj = $(addsuffix .bin.o,$1)
 
 #
@@ -653,7 +658,7 @@ endef
 #
 # All supported SRC_<x> variables
 #
-BID_SRC_VARS ?= S C CC F DATA
+BID_SRC_VARS ?= S C CC F RS DATA
 
 #
 # Generate per target/source/object variables for all sources
@@ -814,6 +819,8 @@ $(if $(BID_ALLOW_CPP_AS_CPLUSPLUS_FILE),$(eval $(call BID_GENERATE_CXX_MAKE_RULE
 $(eval $(call BID_GENERATE_C_MAKE_RULES,c))
 # generate rules to compile %.f90 files to %.o, %.s.o etc
 $(foreach e,$(FORTRAN_FILE_EXTENSIONS),$(eval $(call BID_GENERATE_F_MAKE_RULES,$(subst .,,$e))))
+# generate rules to compile .rs (Rust) files to .o
+$(foreach e,$(RUST_FILE_EXTENSIONS),$(eval $(call BID_GENERATE_RS_MAKE_RULES,$(subst .,,$e))))
 # generate rules to compile %.S files to %.o, %.s.o etc
 $(foreach e,$(BID_ASM_FILE_EXTENSIONS),$(eval $(call BID_GENERATE_ASM_MAKE_RULES,$(subst .,,$e))))
 
@@ -823,7 +830,7 @@ define reset_implicit_rule =
 	
 endef
 
-$(foreach e,.c .cc .cpp $(BID_ASM_FILE_EXTENSIONS) $(FORTRAN_FILE_EXTENSIONS),$(eval $(call reset_implicit_rule,$e)))
+$(foreach e,.c .cc .cpp .rs $(BID_ASM_FILE_EXTENSIONS) $(FORTRAN_FILE_EXTENSIONS),$(eval $(call reset_implicit_rule,$e)))
 
 $(eval $(call BID_GENERATE_I_MAKE_RULE,%.i,%.c,$(CC),$(CFLAGS) $(call BID_mode_var,NOPICFLAGS)))
 $(eval $(call BID_GENERATE_I_MAKE_RULE,%.s.i,%.c,$(CC),$(CFLAGS) $(PICFLAGS)))
