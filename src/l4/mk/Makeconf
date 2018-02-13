@@ -72,6 +72,11 @@ MAKECONFS_ADD    = $(call strip_quotes,$(CONFIG_MAKECONFS_ADD))
 
 CCXX_FLAGS        = $(CCXX_FLAGS_$(BUILD_ARCH))
 
+# Rust compiler flags
+RSFLAGS        ?= -C opt-level=3
+
+
+
 dv               = $(if $(filter-out default undefined,$(origin $(1))),$(1)-default,$(1))
 
 $(call dv,AR)	 = $(CROSS_COMPILE)ar
@@ -82,6 +87,7 @@ CCACHE          ?= ccache
 $(call dv,CC)    = $(if $(USE_CCACHE),$(CCACHE) )$(CC_$(BUILD_ARCH))
 $(call dv,CXX)   = $(if $(USE_CCACHE),$(CCACHE) )$(CXX_$(BUILD_ARCH))
 $(call dv,FC)    = $(if $(USE_CCACHE),$(CCACHE) )$(FC_$(BUILD_ARCH))
+$(call dv,RUSTC) = rustc
 CP		?= cp
 DICE_SRCDIR	?= $(L4DIR)/../dice
 DICE_OBJDIR	?= $(DICE_SRCDIR)
@@ -377,6 +383,9 @@ endif
 # We recognize the following Fortran file extensions.
 FORTRAN_FILE_EXTENSIONS = .f .F .f90 .F90 .f95 .F95
 
+# Rust's source file extension
+RUST_FILE_EXTENSIONS = .rs
+
 # We recognize the following file extensions for assembly.
 BID_ASM_FILE_EXTENSIONS ?= .S
 BID_ASM_CPP_FILE_EXTENSIONS ?= .S
@@ -394,6 +403,7 @@ checkcxx_nowarn = $(if $(shell $(CXX) $(CCXX_FLAGS) -W$(1) -S -o /dev/null \
 callcc    = LC_ALL=C $(CC)  $(CCXX_FLAGS)
 callcxx   = LC_ALL=C $(CXX) $(CCXX_FLAGS)
 callfc    = LC_ALL=C $(FC)  $(CCXX_FLAGS)
+callrustc = LC_ALL=C $(RUSTC) $(RSFLAGS)
 
 define get_gccversion
   v=$$($(callcc) -dumpversion); \
