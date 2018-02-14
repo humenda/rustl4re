@@ -59,6 +59,12 @@ roottask moe --init=rom/hello
 module l4re
 module hello
 
+entry trust
+roottask moe --init=rom/trust
+module l4re
+module trust
+
+
 entry hello-cfg
 kernel fiasco -serial_esc
 roottask moe rom/hello.cfg
