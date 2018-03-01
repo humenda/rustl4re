@@ -127,7 +127,7 @@ endif
 
 DEPS	+= $(foreach file,$(TARGET), $(call BID_LINK_DEPS,$(file)))
 
-$(filter-out $(LINK_INCR) %.so %.o.a %.o.pr.a, $(TARGET)):%.a: $(OBJS)
+$(filter-out $(LINK_INCR) %.so %.o.a %.o.pr.a %.rlib, $(TARGET)):%.a: $(OBJS)
 	@$(AR_MESSAGE)
 	$(VERBOSE)[ -d "$(dir $@)" ] || $(MKDIR) $(dir $@)
 	$(VERBOSE)$(RM) $@
@@ -158,6 +158,36 @@ $(LINK_INCR_TARGETS):%.a: $(OBJS) $(LIBDEPS) $(foreach x,$(LINK_INCR_TARGETS),$(
 	   $(foreach f,$(LINK_INCR_ONLYGLOBSYM_$@),-G $(f)) \
 	   $@)
 	@$(BUILT_MESSAGE)
+
+# build a .rlib (Rust static library)
+# (copy of prog.mk, probably belongs in rules.mk
+
+# execute bindgen rule if required
+bindgen: $(PKGDIR_OBJ)/bindings.rs
+
+$(PKGDIR_OBJ)/bindings.rs:
+	$(VERBOSE)bindgen -o $@ $(PKGDIR)/bindgen.h -- -DSYSTEM_amd64_gen_l4f -DARCH_amd64 -DCPUTYPE_gen -DL4API_l4f -D_GNU_SOURCE nclud -I/home/streicher/uni/af/Armageddon/obj/l4/amd64/include/amd64/l4f -I/home/streicher/uni/af/Armageddon/obj/l4/amd64/include/amd64 -I/home/streicher/uni/af/Armageddon/obj/l4/amd64/include -I/home/streicher/uni/af/Armageddon/obj/l4/amd64/include/uclibc 
+
+
+$(filter %.rlib,$(TARGET)): $(SRC_RS) \
+		$(if $(wildcard $(PKGDIR)/bindgen.h),bindgen)
+	@echo 'Building rlib...'
+	@echo ToDo, currently not including LIBDEPS: $(LIBDEPS)
+	$(VERBOSE)OUT_DIR=$(PKGDIR_OBJ) $(RUSTC) \
+		--target=x86_64-unknown-l4re-uclibc \
+		$(RSFLAGS) \
+		$(addprefix -L, $(PRIVATE_LIBDIR) $(PRIVATE_LIBDIR_$(OSYSTEM)) $(PRIVATE_LIBDIR_$@) $(PRIVATE_LIBDIR_$@_$(OSYSTEM)))\
+		$(addprefix -L, $(L4LIBDIR)) \
+		-L $(OBJ_BASE)/lib/rustlib/ \
+		--crate-type lib \
+		-o $@ $(filter %.rs,$^) \
+		$(if $(find @,$(VERBOSE)),,-v)
+	@$(BUILT_MESSAGE)
+	# doesn't belong here
+	mkdir -p $(OBJ_BASE)/lib/rustlib
+	$(INSTALL) -m 644 $@ $(OBJ_BASE)/lib/rustlib/
+
+
 
 endif	# architecture is defined, really build
 
