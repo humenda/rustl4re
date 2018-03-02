@@ -185,7 +185,7 @@ $(filter %.rlib,$(TARGET)): $(SRC_RS) \
 		$(RSFLAGS) \
 		$(addprefix -L, $(PRIVATE_LIBDIR) $(PRIVATE_LIBDIR_$(OSYSTEM)) $(PRIVATE_LIBDIR_$@) $(PRIVATE_LIBDIR_$@_$(OSYSTEM)))\
 		$(addprefix -L, $(L4LIBDIR)) \
-		-L $(OBJ_BASE)/lib/rustlib/ \
+		--crate-name $(subst -rust,,$(patsubst %.rlib,%,$(patsubst lib%,%,$@))) \
 		--crate-type lib \
 		-o $@ $(filter %.rs,$^) \
 		$(if $(find @,$(VERBOSE)),,-v)
