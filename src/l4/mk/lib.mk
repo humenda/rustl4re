@@ -172,8 +172,10 @@ $(LINK_INCR_TARGETS):%.a: $(OBJS) $(LIBDEPS) $(foreach x,$(LINK_INCR_TARGETS),$(
 # execute bindgen rule if required
 bindgen: $(PKGDIR_OBJ)/bindings.rs
 
-$(PKGDIR_OBJ)/bindings.rs:
-	$(VERBOSE)bindgen -o $@ $(PKGDIR)/bindgen.h -- -DSYSTEM_amd64_gen_l4f -DARCH_amd64 -DCPUTYPE_gen -DL4API_l4f -D_GNU_SOURCE nclud -I/home/streicher/uni/af/Armageddon/obj/l4/amd64/include/amd64/l4f -I/home/streicher/uni/af/Armageddon/obj/l4/amd64/include/amd64 -I/home/streicher/uni/af/Armageddon/obj/l4/amd64/include -I/home/streicher/uni/af/Armageddon/obj/l4/amd64/include/uclibc 
+$(PKGDIR_OBJ)/bindings.rs: $(PKGDIR)/bindgen.h
+	$(VERBOSE)bindgen -o $@ $(PKGDIR)/bindgen.h \
+		-- $(filter -D%,$(CPPFLAGS)) $(filter -I%,$(CPPFLAGS))
+#was before: -DSYSTEM_amd64_gen_l4f -DARCH_amd64 -DCPUTYPE_gen -DL4API_l4f -D_GNU_SOURCE nclud -I/home/streicher/uni/af/Armageddon/obj/l4/amd64/include/amd64/l4f -I/home/streicher/uni/af/Armageddon/obj/l4/amd64/include/amd64 -I/home/streicher/uni/af/Armageddon/obj/l4/amd64/include -I/home/streicher/uni/af/Armageddon/obj/l4/amd64/include/uclibc 
 
 
 $(filter %.rlib,$(TARGET)): $(SRC_RS) \
