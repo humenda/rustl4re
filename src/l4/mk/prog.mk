@@ -178,7 +178,7 @@ else # rust target rule
 $(strip $(TARGET)).a: $(SRC_RS) $(LIBDEPS)
 	@echo Building binary...
 	@echo ToDo, currently not including LIBDEPS: $(LIBDEPS)
-	$(RUSTC) $(RSFLAGS) \
+	$(BERVOSE)$(RUSTC) $(RSFLAGS) \
 		--target=x86_64-unknown-l4re-uclibc \
 		-L $(OBJ_BASE)/lib/rustlib \
 		-L $(OBJ_BASE)/ \
@@ -188,7 +188,8 @@ $(strip $(TARGET)).a: $(SRC_RS) $(LIBDEPS)
 
 $(strip $(TARGET)): $(strip $(TARGET)).a
 	@$(LINK_MESSAGE)
-	$(VERBOSE)$(call MAKEDEP,$(INT_LD_NAME),,,ld) $(LINK_PROGRAM) -o $@ $(BID_LDFLAGS_FOR_LINKING) $< $(LIBS) $(EXTRA_LIBS)
+	$(VERBOSE)$(call MAKEDEP,$(INT_LD_NAME),,,ld) $(LINK_PROGRAM) -o $@ \
+		$(filter-out -PClib%rust,$(BID_LDFLAGS_FOR_LINKING)) $< $(LIBS) $(EXTRA_LIBS)
 	$(if $(BID_GEN_CONTROL),$(VERBOSE)echo "Requires: $(REQUIRES_LIBS)" >> $(PKGDIR)/Control)
 	$(if $(BID_POST_PROG_LINK_MSG_$@),@$(BID_POST_PROG_LINK_MSG_$@))
 	$(if $(BID_POST_PROG_LINK_$@),$(BID_POST_PROG_LINK_$@))
