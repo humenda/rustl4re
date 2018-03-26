@@ -167,8 +167,9 @@ else # rust target rule
 $(strip $(TARGET)).a: $(SRC_RS) $(LIBDEPS)
 	@echo Building binary...
 	@echo ToDo, currently not including LIBDEPS: $(LIBDEPS)
-	$(BERVOSE)$(RUSTC) $(RSFLAGS) \
+	$(VERBOSE)$(RUSTC) $(RSFLAGS) \
 		--target=x86_64-unknown-l4re-uclibc \
+		$(patsubst -D%,--cfg=%,$(filter -D%,$(CPPFLAGS))) \
 		-L $(OBJ_BASE)/lib/rustlib \
 		-L $(OBJ_BASE)/ \
 		--crate-type staticlib \
