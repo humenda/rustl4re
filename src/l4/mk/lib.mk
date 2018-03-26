@@ -168,7 +168,6 @@ bindgen: $(PKGDIR_OBJ)/bindings.rs
 $(PKGDIR_OBJ)/bindings.rs: $(PKGDIR)/bindgen.h
 	$(VERBOSE)bindgen -o $@ $(PKGDIR)/bindgen.h \
 		-- $(filter -D%,$(CPPFLAGS)) $(filter -I%,$(CPPFLAGS))
-#was before: -DSYSTEM_amd64_gen_l4f -DARCH_amd64 -DCPUTYPE_gen -DL4API_l4f -D_GNU_SOURCE nclud -I/home/streicher/uni/af/Armageddon/obj/l4/amd64/include/amd64/l4f -I/home/streicher/uni/af/Armageddon/obj/l4/amd64/include/amd64 -I/home/streicher/uni/af/Armageddon/obj/l4/amd64/include -I/home/streicher/uni/af/Armageddon/obj/l4/amd64/include/uclibc 
 
 
 $(filter %.rlib,$(TARGET)): $(SRC_RS) \
@@ -178,6 +177,7 @@ $(filter %.rlib,$(TARGET)): $(SRC_RS) \
 	$(VERBOSE)OUT_DIR=$(PKGDIR_OBJ) $(RUSTC) \
 		--target=x86_64-unknown-l4re-uclibc \
 		$(RSFLAGS) \
+		$(patsubst -D%,--cfg=%,$(filter -D%,$(CPPFLAGS))) \
 		$(addprefix -L, $(PRIVATE_LIBDIR) $(PRIVATE_LIBDIR_$(OSYSTEM)) $(PRIVATE_LIBDIR_$@) $(PRIVATE_LIBDIR_$@_$(OSYSTEM)))\
 		$(addprefix -L, $(L4LIBDIR)) \
 		--crate-name $(subst -rust,,$(patsubst %.rlib,%,$(patsubst lib%,%,$@))) \
