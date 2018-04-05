@@ -1,4 +1,4 @@
-PKGDIR ?= ..
+PKGDIR ?= ../../..
 L4DIR  ?= $(PKGDIR)/../..
 
 TARGET  = libl4rust-wrapper.a
