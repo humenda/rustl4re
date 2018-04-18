@@ -165,13 +165,24 @@ $(LINK_INCR_TARGETS):%.a: $(OBJS) $(LIBDEPS) $(foreach x,$(LINK_INCR_TARGETS),$(
 # execute bindgen rule if required
 bindgen: $(PKGDIR_OBJ)/bindings.rs
 
-$(PKGDIR_OBJ)/bindings.rs: $(PKGDIR)/bindgen.h
-	$(VERBOSE)bindgen -o $@ $(PKGDIR)/bindgen.h \
-		-- $(filter -D%,$(CPPFLAGS)) $(filter -I%,$(CPPFLAGS))
+RUSTFMT_FOUND := $(shell command -v dot 2> /dev/null)
+
+# Note: bindgen emits errors if it couldn't understand something;A
+$(PKGDIR_OBJ)/bindings.rs: $(wildcard $(SRC_DIR)/bindgen.*)
+	$(VERBOSE)bindgen $(if $(wildcard $(SRC_DIR)/bindgen.hh),--enable-cxx-namespaces) \
+		$(BINDGENARGS) -o $@ $(wildcard $(SRC_DIR)/bindgen.*) \
+		-- $(filter -D%,$(CPPFLAGS)) $(filter -I%,$(CPPFLAGS)) \
+		$(if $(wildcard $(SRC_DIR)/bindgen.hh),-x c++ -std=c++14) \
+		$(if $(VERBOSE),,2>&1 | grep -v -E '^ERROR ')
+ifdef RUSTFMT_FOUND
+	$(VERBOSE)rustfmt --write-mode=overwrite $@ $(if $(CONFIG_VERBOSE),,2>&1 > /dev/null) || true
+endif
+#  ToDo: ^ how to figure out whether or not to use cpp11 or something newer
 
 
 $(filter %.rlib,$(TARGET)): $(SRC_RS) \
-		$(if $(wildcard $(PKGDIR)/bindgen.h),bindgen)
+		$(if $(wildcard $(SRC_DIR)/bindgen.h),bindgen) \
+		$(if $(wildcard $(SRC_DIR)/bindgen.hh),bindgen)
 	@echo 'Building rlib...'
 	@echo ToDo, currently not including LIBDEPS: $(LIBDEPS)
 	$(VERBOSE)OUT_DIR=$(PKGDIR_OBJ) $(RUSTC) \
@@ -180,13 +191,13 @@ $(filter %.rlib,$(TARGET)): $(SRC_RS) \
 		$(patsubst -D%,--cfg=%,$(filter -D%,$(CPPFLAGS))) \
 		$(addprefix -L, $(PRIVATE_LIBDIR) $(PRIVATE_LIBDIR_$(OSYSTEM)) $(PRIVATE_LIBDIR_$@) $(PRIVATE_LIBDIR_$@_$(OSYSTEM)))\
 		$(addprefix -L, $(L4LIBDIR)) \
-		--crate-name $(subst -rust,,$(patsubst %.rlib,%,$(patsubst lib%,%,$@))) \
+		--crate-name $(patsubst lib%,%,$(subst -rust,,$(patsubst %.rlib,%,$(patsubst lib%,%,$@)))) \
 		--crate-type lib \
 		-o $@ $(filter %.rs,$^) \
 		$(if $(find @,$(VERBOSE)),,-v)
 	@$(BUILT_MESSAGE)
 	# doesn't belong here
-	mkdir -p $(OBJ_BASE)/lib/rustlib
+	@mkdir -p $(OBJ_BASE)/lib/rustlib
 	$(INSTALL) -m 644 $@ $(OBJ_BASE)/lib/rustlib/
 
 
