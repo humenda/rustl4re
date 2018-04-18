@@ -1,7 +1,8 @@
 PKGDIR ?= ../../..
 L4DIR  ?= $(PKGDIR)/../..
 
-TARGET  = libl4rust-wrapper.a
+TARGET  	= libipc-rust-wrapper.a
+PC_FILENAME	= libipc-rust-wrapper
 SRC_C = lib.c
 
 REQUIRES_LIBS += libpthread
