@@ -1,7 +1,7 @@
 #![feature(libc)]
 // ToDo: ^ -> replace with version from crates.io
 
-extern crate ipc;
+extern crate ipc_sys as ipc;
 extern crate libc;
 
 use std::{thread, time};
