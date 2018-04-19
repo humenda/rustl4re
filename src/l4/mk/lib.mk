@@ -100,8 +100,18 @@ LDSCRIPT_INCR ?= /dev/null
 include $(L4DIR)/mk/install.inc
 
 ifeq ($(NOTARGETSTOINSTALL),)
+
+# non-rust case
+ifeq ($(SRC_RS),)
 PC_LIBS     ?= $(sort $(patsubst lib%.so,-l%,$(TARGET_SHARED) \
                       $(patsubst lib%.a,-l%,$(TARGET_STANDARD))))
+else
+# add whole path to .rlib and handle others like usual
+PC_LIBS = $(sort $(addprefix $(OBJ_BASE)/lib/rustlib/,  \
+		$(filter %.rlib,$(TARGET_STANDARD))) \
+	$(patsubst lib%.so,-l%,$(TARGET_SHARED) \
+				  $(patsubst lib%.a,-l%, $(filter-out %.rlib,$(TARGET_STANDARD)))))
+endif
 
 PC_FILENAME  ?= $(PKGNAME)
 PC_FILENAMES ?= $(PC_FILENAME)
@@ -179,8 +189,7 @@ $(PKGDIR_OBJ)/bindings.rs: $(wildcard $(SRC_DIR)/bindgen.*)
 	$(VERBOSE)bindgen $(if $(wildcard $(SRC_DIR)/bindgen.hh),--enable-cxx-namespaces) \
 		$(BINDGENARGS) -o $@ $(wildcard $(SRC_DIR)/bindgen.*) \
 		-- $(filter -D%,$(CPPFLAGS)) $(filter -I%,$(CPPFLAGS)) \
-		$(if $(wildcard $(SRC_DIR)/bindgen.hh),-x c++ -std=c++14) \
-		$(if $(VERBOSE),,2>&1 | grep -v -E '^ERROR ')
+		$(if $(wildcard $(SRC_DIR)/bindgen.hh),-x c++ -std=c++14)
 ifdef RUSTFMT_FOUND
 	$(VERBOSE)rustfmt --write-mode=overwrite $@ $(if $(CONFIG_VERBOSE),,2>&1 > /dev/null) || true
 endif
