@@ -5,5 +5,5 @@
 
 // custom wrapper to make inlined C functions visible
 #include <l4/l4re-rust/ipc.h>
+#include <l4/re/env.h>
 
-#include <l4/sys/capability>
