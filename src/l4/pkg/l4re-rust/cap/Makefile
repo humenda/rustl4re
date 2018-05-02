@@ -1,7 +1,7 @@
 PKGDIR	= ..
 L4DIR	?= $(PKGDIR)/../..
 
-TARGET = ipc-rs-sys
+TARGET = cap-rs-sys
 
 include $(L4DIR)/mk/subdir.mk
 

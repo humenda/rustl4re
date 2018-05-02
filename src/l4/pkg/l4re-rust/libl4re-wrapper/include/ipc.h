@@ -34,3 +34,4 @@ EXTERN l4_msgtag_t l4_msgtag_w(long label, unsigned words, unsigned items,
 EXTERN l4_msgtag_t l4_ipc_reply_and_wait_w(l4_utcb_t *utcb, l4_msgtag_t tag,
         l4_umword_t *src, l4_timeout_t timeout);
 
+

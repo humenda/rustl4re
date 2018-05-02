@@ -9,8 +9,6 @@
 
 include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
 
-pub use root::*;
-
 ////////////////////////////////////////////////////////////////////////////////
 // inline functions from l4/sys/ipc.h:
 
