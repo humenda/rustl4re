@@ -3,7 +3,7 @@ L4DIR  ?= $(PKGDIR)/../..
 
 TARGET  	= libl4re-wrapper.a
 PC_FILENAME	= libl4re-wrapper
-SRC_C = env.c ipc.c
+SRC_C = env.c ipc.c mem.c
 
 REQUIRES_LIBS += libpthread
 

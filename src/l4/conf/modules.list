@@ -63,6 +63,12 @@ roottask moe --init=rom/trust
 module l4re
 module trust
 
+entry shm_rust
+roottask moe rom/shm_rust.cfg
+module l4re
+module ned
+module shm_rust.cfg
+module shm_rust-client
 
 entry hello-cfg
 kernel fiasco -serial_esc

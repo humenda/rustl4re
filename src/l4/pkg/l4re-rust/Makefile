@@ -1,7 +1,7 @@
 PKGDIR	= .
 L4DIR	?= $(PKGDIR)/../..
 
-TARGET = dataspace ipc cap libl4re-wrapper
+TARGET = l4mem ipc cap libl4re-wrapper
 
 include $(L4DIR)/mk/subdir.mk
 

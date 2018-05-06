@@ -33,3 +33,7 @@ EXTERN l4_msgtag_t l4_ipc_reply_and_wait_w(l4_utcb_t *utcb, l4_msgtag_t tag,
     return l4_ipc_reply_and_wait(utcb, tag, src, timeout);
 }
 
+EXTERN l4_fpage_t l4_obj_fpage_w(l4_cap_idx_t obj, unsigned int order,
+        unsigned char rights) {
+    return l4_obj_fpage(obj, order, rights);
+}
