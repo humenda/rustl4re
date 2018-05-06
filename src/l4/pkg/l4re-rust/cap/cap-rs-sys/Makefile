@@ -2,6 +2,7 @@ PKGDIR ?= .
 L4DIR  ?= $(PKGDIR)/../../../..
 
 TARGET  		= libcap_sys-rust.rlib
+PC_FILENAME  		= libcap_sys-rust
 SRC_RS   		= lib.rs
 
 DEPENDS_PKGS    = l4sys
