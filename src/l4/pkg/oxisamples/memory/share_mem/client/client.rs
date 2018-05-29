@@ -1,8 +1,11 @@
 extern crate l4mem;
 extern crate cap_sys as cap;
+extern crate ipc_sys as ipc;
 
-use std::ptr;
-use std::{mem, slice, str};
+use cap::l4_cap_idx_t;
+use ipc::l4_utcb;
+use std::{ptr, thread, time};
+use std::mem;
 use std::os::raw::c_void;
 
 /// This in fact matches roughly the C example (ma+rm.c), also offering a alloc_mem (→new) and a
@@ -10,7 +13,7 @@ use std::os::raw::c_void;
 /// a struct.
 struct Memory {
     pub base: *mut ::std::os::raw::c_void,
-    pub size: usize,
+    pub ds: l4mem::l4re_ds_t, // type alias l4_cap_idx_t
 }
 
 impl Memory {
@@ -52,7 +55,7 @@ impl Memory {
                 l4mem::l4re_util_cap_free_um(ds);
                 return Err(format!("Allocation failed with exit code {}", r));
             }
-            return Ok(Memory { base: virt_addr, size: size_in_bytes })
+            return Ok(Memory { base: virt_addr, ds: ds })
         }
     }
 }
@@ -73,21 +76,40 @@ impl Drop for Memory {
     }
 }
 
+pub unsafe fn send_cap(payload: l4_cap_idx_t, dst: l4_cap_idx_t) -> Result<(), String> {
+    let mr = ipc::l4_utcb_mr();
+    println!("Index of cap to send: {:x}, destination: {:x}", payload, dst);
+    (*mr).mr[0] = cap::l4_obj_fpage(payload, 0, cap::L4_fpage_rights_L4_FPAGE_RWX as u8).raw;
+    match ipc::l4_ipc_error(ipc::l4_ipc_call(dst, l4_utcb(),
+            ipc::l4_msgtag(0, 0, 1, 0), ipc::l4_timeout_t { raw: 0 }), l4_utcb()) {
+        0 => Ok(()),
+        n => Err(format!("IPC error while sending capability: {}", n)),
+    }
+}
+
+
 #[no_mangle]
 pub extern "C" fn main() {
+    let server = unsafe { cap::l4re_env_get_cap("channel") };
+    if cap::l4_is_invalid_cap(server) {
+        panic!("No IPC Gate found.");
+    }
+
     let text = (1..1000).fold(String::new(), |mut s, _| {
         s.push_str("Lots of text. ");
         s
     });
-    let size_in_bytes = l4mem::required_shared_mem(&text);
+    let size_in_bytes = l4mem::required_pages(text.len());
     // ok, this is absolutely unsafe: no size check, no proper "drop" handling, so a potential
     // resource leak. But I think you get it.
     let mmem = Memory::new(size_in_bytes).unwrap();
-    println!("got memory, copying data");
     unsafe {
         ptr::copy_nonoverlapping(text.as_str().as_ptr(), mmem.base as *mut u8, text.len());
-        let text_reread = str::from_utf8_unchecked(
-            slice::from_raw_parts(mmem.base as *const u8, text.len()));
-        println!("string contains: {}", text_reread);
     }
+    println!("[client]: memory allocated, about to send data space cap");
+
+    unsafe {
+        send_cap(mmem.ds, server).unwrap();
+    }
+    println!("[client]: sending successful");
 }

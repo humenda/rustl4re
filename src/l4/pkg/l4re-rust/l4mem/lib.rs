@@ -57,10 +57,15 @@ pub unsafe fn l4re_ma_alloc(size: usize, mem: l4re_ds_t, flags: c_ulong)
 // convenience functions
 pub fn required_shared_mem<T>(thing_to_share: &T) -> usize {
     let size_obj = ::std::mem::size_of_val(thing_to_share);
-    let pagesize = (size_obj / L4_PAGESIZEU) + match size_obj % L4_PAGESIZEU {
+    return required_pages(size_obj)
+}
+
+/// Round given value to a full L4_PAGESIZE
+#[inline]
+pub fn required_pages(bytes: usize) -> usize {
+    l4_trunc_page_u(bytes) + match bytes % L4_PAGESIZEU {
         0 => 0,
         _ => L4_PAGESIZEU
-    };
-    l4_trunc_page_u(pagesize)
+    }
 }
 
