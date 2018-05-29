@@ -70,6 +70,7 @@ module l4re
 module ned
 module shm_rust.cfg
 module shm_rust-client
+module shm_rust-server
 
 entry hello-cfg
 kernel fiasco -serial_esc
