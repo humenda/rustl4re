@@ -1,0 +1,5 @@
+This example demonstrates the usage of an IPC gate to communicate between two
+process. The gates are initalised and passed in by Ned.
+
+The directory `C` contains the exact same implementation of the Rust server in C
+as reference.
