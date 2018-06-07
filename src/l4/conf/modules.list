@@ -53,15 +53,18 @@ modaddr 0x01100000
 default-kernel fiasco -serial_esc
 default-bootstrap bootstrap
 
-entry hello
-roottask moe --init=rom/hello
-module l4re
-module hello
-
-entry trust
+entry basic_ipc
 roottask moe --init=rom/trust
 module l4re
-module trust
+module basic_ipc
+
+entry two_task_ipc
+roottask moe rom/two_task_ipc.cfg
+module l4re
+module ned
+module two_task_ipc.cfg
+module two_task_ipc-client
+module two_task_ipc-server
 
 entry shm_rust
 roottask moe rom/shm_rust.cfg
@@ -71,13 +74,23 @@ module shm_rust.cfg
 module shm_rust-client
 module shm_rust-server
 
-entry hello-cfg
+entry two_task_c
 kernel fiasco -serial_esc
-roottask moe rom/hello.cfg
+roottask moe rom/two_task_c.cfg
 module l4re
 module ned
-module hello.cfg
-module hello
+module two_task_c.cfg
+module two_task_c-client
+module two_task_c-server
+
+entry shm_c
+kernel fiasco -serial_esc
+roottask moe rom/shm_c.cfg
+module l4re
+module ned
+module shm_c.cfg
+module shm_rust-client
+module shm_c-server
 
 entry hello-shared
 roottask moe --init=rom/ex_hello_shared

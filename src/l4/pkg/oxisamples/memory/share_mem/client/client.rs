@@ -80,8 +80,9 @@ pub unsafe fn send_cap(payload: l4_cap_idx_t, dst: l4_cap_idx_t) -> Result<(), S
     let mr = ipc::l4_utcb_mr();
     println!("Index of cap to send: {:x}, destination: {:x}", payload, dst);
     (*mr).mr[0] = cap::l4_obj_fpage(payload, 0, cap::L4_fpage_rights_L4_FPAGE_RWX as u8).raw;
+    (*mr).mr[1] = 0;
     match ipc::l4_ipc_error(ipc::l4_ipc_call(dst, l4_utcb(),
-            ipc::l4_msgtag(0, 0, 1, 0), ipc::l4_timeout_t { raw: 0 }), l4_utcb()) {
+            ipc::l4_msgtag(0, 1, 1, 0), ipc::l4_timeout_t { raw: 0 }), l4_utcb()) {
         0 => Ok(()),
         n => Err(format!("IPC error while sending capability: {}", n)),
     }
