@@ -4,7 +4,7 @@ extern crate ipc_sys as ipc;
 
 use cap::l4_cap_idx_t;
 use ipc::l4_utcb;
-use std::{ptr, thread, time};
+use std::ptr;
 use std::mem;
 use std::os::raw::c_void;
 
@@ -35,10 +35,10 @@ impl Memory {
         unsafe {
             match l4mem::l4re_ds_allocate(ds, 0, size_in_bytes as u64) {
                 0 => (),
-                n if n == -(cap::l4_error_code_t_L4_ERANGE as i64) => panic!("Given range outside l4mem"),
-                n if n == -(cap::l4_error_code_t_L4_ENOMEM as i64) => panic!("Not enough memory available"),
-                n if n <= (-(cap::l4_error_code_t_L4_EIPC_LO as i64)) &&
-                    n >= (-(cap::l4_error_code_t_L4_EIPC_HI as i64)) => panic!(
+                n if n == -(cap::L4_ERANGE as i64) => panic!("Given range outside l4mem"),
+                n if n == -(cap::L4_ENOMEM as i64) => panic!("Not enough memory available"),
+                n if n <= (-(cap::L4_EIPC_LO as i64)) &&
+                    n >= (-(cap::L4_EIPC_HI as i64)) => panic!(
                         "IPC error: {}", n),
                 r => panic!("Error while mapping memory into ds: {}", r),
             }
@@ -49,7 +49,7 @@ impl Memory {
         unsafe {
             let mut virt_addr: *mut c_void = mem::uninitialized();
             let r = l4mem::l4re_rm_attach(&mut virt_addr, size_in_bytes as u64,
-                                              l4mem::l4re_rm_flags_t_L4RE_RM_SEARCH_ADDR as u64, ds, 0,
+                                              l4mem::L4RE_RM_SEARCH_ADDR as u64, ds, 0,
                                               l4mem::L4_PAGESHIFT);
             if r > 0 { // error, free ds
                 l4mem::l4re_util_cap_free_um(ds);
@@ -76,13 +76,15 @@ impl Drop for Memory {
     }
 }
 
-pub unsafe fn send_cap(payload: l4_cap_idx_t, dst: l4_cap_idx_t) -> Result<(), String> {
+pub unsafe fn send_cap(payload: l4_cap_idx_t, size: usize, dst: l4_cap_idx_t)
+        -> Result<(), String> {
     let mr = ipc::l4_utcb_mr();
     println!("Index of cap to send: {:x}, destination: {:x}", payload, dst);
-    (*mr).mr[0] = cap::l4_obj_fpage(payload, 0, cap::L4_fpage_rights_L4_FPAGE_RWX as u8).raw;
-    (*mr).mr[1] = 0;
+    (*mr).mr[0] = cap::l4_obj_fpage(payload, 0, cap::L4_FPAGE_RWX as u8).raw;
+    (*mr).mr[1] = size as u64;
+    (*mr).mr[2] = 0;
     match ipc::l4_ipc_error(ipc::l4_ipc_call(dst, l4_utcb(),
-            ipc::l4_msgtag(0, 1, 1, 0), ipc::l4_timeout_t { raw: 0 }), l4_utcb()) {
+            ipc::l4_msgtag(0, 2, 1, 0), ipc::l4_timeout_t { raw: 0 }), l4_utcb()) {
         0 => Ok(()),
         n => Err(format!("IPC error while sending capability: {}", n)),
     }
@@ -110,7 +112,7 @@ pub extern "C" fn main() {
     println!("[client]: memory allocated, about to send data space cap");
 
     unsafe {
-        send_cap(mmem.ds, server).unwrap();
+        send_cap(mmem.ds, size_in_bytes, server).unwrap();
     }
     println!("[client]: sending successful");
 }

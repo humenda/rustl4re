@@ -13,7 +13,7 @@ include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
 ////////////////////////////////////////////////////////////////////////////////
 // redefined constants
 
-pub const FPAGE_RWX: u8 = L4_fpage_rights_L4_FPAGE_RWX as u8;
+pub const FPAGE_RWX: u8 = L4_FPAGE_RWX as u8;
 
 ////////////////////////////////////////////////////////////////////////////////
 // inline functions from l4/sys/env.h:
@@ -27,7 +27,7 @@ pub unsafe fn l4re_env_get_cap(name: &str) -> l4_cap_idx_t {
 
 #[inline]
 pub fn l4_is_invalid_cap(cap: l4_cap_idx_t) -> bool {
-    (cap & l4_cap_consts_t_L4_INVALID_CAP_BIT) > 0
+    (cap & L4_INVALID_CAP_BIT) > 0
 }
 
 #[inline]
@@ -55,9 +55,9 @@ pub unsafe fn l4re_env() -> *mut l4re_env_t {
 #[inline]
 pub fn l4_map_control(snd_base: l4_umword_t, cache: u8, grant: u64)
         -> l4_umword_t {
-    (snd_base & L4_fpage_control_L4_FPAGE_CONTROL_MASK)
+    (snd_base & L4_FPAGE_CONTROL_MASK)
         | ((cache as l4_umword_t) << 4)
-        | (l4_msg_item_consts_t_L4_ITEM_MAP as u64)
+        | (L4_ITEM_MAP as u64)
         | grant
 }
 
