@@ -1,8 +1,8 @@
 PKGDIR	= ../..
 L4DIR	?= $(PKGDIR)/../..
 
-TARGET		= trust
+TARGET		= basic_ipc
 SRC_RS		= main.rs
 
-REQUIRES_LIBS    = libpthread libc_be_sig l4re_c-util libc_support_misc libipc-rust-wrapper ipc-rs-sys
+REQUIRES_LIBS    = libpthread libc_be_sig l4re_c-util libc_support_misc libl4re-wrapper
 include $(L4DIR)/mk/prog.mk

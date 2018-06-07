@@ -6,17 +6,19 @@ use std::{thread, time};
 
 #[no_mangle]
 pub extern "C" fn main() {
-    let server = unsafe { cap::l4re_env_get_cap("echo_server") };
+    // retrieve IPC gate from Ned
+    let server = unsafe { cap::l4re_env_get_cap("channel") };
     if cap::l4_is_invalid_cap(server) {
-        println!("No IPC Gate found.");
+        panic!("No IPC Gate found.");
     }
+
     let mut counter = 1;
     loop {
         // dump value in UTCB
         unsafe {
             (*ipc::l4_utcb_mr()).mr[0] = counter;
         }
-        println!("client: value written to register");
+        println!("value written to register");
         // To an L4 IPC call, i.e. send a message to thread2 and wait for a reply from thread2. The
         // '1' in the msgtag denotes that we want to transfer one word of our message registers
         // (i.e. MR0). No timeout.
@@ -33,6 +35,7 @@ pub extern "C" fn main() {
                 ipc_error => println!("client: IPC error: {}\n",  ipc_error),
             };
         }
+
         thread::sleep(time::Duration::from_millis(1000));
         counter += 1;
     }
