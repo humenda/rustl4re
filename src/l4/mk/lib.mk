@@ -186,7 +186,8 @@ RUSTFMT_FOUND := $(shell command -v dot 2> /dev/null)
 
 # Note: bindgen emits errors if it couldn't understand something;A
 $(PKGDIR_OBJ)/bindings.rs: $(wildcard $(SRC_DIR)/bindgen.*)
-	$(VERBOSE)bindgen $(if $(wildcard $(SRC_DIR)/bindgen.hh),--enable-cxx-namespaces) \
+	$(VERBOSE)bindgen --no-prepend-enum-name \
+		$(if $(wildcard $(SRC_DIR)/bindgen.hh),--enable-cxx-namespaces) \
 		$(BINDGENARGS) -o $@ $(wildcard $(SRC_DIR)/bindgen.*) \
 		-- $(filter -D%,$(CPPFLAGS)) $(filter -I%,$(CPPFLAGS)) \
 		$(if $(wildcard $(SRC_DIR)/bindgen.hh),-x c++ -std=c++14)
