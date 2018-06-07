@@ -12,8 +12,12 @@ include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
 
 ////////////////////////////////////////////////////////////////////////////////
 // redefined constants and enums with (wrongly) generated type
+#[cfg(target_arch = "x86_64")]
 const L4_utcb_consts_amd64_L4_UTCB_GENERIC_DATA_SIZE_u: usize = 
         L4_utcb_consts_amd64_L4_UTCB_GENERIC_DATA_SIZE as usize;
+#[cfg(target_arch = "x86_64")]
+const UTCB_BUF_REGS_OFFSET: isize =
+        L4_utcb_consts_amd64_L4_UTCB_BUF_REGS_OFFSET as isize;
 
 // Constants for message items.
 //
@@ -76,6 +80,12 @@ pub unsafe fn l4_msgtag(label: ::std::os::raw::c_long, words: c_uint,
     l4_msgtag_w(label, words, items, flags)
 }
 
+#[inline]
+pub unsafe fn l4_rcv_ep_bind_thread(gate: l4_cap_idx_t, thread: l4_cap_idx_t,
+        label: l4_umword_t) -> l4_msgtag_t {
+    l4_rcv_ep_bind_thread_w(gate, thread, label)
+}
+
 
 ////////////////////////////////////////////////////////////////////////////////
 // re-implemented inline functions from l4/sys/ipc.h:
@@ -128,7 +138,7 @@ pub unsafe fn l4_sndfpage_add_u(snd_fpage: l4_fpage_t, snd_base: c_ulong,
 
 #[inline]
 pub unsafe fn l4_utcb_mr() -> *mut l4_msg_regs_t {
-    l4_utcb_mr_w()
+    l4_utcb_mr_u(l4_utcb())
 }
 
 
@@ -145,11 +155,12 @@ pub unsafe fn l4_utcb() -> *mut l4_utcb_t {
     l4_utcb_w()
 }
 
-#[inline]
-pub unsafe fn l4_rcv_ep_bind_thread(gate: l4_cap_idx_t, thread: l4_cap_idx_t,
-        label: l4_umword_t) -> l4_msgtag_t {
-    return l4_rcv_ep_bind_thread_u(gate, thread, label, l4_utcb())
-}
+// ToDo: potentially broken (or one of the functions called
+//#[inline]
+//pub unsafe fn l4_rcv_ep_bind_thread(gate: l4_cap_idx_t, thread: l4_cap_idx_t,
+//        label: l4_umword_t) -> l4_msgtag_t {
+//    return l4_rcv_ep_bind_thread_u(gate, thread, label, l4_utcb())
+//}
 
 
 #[inline]
@@ -161,17 +172,30 @@ pub unsafe fn l4_map_control(snd_base: l4_umword_t, cache: u8,
                    | (grant as l4_umword_t)
 }
 
-#[inline]
-pub unsafe fn l4_rcv_ep_bind_thread_u(gate: l4_cap_idx_t, thread: l4_cap_idx_t,
-        label: l4_umword_t, utcb: *mut l4_utcb_t) -> l4_msgtag_t {
-    let m: *mut l4_msg_regs_t = l4_utcb_mr_u(utcb);
-    (*m).mr[0] = L4_fpage_control_L4_FPAGE_CONTROL_MASK;
-    (*m).mr[1] = label;
-    (*m).mr[2] = cap::l4_map_obj_control(0, 0);
-    (*m).mr[3] = cap::l4_obj_fpage(thread, 0, cap::FPAGE_RWX).raw;
-    l4_ipc_call(gate, utcb,
-                l4_msgtag(l4_msgtag_protocol_L4_PROTO_KOBJECT as i64, 2, 1, 0),
-                l4_timeout_t { raw: 0 })
+// ToDo: broken
+//#[inline]
+//pub unsafe fn l4_rcv_ep_bind_thread_u(gate: l4_cap_idx_t, thread: l4_cap_idx_t,
+//        label: l4_umword_t, utcb: *mut l4_utcb_t) -> l4_msgtag_t {
+//    let m: *mut l4_msg_regs_t = l4_utcb_mr_u(utcb);
+//    (*m).mr[0] = L4_fpage_control_L4_FPAGE_CONTROL_MASK;
+//    (*m).mr[1] = label;
+//    (*m).mr[2] = cap::l4_map_obj_control(0, 0);
+//    (*m).mr[3] = cap::l4_obj_fpage(thread, 0, cap::FPAGE_RWX).raw;
+//    l4_ipc_call(gate, utcb,
+//                l4_msgtag(l4_msgtag_protocol_L4_PROTO_KOBJECT as i64, 2, 1, 0),
+//                l4_timeout_t { raw: 0 })
+//}
+
+/// Retrieve pointer to buffer register from current UTCB
+#[inline(always)]
+pub unsafe fn l4_utcb_br() -> *mut l4_buf_regs_t {
+    (l4_utcb() as *mut u8).offset(UTCB_BUF_REGS_OFFSET) as *mut l4_buf_regs_t
+}
+
+/// Retrieve pointer to buffer register from specified UTCB
+#[inline(always)]
+pub unsafe fn l4_utcb_br_u(u: *mut l4_utcb_t) -> *mut l4_buf_regs_t {
+    (u as *mut u8).offset(UTCB_BUF_REGS_OFFSET) as *mut l4_buf_regs_t
 }
 
 #[inline]
@@ -184,12 +208,9 @@ pub unsafe fn l4_utcb_mr_u(u: *mut l4_utcb_t) -> *mut l4_msg_regs_t {
 // new functions
 
 /// Return a never-timeout (akin to L4_IPC_TIMEOUT_NEVER)
-#[inline]
+#[inline(always)]
 pub fn timeout_never() -> l4_timeout_t {
     l4_timeout_t {
-        p: l4_timeout_t__bindgen_ty_1 {
-            snd: l4_timeout_s { t: 0 },
-            rcv: l4_timeout_s { t: 0 }
-        }
+        raw: 0, // forever
     }
 }

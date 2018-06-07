@@ -59,4 +59,6 @@ EXTERN l4_fpage_t l4_obj_fpage_w(l4_cap_idx_t obj, unsigned int order, unsigned
 EXTERN l4_msgtag_t l4_ipc_receive_w(l4_cap_idx_t object, l4_utcb_t *utcb,
         l4_timeout_t timeout);
 
+EXTERN l4_msgtag_t l4_rcv_ep_bind_thread_w(l4_cap_idx_t ep, l4_cap_idx_t thread,
+          l4_umword_t label);
 

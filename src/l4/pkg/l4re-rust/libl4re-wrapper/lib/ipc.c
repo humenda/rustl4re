@@ -1,4 +1,5 @@
 #include <pthread-l4.h>
+#include <l4/sys/rcv_endpoint.h>
 #include <l4/l4re-rust/ipc.h>
 
 EXTERN l4_msg_regs_t *l4_utcb_mr_w() {
@@ -43,3 +44,9 @@ EXTERN l4_fpage_t l4_obj_fpage_w(l4_cap_idx_t obj, unsigned int order,
         unsigned char rights) {
     return l4_obj_fpage(obj, order, rights);
 }
+
+EXTERN l4_msgtag_t l4_rcv_ep_bind_thread_w(l4_cap_idx_t ep, l4_cap_idx_t thread,
+          l4_umword_t label) {
+    return l4_rcv_ep_bind_thread(ep, thread, label);
+}
+
