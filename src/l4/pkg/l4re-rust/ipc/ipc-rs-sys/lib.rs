@@ -13,11 +13,9 @@ include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
 ////////////////////////////////////////////////////////////////////////////////
 // redefined constants and enums with (wrongly) generated type
 #[cfg(target_arch = "x86_64")]
-const L4_utcb_consts_amd64_L4_UTCB_GENERIC_DATA_SIZE_u: usize = 
-        L4_utcb_consts_amd64_L4_UTCB_GENERIC_DATA_SIZE as usize;
+const UTCB_GENERIC_DATA_SIZE: usize = L4_UTCB_GENERIC_DATA_SIZE as usize;
 #[cfg(target_arch = "x86_64")]
-const UTCB_BUF_REGS_OFFSET: isize =
-        L4_utcb_consts_amd64_L4_UTCB_BUF_REGS_OFFSET as isize;
+const UTCB_BUF_REGS_OFFSET: isize = L4_UTCB_BUF_REGS_OFFSET as isize;
 
 // Constants for message items.
 //
@@ -36,9 +34,8 @@ const MSG_ITEM_CONSTS_ITEM_CONT: u64 = 1;
 /// capability.
 /// The receiver requests to receive a local ID instead of a mapping whenever possible.
 
-const MSGTAG_ERROR: i64 = l4_msgtag_flags_L4_MSGTAG_ERROR as i64;
-const L4_FPAGE_CONTROL_MASK: l4_umword_t = L4_fpage_control_L4_FPAGE_CONTROL_MASK as l4_umword_t;
-const MSG_ITEM_MAP: l4_umword_t = l4_msg_item_consts_t_L4_ITEM_MAP as l4_umword_t;
+const MSGTAG_ERROR: i64 = L4_MSGTAG_ERROR as i64;
+const MSG_ITEM_MAP: l4_umword_t = L4_ITEM_MAP as l4_umword_t;
 
 ////////////////////////////////////////////////////////////////////////////////
 // simple wrappers from lib-l4re-rust-wrapper
@@ -124,8 +121,8 @@ pub unsafe fn l4_sndfpage_add_u(snd_fpage: l4_fpage_t, snd_base: c_ulong,
                   tag: *mut l4_msgtag_t, utcb: *mut l4_utcb_t) -> c_int {
     let v = l4_utcb_mr_u(utcb);
     let i = l4_msgtag_words(*tag) as usize + 2 * l4_msgtag_items(*tag);
-    if i >= L4_utcb_consts_amd64_L4_UTCB_GENERIC_DATA_SIZE_u - 1 {
-        return l4_error_code_t_L4_ENOMEM as i32 * -1;
+    if i >= (UTCB_GENERIC_DATA_SIZE - 1) {
+        return L4_ENOMEM as i32 * -1;
     }
 
     (*v).mr[i] = snd_base | MSG_ITEM_CONSTS_ITEM_MAP | MSG_ITEM_CONSTS_ITEM_CONT;
@@ -200,7 +197,7 @@ pub unsafe fn l4_utcb_br_u(u: *mut l4_utcb_t) -> *mut l4_buf_regs_t {
 
 #[inline]
 pub unsafe fn l4_utcb_mr_u(u: *mut l4_utcb_t) -> *mut l4_msg_regs_t {
-     (u as *mut u8).offset(L4_utcb_consts_amd64_L4_UTCB_MSG_REGS_OFFSET as isize)
+     (u as *mut u8).offset(L4_UTCB_MSG_REGS_OFFSET as isize)
          as *mut l4_msg_regs_t
 }
 

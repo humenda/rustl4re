@@ -16,6 +16,7 @@ pub const L4_PAGEMASKU: u64 = L4_PAGEMASK as u64;
 pub const L4_PAGEMASKUSIZE: usize = L4_PAGEMASK as usize;
 pub const L4_PAGESIZEU: usize = L4_PAGESIZE as usize;
 
+
 ////////////////////////////////////////////////////////////////////////////////
 // re-implementations of inlined C functions
 #[inline]
@@ -41,9 +42,9 @@ pub unsafe fn l4re_rm_attach(start: *mut *mut c_void, size: u64, flags: u64,
 }
 
 #[inline]
-pub unsafe fn l4re_rm_detach_ds(addr: *mut c_void, ds: *mut l4re_ds_t) -> i32 {
+pub unsafe fn l4re_rm_detach(addr: *mut c_void, ds: *mut l4re_ds_t) -> i32 {
     l4re_rm_detach_srv((*l4re_global_env).rm, addr as l4_addr_t,
-            ds, l4_default_caps_t_L4_BASE_TASK_CAP as u64)
+            ds, L4_BASE_TASK_CAP as u64)
 }
 
 #[inline]
