@@ -4,7 +4,7 @@ extern crate ipc_sys as ipc;
 
 use cap::l4_cap_idx_t;
 use ipc::l4_utcb;
-use std::ptr;
+use std::{ptr, thread, time};
 use std::mem;
 use std::os::raw::c_void;
 
@@ -76,12 +76,13 @@ impl Drop for Memory {
     }
 }
 
-pub unsafe fn send_cap(payload: l4_cap_idx_t, size: usize, dst: l4_cap_idx_t)
+unsafe fn send_cap(memory: &Memory, textlen: usize, dst: l4_cap_idx_t)
         -> Result<(), String> {
     let mr = ipc::l4_utcb_mr();
-    println!("Index of cap to send: {:x}, destination: {:x}", payload, dst);
-    (*mr).mr[0] = cap::l4_obj_fpage(payload, 0, cap::L4_FPAGE_RWX as u8).raw;
-    (*mr).mr[1] = size as u64;
+    println!("cap info: index {:x}, destination: {:x}, memory size: {:x}",
+             memory.ds, dst, textlen);
+    (*mr).mr[0] = cap::l4_obj_fpage(memory.ds, 0, cap::L4_FPAGE_RWX as u8).raw;
+    (*mr).mr[1] = textlen as u64;
     (*mr).mr[2] = 0;
     match ipc::l4_ipc_error(ipc::l4_ipc_call(dst, l4_utcb(),
             ipc::l4_msgtag(0, 2, 1, 0), ipc::l4_timeout_t { raw: 0 }), l4_utcb()) {
@@ -112,7 +113,9 @@ pub extern "C" fn main() {
     println!("[client]: memory allocated, about to send data space cap");
 
     unsafe {
-        send_cap(mmem.ds, size_in_bytes, server).unwrap();
+        send_cap(&mmem, text.as_bytes().len(), server).unwrap();
     }
     println!("[client]: sending successful");
+    thread::sleep(time::Duration::new(2, 0));
+    println!("bye");
 }

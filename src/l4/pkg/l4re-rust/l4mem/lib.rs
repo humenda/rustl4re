@@ -42,9 +42,10 @@ pub unsafe fn l4re_rm_attach(start: *mut *mut c_void, size: u64, flags: u64,
 }
 
 #[inline]
-pub unsafe fn l4re_rm_detach(addr: *mut c_void, ds: *mut l4re_ds_t) -> i32 {
-    l4re_rm_detach_srv((*l4re_global_env).rm, addr as l4_addr_t,
-            ds, L4_BASE_TASK_CAP as u64)
+pub unsafe fn l4re_rm_detach_ds(addr: *mut c_void, ds: *mut l4re_ds_t) -> i32 {
+    l4re_rm_detach_ds_w(addr, ds)
+    //l4re_rm_detach_srv((*l4re_global_env).rm, addr as l4_addr_t,
+    //        ds, L4_BASE_TASK_CAP as u64)
 }
 
 #[inline]
