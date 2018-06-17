@@ -13,7 +13,7 @@ BINDGENARGS +=  \
 	# Doc:
 	# --whitelist-function is required so that the C functions from the
 	#  l4-ipc-wrapper are found
-TARGET  		= libipc_sys-rust.rlib
+TARGET  		= libl4_sys-rust.rlib
 SRC_RS   		= lib.rs
 
 DEPENDS_PKGS    = l4sys

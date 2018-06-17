@@ -1,14 +1,5 @@
-#![allow(non_upper_case_globals)]
-#![allow(non_camel_case_types)]
-#![allow(non_snake_case)]
-// ToDo: get rid of these
-#![feature(pointer_methods)]
-
-extern crate cap_sys as cap;
-
 use std::os::raw::{c_int, c_uint, c_long, c_ulong};
-
-include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
+use c_api::*;
 
 ////////////////////////////////////////////////////////////////////////////////
 // redefined constants and enums with (wrongly) generated type
@@ -33,9 +24,8 @@ const MSG_ITEM_CONSTS_ITEM_CONT: u64 = 1;
 /// Mark the receive buffer to be a small receive item that describes a buffer for a single
 /// capability.
 /// The receiver requests to receive a local ID instead of a mapping whenever possible.
-
-const MSGTAG_ERROR: i64 = L4_MSGTAG_ERROR as i64;
 const MSG_ITEM_MAP: l4_umword_t = L4_ITEM_MAP as l4_umword_t;
+const MSGTAG_ERROR: i64 = L4_MSGTAG_ERROR as i64;
 
 ////////////////////////////////////////////////////////////////////////////////
 // simple wrappers from lib-l4re-rust-wrapper
@@ -210,4 +200,13 @@ pub fn timeout_never() -> l4_timeout_t {
     l4_timeout_t {
         raw: 0, // forever
     }
+}
+
+/// Extract IPC error code from error code
+///
+/// Error codes in the console output, e.g. for  page faults, contain more information than the IPC
+/// error code, this function extracts this bit of information.
+#[inline(always)]
+pub fn ipc_error2code(code: isize) -> u64 {
+    (code & L4_IPC_ERROR_MASK as isize) as u64
 }

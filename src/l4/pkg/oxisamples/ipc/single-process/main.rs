@@ -1,19 +1,19 @@
 #![feature(libc)]
 // ToDo: ^ -> replace with version from crates.io
 
-extern crate ipc_sys as ipc;
+extern crate l4_sys as l4;
 extern crate libc;
 
 use std::{thread, time};
 
-use ipc::{l4_utcb, l4_msgtag, l4_umword_t};
+use l4::{l4_utcb, l4_msgtag, l4_umword_t};
 
 // ToDo: use from libc
-use ipc::pthread_t;
+use l4::pthread_t;
 
 macro_rules! timeout_never {
     () => {
-        ipc::l4_timeout_t { raw: 0 }
+        l4::l4_timeout_t { raw: 0 }
     }
 }
 
@@ -34,22 +34,22 @@ fn client(server: ThreadHandle) {
     loop {
         // dump value in UTCB
         unsafe {
-            (*ipc::l4_utcb_mr()).mr[0] = counter;
+            (*l4::l4_utcb_mr()).mr[0] = counter;
         }
         println!("client: value written to register");
         // To an L4 IPC call, i.e. send a message to thread2 and wait for a reply from thread2. The
         // '1' in the msgtag denotes that we want to transfer one word of our message registers
         // (i.e. MR0). No timeout.
         unsafe {
-            let tag = ipc::l4_ipc_call(ipc::pthread_l4_cap(server), l4_utcb(),
+            let tag = l4::l4_ipc_call(l4::pthread_l4_cap(server), l4_utcb(),
                         l4_msgtag(0, 1, 0, 0),
                         timeout_never!());
             println!("data sent");
             // check for IPC error, if yes, print out the IPC error code, if not, print the received
             // result.
-            match ipc::l4_ipc_error(tag, l4_utcb()) {
+            match l4::l4_ipc_error(tag, l4_utcb()) {
                 0 => // success
-                    println!("Received: {}\n", (*ipc::l4_utcb_mr()).mr[0]),
+                    println!("Received: {}\n", (*l4::l4_utcb_mr()).mr[0]),
                 ipc_error => println!("client: IPC error: {}\n",  ipc_error),
             };
         }
@@ -69,17 +69,17 @@ pub extern "C" fn main() {
     // square server
     // Wait for requests from any thread. No timeout, i.e. wait forever.
     println!("before waiting for incoming connections");
-    let mut tag = unsafe { ipc::l4_ipc_wait(ipc::l4_utcb(), &mut label,
+    let mut tag = unsafe { l4::l4_ipc_wait(l4::l4_utcb(), &mut label,
             timeout_never!()) };
     println!("waiting for incoming connections");
     loop {
         // Check if we had any IPC failure, if yes, print the error code and
         // just wait again.
         unsafe {
-            let ipc_error = ipc::l4_ipc_error(tag, ipc::l4_utcb());
+            let ipc_error = l4::l4_ipc_error(tag, l4::l4_utcb());
             if ipc_error != 0 {
                 println!("server: IPC error: {}\n", ipc_error);
-                tag = ipc::l4_ipc_wait(ipc::l4_utcb(), &mut label, timeout_never!());
+                tag = l4::l4_ipc_wait(l4::l4_utcb(), &mut label, timeout_never!());
                 continue;
             }
         }
@@ -87,14 +87,14 @@ pub extern "C" fn main() {
         // the IPC was ok, now take the value out of message register 0 of the
         // UTCB and store the square of it back to it.
         unsafe {
-            let val = (*ipc::l4_utcb_mr()).mr[0];
-            (*ipc::l4_utcb_mr()).mr[0] = val * val;
-            println!("new value: {}", (*ipc::l4_utcb_mr()).mr[0]);
+            let val = (*l4::l4_utcb_mr()).mr[0];
+            (*l4::l4_utcb_mr()).mr[0] = val * val;
+            println!("new value: {}", (*l4::l4_utcb_mr()).mr[0]);
 
             // send reply and wait again for new messages.
             // The '1' in msgtag indicates that 1 word transfered from first
             // register
-            tag = ipc::l4_ipc_reply_and_wait(ipc::l4_utcb(), l4_msgtag(0, 1, 0, 0),
+            tag = l4::l4_ipc_reply_and_wait(l4::l4_utcb(), l4_msgtag(0, 1, 0, 0),
                                   &mut label, timeout_never!());
         }
     }
