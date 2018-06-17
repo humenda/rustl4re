@@ -1,14 +1,7 @@
-#![allow(non_upper_case_globals)]
-#![allow(non_camel_case_types)]
-#![allow(non_snake_case)]
-// ToDo: get rid of these
-#![feature(pointer_methods)]
-
-
 use std::{ffi::CString,
         os::raw::{c_uchar, c_uint}};
-
-include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
+use c_api::*;
+use c_api::l4re_global_env;
 
 ////////////////////////////////////////////////////////////////////////////////
 // redefined constants
@@ -40,7 +33,7 @@ pub unsafe fn l4_obj_fpage(obj: l4_cap_idx_t, order: c_uint, rights: c_uchar)
 // complete re-implementations
 
 #[inline]
-pub unsafe fn l4re_env() -> *mut l4re_env_t {
+pub unsafe fn l4re_env() -> *const l4re_env_t {
     l4re_global_env
 }
 

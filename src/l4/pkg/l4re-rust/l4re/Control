@@ -1,0 +1,3 @@
+provides: l4re-rust l4re-sys-rust
+requires: l4sys libpthread libl4re-wrapper l4-sys-rust
+Maintainer: sebastian.humenda@tu-dresden.de

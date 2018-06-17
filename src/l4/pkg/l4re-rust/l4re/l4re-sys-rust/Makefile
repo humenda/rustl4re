@@ -1,7 +1,7 @@
 PKGDIR	= .
-L4DIR	?= $(PKGDIR)/../../..
+L4DIR	?= $(PKGDIR)/../../../..
 
-BINDGENARGS += --blacklist-type=L4_PAGESHIFT
+BINDGENARGS += --blacklist-type=L4_PAGESHIFT --blacklist-type 'l4_addr_t'
 TARGET 		= libl4mem-rust.rlib
 PC_FILENAME	= libl4mem-rust
 SRC_RS = lib.rs

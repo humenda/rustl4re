@@ -10,3 +10,7 @@ EXTERN int l4re_rm_detach_ds_w(void *addr, l4re_ds_t *ds) {
     return l4re_rm_detach_ds(addr, ds);
 }
 
+EXTERN int l4re_rm_detach_w(void *addr) {
+    return l4re_rm_detach(addr);
+}
+
