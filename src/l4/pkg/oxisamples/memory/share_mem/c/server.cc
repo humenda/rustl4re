@@ -16,10 +16,8 @@ char *read_message(l4_cap_idx_t ds, long length);
 
 
 inline void setup_utcb(l4_cap_idx_t ds) {
-    l4_cap_idx_t rcv_ds = ds << L4_CAP_SHIFT;
-    (*l4_utcb_br()).br[0] = rcv_ds | L4_RCV_ITEM_SINGLE_CAP
+    (*l4_utcb_br()).br[0] = ds | L4_RCV_ITEM_SINGLE_CAP
             |  L4_RCV_ITEM_LOCAL_ID;
-    (*l4_utcb_br()).br[1] = 0;
     (*l4_utcb_br()).bdr = 0;
 }
 
@@ -46,7 +44,7 @@ int main(int argc, char **argv) {
     while (1) {
         if ((r = l4_ipc_error(tag, l4_utcb())) == 0) {
             if (l4_is_valid_cap(ds)) {
-                long textlen = l4_utcb_mr()->mr[1];
+                long textlen = l4_utcb_mr()->mr[0];
                 printf("received cap %lx, text length parameter %lx\n", ds, textlen);
                 char *msg = read_message(ds, textlen);
                 // print first 20 chars of a non-null terminated string
