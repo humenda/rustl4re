@@ -67,11 +67,15 @@ void send_cap(l4_cap_idx_t ds, long textlen, l4_cap_idx_t dst) {
     auto mr = l4_utcb_mr();
     printf("cap info: index %lx, destination: %lx, memory size: %lx",
              ds, dst, textlen);
-    (*mr).mr[0] = l4_obj_fpage(ds, 0, L4_FPAGE_RWX).raw;
-    (*mr).mr[1] = textlen;
-    (*mr).mr[2] = 0;
+    // if flex pages and data words are sent, flex pages need to be the last
+    // items
+    (*mr).mr[0] = textlen;
+    // sending a capability requires to registers, one containing the action,
+    // the other the flexpage
+    (*mr).mr[1] = L4_ITEM_MAP;
+    (*mr).mr[2] = l4_obj_fpage(ds, 0, L4_FPAGE_RWX).raw;
     if ((err = l4_ipc_error(l4_ipc_call(dst, l4_utcb(),
-            l4_msgtag(0, 2, 1, 0), L4_IPC_NEVER), l4_utcb())) != 0) {
+            l4_msgtag(0, 1, 1, 0), L4_IPC_NEVER), l4_utcb())) != 0) {
         PANIC1("IPC error while sending capability: %i", err);
     }
 }
