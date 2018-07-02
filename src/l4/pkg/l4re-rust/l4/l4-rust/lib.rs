@@ -1,9 +1,13 @@
 extern crate l4_sys;
 
-use std::mem::size_of;
+pub mod cap;
+mod error;
+pub use error::{Error, Result};
 
+
+use std::mem::size_of;
 use l4_sys::{l4_uint64_t, l4_umword_t,
-    l4_utcb, l4_utcb_mr_u, l4_utcb_t};
+    l4_utcb, l4_utcb_br, l4_utcb_mr_u, l4_utcb_t};
 use l4_sys::L4_UTCB_GENERIC_DATA_SIZE;
 
 // see union l4_msg_regs_t
@@ -53,7 +57,7 @@ impl Utcb {
     #[inline]
     pub fn mr_mut(&mut self) -> &mut [u64; MSG_REG_COUNT] {
         unsafe {
-            let mut ptr = l4_utcb_mr_u(self.utcb);
+            let ptr = l4_utcb_mr_u(self.utcb);
             &mut *(ptr as *mut [u64; MSG_REG_COUNT])
         }
     }
@@ -61,15 +65,15 @@ impl Utcb {
     #[inline(always)]
     pub fn bdr(&self) -> usize {
         unsafe {
-            (*l4_utcb_br()).bdr
+            (*l4_utcb_br()).bdr as usize
         }
     }
 
-    pub fn br(&self) -> &[usize {
+    /*pub fn br(&self) -> &[usize {
         unsafe {
             let buffer_registers = (*l4_utcb_br()).br;
             &*(buffer_registers as *const [usize; L4_UTCB_GENERIC_BUFFERS_SIZE])
         }
     }
-
+    */
 }

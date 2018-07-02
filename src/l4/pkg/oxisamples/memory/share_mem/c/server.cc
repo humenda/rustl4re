@@ -89,8 +89,7 @@ char *read_message(l4_cap_idx_t ds_cap, long length) {
     char *s = (char *)malloc(length + 1);
     memcpy(s, (char *)virt_addr, length);
     s[length] = '\0';
-    printf("copied\n");
-    printf("detaching memory…\n");
+    printf("copied\ndetaching memory…\n");
     l4re_rm_detach(virt_addr);
     return s;
 }
