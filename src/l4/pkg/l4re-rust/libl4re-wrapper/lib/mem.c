@@ -14,3 +14,4 @@ EXTERN int l4re_rm_detach_w(void *addr) {
     return l4re_rm_detach(addr);
 }
 
+

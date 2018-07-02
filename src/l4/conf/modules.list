@@ -92,6 +92,11 @@ module shm_c.cfg
 module shm_c-client
 module shm_c-server
 
+entry testlibraries
+roottask moe --init=rom/testlibraries
+module l4re
+module testlibraries
+
 entry hello-shared
 roottask moe --init=rom/ex_hello_shared
 module l4re

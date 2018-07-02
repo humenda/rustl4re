@@ -36,7 +36,7 @@ l4_cap_idx_t allocate_ds(void **base, long size_in_bytes) {
         PANIC1("Unable to allocate memory for l4mem: %i", err);
     }
     // attach to region map
-    if ((err = l4re_rm_attach(&virt_addr, size_in_bytes,
+    if ((err = l4re_rm_attach(&mut virt_addr, size_in_bytes,
               L4RE_RM_SEARCH_ADDR, ds, 0, L4_PAGESHIFT)) != 0) {
         l4re_util_cap_free_um(ds);
         PANIC1("Allocation failed with exit code %i", err);
