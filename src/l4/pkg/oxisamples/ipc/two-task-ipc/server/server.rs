@@ -1,24 +1,30 @@
+/// A simple square server (squaring a number for a client). This server listens on an IPC gate for
+/// incoming connections of arbitrary clients.
 // This doesn't work with stable Rust, use "extern crate libc" here:
 #![feature(libc)]
 extern crate l4_sys as l4;
 extern crate libc;
 
-
 use l4::{l4_ipc_error, l4_msgtag, l4_utcb};
 
 #[no_mangle]
 pub extern "C" fn main() {
-    unsafe { // avoid deep nesting of unsafe blocks
+    unsafe { // avoid deep nesting of unsafe blocks, just make the whole program unsafe
         unsafe_main();
     }
 }
 
 pub unsafe fn unsafe_main() {
-    // custom identifier for messages from this label
+    // IPC gates can receive from multiple senders, hence messages need an idification label for
+    // clients. Here's one:
     let gatelabel = 0b11111100 as u64;
-    // receive label
+    // place to put label in when a message is received
     let mut label = std::mem::uninitialized();
+
+
+    // get IPC gate capability from Lua script (see ../*.cfg)
     let gate = l4::l4re_env_get_cap("channel");
+    // check whether we got something
     if l4::l4_is_invalid_cap(gate) {
         panic!("No IPC Gate found.");
     }
@@ -31,10 +37,9 @@ pub unsafe fn unsafe_main() {
     };
     println!("IPC gate received and bound.");
 
-    // square server
-    // Wait for requests from any thread. No timeout, i.e. wait forever.
     println!("waiting for incoming connections");
-    // wait an infinite amount of time for a message from a client
+    // Wait for requests from any thread. No timeout, i.e. wait forever. Note that the label of the
+    // sender will be placed in `label`.
     let mut tag = l4::l4_ipc_wait(l4::l4_utcb(), &mut label,
             l4::l4_timeout_t { raw: 0 });
     loop {
@@ -54,9 +59,8 @@ pub unsafe fn unsafe_main() {
         (*l4::l4_utcb_mr()).mr[0] = val * val;
         println!("new value: {}", (*l4::l4_utcb_mr()).mr[0]);
 
-        // send reply and wait again for new messages.
-        // The '1' in msgtag indicates that 1 word transfered from first
-        // register
+        // send reply and wait again for new messages; the message tag specifies to send one
+        // machine word with no protocol, no flex pages and no flags
         tag = l4::l4_ipc_reply_and_wait(l4::l4_utcb(), l4_msgtag(0, 1, 0, 0),
                               &mut label, l4::l4_timeout_t { raw: 0 });
     }
