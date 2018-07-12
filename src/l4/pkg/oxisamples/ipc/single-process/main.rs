@@ -46,9 +46,9 @@ fn client(server: ThreadHandle) {
         // this example);
         //
         // no protocol, 1 machine word, 0 flex pages, no flags
-        let send_tag = l4_msgtag(0, 1, 0, 0);
-        // IPC call to capability of server
         unsafe {
+            let send_tag = l4_msgtag(0, 1, 0, 0);
+            // IPC call to capability of server
             let rcv_tag = l4::l4_ipc_call(l4::pthread_l4_cap(server), l4_utcb(),
                     send_tag, timeout_never!());
             // check for IPC error, if yes, print out the IPC error code, if not, print the received

@@ -7,7 +7,6 @@ PC_FILENAME	= l4re-sys-rust
 SRC_RS = lib.rs
 
 
-REQUIRES_LIBS    = l4re_c
-
+REQUIRES_LIBS    = l4re_c libl4re-wrapper
 
 include $(L4DIR)/mk/lib.mk
