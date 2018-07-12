@@ -1,3 +1,6 @@
+//! Simple client-server example
+//!
+//! The client sends a number, the server squares it and returns it. That's it.
 #![feature(libc)]
 // ToDo: ^ -> replace with version from crates.io
 
@@ -12,11 +15,12 @@ use l4::{l4_utcb, l4_msgtag, l4_umword_t};
 use l4::pthread_t;
 
 macro_rules! timeout_never {
-    () => {
+    () => { // <^ shorthand for C macro L4_IPC_NEVER
         l4::l4_timeout_t { raw: 0 }
     }
 }
 
+/// simple wrapper to make thread handle `Send`
 struct ThreadHandle {
     inner: pthread_t,
 }
@@ -32,46 +36,49 @@ fn client(server: ThreadHandle) {
     let mut counter = 1;
     let server = server.into_inner();
     loop {
-        // dump value in UTCB
+        // dump value into Userspace Thread Control Block (UTCB)
         unsafe {
             (*l4::l4_utcb_mr()).mr[0] = counter;
         }
         println!("client: value written to register");
-        // To an L4 IPC call, i.e. send a message to thread2 and wait for a reply from thread2. The
-        // '1' in the msgtag denotes that we want to transfer one word of our message registers
-        // (i.e. MR0). No timeout.
+        // create message tag; specifies kind of interaction between sender and receiver: protocol,
+        // number of machine words and flex pages to send and other flags (ignore flex pages in
+        // this example);
+        //
+        // no protocol, 1 machine word, 0 flex pages, no flags
+        let send_tag = l4_msgtag(0, 1, 0, 0);
+        // IPC call to capability of server
         unsafe {
-            let tag = l4::l4_ipc_call(l4::pthread_l4_cap(server), l4_utcb(),
-                        l4_msgtag(0, 1, 0, 0),
-                        timeout_never!());
-            println!("data sent");
+            let rcv_tag = l4::l4_ipc_call(l4::pthread_l4_cap(server), l4_utcb(),
+                    send_tag, timeout_never!());
             // check for IPC error, if yes, print out the IPC error code, if not, print the received
             // result.
-            match l4::l4_ipc_error(tag, l4_utcb()) {
+            match l4::l4_ipc_error(rcv_tag, l4_utcb()) {
                 0 => // success
                     println!("Received: {}\n", (*l4::l4_utcb_mr()).mr[0]),
                 ipc_error => println!("client: IPC error: {}\n",  ipc_error),
             };
         }
+        // even servers need to relax
         thread::sleep(time::Duration::from_millis(1000));
         counter += 1;
     }
 }
 
+/// Server part.
 #[no_mangle]
 pub extern "C" fn main() {
+    // wrap the pthread handle "safely"
     let server = ThreadHandle { inner: unsafe { libc::pthread_self() as *mut ::std::os::raw::c_void } };
     let _client = thread::spawn(|| client(server));
-    // turn thread handle into pthread_t:
-    // https://doc.rust-lang.org/std/thread/struct.JoinHandle.html#impl-JoinHandleExt
-    //  client.as_pthread_t()
+    // label is used to identify senders (not relevant in our example)
     let mut label: l4_umword_t = unsafe { ::std::mem::uninitialized() };
     // square server
     // Wait for requests from any thread. No timeout, i.e. wait forever.
-    println!("before waiting for incoming connections");
+    println!("server: waiting for incoming connections");
+    // wait infinitely for messages, see client for more
     let mut tag = unsafe { l4::l4_ipc_wait(l4::l4_utcb(), &mut label,
             timeout_never!()) };
-    println!("waiting for incoming connections");
     loop {
         // Check if we had any IPC failure, if yes, print the error code and
         // just wait again.
@@ -92,17 +99,10 @@ pub extern "C" fn main() {
             println!("new value: {}", (*l4::l4_utcb_mr()).mr[0]);
 
             // send reply and wait again for new messages.
-            // The '1' in msgtag indicates that 1 word transfered from first
-            // register
+            println!("send reply, wait for incoming connections");
+            // msgtag: transfer 1 word from message registers (also see client)
             tag = l4::l4_ipc_reply_and_wait(l4::l4_utcb(), l4_msgtag(0, 1, 0, 0),
                                   &mut label, timeout_never!());
         }
     }
 }
-
-/*
-#[no_mangle]
-pub extern "C" fn main() {
-    println!("âye up");
-}
-*/
