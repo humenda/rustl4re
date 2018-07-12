@@ -1,6 +1,8 @@
 PKGDIR ?= .
 L4DIR  ?= $(PKGDIR)/../../../..
 
+RSFLAGS += -Zunstable-options --pretty=expanded
+
 TARGET  		= libl4-rust.rlib
 SRC_RS   		= lib.rs
 

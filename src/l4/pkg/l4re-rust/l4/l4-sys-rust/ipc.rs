@@ -30,6 +30,7 @@ const MSGTAG_ERROR: i64 = L4_MSGTAG_ERROR as i64;
 ////////////////////////////////////////////////////////////////////////////////
 // simple wrappers from lib-l4re-rust-wrapper
 
+#[must_use]
 #[inline]
 pub unsafe fn l4_ipc_call(dest: l4_cap_idx_t, utcb: *mut l4_utcb_t,
             tag: l4_msgtag_t, timeout: l4_timeout_t) -> l4_msgtag_t {
@@ -41,6 +42,7 @@ pub unsafe fn l4_ipc_error(tag: l4_msgtag_t, utcb: *mut l4_utcb_t) -> l4_umword_
     l4_ipc_error_w(tag, utcb)
 }
 
+#[must_use]
 #[inline]
 pub unsafe fn l4_ipc_receive(object: l4_cap_idx_t, utcb: *mut l4_utcb_t,
         timeout: l4_timeout_t) -> l4_msgtag_t {
@@ -48,6 +50,7 @@ pub unsafe fn l4_ipc_receive(object: l4_cap_idx_t, utcb: *mut l4_utcb_t,
 }
 
 
+#[must_use]
 #[inline]
 pub unsafe fn l4_ipc_reply_and_wait(utcb: *mut l4_utcb_t, tag: l4_msgtag_t,
         src: *mut l4_umword_t, timeout: l4_timeout_t) -> l4_msgtag_t {
@@ -55,6 +58,7 @@ pub unsafe fn l4_ipc_reply_and_wait(utcb: *mut l4_utcb_t, tag: l4_msgtag_t,
 }
 
 
+#[must_use]
 #[inline]
 pub unsafe fn l4_ipc_wait(utcb: *mut l4_utcb_t, label: *mut l4_umword_t,
         timeout: l4_timeout_t) -> l4_msgtag_t {
@@ -67,6 +71,7 @@ pub unsafe fn l4_msgtag(label: ::std::os::raw::c_long, words: c_uint,
     l4_msgtag_w(label, words, items, flags)
 }
 
+#[must_use]
 #[inline]
 pub unsafe fn l4_rcv_ep_bind_thread(gate: l4_cap_idx_t, thread: l4_cap_idx_t,
         label: l4_umword_t) -> l4_msgtag_t {

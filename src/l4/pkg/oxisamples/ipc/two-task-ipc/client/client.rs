@@ -1,4 +1,5 @@
 extern crate l4_sys as l4;
+extern crate l4re_sys as l4re;
 
 use l4::{l4_utcb, l4_msgtag};
 use std::{thread, time};
@@ -6,7 +7,7 @@ use std::{thread, time};
 #[no_mangle]
 pub extern "C" fn main() {
     // retrieve IPC gate from Ned (created in the *.cfg script file
-    let server = unsafe { l4::l4re_env_get_cap("channel") };
+    let server = unsafe { l4re::l4re_env_get_cap("channel") };
     // test whether valid cap received
     if l4::l4_is_invalid_cap(server) {
         panic!("No IPC Gate found.");
@@ -22,8 +23,8 @@ pub extern "C" fn main() {
         // the message tag contains instructions to the kernel and to the other party what is being
         // transfered: no protocol, 1 message register, no flex page and no flags; flex pages are
         // not relevant here
-        let send_tag = l4_msgtag(0, 1, 0, 0),
         unsafe {
+            let send_tag = l4_msgtag(0, 1, 0, 0);
             let tag = l4::l4_ipc_call(server, l4_utcb(), send_tag,
                     l4::l4_timeout_t { raw: 0 });
             println!("data sent");

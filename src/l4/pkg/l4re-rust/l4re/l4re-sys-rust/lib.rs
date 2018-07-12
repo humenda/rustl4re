@@ -2,6 +2,7 @@
 #![allow(non_camel_case_types)]
 #![allow(non_snake_case)]
 
+use std::ffi::CString;
 use std::os::raw::{c_int, c_long, c_ulong, c_void};
 
 include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
@@ -27,6 +28,18 @@ pub const L4_PAGESIZEU: usize = L4_PAGESIZE as usize;
 
 ////////////////////////////////////////////////////////////////////////////////
 // re-implementations of inlined C functions
+#[inline]
+pub unsafe fn l4re_env() -> *const l4re_env_t {
+    l4re_global_env
+}
+
+#[must_use]
+#[inline]
+pub unsafe fn l4re_env_get_cap(name: &str) -> l4_cap_idx_t {
+    let name = CString::from_vec_unchecked(name.as_bytes().to_vec());
+    l4re_env_get_cap_w(name.as_ptr())
+}
+
 
 #[inline]
 pub fn l4_trunc_page(address: l4_addr_t) -> l4_addr_t {

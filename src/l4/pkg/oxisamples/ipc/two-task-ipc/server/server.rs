@@ -1,8 +1,9 @@
-/// A simple square server (squaring a number for a client). This server listens on an IPC gate for
-/// incoming connections of arbitrary clients.
+//! A simple square server (squaring a number for a client). This server listens on an IPC gate for
+//! incoming connections of arbitrary clients.
 // This doesn't work with stable Rust, use "extern crate libc" here:
 #![feature(libc)]
 extern crate l4_sys as l4;
+extern crate l4re_sys as l4re;
 extern crate libc;
 
 use l4::{l4_ipc_error, l4_msgtag, l4_utcb};
@@ -23,7 +24,7 @@ pub unsafe fn unsafe_main() {
 
 
     // get IPC gate capability from Lua script (see ../*.cfg)
-    let gate = l4::l4re_env_get_cap("channel");
+    let gate = l4re::l4re_env_get_cap("channel");
     // check whether we got something
     if l4::l4_is_invalid_cap(gate) {
         panic!("No IPC Gate found.");
@@ -31,7 +32,7 @@ pub unsafe fn unsafe_main() {
 
     // bind IPC gate to main thread with custom label
     match l4_ipc_error(l4::l4_rcv_ep_bind_thread(gate,
-            (*l4::l4re_env()).main_thread, gatelabel), l4_utcb()) {
+            (*l4re::l4re_env()).main_thread, gatelabel), l4_utcb()) {
         0 => (),
         n => panic!("Error while binding IPC gate: {}", n)
     };
