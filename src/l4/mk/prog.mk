@@ -171,9 +171,10 @@ $(strip $(TARGET)).a: $(SRC_RS) $(LIBDEPS)
 		--target=x86_64-unknown-l4re-uclibc \
 		$(patsubst -D%,--cfg=%,$(filter -D%,$(CPPFLAGS))) \
 		-L $(OBJ_BASE)/lib/rustlib \
+		$(addprefix -L, $(PRIVATE_LIBDIR) $(PRIVATE_LIBDIR_$(OSYSTEM)) $(PRIVATE_LIBDIR_$@) $(PRIVATE_LIBDIR_$@_$(OSYSTEM))) \
 		-L $(OBJ_BASE)/ \
 		--crate-type staticlib \
-		-o $@ $<
+		-o $@ $< $(if $(find @,$(VERBOSE)),,-v)
 	@$(BUILT_MESSAGE)
 
 $(strip $(TARGET)): $(strip $(TARGET)).a

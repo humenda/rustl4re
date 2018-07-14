@@ -197,16 +197,18 @@ endif
 #  ToDo: ^ how to figure out whether or not to use cpp11 or something newer
 
 
+RUSTC_TARGET ?= x86_64-unknown-l4re-uclibc
+
 $(filter %.rlib,$(TARGET)): $(SRC_RS) \
 		$(if $(wildcard $(SRC_DIR)/bindgen.h),bindgen) \
 		$(if $(wildcard $(SRC_DIR)/bindgen.hh),bindgen)
 	@echo 'Building rlib...'
 	@echo ToDo, currently not including LIBDEPS: $(LIBDEPS)
 	$(VERBOSE)OUT_DIR=$(PKGDIR_OBJ) $(RUSTC) \
-		--target=x86_64-unknown-l4re-uclibc \
+		--target=$(RUSTC_TARGET) \
 		$(RSFLAGS) \
 		$(patsubst -D%,--cfg=%,$(filter -D%,$(CPPFLAGS))) \
-		$(addprefix -L, $(PRIVATE_LIBDIR) $(PRIVATE_LIBDIR_$(OSYSTEM)) $(PRIVATE_LIBDIR_$@) $(PRIVATE_LIBDIR_$@_$(OSYSTEM)))\
+		$(addprefix -L, $(PRIVATE_LIBDIR) $(PRIVATE_LIBDIR_$(OSYSTEM)) $(PRIVATE_LIBDIR_$@) $(PRIVATE_LIBDIR_$@_$(OSYSTEM))) \
 		$(addprefix -L, $(L4LIBDIR)) \
 		--crate-name $(patsubst lib%,%,$(subst -rust,,$(patsubst %.rlib,%,$(patsubst lib%,%,$@)))) \
 		--crate-type lib \
