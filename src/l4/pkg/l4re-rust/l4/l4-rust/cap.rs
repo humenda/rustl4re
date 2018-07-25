@@ -1,4 +1,4 @@
-use l4_sys::{L4_CAP_SHIFT, L4_INVALID_CAP_BIT, l4_cap_idx_t};
+use l4_sys::{self, L4_CAP_SHIFT, L4_INVALID_CAP_BIT, l4_cap_idx_t};
 use std::ops::Deref;
 
 use error::{Error, Result};
@@ -6,19 +6,23 @@ use error::{Error, Result};
 /// C capability index for FFI interaction.
 pub type CapIdx = l4_cap_idx_t;
 
-/// Raw capability selector without any additrional type info
-pub struct RawCap;
+pub trait CapKind { }
+
+/// Untyped Capability
+pub struct Untyped;
+
+impl CapKind for Untyped { }
 
 /// Representation of a L4 Fiasco capability
 ///
 /// This types safely wraps the interaction with capabilities and allows for easy comparison of
 /// capability handles.
-pub struct Cap<T>{
+pub struct Cap<T: CapKind> {
     interface: T,
     pub raw: l4_cap_idx_t
 }
 
-impl<T> Deref for Cap<T> {
+impl<T: CapKind> Deref for Cap<T> {
     type Target = T;
 
     fn deref(&self) -> &T {
@@ -26,7 +30,7 @@ impl<T> Deref for Cap<T> {
     }
 }
 
-impl<T> PartialEq<Cap<T>> for Cap<T> {
+impl<T: CapKind> PartialEq<Cap<T>> for Cap<T> {
     fn eq(&self, other: &Cap<T>) -> bool {
         (self.raw >> L4_CAP_SHIFT) == (other.raw >> L4_CAP_SHIFT)
     }
@@ -36,7 +40,7 @@ impl<T> PartialEq<Cap<T>> for Cap<T> {
     }
 }
 
-impl<T> PartialEq<CapIdx> for Cap<T> {
+impl<T: CapKind> PartialEq<CapIdx> for Cap<T> {
     fn eq(&self, other: &CapIdx) -> bool {
         (self.raw >> L4_CAP_SHIFT) == (other >> L4_CAP_SHIFT)
     }
@@ -47,16 +51,24 @@ impl<T> PartialEq<CapIdx> for Cap<T> {
 }
 
 
-impl<T> Cap<T> {
+impl<T: CapKind> Cap<T> {
     pub fn new(c: CapIdx, protocol: T) -> Cap<T> {
         Cap { raw: c, interface: protocol }
     }
-    pub fn from(c: CapIdx) -> Cap<RawCap> {
-        Cap { raw: c, interface: RawCap }
+    pub fn from(c: CapIdx) -> Cap<Untyped> {
+        Cap { raw: c, interface: Untyped }
     }
 
-    pub fn alloc(&mut self) -> Result<()> {
-        Ok(())
+    /// Allocate new capability slot
+    pub fn alloc(&mut self) -> Result<Cap<Untyped>> {
+        let cap = Cap {
+            interface: Untyped,
+            raw: unsafe { l4_sys::l4re_util_cap_alloc() }
+        };
+        match cap.is_valid() {
+            true => Ok(cap),
+            false => Err(Error::InvalidCap),
+        }
     }
 
     #[inline]

@@ -93,10 +93,21 @@ module shm_c.cfg
 module shm_c-client
 module shm_c-server
 
-entry testlibraries
-roottask moe --init=rom/testlibraries
+entry syint
+roottask moe rom/syint.cfg
 module l4re
-module testlibraries
+module ned
+module syint.cfg
+module syint
+
+entry shm_c
+kernel fiasco -serial_esc
+roottask moe rom/shm_c.cfg
+module l4re
+module ned
+module shm_c.cfg
+module shm_c-client
+module shm_c-server
 
 entry hello-shared
 roottask moe --init=rom/ex_hello_shared

@@ -10,6 +10,7 @@ macro_rules! enumgenerator {
        $orig:ident => $new:tt,
      )+) => {
         #[allow(non_snake_case)]
+        #[repr(u32)]
         $(#[$global])*
         pub enum $fieldname {
             $($(#[$docs])*
@@ -17,9 +18,10 @@ macro_rules! enumgenerator {
         }
         impl $fieldname {
             /// Initialise from raw L4 error code
-            pub fn from(&self, i: u32) -> $fieldname {
+            pub fn from(i: u32) -> $fieldname {
                 match i {
                     $($orig => $fieldname::$new,)+
+                    n => panic!("invalid enum case: {}", n),
                 }
             }
         }
@@ -27,7 +29,7 @@ macro_rules! enumgenerator {
 }
 
 // for the Type
-enumgenerator! (Generic =>
+enumgenerator! (GenericErr =>
     /// Generic L4 error codes
     ///
     /// These error codes can be used both by kernel and userland programs.
@@ -91,7 +93,7 @@ enumgenerator! (Generic =>
 
 
 // IPC errors
-enumgenerator! (Tcr =>
+enumgenerator! (TcrErr =>
     /// Error codes in the *error* TCR (for IPC).
     ///
     /// The error codes are accessible via the *error* Thread Control
@@ -133,44 +135,57 @@ enumgenerator! (Tcr =>
     L4_IPC_SEMSGCUT         => SendMsgCut,
 );
 
-impl Tcr {
+impl TcrErr {
     /// Get error from given tag (for current thread)
     #[inline]
     pub fn from_tag(tag: l4_msgtag_t) -> Self {
-         Self::from(l4_ipc_error(tag, l4_utcb()))
+        unsafe {
+            Self::from(l4_ipc_error(tag, l4_utcb()) as u32)
+        }
     }
 
     /// Get error from given tag and corresponding UTCB.
     #[inline]
     pub fn from_tag_u(tag: l4_msgtag_t, utcb: &Utcb) -> Self {
-         Self::from(l4_ipc_error(tag, utcb.utcb))
+        unsafe {
+            // as u32 is safe -- low-level function does return the wrong type
+             Self::from(l4_ipc_error(tag, utcb.raw) as u32)
+        }
     }
 }
 
 pub enum Error {
-    Generic(Generic),
-    Tcr(Tcr),
+
+    Generic(GenericErr),
+    /// errors from the Thread Control Registers
+    Tcr(TcrErr),
+    /// Invalid capability
+    InvalidCap,
+    /// Invalid argument to a function with a description or a String containing
+    /// the argument
+    InvalidArg(String)
 }
 
 impl Error {
     /// Get error from given tag (for current thread)
     #[inline]
     pub fn from_tag(tag: l4_msgtag_t) -> Self {
-         Self::Tcr(Tcr::from_tag(tag))
+         Error::Tcr(TcrErr::from_tag(tag))
     }
 
     /// Get error from given tag and corresponding UTCB.
     #[inline]
     pub fn from_tag_u(tag: l4_msgtag_t, utcb: &Utcb) -> Self {
-         Self::Tcr(Tcr::from_tag_u(tag, utcb))
+         Error::Tcr(TcrErr::from_tag_u(tag, utcb))
     }
 
     /// Extract IPC error code from error code
     ///
     /// Error codes from L4 IPC are masked and and need to be umasked before converted to an error.
     #[inline(always)]
-    pub fn from_ipc(code: isize) -> u64 {
-        Error::Tcr(Tcr::from((code & L4_IPC_ERROR_MASK as isize) as u64))
+    pub fn from_ipc(code: isize) -> Self {
+        // applying the mask makes the integer positive, cast to u32 then
+        Error::Tcr(TcrErr::from((code & L4_IPC_ERROR_MASK as isize) as u32))
     }
 }
 
