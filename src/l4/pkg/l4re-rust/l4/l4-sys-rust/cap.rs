@@ -1,7 +1,5 @@
-use std::{ffi::CString,
-        os::raw::{c_uchar, c_uint}};
+use std::os::raw::{c_uchar, c_uint};
 use c_api::*;
-use c_api::l4re_global_env;
 
 ////////////////////////////////////////////////////////////////////////////////
 // redefined constants
@@ -43,7 +41,6 @@ pub fn l4_map_control(snd_base: l4_umword_t, cache: u8, grant: u64)
         | (L4_ITEM_MAP as u64)
         | grant
 }
-
 
 /// Create the first word for a map item for the object space.
 ///

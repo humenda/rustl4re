@@ -23,8 +23,6 @@ const MSG_ITEM_CONSTS_ITEM_CONT: u64 = 1;
 // receive
 /// Mark the receive buffer to be a small receive item that describes a buffer for a single
 /// capability.
-/// The receiver requests to receive a local ID instead of a mapping whenever possible.
-const MSG_ITEM_MAP: l4_umword_t = L4_ITEM_MAP as l4_umword_t;
 const MSGTAG_ERROR: i64 = L4_MSGTAG_ERROR as i64;
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -106,7 +104,7 @@ pub unsafe fn l4_msgtag_label(t: l4_msgtag_t) -> c_long {
 }
 
 #[inline]
-pub unsafe fn l4_msgtag_words(t: l4_msgtag_t) -> u32 {
+pub fn l4_msgtag_words(t: l4_msgtag_t) -> u32 {
     (t.raw & 0x3f) as u32
 }
 
@@ -160,7 +158,7 @@ pub unsafe fn l4_map_control(snd_base: l4_umword_t, cache: u8,
          grant: u32) -> l4_umword_t {
     (snd_base & L4_FPAGE_CONTROL_MASK)
                    | ((cache as l4_umword_t) << 4)
-                   | MSG_ITEM_MAP
+                   | L4_ITEM_MAP as u64
                    | (grant as l4_umword_t)
 }
 
