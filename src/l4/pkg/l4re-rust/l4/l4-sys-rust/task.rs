@@ -19,14 +19,14 @@ use ipc::msgtag;
 /// to share memory as well as to delegate access to objects.
 #[inline]
 pub unsafe fn l4_task_map(dst_task: l4_cap_idx_t, src_task: l4_cap_idx_t,
-            snd_fpage: l4_fpage_t, snd_base: l4_addr_t) -> msgtag_t {
+            snd_fpage: l4_fpage_t, snd_base: l4_addr_t) -> l4_msgtag_t {
     l4_task_map_u(dst_task, src_task, snd_fpage, snd_base, l4_utcb())
 }
 
 #[inline]
 pub unsafe fn l4_task_map_u(dst_task: l4_cap_idx_t, src_task: l4_cap_idx_t,
         snd_fpage: l4_fpage_t, snd_base: l4_addr_t, u: *mut l4_utcb_t)
-        -> msgtag_t {
+        -> l4_msgtag_t {
    let v = l4_utcb_mr_u(u);
     (*v).mr[0] = L4_TASK_MAP_OP as u64;
     (*v).mr[3] = l4_map_obj_control(0,0);
@@ -47,13 +47,13 @@ pub unsafe fn l4_task_map_u(dst_task: l4_cap_idx_t, src_task: l4_cap_idx_t,
 /// capability of an object to be destructed, which destroys the object itself.
 #[inline]
 pub unsafe fn l4_task_unmap(task: l4_cap_idx_t, fpage: l4_fpage_t,
-        map_mask: l4_umword_t) -> msgtag_t {
+        map_mask: l4_umword_t) -> l4_msgtag_t {
     l4_task_unmap_u(task, fpage, map_mask, l4_utcb())
 }
 
 #[inline]
 pub unsafe fn l4_task_unmap_u(task: l4_cap_idx_t, fpage: l4_fpage_t,
-        map_mask: l4_umword_t, u: *mut l4_utcb_t) -> msgtag_t {
+        map_mask: l4_umword_t, u: *mut l4_utcb_t) -> l4_msgtag_t {
     let v = l4_utcb_mr_u(u);
     (*v).mr[0] = L4_TASK_UNMAP_OP as u64;
     (*v).mr[1] = map_mask as u64;
@@ -75,14 +75,14 @@ pub unsafe fn l4_task_unmap_u(task: l4_cap_idx_t, fpage: l4_fpage_t,
 /// capability of an object to be destructed, which destroys the object itself.
 #[inline]
 pub unsafe fn l4_task_unmap_batch(task: l4_cap_idx_t, fpages:  *mut l4_fpage_t,
-        num_fpages: u32, map_mask: u64) -> msgtag_t {
+        num_fpages: u32, map_mask: u64) -> l4_msgtag_t {
     l4_task_unmap_batch_u(task, fpages, num_fpages, map_mask, l4_utcb())
 }
 
 #[inline]
 pub unsafe fn l4_task_unmap_batch_u(task: l4_cap_idx_t,
         fpages: *mut l4_fpage_t, num_fpages: u32, map_mask: u64,
-        u: *mut l4_utcb_t) -> msgtag_t {
+        u: *mut l4_utcb_t) -> l4_msgtag_t {
     let v = l4_utcb_mr_u(u);
     (*v).mr[0] = L4_TASK_UNMAP_OP as u64;
     (*v).mr[1] = map_mask as u64;
@@ -101,13 +101,13 @@ pub unsafe fn l4_task_unmap_batch_u(task: l4_cap_idx_t,
 /// This operation calls `l4_task_unmap()` with `L4_FP_DELETE_OBJ`.
 #[inline]
 pub unsafe fn l4_task_delete_obj(task: l4_cap_idx_t, obj: l4_cap_idx_t) ->
-        msgtag_t {
+        l4_msgtag_t {
     l4_task_delete_obj_u(task, obj, l4_utcb())
 }
 
 #[inline]
 pub unsafe fn l4_task_delete_obj_u(task: l4_cap_idx_t, obj: l4_cap_idx_t,
-        u: *mut l4_utcb_t) -> msgtag_t {
+        u: *mut l4_utcb_t) -> l4_msgtag_t {
     l4_task_unmap_u(task,
             l4_obj_fpage(obj, 0, L4_CAP_FPAGE_RWSD as u8),
             L4_FP_DELETE_OBJ as u64, u)
@@ -118,13 +118,13 @@ pub unsafe fn l4_task_delete_obj_u(task: l4_cap_idx_t, obj: l4_cap_idx_t,
 /// This operation unmaps the capability from the specified task.
 #[inline]
 pub unsafe fn l4_task_release_cap(task: l4_cap_idx_t, cap: l4_cap_idx_t)
-        -> msgtag_t {
+        -> l4_msgtag_t {
     l4_task_release_cap_u(task, cap, l4_utcb())
 }
 
 #[inline]
 pub unsafe fn l4_task_release_cap_u(task: l4_cap_idx_t, cap: l4_cap_idx_t,
-        u: *mut l4_utcb_t) -> msgtag_t {
+        u: *mut l4_utcb_t) -> l4_msgtag_t {
     l4_task_unmap_u(task, l4_obj_fpage(cap, 0, L4_CAP_FPAGE_RWSD as u8),
             L4_FP_ALL_SPACES as u64, u)
 }
@@ -135,13 +135,13 @@ pub unsafe fn l4_task_release_cap_u(task: l4_cap_idx_t, cap: l4_cap_idx_t,
 /// kernel object.
 #[inline]
 pub unsafe fn l4_task_cap_valid(task: l4_cap_idx_t, cap: l4_cap_idx_t)
-        -> msgtag_t {
+        -> l4_msgtag_t {
     l4_task_cap_valid_u(task, cap, l4_utcb())
 }
 
 #[inline]
 pub unsafe fn l4_task_cap_valid_u(task: l4_cap_idx_t, cap: l4_cap_idx_t,
-        u: *mut l4_utcb_t) -> msgtag_t {
+        u: *mut l4_utcb_t) -> l4_msgtag_t {
     let v = l4_utcb_mr_u(u);
     (*v).mr[0] = L4_TASK_CAP_INFO_OP as u64;
     (*v).mr[1] = cap & !1u64;
@@ -153,13 +153,13 @@ pub unsafe fn l4_task_cap_valid_u(task: l4_cap_idx_t, cap: l4_cap_idx_t,
 ///The returned label of the message tag is 1 on equality, 0 on inequality.
 #[inline]
 pub unsafe fn l4_task_cap_equal(task: l4_cap_idx_t, cap_a: l4_cap_idx_t,
-        cap_b: l4_cap_idx_t) -> msgtag_t {
+        cap_b: l4_cap_idx_t) -> l4_msgtag_t {
     l4_task_cap_equal_u(task, cap_a, cap_b, l4_utcb())
 }
 
 #[inline]
 pub unsafe fn l4_task_cap_equal_u(task: l4_cap_idx_t, cap_a: l4_cap_idx_t,
-        cap_b: l4_cap_idx_t, u: *mut l4_utcb_t) -> msgtag_t {
+        cap_b: l4_cap_idx_t, u: *mut l4_utcb_t) -> l4_msgtag_t {
     let v = l4_utcb_mr_u(u);
     (*v).mr[0] = L4_TASK_CAP_INFO_OP as u64;
     (*v).mr[1] = cap_a;
@@ -174,12 +174,12 @@ pub unsafe fn l4_task_cap_equal_u(task: l4_cap_idx_t, cap_a: l4_cap_idx_t,
 /// task.
 #[inline]
 pub unsafe fn l4_task_add_ku_mem(task: l4_cap_idx_t, ku_mem: l4_fpage_t)
-        -> msgtag_t {
+        -> l4_msgtag_t {
     l4_task_add_ku_mem_u(task, ku_mem, l4_utcb())
 }
 
 pub unsafe fn l4_task_add_ku_mem_u(task: l4_cap_idx_t, ku_mem: l4_fpage_t,
-        u: *mut l4_utcb_t) -> msgtag_t {
+        u: *mut l4_utcb_t) -> l4_msgtag_t {
     let v = l4_utcb_mr_u(u);
     (*v).mr[0] = L4_TASK_ADD_KU_MEM_OP as u64;
     (*v).mr[1] = ku_mem.raw;

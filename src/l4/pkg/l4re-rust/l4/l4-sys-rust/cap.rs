@@ -1,11 +1,8 @@
 use std::os::raw::{c_uchar, c_uint};
+
 use c_api::*;
 
 ////////////////////////////////////////////////////////////////////////////////
-// redefined constants
-
-pub const FPAGE_RWX: u8 = L4_FPAGE_RWX as u8;
-
 ////////////////////////////////////////////////////////////////////////////////
 // inline functions from l4/sys/env.h:
 
@@ -16,6 +13,7 @@ pub fn l4_is_invalid_cap(cap: l4_cap_idx_t) -> bool {
     (cap & L4_INVALID_CAP_BIT) > 0
 }
 
+// ToDo: leicht nachzuimplementieren
 #[inline]
 pub unsafe fn l4_obj_fpage(obj: l4_cap_idx_t, order: c_uint, rights: c_uchar)
         -> l4_fpage_t {
