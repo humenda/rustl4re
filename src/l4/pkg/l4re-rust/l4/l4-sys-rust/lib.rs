@@ -1,7 +1,8 @@
-extern crate libc;
 mod cap;
 mod c_api;
+mod consts;
 mod factory;
+mod helpers;
 mod ipc_basic;
 pub mod ipc_ext;
 mod task;
@@ -9,6 +10,7 @@ mod task;
 /// expose public C API
 pub use cap::*;
 pub use c_api::*;
-pub use ipc_basic::*;
+pub use factory::*;
 pub use ipc_ext as ipc;
+pub use ipc_basic::*;
 pub use task::*;
