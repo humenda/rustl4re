@@ -89,7 +89,7 @@ pub extern "C" fn main() {
 }
 
 unsafe fn unsafe_main() {
-    let server = l4::l4re_env_get_cap("channel");
+    let server = l4re::l4re_env_get_cap("channel");
     if l4::l4_is_invalid_cap(server) {
         panic!("No IPC Gate found.");
     }

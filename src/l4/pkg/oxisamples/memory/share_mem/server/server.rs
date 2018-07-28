@@ -28,12 +28,12 @@ pub extern "C" fn main() {
 }
 
 unsafe fn unsafe_main() {
-    let gate = l4::l4re_env_get_cap("channel");
+    let gate = l4re::l4re_env_get_cap("channel");
     if l4::l4_is_invalid_cap(gate) {
         panic!("No IPC Gate found.");
     }
     match l4_ipc_error(l4::l4_rcv_ep_bind_thread(gate,
-            (*l4::l4re_env()).main_thread, 0b111100), l4_utcb()) {
+            (*l4re::l4re_env()).main_thread, 0b111100), l4_utcb()) {
         0 => (),
         n => panic!("Error while binding IPC gate: {}", n)
     };
