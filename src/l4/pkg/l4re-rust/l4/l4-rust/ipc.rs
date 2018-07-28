@@ -103,7 +103,8 @@ impl MsgTag {
     #[inline]
     pub fn result(self) -> Result<MsgTag> {
         match self.has_error() {
-            true  => Error::from(self),
+            true  => Err(Error::from_tag_raw(l4_msgtag_t {
+                    raw: self.raw  as i64 })),
             false => Ok(self),
         }
     }

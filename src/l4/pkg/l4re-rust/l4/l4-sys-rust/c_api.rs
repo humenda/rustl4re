@@ -4,7 +4,7 @@
 
 include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
 
-extern "C" {
-    #[no_mangle]
-    pub static l4re_global_env: *const l4re_env_t;
-}
+//extern "C" {
+//    #[no_mangle]
+//    pub static l4re_global_env: *const l4re_env_t;
+//}

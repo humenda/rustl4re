@@ -18,7 +18,7 @@ impl CapKind for Untyped { }
 /// This types safely wraps the interaction with capabilities and allows for easy comparison of
 /// capability handles.
 pub struct Cap<T: CapKind> {
-    interface: T,
+    pub(crate) interface: T,
     pub raw: l4_cap_idx_t
 }
 

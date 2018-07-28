@@ -169,10 +169,9 @@ pub enum Error {
 impl Error {
     /// Get error from given tag (for current thread)
     #[inline]
-    pub fn from_tag(tag: l4_msgtag_t) -> Self {
+    pub fn from_tag_raw(tag: l4_msgtag_t) -> Self {
          Error::Tcr(TcrErr::from_tag(tag))
     }
-
     /// Get error from given tag and corresponding UTCB.
     #[inline]
     pub fn from_tag_u(tag: l4_msgtag_t, utcb: &Utcb) -> Self {
