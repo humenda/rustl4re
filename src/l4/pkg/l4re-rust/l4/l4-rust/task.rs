@@ -2,15 +2,40 @@
 
 use l4_sys;
 
-use l4_sys::{l4_addr_t, l4_fpage_t, l4_cap_idx_t}; // ToDo: should completely go
+use l4_sys::{l4_addr_t, l4_fpage_t, l4_cap_idx_t, l4re_env_t}; // ToDo: should completely go
 
 use cap::{Cap, CapKind, Untyped};
-use error::Result;
+use error::{Error, Result};
 use ipc::MsgTag;
 use types::{UMword};
 use utcb::Utcb;
 
-pub const THIS_TASK: Cap<Task> = Cap::from(1usize << l4_sys::L4_CAP_SHIFT);
+// ToDo
+pub static THIS_TASK: Cap<Task> = Cap {
+    raw: 1u64 << l4_sys::L4_CAP_SHIFT,
+    interface: Task {
+        cap: 1u64 << l4_sys::L4_CAP_SHIFT,
+    }
+};
+
+
+/// we need this helper to use the factory from the l4re environment, normally this would be part
+/// of the l4re crate, but task is a L4-level abstraction.
+extern "C" {
+    static l4re_global_env: *const l4_sys::l4re_env_t; // set up by uclibc
+}
+
+#[inline(always)]
+fn l4re_env() -> Result<&'static l4re_env_t> {
+    unsafe {
+        if l4re_global_env.is_null() {
+            return Err(Error::InvalidArg("Unable to get L4Re environment pointer, \
+                not set up (either no l4re binary or no libc in use)".into()));
+        }
+        Ok(::std::mem::transmute::<*const l4re_env_t, &'static l4re_env_t>(
+                l4re_global_env))
+    }
+    }
 
 /// Task kernel object
 /// The `Task` represents a combination of the address spaces provided
@@ -41,9 +66,9 @@ impl Task {
     /// The destination task is the task referenced by the capability invoking map and the receive
     /// window is the whole address space of said task.
     #[inline]
-    pub unsafe fn map_u(&self, src_task: Cap<Task>, snd_fpage: l4_fpage_t,
+    pub unsafe fn map_u(&self, dst_task: Cap<Task>, snd_fpage: l4_fpage_t,
                  snd_base: l4_addr_t, u: &mut Utcb) -> Result<MsgTag> {
-        MsgTag::from(l4_sys::l4_task_map_u(self.cap, src_task.raw,
+        MsgTag::from(l4_sys::l4_task_map_u(dst_task.raw, self.cap,
                 snd_fpage, snd_base, u.raw)).result()
     }
 
@@ -91,7 +116,7 @@ impl Task {
     pub unsafe fn unmap_batch(&self, fpages: &mut l4_fpage_t, num_fpages: usize,
             map_mask: UMword, utcb: &Utcb) -> Result<MsgTag> {
         MsgTag::from(l4_sys::l4_task_unmap_batch_u(self.cap, fpages,
-                num_fpages as u32, map_mask, utcb.raw)).result
+                num_fpages as u32, map_mask as u64, utcb.raw)).result()
     }
 
     /// Release capability and delete object.
@@ -156,25 +181,28 @@ impl Task {
     ///
     /// This creates a L4 task, mapping its own capability and the parent capability into the
     /// object space for later use.
-    pub unsafe fn create_from<T: CapKind>(task_cap: Cap<Untyped>,
-            utcb_area: *const l4_fpage_t) -> Result<Task> {
+    pub unsafe fn create_from<T: CapKind>(mut task_cap: Cap<Untyped>,
+            utcb_area: l4_fpage_t) -> Result<Task> {
         let tag = MsgTag::from(l4_sys::l4_factory_create_task(
-                (*l4re_env()).factory, task_cap.raw, utcb_area)).result()?;
-        // ToDo: the first two need to be reimplemented, the last one is up to the caller
+                l4re_env()?.factory, &mut task_cap.raw, utcb_area)).result()?;
+        panic!("ToDo: the first two need to be reimplemented, the last one is up to the caller");
         //map_obj_to_other(task_cap, pager_gate, pager_id, "pager"); /* Map pager cap */
         //map_obj_to(task_cap, main_id, L4_FPAGE_RO, "main"); /* Make us visible */
         //map_obj_to(task_cap, l4re_env()->log, L4_FPAGE_RO, "log"); /* Make print work */
     }
 }
 
+/*
 pub fn create_task() -> Result<Cap<Task>> {
     let newtask = Cap::alloc();
-    let _ = MsgTag::from(l4_sys::l4_factory_create_task(
-            (*l4_sys::l4re_env()).factory, &mut newtask.raw,
+    let _ = MsgTag::from(l4_sys::l4_factory_create_task(l4re_env()?.factory,
+            &mut newtask.raw,
             ToDo_created_utcb)).result()?;
-    // map our region manager to child
-    let _ = l4_sys::l4_task_map(task_cap, THIS_TASK,
+    // map our region manager to child, use C-alike function to avoid creation of task object for
+    // current task
+    let _ = l4_sys::l4_task_map(newtask.raw, THIS_TASK,
             l4_obj_fpage((*l4re_env()).rm, 0, L4_FPAGE_RO),
             l4_map_obj_control((*l4re_env()).rm, l4_sys::L4_MAP_ITEM_MAP)).result()?;
 }
+*/
 
