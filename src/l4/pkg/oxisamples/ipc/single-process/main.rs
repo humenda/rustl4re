@@ -9,16 +9,10 @@ extern crate libc;
 
 use std::{thread, time};
 
-use l4::{l4_utcb, l4_msgtag, l4_umword_t};
+use l4::{l4_utcb, l4_umword_t, ipc::msgtag, timeout_never};
 
 // ToDo: use from libc
 use l4::pthread_t;
-
-macro_rules! timeout_never {
-    () => { // <^ shorthand for C macro L4_IPC_NEVER
-        l4::l4_timeout_t { raw: 0 }
-    }
-}
 
 /// simple wrapper to make thread handle `Send`
 struct ThreadHandle {
@@ -46,11 +40,12 @@ fn client(server: ThreadHandle) {
         // this example);
         //
         // no protocol, 1 machine word, 0 flex pages, no flags
+        let send_tag = msgtag(0, 1, 0, 0);
         unsafe {
-            let send_tag = l4_msgtag(0, 1, 0, 0);
             // IPC call to capability of server
             let rcv_tag = l4::l4_ipc_call(l4::pthread_l4_cap(server), l4_utcb(),
-                    send_tag, timeout_never!());
+                    send_tag, timeout_never());
+            println!("send worked");
             // check for IPC error, if yes, print out the IPC error code, if not, print the received
             // result.
             match l4::l4_ipc_error(rcv_tag, l4_utcb()) {
@@ -70,15 +65,23 @@ fn client(server: ThreadHandle) {
 pub extern "C" fn main() {
     // wrap the pthread handle "safely"
     let server = ThreadHandle { inner: unsafe { libc::pthread_self() as *mut ::std::os::raw::c_void } };
-    let _client = thread::spawn(|| client(server));
+    let _client = thread::spawn(|| {
+        for i in 0..200 {
+            thread::sleep(::std::time::Duration::from_millis(1000));
+            println!("{}", i);
+        }
+    });//client(server));
     // label is used to identify senders (not relevant in our example)
+    println!("beef");
     let mut label: l4_umword_t = unsafe { ::std::mem::uninitialized() };
+    println!("aaaf");
     // square server
     // Wait for requests from any thread. No timeout, i.e. wait forever.
     println!("server: waiting for incoming connections");
     // wait infinitely for messages, see client for more
     let mut tag = unsafe { l4::l4_ipc_wait(l4::l4_utcb(), &mut label,
-            timeout_never!()) };
+            timeout_never()) };
+    println!("öh?");
     loop {
         // Check if we had any IPC failure, if yes, print the error code and
         // just wait again.
@@ -86,7 +89,7 @@ pub extern "C" fn main() {
             let ipc_error = l4::l4_ipc_error(tag, l4::l4_utcb());
             if ipc_error != 0 {
                 println!("server: IPC error: {}\n", ipc_error);
-                tag = l4::l4_ipc_wait(l4::l4_utcb(), &mut label, timeout_never!());
+                tag = l4::l4_ipc_wait(l4::l4_utcb(), &mut label, timeout_never());
                 continue;
             }
         }
@@ -101,8 +104,8 @@ pub extern "C" fn main() {
             // send reply and wait again for new messages.
             println!("send reply, wait for incoming connections");
             // msgtag: transfer 1 word from message registers (also see client)
-            tag = l4::l4_ipc_reply_and_wait(l4::l4_utcb(), l4_msgtag(0, 1, 0, 0),
-                                  &mut label, timeout_never!());
+            tag = l4::l4_ipc_reply_and_wait(l4::l4_utcb(), msgtag(0, 1, 0, 0),
+                                  &mut label, timeout_never());
         }
     }
 }

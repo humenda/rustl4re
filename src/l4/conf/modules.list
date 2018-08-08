@@ -55,7 +55,7 @@ default-kernel fiasco -serial_esc
 default-bootstrap bootstrap
 
 entry basic_ipc
-roottask moe --init=rom/trust
+roottask moe --init=rom/basic_ipc
 module l4re
 module basic_ipc
 

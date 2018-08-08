@@ -25,4 +25,3 @@ pub const MSG_ITEM_CONSTS_ITEM_CONT: u64 = 1;
 /// capability.
 pub const MSGTAG_ERROR: i64 = L4_MSGTAG_ERROR as i64;
 
-
