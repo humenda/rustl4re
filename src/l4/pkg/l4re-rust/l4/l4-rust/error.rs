@@ -12,6 +12,7 @@ macro_rules! enumgenerator {
         #[allow(non_snake_case)]
         #[repr(u32)]
         $(#[$global])*
+        #[derive(Debug)]
         pub enum $fieldname {
             $($(#[$docs])*
                 $new = $orig,)+
@@ -154,6 +155,7 @@ impl TcrErr {
     }
 }
 
+#[derive(Debug)]
 pub enum Error {
 
     Generic(GenericErr),
