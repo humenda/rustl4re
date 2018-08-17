@@ -5,6 +5,7 @@ extern crate l4re_sys;
 
 #[macro_use]
 mod macros;
+mod syint_cc;
 
 const BEGIN_MARKER: &'static str = "[[|| BEGIN TESTS ||]]";
 const END_MARKER: &'static str = "[[|| END TESTS ||]]";

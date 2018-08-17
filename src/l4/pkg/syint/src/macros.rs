@@ -46,7 +46,8 @@ macro_rules! assert_eq {
         #[allow(unused_must_use)]
         match $first == $second {
             true => Ok::<(), String>(()),
-            false => return Err(format!("{} != {}", $first, $second)),
+            false => return Err(format!("{} != {} on {}:{}", $first, $second,
+                                        file!(), line!())),
         }
     }
 }
