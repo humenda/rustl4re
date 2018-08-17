@@ -1,8 +1,14 @@
-use std::mem::size_of;
-use l4_sys::{l4_uint64_t, l4_umword_t,
-    l4_utcb, l4_utcb_br, l4_utcb_mr_u, l4_utcb_t};
-use l4_sys::L4_UTCB_GENERIC_DATA_SIZE;
+use core::{intrinsics::transmute,
+        mem::{align_of, size_of}};
 
+use l4_sys::{l4_uint64_t, l4_umword_t,
+    l4_utcb, l4_utcb_br, l4_utcb_mr, l4_utcb_mr_u, l4_utcb_t};
+use l4_sys::{L4_UTCB_GENERIC_DATA_SIZE, l4_msg_regs_t};
+
+use error::{Error, GenericErr, Result};
+
+const UTCB_DATA_SIZE_IN_BYTES: usize = L4_UTCB_GENERIC_DATA_SIZE as usize
+                    * size_of::<l4_umword_t>();
 
 #[macro_export]
 macro_rules! utcb_mr {
@@ -70,12 +76,71 @@ impl Utcb {
             (*l4_utcb_br()).bdr as usize
         }
     }
+}
 
-    /*pub fn br(&self) -> &[usize {
-        unsafe {
-            let buffer_registers = (*l4_utcb_br()).br;
-            &*(buffer_registers as *const [usize; L4_UTCB_GENERIC_BUFFERS_SIZE])
+pub trait Serialisable { }
+
+macro_rules! impl_serialisable {
+    ($($type:ty),*) => {
+        $(
+            impl Serialisable for $type { }
+        )*
+    }
+}
+
+impl_serialisable!(i8, i16, i32, i64, i128, u8, u16, u32, u64, u128, f32, f64,
+                   bool, char);
+
+/// Return an aligned pointer to the next free message register
+///
+/// The pointer is advanced by the end of the already written message registers,
+/// aligned to the required type. Returned is a
+/// pointer to the type-aligned memory region.
+#[inline]
+unsafe fn align_with_offset<T>(ptr: *mut u8, offset: usize)
+        -> (*mut u8, usize) {
+    let ptr = ptr.offset(offset as isize);
+    let new_offset = ptr.align_offset(align_of::<T>());
+    (ptr.offset(new_offset as isize), offset + new_offset)
+}
+
+/// Convenience interface for message serialisation to the message registers
+pub struct Msg {
+    mr: *mut u8, // casted utcb_mr pointer
+    offset: usize
+}
+
+impl Msg {
+    pub unsafe fn from_raw_mr(mr: *mut l4_msg_regs_t) -> Msg {
+        Msg {
+            mr: transmute::<*mut u64, *mut u8>((*mr).mr.as_mut_ptr()),
+            offset: 0
         }
     }
-    */
+
+    pub fn new() -> Msg {
+        unsafe { // safe, because *every thread MUST have* a UTCB with message registers
+            Msg {
+                mr: transmute::<*mut u64, *mut u8>((*l4_utcb_mr()).mr.as_mut_ptr()),
+                offset: 0,
+            }
+        }
+    }
+
+    /// Write given value to the next free, type-aligned slot
+    ///
+    /// The value is aligned and written into the message registers.
+    pub unsafe fn write<T: Serialisable>(&mut self, val: T) 
+            -> Result<()> {
+        let (ptr, offset) = align_with_offset::<T>(self.mr, self.offset);
+        let next = offset + size_of::<T>();
+        if next > UTCB_DATA_SIZE_IN_BYTES {
+            return Err(Error::Generic(GenericErr::MsgTooLong));
+        }
+        *transmute::<*mut u8, *mut T>(ptr) = val;
+        self.offset = next; // advance offset *behind* element
+        Ok(())
+    }
 }
+
+

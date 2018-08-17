@@ -12,7 +12,7 @@ mod task;
 pub use cap::*;
 pub use c_api::*;
 pub use factory::*;
-pub use ipc_ext as ipc;
+pub use ipc_ext::*;
 pub use ipc_basic::*;
 pub use platform::*;
 pub use task::*;

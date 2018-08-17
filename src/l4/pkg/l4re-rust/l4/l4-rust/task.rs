@@ -177,19 +177,19 @@ impl Task {
         Ok(())
     }
 
-    /// Create a L4 task
-    ///
-    /// This creates a L4 task, mapping its own capability and the parent capability into the
-    /// object space for later use.
-    pub unsafe fn create_from<T: CapKind>(mut task_cap: Cap<Untyped>,
-            utcb_area: l4_fpage_t) -> Result<Task> {
-        let tag = MsgTag::from(l4_sys::l4_factory_create_task(
-                l4re_env()?.factory, &mut task_cap.raw, utcb_area)).result()?;
-        panic!("ToDo: the first two need to be reimplemented, the last one is up to the caller");
-        //map_obj_to_other(task_cap, pager_gate, pager_id, "pager"); /* Map pager cap */
-        //map_obj_to(task_cap, main_id, L4_FPAGE_RO, "main"); /* Make us visible */
-        //map_obj_to(task_cap, l4re_env()->log, L4_FPAGE_RO, "log"); /* Make print work */
-    }
+//    /// Create a L4 task
+//    ///
+//    /// This creates a L4 task, mapping its own capability and the parent capability into the
+//    /// object space for later use.
+//    pub unsafe fn create_from<T: CapKind>(mut task_cap: Cap<Untyped>,
+//            utcb_area: l4_fpage_t) -> Result<Task> {
+//        let tag = MsgTag::from(l4_sys::l4_factory_create_task(
+//                l4re_env()?.factory, &mut task_cap.raw, utcb_area)).result()?;
+//        panic!("ToDo: the first two need to be reimplemented, the last one is up to the caller");
+//        //map_obj_to_other(task_cap, pager_gate, pager_id, "pager"); /* Map pager cap */
+//        //map_obj_to(task_cap, main_id, L4_FPAGE_RO, "main"); /* Make us visible */
+//        //map_obj_to(task_cap, l4re_env()->log, L4_FPAGE_RO, "log"); /* Make print work */
+//    }
 }
 
 /*

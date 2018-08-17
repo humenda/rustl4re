@@ -43,6 +43,7 @@ macro_rules! tests {
 
 macro_rules! assert_eq {
     ($first:expr, $second:expr) => {
+        #[allow(unused_must_use)]
         match $first == $second {
             true => Ok::<(), String>(()),
             false => return Err(format!("{} != {}", $first, $second)),
