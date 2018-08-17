@@ -2,7 +2,6 @@ extern crate l4_sys;
 extern crate l4;
 extern crate l4re_sys;
 
-use l4_sys::l4_utcb;
 
 #[macro_use]
 mod macros;
@@ -24,7 +23,7 @@ macro_rules! call_mod_tests {
                 for (num, function) in $modname::TEST_FUNCTIONS.iter()
                         .enumerate() {
                     match function() {
-                        Ok(msg) => println!("ok {} - {}", num + 1,
+                        Ok(_) => println!("ok {} - {}", num + 1,
                                           $modname::TEST_FUNCTION_NAMES[num]),
                         Err(msg) => println!("not ok {} - {}\n  {}", num + 1,
                                           $modname::TEST_FUNCTION_NAMES[num],

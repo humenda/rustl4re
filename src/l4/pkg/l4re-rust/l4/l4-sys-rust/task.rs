@@ -11,7 +11,7 @@ use std::ptr;
 use cap::{l4_obj_fpage, l4_map_obj_control};
 use c_api::*;
 use ipc_basic::{l4_ipc_call, l4_utcb, l4_utcb_mr_u, timeout_never};
-use ipc::msgtag;
+use ipc_ext::msgtag;
 
 /// Map resources available in the source task to a destination task.
 ///

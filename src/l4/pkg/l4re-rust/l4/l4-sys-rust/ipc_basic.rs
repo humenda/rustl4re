@@ -72,12 +72,12 @@ pub fn l4_msgtag_has_error(t: l4_msgtag_t) -> bool {
 /// This function's return type is altered in comparison to the orig: c_uint -> usize, return value
 /// is used as index and this needs to be usize in Rust world.
 #[inline]
-pub unsafe fn l4_msgtag_items(t: l4_msgtag_t) -> usize {
+pub fn l4_msgtag_items(t: l4_msgtag_t) -> usize {
     ((t.raw >> 6) & 0x3f) as usize
 }
 
 #[inline]
-pub unsafe fn l4_msgtag_label(t: l4_msgtag_t) -> c_long {
+pub fn l4_msgtag_label(t: l4_msgtag_t) -> c_long {
     t.raw >> 16
 }
 
@@ -86,17 +86,18 @@ pub fn l4_msgtag_words(t: l4_msgtag_t) -> u32 {
     (t.raw & 0x3f) as u32
 }
 
-/// re-implementation of the inline function from l4sys/include/ipc.h
+/// See sndfpage_add_u and sndfpage_add
 #[inline]
 pub unsafe fn l4_sndfpage_add_u(snd_fpage: l4_fpage_t, snd_base: c_ulong,
                   tag: *mut l4_msgtag_t, utcb: *mut l4_utcb_t) -> c_int {
-    let v = l4_utcb_mr_u(utcb);
     let i = l4_msgtag_words(*tag) as usize + 2 * l4_msgtag_items(*tag);
     if i >= (UTCB_GENERIC_DATA_SIZE - 1) {
         return L4_ENOMEM as i32 * -1;
     }
 
-    (*v).mr[i] = snd_base | MSG_ITEM_CONSTS_ITEM_MAP | MSG_ITEM_CONSTS_ITEM_CONT;
+    let v = l4_utcb_mr_u(utcb);
+    (*v).mr[i] = snd_base
+            | L4_ITEM_MAP as u64 | L4_ITEM_CONT as u64;
     (*v).mr[i + 1] = snd_fpage.raw;
 
     *tag = l4_msgtag(l4_msgtag_label(*tag), l4_msgtag_words(*tag),
@@ -132,7 +133,7 @@ pub unsafe fn l4_utcb() -> *mut l4_utcb_t {
 
 
 #[inline]
-pub unsafe fn l4_map_control(snd_base: l4_umword_t, cache: u8,
+pub fn l4_map_control(snd_base: l4_umword_t, cache: u8,
          grant: u32) -> l4_umword_t {
     (snd_base & L4_FPAGE_CONTROL_MASK)
                    | ((cache as l4_umword_t) << 4)
@@ -140,21 +141,7 @@ pub unsafe fn l4_map_control(snd_base: l4_umword_t, cache: u8,
                    | (grant as l4_umword_t)
 }
 
-// ToDo: broken
-//#[inline]
-//pub unsafe fn l4_rcv_ep_bind_thread_u(gate: l4_cap_idx_t, thread: l4_cap_idx_t,
-//        label: l4_umword_t, utcb: *mut l4_utcb_t) -> l4_msgtag_t {
-//    let m: *mut l4_msg_regs_t = l4_utcb_mr_u(utcb);
-//    (*m).mr[0] = L4_fpage_control_L4_FPAGE_CONTROL_MASK;
-//    (*m).mr[1] = label;
-//    (*m).mr[2] = cap::l4_map_obj_control(0, 0);
-//    (*m).mr[3] = cap::l4_obj_fpage(thread, 0, cap::FPAGE_RWX).raw;
-//    l4_ipc_call(gate, utcb,
-//                l4_msgtag(l4_msgtag_protocol_L4_PROTO_KOBJECT as i64, 2, 1, 0),
-//                l4_timeout_t { raw: 0 })
-//}
-
-/// Retrieve pointer to buffer register from current UTCB
+/// Retrieve pointer to buffer registers from current UTCB
 #[inline(always)]
 pub unsafe fn l4_utcb_br() -> *mut l4_buf_regs_t {
     (l4_utcb() as *mut u8).offset(UTCB_BUF_REGS_OFFSET) as *mut l4_buf_regs_t

@@ -1,3 +1,7 @@
+#![feature(align_offset)]
+// ToDo: ^ stable Rust
+
+extern crate core;
 extern crate l4_sys;
 
 // apart from macro_use, eep this alphabetical
@@ -9,6 +13,7 @@ pub mod error;
 pub mod utcb;
 pub mod cap;
 pub mod ipc;
+pub mod server;
 pub mod task;
 
 pub use error::{Error, Result};

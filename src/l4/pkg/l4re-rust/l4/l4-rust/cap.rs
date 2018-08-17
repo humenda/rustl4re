@@ -22,6 +22,10 @@ pub struct Cap<T: CapKind> {
     pub raw: l4_cap_idx_t
 }
 
+/// As long as this isn't atomically ref-counted, forbid sending
+//impl<T: ?Sized> !marker::Send for Rc<T> {}
+//impl<T: ?Sized> !marker::Sync for Rc<T> {}
+
 impl<T: CapKind> Deref for Cap<T> {
     type Target = T;
 

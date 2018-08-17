@@ -62,3 +62,8 @@ EXTERN l4_msgtag_t l4_ipc_receive_w(l4_cap_idx_t object, l4_utcb_t *utcb,
 EXTERN l4_msgtag_t l4_rcv_ep_bind_thread_w(l4_cap_idx_t ep, l4_cap_idx_t thread,
           l4_umword_t label);
 
+EXTERN int l4_sndfpage_add_wu(l4_fpage_t const snd_fpage, unsigned long snd_base,
+                l4_msgtag_t *tag, l4_utcb_t *utcb);
+
+
+EXTERN unsigned l4_msgtag_words_w(l4_msgtag_t t);
