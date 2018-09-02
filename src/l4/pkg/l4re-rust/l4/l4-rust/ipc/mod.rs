@@ -1,3 +1,7 @@
+#[macro_use]
+mod iface;
+
+use l4_sys::msgtag;
 use std::convert::From;
 
 use cap::{Cap, CapKind};
@@ -45,6 +49,15 @@ pub struct MsgTag {
 }
 
 impl MsgTag {
+    /// Initialise message tag
+    /// Initialise given message tag for IPC with label/protocol, count of words in the message
+    /// registers, the numbers of typed items (flex pages, etc.) to transfer and the transfer
+    /// flags.
+    #[inline]
+    pub fn init(label: i64, words: u32, items: u32, flags: u32) -> MsgTag {
+        MsgTag { raw: msgtag(label, words, items, flags).raw as Mword }
+    }
+
     /// Get the assigned label
     ///
     /// When sending a message, the label field is used for denoting the protocol type, while it is
@@ -53,6 +66,7 @@ impl MsgTag {
     pub fn label(&self) -> i32 {
         (self.raw >> 16) as i32
     }
+
     /// Get the protocol of the message tag
     ///
     /// This is internally the same as the `label()` function, wrapping the value in a safe
@@ -69,6 +83,7 @@ impl MsgTag {
     pub fn set_label(&mut self, l: i32) {
         self.raw = (self.raw & 0x0ffff) | ((l as isize) << 16)
     }
+
     /// Set the protocol of the message tag
     ///
     /// The label of a message tag is used to set the protocol of a message. This function allows
@@ -76,16 +91,19 @@ impl MsgTag {
     pub fn set_protocol(&mut self, p: Protocol) {
         self.raw = (self.raw & 0x0ffff) | ((p.as_raw() as isize) << 16)
     }
+
     /// Get the number of untyped words.
     #[inline]
     pub fn words(&self) -> UMword {
         (self.raw as UMword) & 0x3f
     }
+
     /// Get the number of typed items.
     #[inline]
     pub fn items(&self) -> UMword {
         ((self.raw as UMword) >> 6) & 0x3f
     }
+
     /// Get the flags value.
     /// 
     /// The flags are a combination of the flags defined by `l4_msgtag_flags`.
@@ -187,11 +205,6 @@ pub unsafe fn l4_rcv_ep_bind_thread(gate: &Cap, thread: &Cap,
 //#[inline]
 //pub unsafe fn l4_msgtag_label(t: l4_msgtag_t) -> c_long {
 //    t.raw >> 16
-//}
-//
-//#[inline]
-//pub unsafe fn l4_msgtag_words(t: l4_msgtag_t) -> u32 {
-//    (t.raw & 0x3f) as u32
 //}
 //
 ///// re-implementation of the inline function from l4sys/include/ipc.h

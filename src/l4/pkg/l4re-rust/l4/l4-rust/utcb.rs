@@ -78,7 +78,7 @@ impl Utcb {
     }
 }
 
-pub trait Serialisable { }
+pub trait Serialisable: Clone { }
 
 macro_rules! impl_serialisable {
     ($($type:ty),*) => {
@@ -140,6 +140,24 @@ impl Msg {
         *transmute::<*mut u8, *mut T>(ptr) = val;
         self.offset = next; // advance offset *behind* element
         Ok(())
+    }
+
+    /// Read given type from the memory region at the internal buffer + offset
+    ///
+    /// This function reads from the given pointer + the internal offset a value
+    /// from the specified type. This is certainly unsafe, because it is not
+    /// sure what will be at the given position and in the worst case a useless
+    /// value will be read. Reading beyond the limits of the  message registers
+    /// will yield an eror.
+    pub unsafe fn read<T: Serialisable>(&mut self)  -> Result<T> {
+        let (ptr, offset) = align_with_offset::<T>(self.mr, self.offset);
+        let next = offset + size_of::<T>();
+        if next > UTCB_DATA_SIZE_IN_BYTES {
+            return Err(Error::Generic(GenericErr::MsgTooLong));
+        }
+        self.offset = next; // advance offset *behind* element
+        let val: T = (*transmute::<*mut u8, *mut T>(ptr)).clone();
+        Ok(val)
     }
 }
 
