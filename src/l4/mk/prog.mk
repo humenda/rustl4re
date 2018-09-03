@@ -163,36 +163,47 @@ $(TARGET): $(OBJS) $(LIBDEPS)
 	$(if $(BID_POST_PROG_LINK_$@),$(BID_POST_PROG_LINK_$@))
 	@$(BUILT_MESSAGE)
 else # rust target rule
-# ToDo if (HOST_LINK_TARGET),(CCXX_FLAGS)) (BID_LDFLAGS_FOR_LINKING_GCC
-$(strip $(TARGET)).a: $(SRC_RS) $(LIBDEPS)
-	@echo Building binary...
-	@echo ToDo, currently not including LIBDEPS: $(LIBDEPS)
-	$(VERBOSE)$(RUSTC) $(RSFLAGS) \
-		--target=x86_64-unknown-l4re-uclibc \
-		$(patsubst -D%,--cfg=%,$(filter -D%,$(CPPFLAGS))) \
+ifneq ($(firstword $(notdir $(LINK_PROGRAM))),l4-bender)
+$(error Rust compilation is only supported for l4-bender, got $(firstword $(notdir $(LINK_PROGRAM))))
+endif
+# Rust's build tool is Cargo, which calls the compiler rustc. Rustc compiles the
+# code and calls the linker. A linker variant "l4-bender" has been added to
+# Rustc. To pass BID arguments to l4-bender, L4_BENDER_ARGS and L4_LD_OPTIONS
+# are read by the compiler and incoorperated into the l4-bender command line.
+# Additional Rustc flags can be passed using the CARGO_BUILD_RUSTFLAGS variable,
+# read by cargo.
+
+# ToDo: this should definitely be auto-derived
+RUST_TARGET=x86_64-unknown-l4re-uclibc
+# strip first word (l4-bender path) and last word (-- delimiter)
+L4_BENDER_ARGS_HEADLESS=$(strip $(LINK_PROGRAM:$(firstword $(LINK_PROGRAM))%=%))
+export L4_BENDER_ARGS=$(strip $(L4_BENDER_ARGS_HEADLESS:%$(lastword $(LINK_PROGRAM))=%))
+export L4_LD_OPTIONS=$(filter-out -PClib%rust,$(BID_LDFLAGS_FOR_LINKING)) $(LIBS) $(EXTRA_LIBS)
+# allow rustc to find l4-bender
+export PATH := $(PATH):$(L4DIR)/tool/bin
+export CARGO_BUILD_RUSTFLAGS=$(strip $(patsubst -D%,--cfg=%,$(filter -D%,$(CPPFLAGS))) \
 		-L $(OBJ_BASE)/lib/rustlib \
 		$(addprefix -L, $(PRIVATE_LIBDIR) $(PRIVATE_LIBDIR_$(OSYSTEM)) $(PRIVATE_LIBDIR_$@) $(PRIVATE_LIBDIR_$@_$(OSYSTEM))) \
-		-L $(OBJ_BASE)/ \
-		--crate-type staticlib \
-		-o $@ $< $(if $(find @,$(VERBOSE)),,-v)
-	@$(BUILT_MESSAGE)
+		-L $(OBJ_BASE)/)
+export CARGO_BUILD_TARGET_DIR=$(dir $(abspath $(strip $(TARGET))))
+ifeq ($(strip $(DEBUG)),1)
+RUST_BIN_DIR=$(CARGO_BUILD_TARGET_DIR)/$(RUST_TARGET)/debug
+else
+RUST_BIN_DIR=$(CARGO_BUILD_TARGET_DIR)/$(RUST_TARGET)/release
+endif
 
-$(strip $(TARGET)): $(strip $(TARGET)).a
+
+# manifest path: location of the Cargo.toml, which should reside in the PKGDIR
+# $PATH has to be extended to include l4-bender
+$(strip $(TARGET)): $(SRC_RS)
 	@$(LINK_MESSAGE)
-	$(VERBOSE)$(call MAKEDEP,$(INT_LD_NAME),,,ld) $(LINK_PROGRAM) -o $@ \
-		$(filter-out -PClib%rust,$(BID_LDFLAGS_FOR_LINKING)) $< $(LIBS) $(EXTRA_LIBS)
-	$(if $(BID_GEN_CONTROL),$(VERBOSE)echo "Requires: $(REQUIRES_LIBS)" >> $(PKGDIR)/Control)
-	$(if $(BID_POST_PROG_LINK_MSG_$@),@$(BID_POST_PROG_LINK_MSG_$@))
-	$(if $(BID_POST_PROG_LINK_$@),$(BID_POST_PROG_LINK_$@))
+	$(VERBOSE)$(call MAKEDEP,$(INT_LD_NAME),,,ld) \
+		cargo build $(if $(VERBOSE),,-v) \
+			$(if $(strip($(DEBUG)),1),--debug,--release) \
+			--target=$(RUST_TARGET) \
+			--manifest-path=$(PKGDIR)/Cargo.toml
 	@$(BUILT_MESSAGE)
-
-
-
-# linker wrapper - currently not used
-#$(TARGET): $(addprefix $(SRC_DIR)/,$(SRC_RS)) $(LIBDEPS)
-#	@$(LINK_MESSAGE)
-#	$(VERBOSE)$(call MAKEDEP,$(INT_LD_NAME),,,ld) $(L4DIR)/tool/bin/rustc_linkerwrapper.py $(LINK_PROGRAM) -o $@ $(BID_LDFLAGS_FOR_LINKING) $< $(LIBS) $(EXTRA_LIBS)
-#	@$(BUILT_MESSAGE)
+	$(VERBOSE)cp $(RUST_BIN_DIR)/$(strip $(TARGET)) $(CARGO_BUILD_TARGET_DIR)
 endif
 
 endif	# architecture is defined, really build
