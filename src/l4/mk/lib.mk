@@ -172,46 +172,35 @@ $(LINK_INCR_TARGETS):%.a: $(OBJS) $(LIBDEPS) $(foreach x,$(LINK_INCR_TARGETS),$(
 # build a .rlib (Rust static library)
 # (copy of prog.mk, probably belongs in rules.mk
 
-# execute bindgen rule if required
-bindgen: $(PKGDIR_OBJ)/bindings.rs
-
-RUSTFMT_FOUND := $(shell command -v dot 2> /dev/null)
-
-# Note: bindgen emits errors if it couldn't understand something;A
-$(PKGDIR_OBJ)/bindings.rs: $(wildcard $(SRC_DIR)/bindgen.*)
-	$(VERBOSE)bindgen --no-prepend-enum-name \
-		$(if $(wildcard $(SRC_DIR)/bindgen.hh),--enable-cxx-namespaces) \
-		$(BINDGENARGS) -o $@ $(wildcard $(SRC_DIR)/bindgen.*) \
-		-- $(filter -D%,$(CPPFLAGS)) $(filter -I%,$(CPPFLAGS)) \
-		$(if $(wildcard $(SRC_DIR)/bindgen.hh),-x c++ -std=c++14)
-ifdef RUSTFMT_FOUND
-	$(VERBOSE)rustfmt --write-mode=overwrite $@ $(if $(CONFIG_VERBOSE),,2>&1 > /dev/null) || true
+contains=$(findstring $(1),$(strip $(TARGET)))
+ifeq ($(and $(call contains,-), $(call contains,lib), $(call contains,.rlib))),)
+$(error A library target has to have a name like libFOO-rust.rlib, while FOO is the name of your library and rust a freely choosable suffix required by rustc.)
 endif
-#  ToDo: ^ how to figure out whether or not to use cpp11 or something newer
 
+# ToDo: which is the best place to get all library directories from? use
+# LDFLAGS for now
+L4_LIBDIRECTORIES=$(filter -L%,$(LDFLAGS))
+export CARGO_BUILD_RUSTFLAGS=$(strip $(L4_LIBDIRECTORIES) $(patsubst -D%,--cfg%,$(filter -D%,$(LDFLAGS))))
+# This can be used from the build script to get access to all l4-related
+# include files
+export L4_INCLUDE_DIRS=$(filter -I%,$(CPPFLAGS))
 
-RUSTC_TARGET ?= x86_64-unknown-l4re-uclibc
+TARGET_RLIB = $(filter %.rlib,$(TARGET))
+# bring all rlibs into a common form: unify libfoo.rlib, foo-rust.rlib,
+# libfoo-rust.rlib, etc. into libfoo-rust.rlib
 
-$(filter %.rlib,$(TARGET)): $(SRC_RS) \
-		$(if $(wildcard $(SRC_DIR)/bindgen.h),bindgen) \
-		$(if $(wildcard $(SRC_DIR)/bindgen.hh),bindgen)
+$(strip $(TARGET)): $(SRC_RS)
 	@echo 'Building rlib...'
 	@echo ToDo, currently not including LIBDEPS: $(LIBDEPS)
-	$(VERBOSE)OUT_DIR=$(PKGDIR_OBJ) $(RUSTC) \
-		--target=$(RUSTC_TARGET) \
-		$(RSFLAGS) \
-		$(patsubst -D%,--cfg=%,$(filter -D%,$(CPPFLAGS))) \
-		$(addprefix -L, $(PRIVATE_LIBDIR) $(PRIVATE_LIBDIR_$(OSYSTEM)) $(PRIVATE_LIBDIR_$@) $(PRIVATE_LIBDIR_$@_$(OSYSTEM))) \
-		$(addprefix -L, $(L4LIBDIR)) \
-		--crate-name $(patsubst lib%,%,$(subst -rust,,$(patsubst %.rlib,%,$(patsubst lib%,%,$@)))) \
-		--crate-type lib \
-		-o $@ $(filter %.rs,$^) \
-		$(if $(find @,$(VERBOSE)),,-v)
+	$(VERBOSE)cargo build $(if $(VERBOSE),,-v) \
+			$(if $(strip $(DEBUG)),--debug,--release) \
+			--target=$(RUST_TARGET) \
+			--manifest-path=$(PKGDIR)/Cargo.toml
 	@$(BUILT_MESSAGE)
-	# doesn't belong here
-	@mkdir -p $(OBJ_BASE)/lib/rustlib
-	$(INSTALL) -m 644 $@ $(OBJ_BASE)/lib/rustlib/
-
+	$(VERBOSE)[ -h $@ ] || ln -s $(RUST_RESULT_DIR)/*.rlib $@
+	$(INSTALL) -m 644 $(RUST_RESULT_DIR)/*.rlib $(OBJ_BASE)/lib/
+# ToDo:  1) Cargo doesn't generate -xyz.rlib suffix; 2) find good way to extract
+# this file name to pass to install
 
 
 endif	# architecture is defined, really build

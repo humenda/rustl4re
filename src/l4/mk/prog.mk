@@ -184,8 +184,6 @@ endif
 # Additional Rustc flags can be passed using the CARGO_BUILD_RUSTFLAGS variable,
 # read by cargo.
 
-# ToDo: this should definitely be auto-derived
-RUST_TARGET=x86_64-unknown-l4re-uclibc
 # strip first word (l4-bender path) and last word (-- delimiter)
 L4_BENDER_ARGS_HEADLESS=$(strip $(LINK_PROGRAM:$(firstword $(LINK_PROGRAM))%=%))
 export L4_BENDER_ARGS=$(strip $(L4_BENDER_ARGS_HEADLESS:%$(lastword $(LINK_PROGRAM))=%))
@@ -193,16 +191,8 @@ export L4_LD_OPTIONS=$(filter-out -PClib%rust,$(BID_LDFLAGS_FOR_LINKING)) $(LIBS
 # allow rustc to find l4-bender
 export PATH := $(PATH):$(L4DIR)/tool/bin
 export CARGO_BUILD_RUSTFLAGS=$(strip $(patsubst -D%,--cfg=%,$(filter -D%,$(CPPFLAGS))) \
-		-L $(OBJ_BASE)/lib/rustlib \
 		$(addprefix -L, $(PRIVATE_LIBDIR) $(PRIVATE_LIBDIR_$(OSYSTEM)) $(PRIVATE_LIBDIR_$@) $(PRIVATE_LIBDIR_$@_$(OSYSTEM))) \
-		-L $(OBJ_BASE)/)
-export CARGO_BUILD_TARGET_DIR=$(dir $(abspath $(strip $(TARGET))))
-ifeq ($(strip $(DEBUG)),1)
-RUST_BIN_DIR=$(CARGO_BUILD_TARGET_DIR)/$(RUST_TARGET)/debug
-else
-RUST_BIN_DIR=$(CARGO_BUILD_TARGET_DIR)/$(RUST_TARGET)/release
-endif
-
+		-L $(OBJ_BASE)/lib -L $(OBJ_BASE)/) $(RSFLAGS)
 
 # manifest path: location of the Cargo.toml, which should reside in the PKGDIR
 # $PATH has to be extended to include l4-bender
@@ -210,11 +200,11 @@ $(strip $(TARGET)): $(SRC_RS)
 	@$(LINK_MESSAGE)
 	$(VERBOSE)$(call MAKEDEP,$(INT_LD_NAME),,,ld) \
 		cargo build $(if $(VERBOSE),,-v) \
-			$(if $(strip($(DEBUG)),1),--debug,--release) \
+			$(if $(strip $(DEBUG)),--debug,--release) \
 			--target=$(RUST_TARGET) \
 			--manifest-path=$(PKGDIR)/Cargo.toml
 	@$(BUILT_MESSAGE)
-	$(VERBOSE)cp $(RUST_BIN_DIR)/$(strip $(TARGET)) $(CARGO_BUILD_TARGET_DIR)
+	$(VERBOSE)cp $(RUST_RESULT_DIR)/$(strip $(TARGET)) $(CARGO_BUILD_TARGET_DIR)
 endif
 
 endif	# architecture is defined, really build
