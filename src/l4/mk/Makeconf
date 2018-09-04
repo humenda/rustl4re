@@ -76,7 +76,7 @@ MAKECONFS_ADD    = $(patsubst "%,%,$(patsubst %",%,$(CONFIG_MAKECONFS_ADD))) #"
 CCXX_FLAGS        = $(CCXX_FLAGS_$(BUILD_ARCH))
 
 # Rust compiler flags and other required variables
-RSFLAGS        ?= -g -C opt-level=3
+RSFLAGS        ?= -C opt-level=3
 export CARGO_BUILD_TARGET_DIR=$(dir $(abspath $(strip $(TARGET))))
 ifeq ($(strip $(DEBUG)),1)
 RUST_RESULT_DIR=$(CARGO_BUILD_TARGET_DIR)/$(RUST_TARGET)/debug
