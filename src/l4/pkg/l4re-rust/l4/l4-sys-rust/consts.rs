@@ -1,11 +1,18 @@
+//! Type definitions and constants.
 use c_api::*;
 
-// redefined constants and enums with (wrongly) generated type
+/// An alias for the corresponding platform enum
 #[cfg(target_arch = "x86_64")]
+pub use L4_utcb_consts_amd64 as UtcbConsts;
+/// An alias for the corresponding platform enum
+#[cfg(target_arch = "x86")]
+pub use L4_utcb_consts_x86 as UtcbConsts;
+
+
+// redefined constants and enums with (wrongly) generated type
 pub const UTCB_GENERIC_DATA_SIZE: usize = 
         L4_utcb_consts_amd64::L4_UTCB_GENERIC_DATA_SIZE as usize;
-#[cfg(target_arch = "x86_64")]
-pub const UTCB_BUF_REGS_OFFSET: isize = L4_utcb_consts_amd64::L4_UTCB_BUF_REGS_OFFSET
+pub const UTCB_BUF_REGS_OFFSET: isize = UtcbConsts::L4_UTCB_BUF_REGS_OFFSET
         as isize;
 
 // Constants for message items.
@@ -16,4 +23,5 @@ pub const UTCB_BUF_REGS_OFFSET: isize = L4_utcb_consts_amd64::L4_UTCB_BUF_REGS_O
 // The names have been stripped of their L4 prefix and the _t suffix, but are
 // identical otherwise.
 pub const MSGTAG_ERROR: i64 = l4_msgtag_flags::L4_MSGTAG_ERROR as i64;
+
 
