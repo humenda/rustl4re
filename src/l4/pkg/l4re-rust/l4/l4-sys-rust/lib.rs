@@ -1,8 +1,13 @@
+#![no_std]
+
+extern crate libc;
+
+#[macro_use]
+mod helpers;
 mod cap;
 mod c_api;
 mod consts;
 mod factory;
-mod helpers;
 mod ipc_basic;
 pub mod ipc_ext;
 mod platform;

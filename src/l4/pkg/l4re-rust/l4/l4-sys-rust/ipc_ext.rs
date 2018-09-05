@@ -1,4 +1,4 @@
-use c_api::*;
+use c_api::{*, l4_msgtag_flags::*};
 
 use ipc_basic::{self, l4_utcb};
 

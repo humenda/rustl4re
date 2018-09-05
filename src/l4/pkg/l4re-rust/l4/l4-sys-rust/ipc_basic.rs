@@ -1,5 +1,7 @@
-use std::os::raw::{c_int, c_uint, c_long, c_ulong};
-use c_api::*;
+use libc::{c_int, c_uint, c_long, c_ulong};
+
+use c_api::{*, l4_error_code_t::*, l4_msg_item_consts_t::*,
+        L4_fpage_control::*};
 use consts::*;
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -42,8 +44,8 @@ pub unsafe fn l4_ipc_wait(utcb: *mut l4_utcb_t, label: *mut l4_umword_t,
 }
 
 #[inline]
-pub unsafe fn l4_msgtag(label: ::std::os::raw::c_long, words: c_uint,
-        items: c_uint, flags: c_uint) -> l4_msgtag_t {
+pub unsafe fn l4_msgtag(label: c_long, words: c_uint, items: c_uint,
+                        flags: c_uint) -> l4_msgtag_t {
     l4_msgtag_w(label, words, items, flags)
 }
 
@@ -96,9 +98,8 @@ pub unsafe fn l4_sndfpage_add_u(snd_fpage: l4_fpage_t, snd_base: c_ulong,
     }
 
     let v = l4_utcb_mr_u(utcb);
-    (*v).mr[i] = snd_base
-            | L4_ITEM_MAP as u64 | L4_ITEM_CONT as u64;
-    (*v).mr[i + 1] = snd_fpage.raw;
+    mr!(v[i] = snd_base | L4_ITEM_MAP as u64 | L4_ITEM_CONT as u64);
+    mr!(v[i + 1] = snd_fpage.bindgen_union_field);
 
     *tag = l4_msgtag(l4_msgtag_label(*tag), l4_msgtag_words(*tag),
                    l4_msgtag_items(*tag) as u32 + 1, l4_msgtag_flags(*tag) as u32);
@@ -135,7 +136,7 @@ pub unsafe fn l4_utcb() -> *mut l4_utcb_t {
 #[inline]
 pub fn l4_map_control(snd_base: l4_umword_t, cache: u8,
          grant: u32) -> l4_umword_t {
-    (snd_base & L4_FPAGE_CONTROL_MASK)
+    (snd_base & L4_FPAGE_CONTROL_MASK as l4_umword_t)
                    | ((cache as l4_umword_t) << 4)
                    | L4_ITEM_MAP as u64
                    | (grant as l4_umword_t)
@@ -155,7 +156,8 @@ pub unsafe fn l4_utcb_br_u(u: *mut l4_utcb_t) -> *mut l4_buf_regs_t {
 
 #[inline]
 pub unsafe fn l4_utcb_mr_u(u: *mut l4_utcb_t) -> *mut l4_msg_regs_t {
-     (u as *mut u8).offset(L4_UTCB_MSG_REGS_OFFSET as isize)
+     (u as *mut u8).offset(L4_utcb_consts_amd64::L4_UTCB_MSG_REGS_OFFSET
+                           as isize)
          as *mut l4_msg_regs_t
 }
 
@@ -166,7 +168,9 @@ pub unsafe fn l4_utcb_mr_u(u: *mut l4_utcb_t) -> *mut l4_msg_regs_t {
 #[inline(always)]
 pub fn timeout_never() -> l4_timeout_t {
     l4_timeout_t {
-        raw: 0, // forever
+        p: __BindgenUnionField::new(),
+        raw: __BindgenUnionField::new(),
+        bindgen_union_field: 0,
     }
 }
 
@@ -176,5 +180,5 @@ pub fn timeout_never() -> l4_timeout_t {
 /// error code, this function extracts this bit of information.
 #[inline(always)]
 pub fn ipc_error2code(code: isize) -> u64 {
-    (code & L4_IPC_ERROR_MASK as isize) as u64
+    (code & l4_ipc_tcr_error_t::L4_IPC_ERROR_MASK as isize) as u64
 }
