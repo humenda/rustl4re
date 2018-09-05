@@ -1,4 +1,4 @@
-use std::os::raw::{c_uchar, c_uint};
+use libc::{c_uchar, c_uint};
 
 use c_api::*;
 
@@ -10,7 +10,7 @@ use c_api::*;
 
 #[inline]
 pub fn l4_is_invalid_cap(cap: l4_cap_idx_t) -> bool {
-    (cap & L4_INVALID_CAP_BIT) > 0
+    (cap & l4_cap_consts_t::L4_INVALID_CAP_BIT as u64) > 0
 }
 
 // ToDo: leicht nachzuimplementieren
@@ -34,9 +34,9 @@ pub unsafe fn l4_obj_fpage(obj: l4_cap_idx_t, order: c_uint, rights: c_uchar)
 #[inline]
 pub fn l4_map_control(snd_base: l4_umword_t, cache: u8, grant: u64)
         -> l4_umword_t {
-    (snd_base & L4_FPAGE_CONTROL_MASK)
+    (snd_base & L4_fpage_control::L4_FPAGE_CONTROL_MASK as u64)
         | ((cache as l4_umword_t) << 4)
-        | (L4_ITEM_MAP as u64)
+        | (l4_msg_item_consts_t::L4_ITEM_MAP as u64)
         | grant
 }
 

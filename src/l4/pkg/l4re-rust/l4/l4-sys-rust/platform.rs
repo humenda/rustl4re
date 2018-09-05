@@ -32,8 +32,8 @@ pub fn l4_platform_ctl_system_suspend(pfc: l4_cap_idx_t,
 pub unsafe fn l4_platform_ctl_system_suspend_u(pfc: l4_cap_idx_t,
         extras: l4_umword_t, utcb: *mut l4_utcb_t) -> l4_msgtag_t {
     let v = l4_utcb_mr_u(utcb);
-    (*v).mr[0] = L4_PLATFORM_CTL_SYS_SUSPEND_OP;
-    (*v).mr[1] = extras;
+    mr!(v[0] = L4_PLATFORM_CTL_SYS_SUSPEND_OP);
+    mr!(v[1] = extras);
     l4_ipc_call(pfc, utcb, msgtag(L4_PROTO_PLATFORM_CTL, 2, 0, 0),
                                           timeout_never())
 }
@@ -54,8 +54,8 @@ pub fn l4_platform_ctl_system_shutdown(pfc: l4_cap_idx_t,
 unsafe fn l4_platform_ctl_system_shutdown_u(pfc: l4_cap_idx_t,
         reboot: l4_umword_t, utcb: *mut l4_utcb_t) -> l4_msgtag_t {
     let v = l4_utcb_mr_u(utcb);
-    (*v).mr[0] = L4_PLATFORM_CTL_SYS_SHUTDOWN_OP as u64;
-    (*v).mr[1] = reboot;
+    mr!(v[0] = L4_PLATFORM_CTL_SYS_SHUTDOWN_OP);
+    mr!(v[1] = reboot);
     l4_ipc_call(pfc, utcb, msgtag(L4_PROTO_PLATFORM_CTL, 2, 0, 0),
                 timeout_never())
 }
@@ -75,8 +75,8 @@ pub fn l4_platform_ctl_cpu_enable(pfc: l4_cap_idx_t,
 pub unsafe fn l4_platform_ctl_cpu_enable_u(pfc: l4_cap_idx_t,
         phys_id: l4_umword_t, utcb: *mut l4_utcb_t) -> l4_msgtag_t {
     let v = l4_utcb_mr_u(utcb);
-    (*v).mr[0] = L4_PLATFORM_CTL_CPU_ENABLE_OP as u64;
-    (*v).mr[1] = phys_id;
+    mr!(v[0] = L4_PLATFORM_CTL_CPU_ENABLE_OP);
+    mr!(v[1] = phys_id);
     l4_ipc_call(pfc, utcb, msgtag(L4_PROTO_PLATFORM_CTL, 2, 0, 0),
             timeout_never())
 }

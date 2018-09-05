@@ -6,10 +6,11 @@
 //!
 //! Task objects are created using the a factory to create new kernel objects.
 
-use std::ptr;
+use core::ptr;
 
 use cap::{l4_obj_fpage, l4_map_obj_control};
-use c_api::*;
+use c_api::{*, L4_fpage_rights::*, L4_task_ops::*,
+        L4_cap_fpage_rights::*, l4_unmap_flags_t::*};
 use ipc_basic::{l4_ipc_call, l4_utcb, l4_utcb_mr_u, timeout_never};
 use ipc_ext::msgtag;
 
@@ -28,13 +29,14 @@ pub unsafe fn l4_task_map_u(dst_task: l4_cap_idx_t, src_task: l4_cap_idx_t,
         snd_fpage: l4_fpage_t, snd_base: l4_addr_t, u: *mut l4_utcb_t)
         -> l4_msgtag_t {
    let v = l4_utcb_mr_u(u);
-    (*v).mr[0] = L4_TASK_MAP_OP as u64;
-    (*v).mr[3] = l4_map_obj_control(0,0);
-    (*v).mr[4] = l4_obj_fpage(src_task, 0, L4_FPAGE_RWX as u8).raw as u64;
-    (*v).mr[1] = snd_base;
-    (*v).mr[2] = snd_fpage.raw;
+    mr!(v[0] = L4_TASK_MAP_OP);
+    mr!(v[3] = l4_map_obj_control(0, 0));
+    mr!(v[4] = l4_obj_fpage(src_task, 0, L4_FPAGE_RWX as u8).bindgen_union_field);
+    mr!(v[1] = snd_base);
+    mr!(v[2] = snd_fpage.bindgen_union_field);
     l4_ipc_call(dst_task, u,
-            msgtag(L4_PROTO_TASK as i64, 3, 1, 0), timeout_never())
+            msgtag(l4_msgtag_protocol::L4_PROTO_TASK as i64, 3, 1, 0),
+            timeout_never())
 }
 
 /// Revoke rights from the task.
@@ -55,10 +57,11 @@ pub unsafe fn l4_task_unmap(task: l4_cap_idx_t, fpage: l4_fpage_t,
 pub unsafe fn l4_task_unmap_u(task: l4_cap_idx_t, fpage: l4_fpage_t,
         map_mask: l4_umword_t, u: *mut l4_utcb_t) -> l4_msgtag_t {
     let v = l4_utcb_mr_u(u);
-    (*v).mr[0] = L4_TASK_UNMAP_OP as u64;
-    (*v).mr[1] = map_mask as u64;
-    (*v).mr[2] = fpage.raw;
-    l4_ipc_call(task, u, msgtag(L4_PROTO_TASK as i64, 3, 0, 0), timeout_never())
+    mr!(v[0] = L4_TASK_UNMAP_OP);
+    mr!(v[1] = map_mask);
+    mr!(v[2] = fpage.bindgen_union_field);
+    l4_ipc_call(task, u, msgtag(l4_msgtag_protocol::L4_PROTO_TASK as i64,
+                                3, 0, 0), timeout_never())
 }
 
 
@@ -84,10 +87,11 @@ pub unsafe fn l4_task_unmap_batch_u(task: l4_cap_idx_t,
         fpages: *mut l4_fpage_t, num_fpages: u32, map_mask: u64,
         u: *mut l4_utcb_t) -> l4_msgtag_t {
     let v = l4_utcb_mr_u(u);
-    (*v).mr[0] = L4_TASK_UNMAP_OP as u64;
-    (*v).mr[1] = map_mask as u64;
-    ptr::copy_nonoverlapping(fpages as *mut u64, &mut (*v).mr[2], num_fpages as usize);
-    l4_ipc_call(task, u, msgtag(L4_PROTO_TASK as i64, 2 + num_fpages, 0, 0),
+    mr!(v[0] = L4_TASK_UNMAP_OP as u64);
+    mr!(v[1] = map_mask as u64);
+    ptr::copy_nonoverlapping(fpages as *mut u64, &mut (*v).bindgen_union_field[2],
+                             num_fpages as usize);
+    l4_ipc_call(task, u, msgtag(l4_msgtag_protocol::L4_PROTO_TASK as i64, 2 + num_fpages, 0, 0),
             timeout_never())
 }
 
@@ -143,9 +147,10 @@ pub unsafe fn l4_task_cap_valid(task: l4_cap_idx_t, cap: l4_cap_idx_t)
 pub unsafe fn l4_task_cap_valid_u(task: l4_cap_idx_t, cap: l4_cap_idx_t,
         u: *mut l4_utcb_t) -> l4_msgtag_t {
     let v = l4_utcb_mr_u(u);
-    (*v).mr[0] = L4_TASK_CAP_INFO_OP as u64;
-    (*v).mr[1] = cap & !1u64;
-    l4_ipc_call(task, u, msgtag(L4_PROTO_TASK as i64, 2, 0, 0), timeout_never())
+    mr!(v[0] = L4_TASK_CAP_INFO_OP);
+    mr!(v[1] = cap & !1u64);
+    l4_ipc_call(task, u, msgtag(l4_msgtag_protocol::L4_PROTO_TASK as i64,
+                                2, 0, 0), timeout_never())
 }
 
 /// Test whether two capabilities point to the same object with the same rights.
@@ -161,10 +166,11 @@ pub unsafe fn l4_task_cap_equal(task: l4_cap_idx_t, cap_a: l4_cap_idx_t,
 pub unsafe fn l4_task_cap_equal_u(task: l4_cap_idx_t, cap_a: l4_cap_idx_t,
         cap_b: l4_cap_idx_t, u: *mut l4_utcb_t) -> l4_msgtag_t {
     let v = l4_utcb_mr_u(u);
-    (*v).mr[0] = L4_TASK_CAP_INFO_OP as u64;
-    (*v).mr[1] = cap_a;
-    (*v).mr[2] = cap_b;
-    l4_ipc_call(task, u, msgtag(L4_PROTO_TASK as i64, 3, 0, 0),
+    mr!(v[0] = L4_TASK_CAP_INFO_OP);
+    mr!(v[1] = cap_a);
+    mr!(v[2] = cap_b);
+    l4_ipc_call(task, u, msgtag(l4_msgtag_protocol::L4_PROTO_TASK as i64,
+                                3, 0, 0),
             timeout_never())
 }
 
@@ -181,9 +187,9 @@ pub unsafe fn l4_task_add_ku_mem(task: l4_cap_idx_t, ku_mem: l4_fpage_t)
 pub unsafe fn l4_task_add_ku_mem_u(task: l4_cap_idx_t, ku_mem: l4_fpage_t,
         u: *mut l4_utcb_t) -> l4_msgtag_t {
     let v = l4_utcb_mr_u(u);
-    (*v).mr[0] = L4_TASK_ADD_KU_MEM_OP as u64;
-    (*v).mr[1] = ku_mem.raw;
-    l4_ipc_call(task, u, msgtag(L4_PROTO_TASK as i64, 2, 0, 0),
+    mr!(v[0] = L4_TASK_ADD_KU_MEM_OP);
+    mr!(v[1] = ku_mem.bindgen_union_field);
+    l4_ipc_call(task, u, msgtag(l4_msgtag_protocol::L4_PROTO_TASK as i64, 2, 0, 0),
             timeout_never())
 }
 
