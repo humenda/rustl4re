@@ -15,6 +15,7 @@ use core::mem::size_of;
 
 use c_api::{*, l4_msgtag_protocol as MsgTagProto};
 use cap;
+use consts::UtcbConsts;
 use ipc_basic::{l4_ipc_call, l4_utcb, l4_utcb_mr_u, l4_utcb_br_u, timeout_never};
 use ipc_ext::{msgtag, msgtag_flags, msgtag_label, msgtag_words};
 use helpers;
@@ -181,7 +182,7 @@ pub fn l4_factory_create_add_int_u(d: l4_mword_t, tag: &mut l4_msgtag_t,
     // safe, because tag is a mutable reference and hence never null and l4_utcb_mr_u works
     // *always*
     let mut w = msgtag_words(*tag) as usize;
-    if w + 2 > L4_utcb_consts_amd64::L4_UTCB_GENERIC_DATA_SIZE as usize {
+    if w + 2 > UtcbConsts::L4_UTCB_GENERIC_DATA_SIZE as usize {
         return false;
     }
     unsafe {
@@ -199,7 +200,7 @@ pub fn l4_factory_create_add_int_u(d: l4_mword_t, tag: &mut l4_msgtag_t,
 pub fn l4_factory_create_add_uint_u(d: l4_umword_t, tag: &mut l4_msgtag_t,
         u: *mut l4_utcb_t) -> bool {
     let mut w = msgtag_words(*tag);
-    if w + 2 > L4_utcb_consts_amd64::L4_UTCB_GENERIC_DATA_SIZE as u32 {
+    if w + 2 > UtcbConsts::L4_UTCB_GENERIC_DATA_SIZE as u32 {
         return false;
     }
     unsafe {
@@ -220,7 +221,7 @@ pub unsafe fn l4_factory_create_add_cstr_u(s: *const u8,
     let mut w = msgtag_words(*tag) as usize;
     let len = helpers::strlen(s) as usize;
     if w + 1 + (len + size_of::<l4_umword_t>() - 1) / size_of::<l4_umword_t>()
-            > (L4_utcb_consts_amd64::L4_UTCB_GENERIC_DATA_SIZE as usize) {
+            > (UtcbConsts::L4_UTCB_GENERIC_DATA_SIZE as usize) {
         return false;
     }
     let v = l4_utcb_mr_u(u);
@@ -238,7 +239,7 @@ pub fn l4_factory_create_add_str_u(s: &str, tag: &mut l4_msgtag_t,
     let mut w = msgtag_words(*tag);
     let len = s.len();
     if w as usize + 1 + (len + size_of::<l4_umword_t>() - 1) / size_of::<l4_umword_t>()
-            > L4_utcb_consts_amd64::L4_UTCB_GENERIC_DATA_SIZE as usize {
+            > UtcbConsts::L4_UTCB_GENERIC_DATA_SIZE as usize {
         return false;
     }
     unsafe {
@@ -326,7 +327,7 @@ unsafe fn l4_factory_create_start_u(protocol: i32, target_cap: l4_cap_idx_t,
 pub fn l4_factory_create_add_fpage_u(d: l4_fpage_t, tag: &mut l4_msgtag_t,
         u: *mut l4_utcb_t) -> bool {
     let mut w = msgtag_words(*tag);
-    if w + 2 > L4_utcb_consts_amd64::L4_UTCB_GENERIC_DATA_SIZE as u32 {
+    if w + 2 > UtcbConsts::L4_UTCB_GENERIC_DATA_SIZE as u32 {
         return false; 
     }
     unsafe {
@@ -343,7 +344,7 @@ pub fn l4_factory_create_add_fpage_u(d: l4_fpage_t, tag: &mut l4_msgtag_t,
 pub unsafe fn l4_factory_create_add_nil_u(tag: &mut l4_msgtag_t,
         u: *mut l4_utcb_t) -> bool {
   let mut w = msgtag_words(*tag);
-    if w + 1 > L4_utcb_consts_amd64::L4_UTCB_GENERIC_DATA_SIZE as u32 {
+    if w + 1 > UtcbConsts::L4_UTCB_GENERIC_DATA_SIZE as u32 {
         return false; 
     }
 

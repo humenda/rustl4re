@@ -156,7 +156,7 @@ pub unsafe fn l4_utcb_br_u(u: *mut l4_utcb_t) -> *mut l4_buf_regs_t {
 
 #[inline]
 pub unsafe fn l4_utcb_mr_u(u: *mut l4_utcb_t) -> *mut l4_msg_regs_t {
-     (u as *mut u8).offset(L4_utcb_consts_amd64::L4_UTCB_MSG_REGS_OFFSET
+     (u as *mut u8).offset(UtcbConsts::L4_UTCB_MSG_REGS_OFFSET
                            as isize)
          as *mut l4_msg_regs_t
 }
