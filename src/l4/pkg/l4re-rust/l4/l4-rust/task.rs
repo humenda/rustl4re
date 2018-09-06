@@ -1,41 +1,23 @@
 //! L4(Re) Task API
 
-use l4_sys;
+use l4_sys::{self, l4_cap_consts_t::L4_CAP_SHIFT};
 
-use l4_sys::{l4_addr_t, l4_fpage_t, l4_cap_idx_t, l4re_env_t}; // ToDo: should completely go
+use l4_sys::{l4_addr_t, l4_fpage_t, l4_cap_idx_t};
 
-use cap::{Cap, CapKind, Untyped};
-use error::{Error, Result};
+use cap::{Cap, CapKind};
+use error::{Result};
 use ipc::MsgTag;
 use types::{UMword};
 use utcb::Utcb;
 
 // ToDo
 pub static THIS_TASK: Cap<Task> = Cap {
-    raw: 1u64 << l4_sys::L4_CAP_SHIFT,
+    raw: 1u64 << L4_CAP_SHIFT as u64,
     interface: Task {
-        cap: 1u64 << l4_sys::L4_CAP_SHIFT,
+        cap: 1u64 << L4_CAP_SHIFT as u64,
     }
 };
 
-
-/// we need this helper to use the factory from the l4re environment, normally this would be part
-/// of the l4re crate, but task is a L4-level abstraction.
-extern "C" {
-    static l4re_global_env: *const l4_sys::l4re_env_t; // set up by uclibc
-}
-
-#[inline(always)]
-fn l4re_env() -> Result<&'static l4re_env_t> {
-    unsafe {
-        if l4re_global_env.is_null() {
-            return Err(Error::InvalidArg("Unable to get L4Re environment pointer, \
-                not set up (either no l4re binary or no libc in use)".into()));
-        }
-        Ok(::std::mem::transmute::<*const l4re_env_t, &'static l4re_env_t>(
-                l4re_global_env))
-    }
-    }
 
 /// Task kernel object
 /// The `Task` represents a combination of the address spaces provided
@@ -171,10 +153,9 @@ impl Task {
     ///
     /// This adds user-kernel memory (to be used for instance as UTCB) by specifying it in the
     /// given flex page.
-    pub unsafe fn add_ku_mem(&self, fpage: l4_fpage_t, utcb: &Utcb) -> Result<()> {
-        let tag = MsgTag::from(l4_sys::l4_task_add_ku_mem_u(self.cap, fpage,
-                utcb.raw)).result()?;
-        Ok(())
+    pub unsafe fn add_ku_mem(&self, fpage: l4_fpage_t, utcb: &Utcb) -> Result<MsgTag> {
+        MsgTag::from(l4_sys::l4_task_add_ku_mem_u(self.cap, fpage,
+                utcb.raw)).result()
     }
 
 //    /// Create a L4 task

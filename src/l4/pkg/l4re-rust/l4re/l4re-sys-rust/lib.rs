@@ -7,6 +7,13 @@ use std::os::raw::{c_int, c_long, c_ulong, c_void};
 
 include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
 
+/// we need this helper to use the factory from the l4re environment, normally this would be part
+/// of the l4re crate, but task is a L4-level abstraction.
+extern "C" {
+    static l4re_global_env: *const l4_sys::l4re_env_t; // set up by uclibc
+}
+
+
 // blacklisted
 pub type l4_addr_t = usize; // memory addresses
 
@@ -32,6 +39,19 @@ pub const L4_PAGESIZEU: usize = L4_PAGESIZE as usize;
 pub unsafe fn l4re_env() -> *const l4re_env_t {
     l4re_global_env
 }
+
+#[inline(always)]
+fn l4re_env() -> Result<&'static l4re_env_t> {
+    unsafe {
+        if l4re_global_env.is_null() {
+            return Err(Error::InvalidArg("Unable to get L4Re environment pointer, \
+                not set up (either no l4re binary or no libc in use)"));
+        }
+        Ok(::core::mem::transmute::<*const l4re_env_t, &'static l4re_env_t>(
+                l4re_global_env))
+    }
+    }
+
 
 #[must_use]
 #[inline]

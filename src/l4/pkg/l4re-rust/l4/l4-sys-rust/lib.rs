@@ -6,7 +6,7 @@ extern crate libc;
 mod helpers;
 mod cap;
 mod c_api;
-mod consts;
+pub mod consts;
 mod factory;
 mod ipc_basic;
 pub mod ipc_ext;
