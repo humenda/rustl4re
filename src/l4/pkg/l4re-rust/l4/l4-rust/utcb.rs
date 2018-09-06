@@ -2,12 +2,12 @@ use core::{intrinsics::transmute,
         mem::{align_of, size_of}};
 
 use l4_sys::{l4_uint64_t, l4_umword_t,
-    l4_utcb, l4_utcb_br, l4_utcb_mr, l4_utcb_mr_u, l4_utcb_t};
-use l4_sys::{L4_UTCB_GENERIC_DATA_SIZE, l4_msg_regs_t};
+        l4_utcb, l4_utcb_br, l4_utcb_mr, l4_utcb_mr_u, l4_utcb_t, l4_msg_regs_t,
+        consts::UTCB_GENERIC_DATA_SIZE};
 
 use error::{Error, GenericErr, Result};
 
-const UTCB_DATA_SIZE_IN_BYTES: usize = L4_UTCB_GENERIC_DATA_SIZE as usize
+const UTCB_DATA_SIZE_IN_BYTES: usize = UTCB_GENERIC_DATA_SIZE
                     * size_of::<l4_umword_t>();
 
 #[macro_export]
@@ -19,7 +19,7 @@ macro_rules! utcb_mr {
 
 
 // see union l4_msg_regs_t
-const MSG_REG_COUNT: usize = L4_UTCB_GENERIC_DATA_SIZE as usize / 
+const MSG_REG_COUNT: usize = UTCB_GENERIC_DATA_SIZE / 
         (size_of::<l4_uint64_t>() / size_of::<l4_umword_t>());
 
 
@@ -113,7 +113,7 @@ pub struct Msg {
 impl Msg {
     pub unsafe fn from_raw_mr(mr: *mut l4_msg_regs_t) -> Msg {
         Msg {
-            mr: transmute::<*mut u64, *mut u8>((*mr).mr.as_mut_ptr()),
+            mr: transmute::<*mut u64, *mut u8>((*mr).bindgen_union_field.as_mut_ptr()),
             offset: 0
         }
     }
@@ -121,7 +121,8 @@ impl Msg {
     pub fn new() -> Msg {
         unsafe { // safe, because *every thread MUST have* a UTCB with message registers
             Msg {
-                mr: transmute::<*mut u64, *mut u8>((*l4_utcb_mr()).mr.as_mut_ptr()),
+                mr: transmute::<*mut u64, *mut u8>((*l4_utcb_mr())
+                           .bindgen_union_field.as_mut_ptr()),
                 offset: 0,
             }
         }

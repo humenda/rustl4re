@@ -1,5 +1,7 @@
-use l4_sys::{self, L4_CAP_SHIFT, L4_INVALID_CAP_BIT, l4_cap_idx_t};
-use std::ops::Deref;
+use core::ops::Deref;
+use l4_sys::{self,
+        l4_cap_consts_t::{L4_CAP_SHIFT, L4_INVALID_CAP_BIT},
+        l4_cap_idx_t};
 
 use error::{Error, Result};
 
@@ -36,21 +38,21 @@ impl<T: CapKind> Deref for Cap<T> {
 
 impl<T: CapKind> PartialEq<Cap<T>> for Cap<T> {
     fn eq(&self, other: &Cap<T>) -> bool {
-        (self.raw >> L4_CAP_SHIFT) == (other.raw >> L4_CAP_SHIFT)
+        (self.raw >> L4_CAP_SHIFT as u64) == (other.raw >> L4_CAP_SHIFT as u64)
     }
 
     fn ne(&self, other: &Cap<T>) -> bool {
-        (self.raw >> L4_CAP_SHIFT) != (other.raw >> L4_CAP_SHIFT)
+        (self.raw >> L4_CAP_SHIFT as u64) != (other.raw >> L4_CAP_SHIFT as u64)
     }
 }
 
 impl<T: CapKind> PartialEq<CapIdx> for Cap<T> {
     fn eq(&self, other: &CapIdx) -> bool {
-        (self.raw >> L4_CAP_SHIFT) == (other >> L4_CAP_SHIFT)
+        (self.raw >> L4_CAP_SHIFT as u64) == (other >> L4_CAP_SHIFT as u64)
     }
 
     fn ne(&self, other: &CapIdx) -> bool {
-        (self.raw >> L4_CAP_SHIFT) != (other >> L4_CAP_SHIFT)
+        (self.raw >> L4_CAP_SHIFT as u64) != (other >> L4_CAP_SHIFT as u64)
     }
 }
 
@@ -77,12 +79,12 @@ impl<T: CapKind> Cap<T> {
 
     #[inline]
     pub fn is_valid(&self) -> bool {
-        (self.raw & L4_INVALID_CAP_BIT) == 0
+        (self.raw & L4_INVALID_CAP_BIT as u64) == 0
     }
 
     #[inline]
     pub fn is_invalid(&self) -> bool {
-        (self.raw & L4_INVALID_CAP_BIT) != 0
+        (self.raw & L4_INVALID_CAP_BIT as u64) != 0
     }
 }
 

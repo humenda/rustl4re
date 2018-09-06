@@ -1,8 +1,11 @@
+#![no_std]
 #![feature(align_offset)]
 // ToDo: ^ stable Rust
 
-extern crate core;
 extern crate l4_sys;
+#[macro_use]
+extern crate num_derive;
+extern crate num_traits;
 
 // apart from macro_use, eep this alphabetical
 #[macro_use]

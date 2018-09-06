@@ -1,0 +1,18 @@
+[package]
+name = "l4"
+version = "0.1.0"
+authors = ["Sebastian Humenda <shumenda @ gmx . de>"]
+
+[lib]
+path = "lib.rs"
+
+[dependencies]
+libc = "0.2.43"
+
+[dependencies.num-traits]
+version = "0.2"
+default-features = false
+
+[dependencies.num-derive]
+version = "0.2"
+default-features = false

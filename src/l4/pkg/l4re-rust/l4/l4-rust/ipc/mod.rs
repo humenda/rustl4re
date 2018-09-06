@@ -1,46 +1,42 @@
 #[macro_use]
 mod iface;
-
-use l4_sys::msgtag;
-use std::convert::From;
+use core::convert::From;
+use l4_sys::{l4_msgtag_flags::*, l4_msgtag_t, l4_timeout_t, msgtag};
+use num_traits::{FromPrimitive};
 
 use cap::{Cap, CapKind};
 use error::{Error, Result};
 use types::{Mword, Protocol, UMword};
 use utcb::Utcb;
 
-use l4_sys::{L4_MSGTAG_ERROR, L4_MSGTAG_TRANSFER_FPU, L4_MSGTAG_SCHEDULE,
-        L4_MSGTAG_PROPAGATE, L4_MSGTAG_FLAGS, l4_msgtag_t, l4_timeout_t};
-
 use l4_sys;
 
-/// wait infinitely
-#[macro_export]
-enumgenerator! (MsgTagFlags =>
+enumgenerator! {
     /// flags for message tags
-    fields:
-    /// Error indicator flag for a received message.
-    L4_MSGTAG_ERROR        => Error,
-    /// Enable FPU transfer flag for IPC send.
-    ///
-    /// By enabling this flag when sending IPC, the sender indicates that the contents of the FPU
-    /// shall be transfered to the receiving thread. However, the receiver has to indicate its
-    /// willingness to receive FPU context in its buffer descriptor register (BDR).
-    L4_MSGTAG_TRANSFER_FPU => TransferFpu,
-    /// Enable schedule in IPC flag. (sending)
-    ///
-    /// Usually IPC operations donate the remaining time slice of a thread to the called thread.
-    /// Enabling this flag when sending IPC does a real scheduling decision. However, this flag
-    /// decreases IPC performance.
-    L4_MSGTAG_SCHEDULE     => Schedule,
-    /// Enable IPC propagation.
-    /// This flag enables IPC propagation, which means an IPC reply-connection from the current
-    /// caller will be propagated to the new IPC receiver. This makes it possible to propagate an
-    /// IPC call to a third thread, which may then directly answer to the caller.
-    L4_MSGTAG_PROPAGATE    => Propagate,
-    /// Mask for all flags.
-    L4_MSGTAG_FLAGS        => Mask,
-);
+    enum MsgTagFlags {
+        /// Error indicator flag for a received message.
+        L4_MSGTAG_ERROR        => Error,
+        /// Enable FPU transfer flag for IPC send.
+        ///
+        /// By enabling this flag when sending IPC, the sender indicates that the contents of the FPU
+        /// shall be transfered to the receiving thread. However, the receiver has to indicate its
+        /// willingness to receive FPU context in its buffer descriptor register (BDR).
+        L4_MSGTAG_TRANSFER_FPU => TransferFpu,
+        /// Enable schedule in IPC flag. (sending)
+        ///
+        /// Usually IPC operations donate the remaining time slice of a thread to the called thread.
+        /// Enabling this flag when sending IPC does a real scheduling decision. However, this flag
+        /// decreases IPC performance.
+        L4_MSGTAG_SCHEDULE     => Schedule,
+        /// Enable IPC propagation.
+        /// This flag enables IPC propagation, which means an IPC reply-connection from the current
+        /// caller will be propagated to the new IPC receiver. This makes it possible to propagate an
+        /// IPC call to a third thread, which may then directly answer to the caller.
+        L4_MSGTAG_PROPAGATE    => Propagate,
+        /// Mask for all flags.
+        L4_MSGTAG_FLAGS        => Mask,
+    }
+}
 
 const L4_MSGTAG_ERROR_I: isize = L4_MSGTAG_ERROR as isize;
 
@@ -72,7 +68,8 @@ impl MsgTag {
     /// This is internally the same as the `label()` function, wrapping the value in a safe
     /// Protocol enum.
     pub fn protocol(&self) -> Result<Protocol> {
-        Protocol::from((self.raw >> 16) as i32)
+        Protocol::from_isize(self.raw >> 16).ok_or(
+                Error::InvalidArg("Unknown protocol", Some(self.raw >> 16)))
     }
 
     /// Set the label value.
@@ -89,7 +86,7 @@ impl MsgTag {
     /// The label of a message tag is used to set the protocol of a message. This function allows
     /// to set one of the predefined protocol values safely.
     pub fn set_protocol(&mut self, p: Protocol) {
-        self.raw = (self.raw & 0x0ffff) | ((p.as_raw() as isize) << 16)
+        self.raw = (self.raw & 0x0ffff) | ((p as isize) << 16)
     }
 
     /// Get the number of untyped words.
@@ -168,7 +165,7 @@ pub unsafe fn l4_ipc_wait(utcb: &mut Utcb, label: *mut l4_umword_t,
 }
 
 #[inline]
-pub unsafe fn l4_msgtag(label: ::std::os::raw::c_long, words: c_uint,
+pub unsafe fn l4_msgtag(label: ::libc::c_long, words: c_uint,
         items: c_uint, flags: c_uint) -> l4_msgtag_t {
     l4_msgtag_w(label, words, items, flags)
 }
@@ -225,7 +222,7 @@ pub unsafe fn l4_rcv_ep_bind_thread(gate: &Cap, thread: &Cap,
 //    0
 //}
 //
-/// re-implementation of the inline function from l4sys/include/ipc.h
+// re-implementation of the inline function from l4sys/include/ipc.h
 //#[inline]
 //pub unsafe fn l4_sndfpage_add(snd_fpage: l4_fpage_t, snd_base: c_ulong,
 //        tag: *mut l4_msgtag_t) -> c_int {
@@ -256,13 +253,4 @@ pub unsafe fn l4_rcv_ep_bind_thread(gate: &Cap, thread: &Cap,
 //                l4_msgtag(l4_msgtag_protocol_L4_PROTO_KOBJECT as i64, 2, 1, 0),
 //                l4_timeout_t { raw: 0 })
 //}
-
-/// Return a never-timeout (akin to L4_IPC_TIMEOUT_NEVER)
-#[inline(always)]
-pub fn timeout_never() -> l4_timeout_t {
-    l4_timeout_t {
-        raw: 0, // forever
-    }
-}
-
 
