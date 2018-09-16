@@ -1,8 +1,10 @@
 use core::marker::PhantomData;
+use core::ops::{Deref, DerefMut};
 
 use super::super::{
-    error::Result,
-    utcb::{Msg, Serialisable}
+    cap::{Cap, CapIdx, CapKind, CapInit},
+    error::{Error, Result},
+    utcb::{Msg, Serialisable, Utcb}
 };
 
 /// compile-time specification of an opcode for a type
@@ -12,7 +14,13 @@ trait HasOpCode {
 }
 
 trait Dispatch {
-    fn dispatch(message: Msg) -> Result<()>;
+    /// Dispatch message from client to the user-defined server implementation
+    ///
+    /// Using the operation code (opcode) for each IPC call  defined in an interface, the arguments
+    /// are read from the UTCB and fed into the user-supplied server implementation. Please note
+    /// that the opcode might have been defined automatically, if no arguments were supplied.
+    /// The result of the operation will be written back to the UTCB, errors are propagated upward.
+    fn dispatch(&mut self) -> Result<()>;
 }
 
 /// Define a function in a type and allow the derivation of the opposite type
@@ -44,17 +52,50 @@ pub struct Receiver<ValueType, Next>(
 impl<Val: Serialisable, Next: HasOpposite> HasOpposite for Receiver<Val, Next> {
     type Opposite = Sender<Val, Next::Opposite>;
 }
+
+struct Client;
+
+impl CapKind for Client { }
+
+pub struct Server<T> {
+    user_impl: T,
+}
+
+impl<T> CapKind for Server<T> { }
+
+impl<T> Deref for Server<T> {
+    type Target = T;
+
+    fn deref(&self) -> &Self::Target {
+        &self.user_impl
+    }
+}
+
+
+impl<T> DerefMut for Server<T> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.user_impl
+    }
+}
 macro_rules! write_msg {
-    ($func_representation:ty, $msg:expr, $(arg:expr),*) => {
+    ($funcstruct:ty, $msg_mr:expr, $($arg:expr),*) => {
         {
-            let instance = $func_representation { PhantomData };
-            $(
-                let instance = instance.write($msg, $arg);
-            )*
+            type Foo = $funcstruct;
+            let instance = Foo::new();
+            unsafe {
+                $(
+                    $msg_mr.write($arg)?;
+                 )*
+            }
+            Ok(())
         }
     }
 }
 
+/// Read IPC arguments from the message registers and create a comma-separate argument list to be
+/// inserted into a function call:
+///
+///     { read_instruct() }, { read_instruct()  }, …
 
 macro_rules! unroll_types {
     () => {
@@ -96,6 +137,13 @@ macro_rules! rpc_func_impl {
             type OpType = $type;
             const OP_CODE: Self::OpType = $opcode;
         }
+
+        impl $name {
+            #[inline]
+            fn new() -> $name {
+                $name(Sender(PhantomData))
+            }
+        }
     }
 }
 
@@ -121,26 +169,76 @@ macro_rules! derive_functors {
     }
 }
 
-macro_rules! iface {
-    (mod $iface_name:ident {
-        $(fn $name:ident($($argname:ident: $argtype:ty),*);)*
-    }) => {
-        mod $iface_name {
-            trait Spec {
+macro_rules! derive_ipc_struct {
+    (iface $iface:ident:
+     $($name:ident($($argname:ident: $type:ty),*);)*
+    ) => {
+        struct $iface<T: CapKind> {
+            cap: Cap<T>,
+            utcb: Utcb,
+        }
+
+        impl $iface<Client> {
             $(
-                fn $name(&mut self, $(argname: $argtype),*);
-             )*
+                pub fn $name(&mut self, $($argname: $type),*) -> Result<()> {
+                    let mut msg = self.utcb.mr();
+                    write_msg!(__iface::$name, msg, $($argname),*)
+                }
+            )*
+        }
+
+        impl<T: Spec> $iface<Server<T>> {
+            // ToDo: docstring + provide _u version which also takes utcb; think of better way to
+            // create or receive capability
+            pub fn from_impl(cap: CapIdx, user_impl: T) -> $iface<Server<T>> {
+                $iface {
+                    cap: Cap::new(cap, Server { user_impl }),
+                    utcb: Utcb::current(),
+                }
             }
+        }
 
-            mod functors {
-                use super::super::*;
-
-                derive_functors!(0; $($name($($argtype),*)),*);
+        impl<T: Spec> Dispatch for $iface<Server<T>> {
+            fn dispatch(&mut self) -> Result<()> {
+                let mut msg_mr = self.utcb.mr();
+                // ToDo: i8 as opcode assumed here, should be more dynamic
+                let opcode: i8 = unsafe { msg_mr.read::<i8>()? };
+                $(
+                    if opcode == __iface::$name::OP_CODE {
+                        // ToDo: use result
+                        unsafe {
+                            // ToDo: use result -> use for reply
+                            (**self.cap).$name(
+                                    $(msg_mr.read::<$type>()?),*
+                                );
+                        }
+                        return Ok(());
+                    }
+                )*
+                Err(Error::InvalidArg("unknown opcode received", Some(opcode as isize)))
             }
         }
     }
 }
 
+macro_rules! iface {
+    (mod $iface_name:ident {
+        $(fn $name:ident($($argname:ident: $argtype:ty),*);)*
+    }) => {
+        mod __iface {
+            use super::*;
+            trait Spec {
+            $(
+                fn $name(&mut self, $(argname: $argtype),*);
+            )*
+            }
+
+            derive_functors!(0; $($name($($argtype),*)),*);
+            derive_ipc_struct!(iface $iface_name:
+                $($name($($argname: $argtype),*);)*);
+        }
+    }
+}
 
 iface! {
     mod echoserver {

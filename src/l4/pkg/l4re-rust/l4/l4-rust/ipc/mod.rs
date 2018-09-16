@@ -140,14 +140,14 @@ impl From<l4_msgtag_t> for MsgTag {
 pub fn call<T: CapKind>(dest: &Cap<T>, utcb: &mut Utcb,
         tag: l4_msgtag_t, timeout: l4_timeout_t) -> MsgTag {
     unsafe {
-        MsgTag::from(l4_sys::l4_ipc_call(dest.raw, utcb.raw, tag, timeout))
+        MsgTag::from(l4_sys::l4_ipc_call(dest.raw(), utcb.raw, tag, timeout))
     }
 }
 
 #[inline]
 pub unsafe fn receive<T: CapKind>(object: Cap<T>, utcb: &mut Utcb,
         timeout: l4_timeout_t) -> l4_msgtag_t {
-    l4_sys::l4_ipc_receive(object.raw, utcb.raw, timeout)
+    l4_sys::l4_ipc_receive(object.raw(), utcb.raw, timeout)
 }
 
 /*
