@@ -55,7 +55,7 @@ impl Utcb {
     }
 
     #[inline]
-    pub fn mr(&self) -> &[u64; MSG_REG_COUNT] {
+    pub fn mr_raw(&self) -> &[u64; MSG_REG_COUNT] {
         unsafe {
             let ptr = l4_utcb_mr_u(self.raw);
             &*(ptr as *const [u64; MSG_REG_COUNT])
@@ -63,12 +63,26 @@ impl Utcb {
     }
 
     #[inline]
-    pub fn mr_mut(&mut self) -> &mut [u64; MSG_REG_COUNT] {
+    pub fn mr_raw_mut(&mut self) -> &mut [u64; MSG_REG_COUNT] {
         unsafe {
             let ptr = l4_utcb_mr_u(self.raw);
             &mut *(ptr as *mut [u64; MSG_REG_COUNT])
         }
     }
+
+    /// Create message register builder
+    ///
+    /// This returns a message builder for the message registers. Unlike the raw
+    /// C version, this builder is capable to write byte-granular to the message
+    /// registers, allowing both space and performance-optimisations due to
+    /// alignment. See [Msg](struct.Msg.html) for more details.
+    #[inline]
+    pub fn mr(&mut self) -> Msg {
+        unsafe {
+            Msg::from_raw_mr(l4_utcb_mr_u(self.raw))
+        }
+    }
+
 
     #[inline(always)]
     pub fn bdr(&self) -> usize {
@@ -146,10 +160,12 @@ impl Msg {
     /// Read given type from the memory region at the internal buffer + offset
     ///
     /// This function reads from the given pointer + the internal offset a value
-    /// from the specified type. This is certainly unsafe, because it is not
-    /// sure what will be at the given position and in the worst case a useless
-    /// value will be read. Reading beyond the limits of the  message registers
-    /// will yield an eror.
+    /// from the specified type. If a read beyond the message registers is
+    /// attempted, an error is returned.
+    /// This is unsafe due to a missing guarantee that
+    /// the pointer to the UTCB, with which the object was constructed is valid
+    /// and that the memory region behind  has the length of
+    /// `UTCB_DATA_SIZE_IN_BYTES`.
     pub unsafe fn read<T: Serialisable>(&mut self)  -> Result<T> {
         let (ptr, offset) = align_with_offset::<T>(self.mr, self.offset);
         let next = offset + size_of::<T>();
