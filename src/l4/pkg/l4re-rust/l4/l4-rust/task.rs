@@ -50,7 +50,7 @@ impl Task {
     #[inline]
     pub unsafe fn map_u(&self, dst_task: Cap<Task>, snd_fpage: l4_fpage_t,
                  snd_base: l4_addr_t, u: &mut Utcb) -> Result<MsgTag> {
-        MsgTag::from(l4_sys::l4_task_map_u(dst_task.raw, self.cap,
+        MsgTag::from(l4_sys::l4_task_map_u(dst_task.raw(), self.cap,
                 snd_fpage, snd_base, u.raw)).result()
     }
 
@@ -108,7 +108,7 @@ impl Task {
     #[inline]
     pub unsafe fn delete_obj<T: CapKind>(&self, obj: Cap<T>, utcb: &Utcb)
             -> Result<MsgTag> {
-        MsgTag::from(l4_sys::l4_task_delete_obj_u(self.cap, obj.raw, utcb.raw))
+        MsgTag::from(l4_sys::l4_task_delete_obj_u(self.cap, obj.raw(), utcb.raw))
                 .result()
     }
 
@@ -118,7 +118,7 @@ impl Task {
     #[inline]
     pub unsafe fn release_cap<T: CapKind>(&self, cap: Cap<T>, u: &Utcb)
             -> Result<MsgTag> {
-        MsgTag::from(l4_sys::l4_task_release_cap_u(self.cap, cap.raw, u.raw))
+        MsgTag::from(l4_sys::l4_task_release_cap_u(self.cap, cap.raw(), u.raw))
                 .result()
     }
 
@@ -129,7 +129,7 @@ impl Task {
             -> Result<bool>  {
         let tag: Result<MsgTag> = unsafe {
             MsgTag::from(l4_sys::l4_task_cap_valid_u(
-                    self.cap, cap.raw, utcb.raw)).result()
+                    self.cap, cap.raw(), utcb.raw)).result()
         };
         let tag: MsgTag = tag?;
         Ok(tag.label() > 0)
@@ -143,7 +143,7 @@ impl Task {
                         utcb: &Utcb) -> Result<bool> {
         let tag: Result<MsgTag> = unsafe {
             MsgTag::from(l4_sys::l4_task_cap_equal_u(
-                        self.cap, cap_a.raw, cap_b.raw, utcb.raw)).result()
+                        self.cap, cap_a.raw(), cap_b.raw(), utcb.raw)).result()
         };
         let tag: MsgTag = tag?;
         Ok(tag.label() == 1)
@@ -165,7 +165,7 @@ impl Task {
 //    pub unsafe fn create_from<T: CapKind>(mut task_cap: Cap<Untyped>,
 //            utcb_area: l4_fpage_t) -> Result<Task> {
 //        let tag = MsgTag::from(l4_sys::l4_factory_create_task(
-//                l4re_env()?.factory, &mut task_cap.raw, utcb_area)).result()?;
+//                l4re_env()?.factory, &mut task_cap.raw(), utcb_area)).result()?;
 //        panic!("ToDo: the first two need to be reimplemented, the last one is up to the caller");
 //        //map_obj_to_other(task_cap, pager_gate, pager_id, "pager"); /* Map pager cap */
 //        //map_obj_to(task_cap, main_id, L4_FPAGE_RO, "main"); /* Make us visible */
@@ -177,11 +177,11 @@ impl Task {
 pub fn create_task() -> Result<Cap<Task>> {
     let newtask = Cap::alloc();
     let _ = MsgTag::from(l4_sys::l4_factory_create_task(l4re_env()?.factory,
-            &mut newtask.raw,
+            &mut newtask.raw(),
             ToDo_created_utcb)).result()?;
     // map our region manager to child, use C-alike function to avoid creation of task object for
     // current task
-    let _ = l4_sys::l4_task_map(newtask.raw, THIS_TASK,
+    let _ = l4_sys::l4_task_map(newtask.raw(), THIS_TASK,
             l4_obj_fpage((*l4re_env()).rm, 0, L4_FPAGE_RO),
             l4_map_obj_control((*l4re_env()).rm, l4_sys::L4_MAP_ITEM_MAP)).result()?;
 }
