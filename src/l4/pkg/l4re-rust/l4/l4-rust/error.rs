@@ -130,7 +130,7 @@ impl TcrErr {
 
 #[derive(Debug)]
 pub enum Error {
-
+    /// Generic Error Codes
     Generic(GenericErr),
     /// errors from the Thread Control Registers
     Tcr(TcrErr),
