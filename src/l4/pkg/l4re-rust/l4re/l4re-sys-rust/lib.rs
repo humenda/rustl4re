@@ -1,21 +1,13 @@
 #![allow(non_upper_case_globals)]
 #![allow(non_camel_case_types)]
 #![allow(non_snake_case)]
+#![no_std]
 
-use std::ffi::CString;
-use std::os::raw::{c_int, c_long, c_ulong, c_void};
+extern crate libc;
+
+use libc::{c_int, c_long, c_ulong, c_void};
 
 include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
-
-/// we need this helper to use the factory from the l4re environment, normally this would be part
-/// of the l4re crate, but task is a L4-level abstraction.
-extern "C" {
-    static l4re_global_env: *const l4_sys::l4re_env_t; // set up by uclibc
-}
-
-
-// blacklisted
-pub type l4_addr_t = usize; // memory addresses
 
 ////////////////////////////////////////////////////////////////////////////////
 // Custom types
@@ -26,9 +18,8 @@ pub type l4_addr_t = usize; // memory addresses
 // defined before
 // arch-dependent define (l4sys/include/ARCH-amd64/consts.h)
 #[cfg(target_arch = "x86_64")]
-pub const L4_PAGESHIFT: u8 = 12;
 #[cfg(target_arch = "x86_64")]
-pub const L4_PAGEMASKU: usize = L4_PAGEMASK as usize;
+pub const L4_PAGEMASKU: l4_addr_t = L4_PAGEMASK as l4_addr_t;
 pub const L4_PAGEMASKUSIZE: usize = L4_PAGEMASK as usize;
 pub const L4_PAGESIZEU: usize = L4_PAGESIZE as usize;
 
@@ -41,25 +32,23 @@ pub unsafe fn l4re_env() -> *const l4re_env_t {
 }
 
 #[inline(always)]
-fn l4re_env() -> Result<&'static l4re_env_t> {
-    unsafe {
-        if l4re_global_env.is_null() {
-            return Err(Error::InvalidArg("Unable to get L4Re environment pointer, \
-                not set up (either no l4re binary or no libc in use)"));
-        }
-        Ok(::core::mem::transmute::<*const l4re_env_t, &'static l4re_env_t>(
-                l4re_global_env))
-    }
-    }
+//fn l4re_env() -> Result<&'static l4re_env_t> {
+//    unsafe {
+//        if l4re_global_env.is_null() {
+//            return Err(Error::InvalidArg("Unable to get L4Re environment pointer, \
+//                not set up (either no l4re binary or no libc in use)"));
+//        }
+//        Ok(::core::mem::transmute::<*const l4re_env_t, &'static l4re_env_t>(
+//                l4re_global_env))
+//    }
+//    }
 
 
 #[must_use]
 #[inline]
 pub unsafe fn l4re_env_get_cap(name: &str) -> l4_cap_idx_t {
-    let name = CString::from_vec_unchecked(name.as_bytes().to_vec());
     l4re_env_get_cap_w(name.as_ptr())
 }
-
 
 #[inline]
 pub fn l4_trunc_page(address: l4_addr_t) -> l4_addr_t {

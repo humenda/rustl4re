@@ -1,0 +1,13 @@
+[package]
+name = "l4re_sys"
+version = "0.1.0"
+authors = ["Sebastian Humenda <shumenda @ gmx . de>"]
+
+[lib]
+path = "lib.rs"
+
+[build-dependencies]
+bindgen = "0.26.3"
+
+[dependencies]
+libc = "0.2.43"
