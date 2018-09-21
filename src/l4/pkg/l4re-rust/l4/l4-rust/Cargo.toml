@@ -8,6 +8,7 @@ path = "lib.rs"
 
 [dependencies]
 libc = "0.2.43"
+#l4-derive = { path = "l4-derive" } 
 
 [dependencies.num-traits]
 version = "0.2"
