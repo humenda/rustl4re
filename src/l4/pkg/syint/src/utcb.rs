@@ -1,6 +1,16 @@
+use l4::utcb::*;
 use std::mem::transmute;
 
+use helpers::MsgMrFake;
 use syint_cc::*;
+
+fn mk_msg_regs() -> (MsgMrFake, Msg) {
+    let mut mr = MsgMrFake::new();
+    let msg = unsafe {
+        Msg::from_raw_mr(mr.mut_ptr())
+    };
+    (mr, msg)
+}
 
 tests! {
     fn msgtag_reimplementation_work_the_same_way() {
@@ -36,12 +46,9 @@ tests! {
 
     fn serialisation_of_long_float_bool_same_as_cc() {
         use l4::utcb::*;
-        use l4_sys::{l4_msg_regs_t, L4_UTCB_GENERIC_DATA_SIZE};
-        let mut mr = l4_msg_regs_t {
-            mr: [0u64; L4_UTCB_GENERIC_DATA_SIZE as usize]
-        };
+        let mut mr = MsgMrFake::new();
         let mut msg = unsafe {
-            Msg::from_raw_mr(&mut mr as *mut l4_msg_regs_t)
+            Msg::from_raw_mr(mr.mut_ptr())
         };
         unsafe {
             msg.write(987654u64).expect("Writing failed");
@@ -51,31 +58,27 @@ tests! {
 
         unsafe {
             let c_res = transmute::<*mut u8, *mut u64>(write_long_float_bool());
-            assert_eq!(*c_res, *mr.mr.get(0).unwrap());
-            assert_eq!(*c_res.offset(1), *mr.mr.get(1).unwrap());
+            assert_eq!(*c_res, mr.get(0));
+            assert_eq!(*c_res.offset(1), mr.get(1));
         }
     }
 
-    fn serialisation_of_bool_long_float_match() {
-        use l4::utcb::*;
-        use l4_sys::{l4_msg_regs_t, L4_UTCB_GENERIC_DATA_SIZE};
-        let mut mr = l4_msg_regs_t {
-            mr: [0u64; L4_UTCB_GENERIC_DATA_SIZE as usize]
-        };
-        let mut msg = unsafe {
-            Msg::from_raw_mr(&mut mr as *mut l4_msg_regs_t)
-        };
+    fn word_count_correct_for_u64() {
+        let (mr, mut msg) = mk_msg_regs();
         unsafe {
-            msg.write(true).expect("ToDo");
-            msg.write(987654u64).expect("Writing failed");
-            msg.write(3.14f32).expect("ToDo");
+            msg.write(0u64).expect("Writing failed");
+            msg.write(3u64).expect("Couldn't write to msg");
         }
+        assert_eq!(msg.words(), 2);
+    }
 
-        unsafe {
-            let c_res = transmute::<*mut u8, *mut u64>(write_bool_long_float());
-            assert_eq!(*c_res, *mr.mr.get(0).unwrap());
-            assert_eq!(*c_res.offset(1), *mr.mr.get(1).unwrap());
-            assert_eq!(*c_res.offset(2), *mr.mr.get(2).unwrap());
-        }
+    fn word_count_is_correctly_rounded_up() {
+        let (mr, mut msg) = mk_msg_regs();
+        unsafe { msg.write(08).expect("Writing failed"); }
+        assert_eq!(msg.words(), 1);
+        unsafe { msg.write(42u8).expect("Writing failed"); }
+        assert_eq!(msg.words(), 1);
+        unsafe { msg.write(42u8).expect("Writing failed"); }
+        assert_eq!(msg.words(), 1);
     }
 }
