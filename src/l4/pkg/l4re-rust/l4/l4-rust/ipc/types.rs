@@ -7,7 +7,7 @@ use core::{
 
 use super::super::{
     error::Result,
-    cap::CapKind,
+    cap::{CapKind, CapIdx},
     utcb::Serialisable
 };
 
@@ -78,7 +78,7 @@ impl<Val: Serialisable, Next: HasOpposite> HasOpposite for Receiver<Val, Next> {
 }
 
 /// Empty type to symbolise client-side access to the interface.
-pub struct Client;
+pub struct Client(CapIdx);
 
 impl CapKind for Client { }
 

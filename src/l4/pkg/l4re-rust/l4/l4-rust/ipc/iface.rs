@@ -1,87 +1,15 @@
 use core::marker::PhantomData;
-use core::ops::{Deref, DerefMut};
 
 use super::super::{
-    cap::{Cap, CapIdx, CapKind, CapInit},
+    cap::{Cap, CapIdx, CapKind},
     error::{Error, Result},
-    utcb::{Msg, Serialisable, Utcb}
+    utcb::Utcb
 };
+use ipc::{call, types::*, MsgTag};
 
-/// compile-time specification of an opcode for a type
-trait HasOpCode {
-    type OpType;
-    const OP_CODE: Self::OpType;
-}
-
-trait Dispatch {
-    /// Dispatch message from client to the user-defined server implementation
-    ///
-    /// Using the operation code (opcode) for each IPC call  defined in an interface, the arguments
-    /// are read from the UTCB and fed into the user-supplied server implementation. Please note
-    /// that the opcode might have been defined automatically, if no arguments were supplied.
-    /// The result of the operation will be written back to the UTCB, errors are propagated upward.
-    fn dispatch(&mut self) -> Result<()>;
-}
-
-/// Define a function in a type and allow the derivation of the opposite type
-///
-/// This allows the macro rules to define the type for a sender and derive the receiver part
-/// automatically.
-trait HasOpposite {
-    type Opposite;
-}
-
-pub struct End;
-
-impl HasOpposite for End {
-    type Opposite = End;
-}
-
-pub struct Sender<ValueType, NextType>(
-        PhantomData<(ValueType, NextType)>);
-
-impl<ValueType: Serialisable, Next: HasOpposite> HasOpposite for Sender<ValueType, Next> {
-    type Opposite = Receiver<ValueType, Next::Opposite>;
-}
-
-// we may not constraint Next with a trait requirement, because this will prefvent the compiler
-// from auto-deriving children types from the Next element
-pub struct Receiver<ValueType, Next>(
-        PhantomData<(ValueType, Next)>);
-
-impl<Val: Serialisable, Next: HasOpposite> HasOpposite for Receiver<Val, Next> {
-    type Opposite = Sender<Val, Next::Opposite>;
-}
-
-struct Client;
-
-impl CapKind for Client { }
-
-pub struct Server<T> {
-    user_impl: T,
-}
-
-impl<T> CapKind for Server<T> { }
-
-impl<T> Deref for Server<T> {
-    type Target = T;
-
-    fn deref(&self) -> &Self::Target {
-        &self.user_impl
-    }
-}
-
-
-impl<T> DerefMut for Server<T> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.user_impl
-    }
-}
 macro_rules! write_msg {
     ($funcstruct:ty, $msg_mr:expr, $($arg:expr),*) => {
         {
-            type Foo = $funcstruct;
-            let instance = Foo::new();
             unsafe {
                 $(
                     $msg_mr.write($arg)?;
@@ -140,7 +68,7 @@ macro_rules! rpc_func_impl {
 
         impl $name {
             #[inline]
-            fn new() -> $name {
+            pub fn new() -> $name {
                 $name(Sender(PhantomData))
             }
         }
@@ -169,6 +97,17 @@ macro_rules! derive_functors {
     }
 }
 
+/// Extract the opcode from a list of function names
+///
+/// The basic assumption is that all functions share the same opcode type in an IPC interface.
+/// Within a macro, it is impossible to separate the first element from a type list, hence this
+/// helper macro gets the head and yields the opcode type.
+macro_rules! opcode {
+    ($name:ident, $($other_names:ident),*) => {
+        <__iface::$name as HasOpCode>::OpType
+    }
+}
+
 macro_rules! derive_ipc_struct {
     (iface $iface:ident:
      $($name:ident($($argname:ident: $type:ty),*);)*
@@ -181,8 +120,22 @@ macro_rules! derive_ipc_struct {
         impl $iface<Client> {
             $(
                 pub fn $name(&mut self, $($argname: $type),*) -> Result<()> {
-                    let mut msg = self.utcb.mr();
-                    write_msg!(__iface::$name, msg, $($argname),*)
+                    let mut mr = self.utcb.mr();
+                    // write opcode
+                    unsafe {
+                        mr.write(__iface::$name::OP_CODE)?;
+                    }
+                    write_msg!(__iface::$name, mr, $($argname),*)?;
+                    // ToDo: first param is protocol number, interface should define it, c++?`
+                    // ToDo: third parameter is buffer registers, missing
+                    // ToDo: flags aren't passed yet, C++ does it
+                    let tag = MsgTag::new(0, mr.words(), 0, 0);
+                    // ToDo: fill in args for syscall
+                    //let msgtag = call(dest: &Cap<T>, &mut Utcb::current,
+                    //                          tag, ::l4_sys::timeout_never())
+                    //    .result()?;
+                    // ToDo: extract return value
+                    Ok(())
                 }
             )*
         }
@@ -201,8 +154,9 @@ macro_rules! derive_ipc_struct {
         impl<T: Spec> Dispatch for $iface<Server<T>> {
             fn dispatch(&mut self) -> Result<()> {
                 let mut msg_mr = self.utcb.mr();
-                // ToDo: i8 as opcode assumed here, should be more dynamic
-                let opcode: i8 = unsafe { msg_mr.read::<i8>()? };
+                let opcode: i8 = unsafe {
+                        msg_mr.read::<opcode!($($name),*)>()?
+                };
                 $(
                     if opcode == __iface::$name::OP_CODE {
                         // ToDo: use result

@@ -176,6 +176,16 @@ impl Msg {
         let val: T = (*transmute::<*mut u8, *mut T>(ptr)).clone();
         Ok(val)
     }
+
+
+    #[inline]
+    pub fn words(&self) -> u32 {
+        (self.offset / size_of::<usize>() +
+            match self.offset % size_of::<usize>() {
+                0 => 0,
+                _ => 1
+            }) as u32
+    }
 }
 
 

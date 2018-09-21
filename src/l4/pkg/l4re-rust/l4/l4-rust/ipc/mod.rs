@@ -1,5 +1,7 @@
 #[macro_use]
 mod iface;
+mod types;
+
 use core::convert::From;
 use l4_sys::{l4_msgtag_flags::*, l4_msgtag_t, l4_timeout_t, msgtag};
 use num_traits::{FromPrimitive};
@@ -50,7 +52,7 @@ impl MsgTag {
     /// registers, the numbers of typed items (flex pages, etc.) to transfer and the transfer
     /// flags.
     #[inline]
-    pub fn init(label: i64, words: u32, items: u32, flags: u32) -> MsgTag {
+    pub fn new(label: i64, words: u32, items: u32, flags: u32) -> MsgTag {
         MsgTag { raw: msgtag(label, words, items, flags).raw as Mword }
     }
 

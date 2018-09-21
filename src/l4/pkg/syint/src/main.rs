@@ -5,6 +5,7 @@ extern crate l4re_sys;
 
 #[macro_use]
 mod macros;
+mod helpers;
 mod syint_cc;
 
 const BEGIN_MARKER: &'static str = "[[|| BEGIN TESTS ||]]";
@@ -16,7 +17,6 @@ macro_rules! call_mod_tests {
         $(
             mod $modname;
          )*
-        #[no_mangle]
         pub fn main() {
             println!("{}", BEGIN_MARKER);
             $(
