@@ -187,22 +187,30 @@ endif
 # strip first word (l4-bender path) and last word (-- delimiter)
 L4_BENDER_ARGS_HEADLESS=$(strip $(LINK_PROGRAM:$(firstword $(LINK_PROGRAM))%=%))
 export L4_BENDER_ARGS=$(strip $(L4_BENDER_ARGS_HEADLESS:%$(lastword $(LINK_PROGRAM))=%))
-export L4_LD_OPTIONS=$(filter-out -PClib%rust,$(BID_LDFLAGS_FOR_LINKING)) $(LIBS) $(EXTRA_LIBS)
 # allow rustc to find l4-bender
 export PATH := $(PATH):$(L4DIR)/tool/bin
+_RUST_DEPS = $(addprefix $(OBJ_BASE)/lib/rustlib/,$(filter %rust,$(REQUIRES_LIBS)))
 export CARGO_BUILD_RUSTFLAGS=$(strip $(patsubst -D%,--cfg=%,$(filter -D%,$(CPPFLAGS))) \
 		$(addprefix -L, $(PRIVATE_LIBDIR) $(PRIVATE_LIBDIR_$(OSYSTEM)) $(PRIVATE_LIBDIR_$@) $(PRIVATE_LIBDIR_$@_$(OSYSTEM))) \
-		-L $(OBJ_BASE)/lib -L $(OBJ_BASE)/) $(RSFLAGS)
+		$(addprefix -L,$(addsuffix /$(RUST_TARGET),$(_RUST_DEPS))) \
+		$(addprefix -L dependency=,$(addsuffix /$(RUST_TARGET)/deps,$(_RUST_DEPS))) \
+		$(addprefix -L dependency=,$(addsuffix /host-deps,$(_RUST_DEPS))) \
+		$(RSFLAGS)) \
+		$(addprefix -C link-arg=,$(filter-out -PClib%rust,$(BID_LDFLAGS_FOR_LINKING)) $(LIBS) $(EXTRA_LIBS))
+
+export L4_INCLUDE_DIRS=$(filter -I%,$(CPPFLAGS))
+
 
 # manifest path: location of the Cargo.toml, which should reside in the PKGDIR
 # $PATH has to be extended to include l4-bender
-$(strip $(TARGET)): $(SRC_RS)
+$(strip $(TARGET)): $(SRC_RS) $(LIBDEPS)
 	@$(LINK_MESSAGE)
+	$(if $(VERBOSE),,@echo CARGO_BUILD_RUSTFLAGS=$(CARGO_BUILD_RUSTFLAGS))
 	$(VERBOSE)$(call MAKEDEP,$(INT_LD_NAME),,,ld) \
 		cargo build $(if $(VERBOSE),,-v) \
 			$(if $(strip $(DEBUG)),--debug,--release) \
 			--target=$(RUST_TARGET) \
-			--manifest-path=$(PKGDIR)/Cargo.toml
+			--manifest-path=$(PKGDIR_ABS)/Cargo.toml
 	@$(BUILT_MESSAGE)
 	$(VERBOSE)cp $(RUST_RESULT_DIR)/$(strip $(TARGET)) $(CARGO_BUILD_TARGET_DIR)
 endif

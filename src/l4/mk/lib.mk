@@ -100,8 +100,8 @@ PC_LIBS     ?= $(sort $(patsubst lib%.so,-l%,$(TARGET_SHARED) \
                       $(patsubst lib%.a,-l%,$(TARGET_STANDARD))))
 else
 # add whole path to .rlib and handle others like usual
-PC_LIBS = $(sort $(addprefix $(OBJ_BASE)/lib/rustlib/,  \
-		$(filter %.rlib,$(TARGET_STANDARD))) \
+PC_LIBS = $(sort $(addprefix $(OBJ_BASE)/lib/rustlib/$(PKGNAME)/$(RUST_TARGET)/, \
+		$(patsubst %-rust.rlib,%.rlib,$(filter %.rlib,$(TARGET_STANDARD)))) \
 	$(patsubst lib%.so,-l%,$(TARGET_SHARED) \
 				  $(patsubst lib%.a,-l%, $(filter-out %.rlib,$(TARGET_STANDARD)))))
 endif
@@ -169,39 +169,53 @@ $(LINK_INCR_TARGETS):%.a: $(OBJS) $(LIBDEPS) $(foreach x,$(LINK_INCR_TARGETS),$(
 	   $@)
 	@$(BUILT_MESSAGE)
 
-# build a .rlib (Rust static library)
-# (copy of prog.mk, probably belongs in rules.mk
+################################################################################
+# Rust target
 
+ifneq ($(SRC_RS),)
 contains=$(findstring $(1),$(strip $(TARGET)))
 ifeq ($(and $(call contains,-), $(call contains,lib), $(call contains,.rlib))),)
 $(error A library target has to have a name like libFOO-rust.rlib, while FOO is the name of your library and rust a freely choosable suffix required by rustc.)
 endif
 
-# ToDo: which is the best place to get all library directories from? use
-# LDFLAGS for now
+# The CARG* variables are exported to instruct Cargo where to find and how to
+# use libraries. They are exported to be passed to the subprocess.
 L4_LIBDIRECTORIES=$(filter -L%,$(LDFLAGS))
-export CARGO_BUILD_RUSTFLAGS=$(strip $(L4_LIBDIRECTORIES) $(patsubst -D%,--cfg%,$(filter -D%,$(LDFLAGS))))
+# rust dependencies, special treatment
+_RUST_DEPS = $(addprefix $(OBJ_BASE)/lib/rustlib/,$(filter %rust,$(REQUIRES_LIBS)))
+# add flags: normal lib dirs, rust lib dirs, rust dependency lib dirs, --cfg's
+export CARGO_BUILD_RUSTFLAGS=$(strip $(L4_LIBDIRECTORIES) $(patsubst -D%,--cfg%,$(filter -D%,$(LDFLAGS))) $(RSFLAGS) \
+		$(addprefix -L,$(addsuffix /$(RUST_TARGET),$(_RUST_DEPS))) \
+		$(addprefix -L dependency=,$(addsuffix /$(RUST_TARGET)/deps,$(_RUST_DEPS))) \
+		$(addprefix -L dependency=,$(addsuffix /host-deps,$(_RUST_DEPS))))
+
 # This can be used from the build script to get access to all l4-related
 # include files
 export L4_INCLUDE_DIRS=$(filter -I%,$(CPPFLAGS))
 
-TARGET_RLIB = $(filter %.rlib,$(TARGET))
-# bring all rlibs into a common form: unify libfoo.rlib, foo-rust.rlib,
-# libfoo-rust.rlib, etc. into libfoo-rust.rlib
+ifneq ($(DEBUG),)
+ifeq ($(filter -g,$(RSFLAGS)),)
+RSFLAGS += -g
+endif
+endif
+
+# $(1) SRC $(2) DST in $OBJ_BASE/lib/rustlib/PKGNAME
+mklink_rustlib=$(VERBOSE)rm -f $(OBJ_BASE)/lib/rustlib/$(PKGNAME)/$(2) \
+			   && ln -s $(1) $(OBJ_BASE)/lib/rustlib/$(PKGNAME)/$(2)
+
 
 $(strip $(TARGET)): $(SRC_RS)
 	@echo 'Building rlib...'
-	@echo ToDo, currently not including LIBDEPS: $(LIBDEPS)
-	$(VERBOSE)cargo build $(if $(VERBOSE),,-v) \
-			$(if $(strip $(DEBUG)),--debug,--release) \
+	$(if $(VERBOSE),,@echo CARGO_BUILD_RUSTFLAGS=$(CARGO_BUILD_RUSTFLAGS))
+	$(VERBOSE)cargo build $(if $(VERBOSE),,-v) --release \
 			--target=$(RUST_TARGET) \
 			--manifest-path=$(PKGDIR)/Cargo.toml
 	@$(BUILT_MESSAGE)
-	$(VERBOSE)[ -h $@ ] || ln -s $(RUST_RESULT_DIR)/*.rlib $@
-	$(INSTALL) -m 644 $(RUST_RESULT_DIR)/*.rlib $(OBJ_BASE)/lib/
-# ToDo:  1) Cargo doesn't generate -xyz.rlib suffix; 2) find good way to extract
-# this file name to pass to install
-
+	$(VERBOSE)[ -d $(OBJ_BASE)/lib/rustlib/$(PKGNAME) ] || \
+		mkdir -p $(OBJ_BASE)/lib/rustlib/$(PKGNAME)
+	$(call mklink_rustlib,$(CARGO_BUILD_TARGET_DIR)/release/deps,host-deps)
+	$(call mklink_rustlib,$(CARGO_BUILD_TARGET_DIR)/$(RUST_TARGET)/release,$(RUST_TARGET))
+endif # SRC_RS is defined
 
 endif	# architecture is defined, really build
 
