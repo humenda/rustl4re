@@ -1,6 +1,7 @@
 //! IPC Interface Types
 
 use core::{
+    default::Default,
     ops::{Deref, DerefMut},
     marker::PhantomData
 };
@@ -8,7 +9,7 @@ use core::{
 use super::super::{
     error::Result,
     cap::{CapKind, CapIdx},
-    utcb::Serialisable
+    utcb::{Msg, Serialisable}
 };
 
 /// compile-time specification of an opcode for a type
@@ -35,22 +36,49 @@ pub trait Dispatch {
     fn dispatch(&mut self) -> Result<()>;
 }
 
-/// Define a function in a type and allow the derivation of the opposite type
+/// Define a function in a type and allow the derivation of the dual type
 ///
 /// This allows the macro rules to define the type for a sender and derive the receiver part
 /// automatically.
-trait HasOpposite {
-    type Opposite;
+pub trait HasDual {
+    type Dual;
 }
 
-/// End Of Type List
+/// Return Type Of Function Struct
 ///
 /// RPC functions are represented as a type system list of function arguments. This type defines
-/// the end node.
-pub struct End;
+/// the return type and serves as the list end.
+#[derive(Default)]
+pub struct Return<T>(PhantomData<T>);
 
-impl HasOpposite for End {
-    type Opposite = End;
+impl<T: Serialisable> Return<T> {
+    pub unsafe fn read(self, mr: &mut Msg) -> ((), Result<T>) {
+        ((), mr.read::<T>())
+    }
+}
+
+impl<T: Serialisable> HasDual for Return<T> {
+    type Dual = Return<T>;
+}
+
+/// private marker for ()
+pub unsafe trait UnitType { }
+
+unsafe impl UnitType for () { }
+
+
+/// A function which returns nothin
+#[derive(Default)]
+pub struct ReturnNothing<T>(PhantomData<T>);
+
+impl<T: UnitType> ReturnNothing<T> {
+    pub unsafe fn read(self, mr: &mut Msg) -> ((), Result<()>) {
+        ((), Ok(()))
+    }
+}
+
+impl<T: UnitType> HasDual for ReturnNothing<T> {
+    type Dual = ReturnNothing<T>;
 }
 
 /// Intermediate Function List Node
@@ -59,22 +87,39 @@ impl HasOpposite for End {
 /// `Sender` consists of the current type and a type reference to the next type. `Sender`
 /// identifies that this function parameter list defines the client side. Note that the server side
 /// can be automatically be derived, see the [HasDual trait](trait.HasDual.html).
+
+#[derive(Default)]
 pub struct Sender<ValueType, NextType>(
         pub PhantomData<(ValueType, NextType)>);
 
-impl<ValueType: Serialisable, Next: HasOpposite> HasOpposite for Sender<ValueType, Next> {
-    type Opposite = Receiver<ValueType, Next::Opposite>;
+impl<ValueType: Serialisable, Next: HasDual> HasDual for Sender<ValueType, Next> {
+    type Dual = Receiver<ValueType, Next::Dual>;
 }
 
 
-/// Intermediate Function List Node
+impl<ValTy, Next> Sender<ValTy, Next> 
+        where ValTy: Serialisable, Next: HasDual + Default {
+    pub unsafe fn read(self, msg: &mut Msg) -> (Next, Result<ValTy>) {
+        (Next::default(), msg.read::<ValTy>())
+    }
+}
+
+/// Intermediate Function List Node For Receiver Site
 ///
 /// Please see [Sender<Val, Next>](struct.Sender.html) for details.
+#[derive(Default)]
 pub struct Receiver<ValueType, Next>(
         pub PhantomData<(ValueType, Next)>);
 
-impl<Val: Serialisable, Next: HasOpposite> HasOpposite for Receiver<Val, Next> {
-    type Opposite = Sender<Val, Next::Opposite>;
+impl<Val: Serialisable, Next: HasDual> HasDual for Receiver<Val, Next> {
+    type Dual = Sender<Val, Next::Dual>;
+}
+
+impl<ValTy, Next> Receiver<ValTy, Next>
+        where ValTy: Serialisable, Next: HasDual + Default {
+    pub unsafe fn read(self, msg: &mut Msg) -> (Next, Result<ValTy>) {
+        (Next::default(), msg.read::<ValTy>())
+    }
 }
 
 /// Empty type to symbolise client-side access to the interface.

@@ -43,7 +43,7 @@ enumgenerator! {
 const L4_MSGTAG_ERROR_I: isize = L4_MSGTAG_ERROR as isize;
 
 pub struct MsgTag {
-    pub raw: Mword,
+    raw: Mword,
 }
 
 impl MsgTag {
@@ -124,6 +124,11 @@ impl MsgTag {
                     raw: self.raw  as i64 })),
             false => Ok(self),
         }
+    }
+
+    #[inline]
+    pub fn raw(self) -> l4_msgtag_t {
+        ::l4_sys::l4_msgtag_t { raw: self.raw as i64 }
     }
 }
 
