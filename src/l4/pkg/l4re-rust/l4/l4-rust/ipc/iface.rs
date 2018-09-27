@@ -1,11 +1,10 @@
-use core::marker::PhantomData;
 
 use super::super::{
     cap::{Cap, CapIdx, CapKind},
     error::{Error, Result},
     utcb::Utcb
 };
-use ipc::{call, types::*, MsgTag};
+use ipc::{types::*, MsgTag};
 
 macro_rules! write_msg {
     ($funcstruct:ty, $msg_mr:expr, $($arg:expr),*) => {
@@ -24,37 +23,36 @@ macro_rules! write_msg {
 /// inserted into a function call:
 ///
 ///     { read_instruct() }, { read_instruct()  }, …
-
 macro_rules! unroll_types {
-    () => {
-        End
+    (() -> $ret:ty) => {
+        Return<$ret>
     };
 
-    ($last:ty) => {
-        Sender<$last, End>
+    (($last:ty) -> $ret:ty) => {
+        Sender<$last, Return<$ret>>
     };
 
-    ($head:ty, $($tail:ty),*) => {
-        Sender<$head, unroll_types!($($tail),*)>
+    (($head:ty, $($tail:ty),*) -> $ret:ty) => {
+        Sender<$head, unroll_types!(($($tail),*) -> $ret)>
     }
 }
 
 macro_rules! rpc_func {
-    ($opcode:expr => $name:ident()) => {
+    ($opcode:expr => $name:ident() -> $ret:ty) => {
         #[allow(non_snake_case)]
-        pub struct $name(End);
+        pub struct $name(Return<$ret>);
         rpc_func_impl!($name, i8, $opcode);
     };
 
-    ($opcode:expr => $name:ident($type:ty)) => {
+    ($opcode:expr => $name:ident($type:ty) -> $ret:ty) => {
         #[allow(non_snake_case)]
-        pub struct $name(Sender<$type, End>);
+        pub struct $name(Sender<$type, Return<$ret>>);
         rpc_func_impl!($name, i8, $opcode);
     };
 
-    ($opcode:expr => $name:ident($head:ty, $($tail:ty),*)) => {
+    ($opcode:expr => $name:ident($head:ty, $($tail:ty),*) -> $ret:ty) => {
         #[allow(non_snake_case)]
-        pub struct $name(Sender<$head, unroll_types!($($tail),*)>);
+        pub struct $name(Sender<$head, unroll_types!(($($tail),*)>) -> $ret);
         rpc_func_impl!($name, i8, $opcode);
     }
 }
@@ -86,14 +84,16 @@ macro_rules! unroll_mr {
 macro_rules! derive_functors {
     ($count:expr;) => ();
 
-    ($count:expr; $name:ident($($types:ty),*)) => {
-        rpc_func!($count => $name($($types),*));
+    ($count:expr; $name:ident($($types:ty),*) -> $ret:ty) => { // se below
+        rpc_func!($count => $name($($types),*) -> $ret);
     };
 
-    ($count:expr; $name:ident($($types:ty),*), // head of function list
-                $($more:ident($($othertypes:ty),*)),*) => { // ← tail of list
-        rpc_func!($count => $name($($types),*));
-        derive_functors!($count + 1; $($more($($othertypes),*)),*);
+    ($count:expr;
+            $name:ident($($types:ty),*) -> $ret1:ty; // head of function list
+                $($more:ident($($othertypes:ty),*) -> $ret2:ty);* // ← tail
+    ) => { // return type
+        rpc_func!($count => $name($($types),*) -> $ret1);
+        derive_functors!($count + 1; $($more($($othertypes),*) -> $ret2);*);
     }
 }
 
@@ -103,70 +103,82 @@ macro_rules! derive_functors {
 /// Within a macro, it is impossible to separate the first element from a type list, hence this
 /// helper macro gets the head and yields the opcode type.
 macro_rules! opcode {
-    ($name:ident, $($other_names:ident),*) => {
-        <__iface::$name as HasOpCode>::OpType
+    ($iface:ident; $name:ident, $($other_names:ident),*) => {
+        <$iface::$name as HasOpCode>::OpType
+    }
+}
+
+macro_rules! ret_val_or_empty {
+    ($mr:expr, ()) => (Ok(()));
+    ($mr:expr, $type:ty) => {
+        unsafe {
+            $mr.read::<$type>()
+        }
     }
 }
 
 macro_rules! derive_ipc_struct {
-    (iface $iface:ident:
-     $($name:ident($($argname:ident: $type:ty),*);)*
+    (iface $traitname:ident($iface:ident):
+     $($name:ident($($argname:ident: $type:ty),*) -> $return:ty;)*
     ) => {
-        struct $iface<T: CapKind> {
+        struct $traitname<T: CapKind> {
             cap: Cap<T>,
             utcb: Utcb,
         }
 
-        impl $iface<Client> {
+        impl $traitname<Client> {
             $(
-                pub fn $name(&mut self, $($argname: $type),*) -> Result<()> {
+                pub fn $name(&mut self, $($argname: $type),*) -> Result<$return> {
                     let mut mr = self.utcb.mr();
                     // write opcode
                     unsafe {
-                        mr.write(__iface::$name::OP_CODE)?;
+                        mr.write($iface::$name::OP_CODE)?;
                     }
-                    write_msg!(__iface::$name, mr, $($argname),*)?;
+                    write_msg!($iface::$name, mr, $($argname),*)?;
                     // ToDo: first param is protocol number, interface should define it, c++?`
                     // ToDo: third parameter is buffer registers, missing
                     // ToDo: flags aren't passed yet, C++ does it
                     let tag = MsgTag::new(0, mr.words(), 0, 0);
-                    // ToDo: fill in args for syscall
-                    //let msgtag = call(dest: &Cap<T>, &mut Utcb::current,
-                    //                          tag, ::l4_sys::timeout_never())
-                    //    .result()?;
-                    // ToDo: extract return value
-                    Ok(())
+                    let restag = MsgTag::from(unsafe {
+                            ::l4_sys::l4_ipc_call(self.cap.raw(),
+                                    ::l4_sys::l4_utcb(), tag.raw(),
+                                ::l4_sys::timeout_never())
+                        }).result()?;
+                    // ToDo: return value extraction is purely guessed
+                    mr.reset();
+                    // return () if "empty" return value, val otherwise
+                    ret_val_or_empty!(mr, $return)
                 }
             )*
         }
 
-        impl<T: Spec> $iface<Server<T>> {
+        impl<T: $iface::$traitname> $traitname<Server<T>> {
             // ToDo: docstring + provide _u version which also takes utcb; think of better way to
             // create or receive capability
-            pub fn from_impl(cap: CapIdx, user_impl: T) -> $iface<Server<T>> {
-                $iface {
+            pub fn from_impl(cap: CapIdx, user_impl: T) -> $traitname<Server<T>> {
+                $traitname {
                     cap: Cap::new(cap, Server { user_impl }),
                     utcb: Utcb::current(),
                 }
             }
         }
 
-        impl<T: Spec> Dispatch for $iface<Server<T>> {
+        impl<T: $iface::$traitname> Dispatch for $traitname<Server<T>> {
             fn dispatch(&mut self) -> Result<()> {
                 let mut msg_mr = self.utcb.mr();
                 let opcode: i8 = unsafe {
-                        msg_mr.read::<opcode!($($name),*)>()?
+                        msg_mr.read::<opcode!($iface; $($name),*)>()?
                 };
                 $(
-                    if opcode == __iface::$name::OP_CODE {
+                    if opcode == $iface::$name::OP_CODE {
                         // ToDo: use result
                         unsafe {
                             // ToDo: use result -> use for reply
                             (**self.cap).$name(
                                     $(msg_mr.read::<$type>()?),*
                                 );
+                            return Ok(());
                         }
-                        return Ok(());
                     }
                 )*
                 Err(Error::InvalidArg("unknown opcode received", Some(opcode as isize)))
@@ -175,29 +187,73 @@ macro_rules! derive_ipc_struct {
     }
 }
 
+#[macro_export]
 macro_rules! iface {
-    (mod $iface_name:ident {
-        $(fn $name:ident($($argname:ident: $argtype:ty),*);)*
+    (mod $iface_name:ident;
+     trait $traitname:ident {
+        $(
+            fn $name:ident(&mut self, $($argname:ident: $argtype:ty),*) -> $ret:ty;
+        )*
     }) => {
-        mod __iface {
+        mod $iface_name {
             use super::*;
-            trait Spec {
+            use super::super::types::{Sender, Receiver, Return};
+            use core::marker::PhantomData;
+
+            pub trait $traitname {
             $(
-                fn $name(&mut self, $(argname: $argtype),*);
+                fn $name(&mut self, $(argname: $argtype),*) -> $ret;
             )*
             }
 
-            derive_functors!(0; $($name($($argtype),*)),*);
-            derive_ipc_struct!(iface $iface_name:
-                $($name($($argname: $argtype),*);)*);
+            derive_functors!(0; $($name($($argtype),*) -> $ret),*);
+        }
+        derive_ipc_struct!(iface $traitname($iface_name):
+            $($name($($argname: $argtype),*) -> $ret;)*);
+    };
+
+    (mod $iface_name:ident;
+     trait $traitname:ident {
+        $(
+            fn $name:ident($($argname:ident: $argtype:ty),*);
+        )*
+    }) => {
+        iface! {
+            mod $iface_name;
+            trait $traitname {
+                $(
+                    fn $name(&mut self, $($argname: $argtype),*) -> ();
+                )*
+            }
         }
     }
 }
 
+/*
 iface! {
-    mod echoserver {
-        fn do_something(i: i32);
-        fn do_something_else(u: u64);
+    mod echoserver;
+    trait EchoServer {
+        fn do_something(&mut self, i: i32) -> u8;
+        fn do_something_else(&mut self, u: u64) -> u8;
     }
 }
+*/
 
+mod echoserver {
+    use super::super::types::*; // need to do it here manually
+    use core::marker::PhantomData;
+
+    pub trait EchoServer {
+        fn do_something(&mut self, i: i32);
+        fn do_something_else(&mut self, u: u64);
+    }
+
+    derive_functors!(0; do_something(i32) -> (); do_something_else(u64) -> ());
+
+}
+
+derive_ipc_struct! {
+    iface EchoServer(echoserver):
+    do_something(i: i32) -> u8;
+    do_something_else(u: u64) -> u8;
+}

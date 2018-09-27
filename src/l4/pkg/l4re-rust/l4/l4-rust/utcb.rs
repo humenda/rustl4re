@@ -1,4 +1,5 @@
 use core::{intrinsics::transmute,
+        marker::PhantomData,
         mem::{align_of, size_of}};
 
 use l4_sys::{l4_uint64_t, l4_umword_t,
@@ -172,7 +173,7 @@ impl Msg {
         if next > UTCB_DATA_SIZE_IN_BYTES {
             return Err(Error::Generic(GenericErr::MsgTooLong));
         }
-        self.offset = next; // advance offset *behind* element
+        self.offset = offset;
         let val: T = (*transmute::<*mut u8, *mut T>(ptr)).clone();
         Ok(val)
     }
@@ -186,6 +187,10 @@ impl Msg {
                 _ => 1
             }) as u32
     }
+
+    /// Reset internal offset to beginning of message registers
+    #[inline]
+    pub fn reset(&mut self) {
+        self.offset = 0
+    }
 }
-
-
