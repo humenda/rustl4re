@@ -44,6 +44,11 @@ pub trait HasDual {
     type Dual;
 }
 
+pub trait ReadReturn<T> {
+    fn read(mr: &mut Msg) -> T;
+}
+
+/// private marker for ()
 /// Return Type Of Function Struct
 ///
 /// RPC functions are represented as a type system list of function arguments. This type defines
@@ -51,34 +56,8 @@ pub trait HasDual {
 #[derive(Default)]
 pub struct Return<T>(PhantomData<T>);
 
-impl<T: Serialisable> Return<T> {
-    pub unsafe fn read(self, mr: &mut Msg) -> ((), Result<T>) {
-        ((), mr.read::<T>())
-    }
-}
-
 impl<T: Serialisable> HasDual for Return<T> {
     type Dual = Return<T>;
-}
-
-/// private marker for ()
-pub unsafe trait UnitType { }
-
-unsafe impl UnitType for () { }
-
-
-/// A function which returns nothin
-#[derive(Default)]
-pub struct ReturnNothing<T>(PhantomData<T>);
-
-impl<T: UnitType> ReturnNothing<T> {
-    pub unsafe fn read(self, mr: &mut Msg) -> ((), Result<()>) {
-        ((), Ok(()))
-    }
-}
-
-impl<T: UnitType> HasDual for ReturnNothing<T> {
-    type Dual = ReturnNothing<T>;
 }
 
 /// Intermediate Function List Node

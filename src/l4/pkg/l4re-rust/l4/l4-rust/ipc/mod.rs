@@ -1,6 +1,6 @@
 #[macro_use]
 mod iface;
-mod types;
+pub mod types;
 
 use core::convert::From;
 use l4_sys::{l4_msgtag_flags::*, l4_msgtag_t, l4_timeout_t, msgtag};
