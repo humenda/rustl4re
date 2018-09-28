@@ -1,5 +1,4 @@
 use core::{intrinsics::transmute,
-        marker::PhantomData,
         mem::{align_of, size_of}};
 
 use l4_sys::{l4_uint64_t, l4_umword_t,
@@ -93,7 +92,17 @@ impl Utcb {
     }
 }
 
-pub trait Serialisable: Clone { }
+pub trait Serialisable: Clone {
+    #[inline]
+    unsafe fn read(m: &mut Msg) -> Result<Self> {
+        m.read::<Self>()
+    }
+
+    #[inline]
+    unsafe fn write(m: &mut Msg, v: Self) -> Result<()> {
+        m.write::<Self>(v)
+    }
+}
 
 macro_rules! impl_serialisable {
     ($($type:ty),*) => {
@@ -105,6 +114,16 @@ macro_rules! impl_serialisable {
 
 impl_serialisable!(i8, i16, i32, i64, i128, u8, u16, u32, u64, u128, f32, f64,
                    bool, char);
+
+impl Serialisable for () {
+    unsafe fn read(_: &mut Msg) -> Result<()> {
+        Ok(())
+    }
+
+    unsafe fn write(_: &mut Msg, _: Self) -> Result<()> {
+        Ok(())
+    }
+}
 
 /// Return an aligned pointer to the next free message register
 ///
