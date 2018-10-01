@@ -19,11 +19,11 @@ macro_rules! write_msg {
 #[macro_export]
 macro_rules! unroll_types {
     (() -> $ret:ty) => {
-        Return<$ret>
+        $crate::ipc::types::Return<$ret>
     };
 
     (($last:ty) -> $ret:ty) => {
-        $crate::ipc::types::Sender<$last, Return<$ret>>
+        $crate::ipc::types::Sender<$last, $crate::ipc::types::Return<$ret>>
     };
 
     (($head:ty, $($tail:ty),*) -> $ret:ty) => {
@@ -49,7 +49,7 @@ macro_rules! rpc_func {
     ($opcode:expr => $name:ident($head:ty, $($tail:ty),*) -> $ret:ty) => {
         #[allow(non_snake_case)]
         pub struct $name($crate::ipc::types::Sender<$head,
-                         unroll_types!(($($tail),*)) -> $ret);
+                         unroll_types!(($($tail),*) -> $ret)>);
         rpc_func_impl!($name, i8, $opcode);
     }
 }
@@ -97,6 +97,9 @@ macro_rules! derive_functors {
 /// helper macro gets the head and yields the opcode type.
 #[macro_export]
 macro_rules! opcode {
+    ($iface:ident; $name:ident) => {
+        <$iface::$name as $crate::ipc::types::HasOpCode>::OpType
+    };
     ($iface:ident; $name:ident, $($other_names:ident),*) => {
         <$iface::$name as $crate::ipc::types::HasOpCode>::OpType
     }
@@ -238,16 +241,16 @@ mod echoserver {
     use core::marker::PhantomData;
 
     pub trait EchoServer {
-        fn do_something(&mut self, i: i32) -> i32;
+        fn do_something(&mut self, i: i32, a: i64) -> i32;
         fn do_something_else(&mut self, u: u64) -> u64;
     }
 
-    derive_functors!(0; do_something(i32) -> i32; do_something_else(u64) -> u64);
+    derive_functors!(0; do_something(i32, i64) -> i32; do_something_else(u64) -> u64);
 }
 
 derive_ipc_struct! {
     iface EchoServer(echoserver):
-    do_something(i: i32) -> ();
+    do_something(i: i32, b: i64) -> ();
     do_something_else(u: u64) -> u8;
 }
 */
