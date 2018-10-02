@@ -6,7 +6,7 @@ extern crate l4re_sys;
 #[macro_use]
 mod macros;
 mod helpers;
-mod syint_cc;
+mod utcb_cc;
 
 const BEGIN_MARKER: &'static str = "[[|| BEGIN TESTS ||]]";
 const END_MARKER: &'static str = "[[|| END TESTS ||]]";
@@ -38,6 +38,7 @@ macro_rules! call_mod_tests {
 }
 
 call_mod_tests! {
+    mod l4sys;
     mod utcb;
 }
 
