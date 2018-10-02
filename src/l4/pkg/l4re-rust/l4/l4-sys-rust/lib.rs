@@ -3,7 +3,7 @@
 extern crate libc;
 
 #[macro_use]
-mod helpers;
+pub mod helpers;
 mod cap;
 mod c_api;
 pub mod consts;

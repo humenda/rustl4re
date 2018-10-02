@@ -20,3 +20,15 @@ macro_rules! mr {
     }
 }
 
+pub unsafe fn eq_str_cstr(name: &str, other: *const u8) -> bool {
+    let mut in_name = other;
+    for byte in name.as_bytes() {
+        match *in_name {
+            0 => return false,
+            n if &n != byte => return false,
+            _ => (),
+        }
+        in_name = in_name.offset(1);
+    }
+    return *in_name == 0 // if 0 reached, strings matched
+}

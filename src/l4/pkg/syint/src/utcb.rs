@@ -2,7 +2,7 @@ use l4::utcb::*;
 use std::mem::transmute;
 
 use helpers::MsgMrFake;
-use syint_cc::*;
+use utcb_cc::*;
 
 fn mk_msg_regs() -> (MsgMrFake, Msg) {
     let mut mr = MsgMrFake::new();

@@ -51,3 +51,9 @@ macro_rules! assert_eq {
         }
     }
 }
+
+macro_rules! assert_true {
+    ($condition:expr) => {
+        assert_eq!($condition, true);
+    }
+}
