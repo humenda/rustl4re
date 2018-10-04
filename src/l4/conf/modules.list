@@ -74,14 +74,14 @@ module shm_rust.cfg
 module shm_rust-client
 module shm_rust-server
 
-entry two_task_c
+entry ox_rcalc-client
 kernel fiasco -serial_esc
-roottask moe rom/two_task_c.cfg
+roottask moe rom/rcalc-client.conf
 module l4re
 module ned
-module two_task_c.cfg
-module two_task_c-client
-module two_task_c-server
+module rcalc-client.conf
+module ox_rcalc-client
+module ex_clntsrv-server
 
 entry shm_c
 kernel fiasco -serial_esc
