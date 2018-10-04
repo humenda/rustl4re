@@ -11,6 +11,9 @@ use super::super::{
     utcb::{Msg, Serialisable}
 };
 
+/// opcode redefinition, shall be more flexible in the future
+pub type OpCode = i32;
+
 /// compile-time specification of an opcode for a type
 ///
 /// The operand code (opcode) is used to identify the message received and
@@ -18,6 +21,16 @@ use super::super::{
 pub trait HasOpCode {
     type OpType;
     const OP_CODE: Self::OpType;
+}
+
+/// Protocol Identifier
+///
+/// Each protocol should have an idally unique identifier, used at the server
+/// side to distinguish between the IPC protocols available. It is transmitted
+/// within the label field of the message tag. This trait requires this protocol
+/// ID to be specified for an IPC interface.
+pub trait HasProtocol {
+    const PROTOCOL_ID: i64;
 }
 
 /// Opcode-based Function Dispatch

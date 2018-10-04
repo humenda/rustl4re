@@ -140,6 +140,9 @@ pub enum Error {
     InvalidArg(&'static str, Option<isize>),
     /// Unknown error code
     UnknownErr(isize),
+    /// Protocol error, custom defined protocol error labels passed with an answer using the MSG
+    /// msgtag label
+    Protocol(i64),
 }
 
 impl Error {
@@ -151,6 +154,7 @@ impl Error {
              Err(e) => e,
          }
     }
+
     /// Get error from given tag and corresponding UTCB.
     #[inline]
     pub fn from_tag_u(tag: l4_msgtag_t, utcb: &Utcb) -> Self {
@@ -174,5 +178,3 @@ impl Error {
 }
 
 pub type Result<T> = ::core::result::Result<T, Error>;
-
-
