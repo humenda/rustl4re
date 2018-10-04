@@ -36,21 +36,21 @@ macro_rules! rpc_func {
     ($opcode:expr => $name:ident() -> $ret:ty) => {
         #[allow(non_snake_case)]
         pub struct $name($crate::ipc::types::Return<$ret>);
-        rpc_func_impl!($name, i8, $opcode);
+        rpc_func_impl!($name, $crate::ipc::types::OpCode, $opcode);
     };
 
     ($opcode:expr => $name:ident($type:ty) -> $ret:ty) => {
         #[allow(non_snake_case)]
         pub struct $name($crate::ipc::types::Sender<$type,
                 $crate::ipc::types::Return<$ret>>);
-        rpc_func_impl!($name, i8, $opcode);
+        rpc_func_impl!($name, $crate::ipc::types::OpCode, $opcode);
     };
 
     ($opcode:expr => $name:ident($head:ty, $($tail:ty),*) -> $ret:ty) => {
         #[allow(non_snake_case)]
         pub struct $name($crate::ipc::types::Sender<$head,
                          unroll_types!(($($tail),*) -> $ret)>);
-        rpc_func_impl!($name, i8, $opcode);
+        rpc_func_impl!($name, $crate::ipc::types::OpCode, $opcode);
     }
 }
 
@@ -110,7 +110,7 @@ macro_rules! derive_ipc_struct {
     (iface $traitname:ident($iface:ident):
      $($name:ident($($argname:ident: $type:ty),*) -> $return:ty;)*
     ) => {
-        struct $traitname<T> {
+        pub struct $traitname<T> {
             cap: $crate::cap::CapIdx,
             user_impl: T,
             utcb: $crate::utcb::Utcb,
@@ -136,17 +136,17 @@ macro_rules! derive_ipc_struct {
                                  ::OP_CODE)?;
                     }
                     write_msg!($iface::$name, mr, $($argname),*)?;
-                    // ToDo: first param is protocol number, interface should define it, c++?`
-                    // ToDo: third parameter is buffer registers, missing
-                    // ToDo: flags aren't passed yet, C++ does it
-                    let tag = $crate::ipc::MsgTag::new(0, mr.words(), 0, 0);
+                    // get the protocol for the msg tag label
+                    let proto = <$traitname<$crate::ipc::types::Client> as
+                            $crate::ipc::types::HasProtocol>::PROTOCOL_ID;
+                    let tag = $crate::ipc::MsgTag::new(proto, mr.words(), 0, 0);
+                    // IPC — ToDo: no flags, no buffer register items transfered
                     let restag = $crate::ipc::MsgTag::from(unsafe {
                             ::l4_sys::l4_ipc_call(self.cap,
                                     ::l4_sys::l4_utcb(), tag.raw(),
                                     ::l4_sys::timeout_never())
                         }).result()?;
-                    // ToDo: return value extraction is purely guessed; ToDo: use restag
-                    mr.reset();
+                    mr.reset(); // read again from start of registers
                     // return () if "empty" return value, val otherwise
                     unsafe {
                         <$return as $crate::utcb::Serialisable>::read(
@@ -174,7 +174,7 @@ macro_rules! derive_ipc_struct {
                 for $traitname<$crate::ipc::types::Server<T>> {
             fn dispatch(&mut self) -> $crate::error::Result<()> {
                 let mut msg_mr = self.utcb.mr();
-                let opcode: i8 = unsafe {
+                let opcode: $crate::ipc::types::OpCode = unsafe {
                         msg_mr.read::<opcode!($iface; $($name),*)>()?
                 };
                 $(
@@ -201,10 +201,11 @@ macro_rules! derive_ipc_struct {
 macro_rules! iface {
     (mod $iface_name:ident;
      trait $traitname:ident {
-        $(
-            fn $name:ident(&mut self, $($argname:ident: $argtype:ty),*) -> $ret:ty;
-        )*
-    }) => {
+         const PROTOCOL_ID: i64 = $proto:tt;
+         $(
+             fn $name:ident(&mut self, $($argname:ident: $argtype:ty),*) -> $ret:ty;
+         )*
+     }) => {
         mod $iface_name {
             pub trait $traitname {
             $(
@@ -216,17 +217,22 @@ macro_rules! iface {
         }
         derive_ipc_struct!(iface $traitname($iface_name):
             $($name($($argname: $argtype),*) -> $ret;)*);
+        impl<T> $crate::ipc::types::HasProtocol for $traitname<T> {
+            const PROTOCOL_ID: i64 = $proto;
+        }
     };
 
     (mod $iface_name:ident;
      trait $traitname:ident {
-        $(
-            fn $name:ident($($argname:ident: $argtype:ty),*);
-        )*
+         const PROTOCOL_ID: i64 = $proto:tt;
+         $(
+             fn $name:ident($($argname:ident: $argtype:ty),*);
+         )*
     }) => {
         iface! {
             mod $iface_name;
             trait $traitname {
+                const PROTOCOL_ID: i64 = $proto;
                 $(
                     fn $name(&mut self, $($argname: $argtype),*) -> ();
                 )*
@@ -239,11 +245,12 @@ macro_rules! iface {
 iface! {
     mod echoserver;
     trait EchoServer {
+        const PROTOCOL_ID: i64 = 0xdeadbeef;
         fn do_something(&mut self, i: i32) -> u8;
         fn do_something_else(&mut self, u: u64) -> ();
     }
 }
-*/
+/*
 
 /*
 mod echoserver {

@@ -117,13 +117,27 @@ impl MsgTag {
         (self.raw & L4_MSGTAG_ERROR_I) != 0
     }
 
+    /// Check message tag for errors
+    ///
+    /// This function is only useful for message tags obtained as return value
+    /// of an IPC call. It checks the Thread Control Registers (TCR) for an
+    /// error code and afterwards the "label" field. A negative label is by
+    /// convention an error and can be freely chosen by the programmer.
     #[inline]
     pub fn result(self) -> Result<MsgTag> {
-        match self.has_error() {
-            true  => Err(Error::from_tag_raw(l4_msgtag_t {
-                    raw: self.raw  as i64 })),
-            false => Ok(self),
+        if self.has_error() {
+            return Err(Error::from_tag_raw(l4_msgtag_t {
+                  raw: self.raw as i64 }));
         }
+        if self.label() < 0 {
+            let gerr = ::num_traits::FromPrimitive::from_i32(self.label());
+            return Err(match gerr {
+                Some(e) => Error::Generic(e),
+                None => Error::Protocol(
+                    self.label() as i64)
+            })
+        }
+        Ok(self)
     }
 
     #[inline]
