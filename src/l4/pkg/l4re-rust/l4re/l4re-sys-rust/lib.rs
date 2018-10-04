@@ -1,10 +1,16 @@
+//! L4Re interface crate
+//!
+//! Reimplemented methods
 #![allow(non_upper_case_globals)]
 #![allow(non_camel_case_types)]
 #![allow(non_snake_case)]
 #![no_std]
 
 extern crate libc;
+extern crate l4_sys;
 
+use core::ptr::NonNull;
+use l4_sys::helpers::eq_str_cstr;
 use libc::{c_int, c_long, c_ulong, c_void};
 
 include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
@@ -31,25 +37,39 @@ pub unsafe fn l4re_env() -> *const l4re_env_t {
     l4re_global_env
 }
 
-#[inline(always)]
-//fn l4re_env() -> Result<&'static l4re_env_t> {
-//    unsafe {
-//        if l4re_global_env.is_null() {
-//            return Err(Error::InvalidArg("Unable to get L4Re environment pointer, \
-//                not set up (either no l4re binary or no libc in use)"));
-//        }
-//        Ok(::core::mem::transmute::<*const l4re_env_t, &'static l4re_env_t>(
-//                l4re_global_env))
-//    }
-//    }
-
-
-#[must_use]
+/// Get the capability (selector) from the environment with the specified name
+///
+/// Each appplication comes with a set of capabilities predefined by its
+/// environment (parent). This function can query for the capability selector
+/// by the given name, returning None if no such  name was found.
 #[inline]
-pub unsafe fn l4re_env_get_cap(name: &str) -> l4_cap_idx_t {
-    l4re_env_get_cap_w(name.as_ptr())
+pub fn l4re_env_get_cap(name: &str) -> Option<l4_cap_idx_t> {
+    unsafe {
+        l4re_env_get_cap_e(name, NonNull::new(l4re_env() as *mut l4re_env_t))
+    }
 }
 
+#[inline]
+unsafe fn l4re_env_get_cap_e(name: &str, e: Option<NonNull<l4re_env_t>>)
+        -> Option<l4_cap_idx_t> {
+    l4re_env_get_cap_l(name, e)
+        .map(|record| record.as_ref().cap)
+}
+
+#[inline]
+unsafe fn l4re_env_get_cap_l(name: &str,
+        e: Option<NonNull<l4re_env_t>>) -> Option<NonNull<l4re_env_cap_entry_t>> {
+    // unwrap here because this function is internal and doesn't get a null pointer, see calling
+    // functions
+    let mut c = e.unwrap().as_ref().caps;
+    while !c.is_null() && (*c).flags != !0u64 {
+        c = c.offset(1); // advance one record
+        if eq_str_cstr(name, &(*c).name as *const u8) {
+            return NonNull::new(c);
+        }
+    }
+    None
+}
 #[inline]
 pub fn l4_trunc_page(address: l4_addr_t) -> l4_addr_t {
     address & L4_PAGEMASKU
