@@ -8,7 +8,6 @@ use core::{
 
 use super::super::{
     error::Result,
-    cap::{CapKind, CapIdx},
     utcb::{Msg, Serialisable}
 };
 
@@ -102,9 +101,7 @@ impl<ValTy, Next> Receiver<ValTy, Next>
 }
 
 /// Empty type to symbolise client-side access to the interface.
-pub struct Client(CapIdx);
-
-impl CapKind for Client { }
+pub struct Client;
 
 /// Server-side marker For An IPC Interface
 ///
@@ -112,24 +109,24 @@ impl CapKind for Client { }
 /// The user has to supply an implementation of server-side functions. This is usually by
 /// implementing a trait like this:
 // ToDo: example implementation of a user_impl
-pub struct Server<T> {
-    pub user_impl: T,
-}
-
-impl<T> CapKind for Server<T> { }
+pub struct Server<T>(T);
 
 impl<T> Deref for Server<T> {
     type Target = T;
 
     fn deref(&self) -> &Self::Target {
-        &self.user_impl
+        &self.0
     }
 }
-
 
 impl<T> DerefMut for Server<T> {
     fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.user_impl
+        &mut self.0
     }
 }
 
+impl<T> Server<T> {
+    pub fn new(uimpl: T) -> Server<T> {
+        Server { 0: uimpl }
+    }
+}

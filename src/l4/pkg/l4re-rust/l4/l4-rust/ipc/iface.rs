@@ -110,12 +110,22 @@ macro_rules! derive_ipc_struct {
     (iface $traitname:ident($iface:ident):
      $($name:ident($($argname:ident: $type:ty),*) -> $return:ty;)*
     ) => {
-        struct $traitname<T: $crate::cap::CapKind> {
-            cap: $crate::cap::Cap<T>,
+        struct $traitname<T> {
+            cap: $crate::cap::CapIdx,
+            user_impl: T,
             utcb: $crate::utcb::Utcb,
         }
 
         impl $traitname<$crate::ipc::types::Client> {
+            pub fn client(c: $crate::cap::CapIdx)
+                        -> $traitname<$crate::ipc::types::Client> {
+                $traitname {
+                    cap: c,
+                    user_impl: $crate::ipc::types::Client { },
+                    utcb: $crate::utcb::Utcb::current()
+                }
+            }
+
             $(
                 pub fn $name(&mut self, $($argname: $type),*)
                             -> $crate::error::Result<$return> {
@@ -131,7 +141,7 @@ macro_rules! derive_ipc_struct {
                     // ToDo: flags aren't passed yet, C++ does it
                     let tag = $crate::ipc::MsgTag::new(0, mr.words(), 0, 0);
                     let restag = $crate::ipc::MsgTag::from(unsafe {
-                            ::l4_sys::l4_ipc_call(self.cap.raw(),
+                            ::l4_sys::l4_ipc_call(self.cap,
                                     ::l4_sys::l4_utcb(), tag.raw(),
                                     ::l4_sys::timeout_never())
                         }).result()?;
@@ -146,15 +156,15 @@ macro_rules! derive_ipc_struct {
             )*
         }
 
-        impl<T: $iface::$traitname> $traitname
-                <$crate::ipc::types::Server<T>> {
+        impl<T> $traitname<$crate::ipc::types::Server<T>> 
+                where T: $iface::$traitname {
             // ToDo: docstring + provide _u version which also takes utcb; think of better way to
             // create or receive capability
             pub fn from_impl(cap: $crate::cap::CapIdx, user_impl: T)
                     -> $traitname<$crate::ipc::types::Server<T>> {
                 $traitname {
-                    cap: $crate::cap::Cap::new(cap,
-                            $crate::ipc::types::Server { user_impl }),
+                    cap: cap,
+                    user_impl: $crate::ipc::types::Server::new(user_impl),
                     utcb: $crate::utcb::Utcb::current(),
                 }
             }
@@ -173,7 +183,7 @@ macro_rules! derive_ipc_struct {
                         // ToDo: use result
                         unsafe {
                             // ToDo: use result -> use for reply
-                            (**self.cap).$name(
+                            self.user_impl.$name(
                                     $(msg_mr.read::<$type>()?),*
                                 );
                             return Ok(());

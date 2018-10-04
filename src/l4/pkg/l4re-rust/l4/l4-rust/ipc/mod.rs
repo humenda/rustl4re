@@ -6,7 +6,7 @@ use core::convert::From;
 use l4_sys::{l4_msgtag_flags::*, l4_msgtag_t, l4_timeout_t, msgtag};
 use num_traits::{FromPrimitive};
 
-use cap::{Cap, CapKind};
+use cap::{Cap, Interface};
 use error::{Error, Result};
 use types::{Mword, Protocol, UMword};
 use utcb::Utcb;
@@ -144,7 +144,7 @@ impl From<l4_msgtag_t> for MsgTag {
 ///
 /// Call to given destination and block for answer.
 #[inline(always)]
-pub fn call<T: CapKind>(dest: &Cap<T>, utcb: &mut Utcb,
+pub fn call<T: Interface>(dest: &Cap<T>, utcb: &mut Utcb,
         tag: l4_msgtag_t, timeout: l4_timeout_t) -> MsgTag {
     unsafe {
         MsgTag::from(l4_sys::l4_ipc_call(dest.raw(), utcb.raw, tag, timeout))
@@ -152,7 +152,7 @@ pub fn call<T: CapKind>(dest: &Cap<T>, utcb: &mut Utcb,
 }
 
 #[inline]
-pub unsafe fn receive<T: CapKind>(object: Cap<T>, utcb: &mut Utcb,
+pub unsafe fn receive<T: Interface>(object: Cap<T>, utcb: &mut Utcb,
         timeout: l4_timeout_t) -> l4_msgtag_t {
     l4_sys::l4_ipc_receive(object.raw(), utcb.raw, timeout)
 }

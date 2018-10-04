@@ -1,10 +1,8 @@
 //! L4(Re) Task API
 
-use l4_sys::{self, l4_cap_consts_t::L4_CAP_SHIFT};
-
-use l4_sys::{l4_addr_t, l4_fpage_t, l4_cap_idx_t};
-
-use cap::{Cap, CapKind};
+use l4_sys::{self, l4_cap_consts_t::L4_CAP_SHIFT,
+             l4_addr_t, l4_fpage_t, l4_cap_idx_t};
+use cap::{Cap, CapIdx, Interface};
 use error::{Result};
 use ipc::MsgTag;
 use types::{UMword};
@@ -12,7 +10,6 @@ use utcb::Utcb;
 
 // ToDo
 pub static THIS_TASK: Cap<Task> = Cap {
-    raw: 1u64 << L4_CAP_SHIFT as u64,
     interface: Task {
         cap: 1u64 << L4_CAP_SHIFT as u64,
     }
@@ -35,7 +32,11 @@ pub struct Task {
 //  public Kobject_t<Task, Kobject, L4_PROTO_TASK,
 //                   Type_info::Demand_t<2> >
 
-impl CapKind for Task { }
+impl Interface for Task {
+    unsafe fn cap(&self) -> CapIdx {
+        self.cap
+    }
+}
 
 impl Task {
     /// Map resources available in the source task to a destination task.
@@ -106,7 +107,7 @@ impl Task {
     /// The object will be deleted if the `obj` has sufficient rights. No error will be reported if
     /// the rights are insufficient, however, the capability is removed in all cases.
     #[inline]
-    pub unsafe fn delete_obj<T: CapKind>(&self, obj: Cap<T>, utcb: &Utcb)
+    pub unsafe fn delete_obj<T: Interface>(&self, obj: Cap<T>, utcb: &Utcb)
             -> Result<MsgTag> {
         MsgTag::from(l4_sys::l4_task_delete_obj_u(self.cap, obj.raw(), utcb.raw))
                 .result()
@@ -116,7 +117,7 @@ impl Task {
     ///
     /// This operation unmaps the capability from `this` task.
     #[inline]
-    pub unsafe fn release_cap<T: CapKind>(&self, cap: Cap<T>, u: &Utcb)
+    pub unsafe fn release_cap<T: Interface>(&self, cap: Cap<T>, u: &Utcb)
             -> Result<MsgTag> {
         MsgTag::from(l4_sys::l4_task_release_cap_u(self.cap, cap.raw(), u.raw))
                 .result()
@@ -125,7 +126,7 @@ impl Task {
     /// Check whether a capability is present (refers to an object).
     ///
     /// A capability is considered present when it refers to an existing kernel object.
-    pub fn cap_valid<T: CapKind>(&self, cap: &Cap<T>, utcb: &Utcb)
+    pub fn cap_valid<T: Interface>(&self, cap: &Cap<T>, utcb: &Utcb)
             -> Result<bool>  {
         let tag: Result<MsgTag> = unsafe {
             MsgTag::from(l4_sys::l4_task_cap_valid_u(
@@ -139,7 +140,7 @@ impl Task {
     ///
     /// Test whether two capabilities point to the same object with the same rights. The UTCB is
     /// that one of the calling thread.
-    pub fn cap_equal<T: CapKind>(&self, cap_a: &Cap<T>, cap_b: &Cap<T>,
+    pub fn cap_equal<T: Interface>(&self, cap_a: &Cap<T>, cap_b: &Cap<T>,
                         utcb: &Utcb) -> Result<bool> {
         let tag: Result<MsgTag> = unsafe {
             MsgTag::from(l4_sys::l4_task_cap_equal_u(
@@ -162,7 +163,7 @@ impl Task {
 //    ///
 //    /// This creates a L4 task, mapping its own capability and the parent capability into the
 //    /// object space for later use.
-//    pub unsafe fn create_from<T: CapKind>(mut task_cap: Cap<Untyped>,
+//    pub unsafe fn create_from<T: Interface>(mut task_cap: Cap<Untyped>,
 //            utcb_area: l4_fpage_t) -> Result<Task> {
 //        let tag = MsgTag::from(l4_sys::l4_factory_create_task(
 //                l4re_env()?.factory, &mut task_cap.raw(), utcb_area)).result()?;
