@@ -140,7 +140,8 @@ macro_rules! derive_ipc_struct {
                     let proto = <$traitname<$crate::ipc::types::Client> as
                             $crate::ipc::types::HasProtocol>::PROTOCOL_ID;
                     let tag = $crate::ipc::MsgTag::new(proto, mr.words(), 0, 0);
-                    // IPC — ToDo: no flags, no buffer register items transfered
+                    // IPC — ToDo: no flags, no buffer register items transfered, restag hence
+                    // unused
                     let restag = $crate::ipc::MsgTag::from(unsafe {
                             ::l4_sys::l4_ipc_call(self.cap,
                                     ::l4_sys::l4_utcb(), tag.raw(),
@@ -198,7 +199,7 @@ macro_rules! derive_ipc_struct {
 }
 
 #[macro_export]
-macro_rules! iface {
+macro_rules! iface_back {
     (mod $iface_name:ident;
      trait $traitname:ident {
          const PROTOCOL_ID: i64 = $proto:tt;
@@ -221,36 +222,104 @@ macro_rules! iface {
             const PROTOCOL_ID: i64 = $proto;
         }
     };
+}
 
+#[macro_export]
+macro_rules! iface {
+    // entry point, to be used by the end-user
     (mod $iface_name:ident;
      trait $traitname:ident {
          const PROTOCOL_ID: i64 = $proto:tt;
          $(
-             fn $name:ident($($argname:ident: $argtype:ty),*);
+             fn $name:ident(&mut self, $($argname:ident: $argtype:ty),*) $(-> $ret:ty)*;
          )*
     }) => {
         iface! {
             mod $iface_name;
             trait $traitname {
                 const PROTOCOL_ID: i64 = $proto;
+                {$(
+                    fn $name($($argname: $argtype),*) $(-> $ret)*;
+                )*}
+            }
+        }
+    };
+
+    // matcher for when next IPC function has no ret type
+    (mod $iface_name:ident;
+     trait $traitname:ident {
+         const PROTOCOL_ID: i64 = $proto:tt;
+         {
+             fn $name:ident($($argname:ident: $argtype:ty),*);
+             $($unexpanded:tt)*
+         }
+         $($expanded:tt)*
+    }) => {
+        iface! {
+            mod $iface_name;
+            trait $traitname {
+                const PROTOCOL_ID: i64 = $proto;
+                { $($unexpanded)* }
+                $($expanded)*
+                fn $name($($argname: $argtype),*) -> ();
+            }
+        }
+    };
+
+
+    // matcher for when next IPC function has return type
+    (mod $iface_name:ident;
+     trait $traitname:ident {
+         const PROTOCOL_ID: i64 = $proto:tt;
+         {
+             fn $name:ident($($argname:ident: $argtype:ty),*) -> $ret:ty;
+             $($unexpanded:tt)*
+         }
+         $($expanded:tt)*
+    }) => {
+        iface! {
+            mod $iface_name;
+            trait $traitname {
+                const PROTOCOL_ID: i64 = $proto;
+                { $($unexpanded)* }
+                $($expanded)*
+                fn $name($($argname: $argtype),*) -> $ret;
+            }
+        }
+    };
+
+    // match arm for completely expanded trait definition
+    (mod $iface_name:ident;
+     trait $traitname:ident {
+         const PROTOCOL_ID: i64 = $proto:tt;
+         { }
+         $(
+             fn $name:ident($($argname:ident: $argtype:ty),*) -> $ret:ty;
+         )*
+    }) => {
+        iface_back! {
+            mod $iface_name;
+            trait $traitname {
+                const PROTOCOL_ID: i64 = $proto;
                 $(
-                    fn $name(&mut self, $($argname: $argtype),*) -> ();
+                    fn $name(&mut self, $($argname: $argtype),*) -> $ret;
                 )*
             }
         }
-    }
+    };
+
+    ($(unexpanded:tt)*) => { compile_error!("ToDo, proper help message"); };
 }
 
-/*
 iface! {
     mod echoserver;
     trait EchoServer {
         const PROTOCOL_ID: i64 = 0xdeadbeef;
         fn do_something(&mut self, i: i32) -> u8;
         fn do_something_else(&mut self, u: u64) -> ();
+        fn signal(&mut self, i: u32);
     }
 }
-/*
 
 /*
 mod echoserver {
