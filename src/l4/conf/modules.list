@@ -76,10 +76,10 @@ module shm_rust-server
 
 entry ox_rcalc-client
 kernel fiasco -serial_esc
-roottask moe rom/rcalc-client.conf
+roottask moe rom/ox_rcalc-client.conf
 module l4re
 module ned
-module rcalc-client.conf
+module ox_rcalc-client.conf
 module ox_rcalc-client
 module ex_clntsrv-server
 

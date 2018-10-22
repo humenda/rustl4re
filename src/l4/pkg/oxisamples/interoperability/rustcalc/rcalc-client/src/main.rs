@@ -25,4 +25,7 @@ fn main() {
     println!("\n\nWhat is 9898 - 7777?");
     let res = client.sub(9898, 7777).unwrap();
     println!("It is: {}", res);
+    println!("What is neg(9)");
+    let res = client.neg(9).unwrap();
+    println!("It is: {}", res);
 }
