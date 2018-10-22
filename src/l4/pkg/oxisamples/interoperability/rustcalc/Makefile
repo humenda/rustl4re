@@ -1,6 +1,6 @@
 PKGDIR	?= ../..
 L4DIR	?= $(PKGDIR)/../..
 
-TARGET = rustcalc-client
+TARGET = rcalc-client
 
 include $(L4DIR)/mk/subdir.mk
