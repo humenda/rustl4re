@@ -8,6 +8,7 @@ use core::{
 
 use super::super::{
     error::Result,
+    ipc::MsgTag,
     utcb::{Msg, Serialisable}
 };
 
@@ -44,8 +45,10 @@ pub trait Dispatch {
     /// Using the operation code (opcode) for each IPC call  defined in an interface, the arguments
     /// are read from the UTCB and fed into the user-supplied server implementation. Please note
     /// that the opcode might have been defined automatically, if no arguments were supplied.
-    /// The result of the operation will be written back to the UTCB, errors are propagated upward.
-    fn dispatch(&mut self) -> Result<()>;
+    /// The result of the operation will be written back to the UTCB, errors are
+    /// propagated upward. If the operation was successful, the ready-to-use
+    /// message tag is returned.
+    fn dispatch(&mut self) -> Result<MsgTag>;
 }
 
 /// Define a function in a type and allow the derivation of the dual type
@@ -72,13 +75,13 @@ impl<T: Serialisable> HasDual for Return<T> {
     type Dual = Return<T>;
 }
 
+
 /// Intermediate Function List Node
 ///
 /// RPC functions are represented as a linked list of types, each function argument being a node. A
 /// `Sender` consists of the current type and a type reference to the next type. `Sender`
 /// identifies that this function parameter list defines the client side. Note that the server side
 /// can be automatically be derived, see the [HasDual trait](trait.HasDual.html).
-
 #[derive(Default)]
 pub struct Sender<ValueType, NextType>(
         pub PhantomData<(ValueType, NextType)>);

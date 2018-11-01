@@ -32,7 +32,6 @@ macro_rules! call_mod_tests {
                 };
                 println!("{}", msg);
             }));*/
-            panic::catch_unwind(|| panic!("y"));
             println!("{}", BEGIN_MARKER);
             $(
                 println!("1..{}", $modname::TEST_FUNCTIONS.len());

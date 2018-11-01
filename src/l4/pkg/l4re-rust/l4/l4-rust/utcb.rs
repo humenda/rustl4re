@@ -192,7 +192,7 @@ impl Msg {
         if next > UTCB_DATA_SIZE_IN_BYTES {
             return Err(Error::Generic(GenericErr::MsgTooLong));
         }
-        self.offset = offset;
+        self.offset = next;
         let val: T = (*transmute::<*mut u8, *mut T>(ptr)).clone();
         Ok(val)
     }
