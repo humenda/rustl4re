@@ -179,6 +179,10 @@ $(LINK_INCR_TARGETS):%.a: $(OBJS) $(LIBDEPS) $(foreach x,$(LINK_INCR_TARGETS),$(
 ################################################################################
 # Rust target
 
+# paths to all source files to that make recompiles on changes (ToDo: Rust
+# supports generating dep-info)
+SRC_FILES = $(strip $(shell find $(abspath $(abspath $(SRC_DIR))/$(dir $(firstword $(SRC_RS)))) -name '*.rs'))
+
 ifneq ($(SRC_RS),)
 contains=$(findstring $(1),$(strip $(TARGET)))
 ifeq ($(and $(call contains,-), $(call contains,lib), $(call contains,.rlib))),)
@@ -211,7 +215,7 @@ mklink_rustlib=$(VERBOSE)rm -f $(OBJ_BASE)/lib/rustlib/$(PKGNAME)/$(2) \
 			   && ln -s $(1) $(OBJ_BASE)/lib/rustlib/$(PKGNAME)/$(2)
 
 
-$(strip $(TARGET)): $(SRC_RS)
+$(strip $(TARGET)): $(SRC_FILES)
 	@echo 'Building rlib...'
 	$(if $(VERBOSE),,@echo CARGO_BUILD_RUSTFLAGS=$(CARGO_BUILD_RUSTFLAGS))
 	$(VERBOSE)cargo build $(if $(VERBOSE),,-v) --release \

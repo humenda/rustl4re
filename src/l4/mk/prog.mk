@@ -163,6 +163,11 @@ $(TARGET): $(OBJS) $(LIBDEPS)
 	$(if $(BID_POST_PROG_LINK_$@),$(BID_POST_PROG_LINK_$@))
 	@$(BUILT_MESSAGE)
 else # rust target rule
+
+# paths to all source files to that make recompiles on changes (ToDo: Rust
+# supports generating dep-info)
+SRC_FILES = $(strip $(shell find $(abspath $(abspath $(SRC_DIR))/$(dir $(firstword $(SRC_RS)))) -name '*.rs'))
+
 ifneq ($(firstword $(notdir $(LINK_PROGRAM))),l4-bender)
 $(error Rust compilation is only supported for l4-bender, got $(firstword $(notdir $(LINK_PROGRAM))))
 endif
@@ -192,7 +197,7 @@ export L4_INCLUDE_DIRS=$(filter -I%,$(CPPFLAGS))
 
 # manifest path: location of the Cargo.toml, which should reside in the PKGDIR
 # $PATH has to be extended to include l4-bender
-$(strip $(TARGET)): $(SRC_RS) $(LIBDEPS)
+$(strip $(TARGET)): $(SRC_FILES) $(LIBDEPS)
 	@$(LINK_MESSAGE)
 	$(if $(VERBOSE),,@echo CARGO_BUILD_RUSTFLAGS=$(CARGO_BUILD_RUSTFLAGS))
 	$(VERBOSE)$(call MAKEDEP,$(INT_LD_NAME),,,ld) \
