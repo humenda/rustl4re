@@ -63,6 +63,20 @@ tests! {
         }
     }
 
+    fn read_i64_i64_from_mr() {
+        use l4::utcb::*;
+        let mut mr = MsgMrFake::new();
+        mr.set(0, 284);
+        mr.set(1, 989812);
+        let mut msg = unsafe {
+            Msg::from_raw_mr(mr.mut_ptr())
+        };
+        unsafe {
+            assert_eq!(msg.read::<u64>().unwrap(), 284);
+            assert_eq!(msg.read::<u64>().unwrap(), 989812);
+        }
+    }
+
     fn word_count_correct_for_u64() {
         let (mr, mut msg) = mk_msg_regs();
         unsafe {

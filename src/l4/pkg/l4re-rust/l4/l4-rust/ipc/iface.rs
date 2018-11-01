@@ -137,7 +137,7 @@ macro_rules! derive_ipc_struct {
                     }
                     write_msg!($iface::$name, mr, $($argname),*)?;
                     // get the protocol for the msg tag label
-                    let proto = <$traitname<$crate::ipc::types::Client> as
+                    let proto = <Self as
                             $crate::ipc::types::HasProtocol>::PROTOCOL_ID;
                     let tag = $crate::ipc::MsgTag::new(proto, mr.words(), 0, 0);
                     // IPC — ToDo: no flags, no buffer register items transfered, restag hence
@@ -173,10 +173,11 @@ macro_rules! derive_ipc_struct {
 
         impl<T: $iface::$traitname> $crate::ipc::types::Dispatch
                 for $traitname<$crate::ipc::types::Server<T>> {
-            fn dispatch(&mut self) -> $crate::error::Result<()> {
+            fn dispatch(&mut self) ->
+                    $crate::error::Result<$crate::ipc::MsgTag> {
                 let mut msg_mr = self.utcb.mr();
                 let opcode: $crate::ipc::types::OpCode = unsafe {
-                        msg_mr.read::<opcode!($iface; $($name),*)>()?
+                        msg_mr.read::<opcode!($iface;$($name),*)>()?
                 };
                 $(
                     if opcode == <$iface::$name as $crate::ipc::types::HasOpCode>
@@ -184,10 +185,15 @@ macro_rules! derive_ipc_struct {
                         // ToDo: use result
                         unsafe {
                             // ToDo: use result -> use for reply
-                            self.user_impl.$name(
+                            let user_ret = self.user_impl.$name(
                                     $(msg_mr.read::<$type>()?),*
                                 );
-                            return Ok(());
+                            msg_mr.reset();
+                            msg_mr.write(user_ret);
+                            // on return, label/protocol is 0 for success and a custom error code
+                            // otherwise; negative means some IPC failure
+                            return Ok($crate::ipc::MsgTag::new(0,
+                                    msg_mr.words(), 0, 0));
                         }
                     }
                 )*
@@ -311,6 +317,7 @@ macro_rules! iface {
     ($(unexpanded:tt)*) => { compile_error!("ToDo, proper help message"); };
 }
 
+/*
 iface! {
     mod echoserver;
     trait EchoServer {
@@ -320,6 +327,7 @@ iface! {
         fn signal(&mut self, i: u32);
     }
 }
+*/
 
 /*
 mod echoserver {

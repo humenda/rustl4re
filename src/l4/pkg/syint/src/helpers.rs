@@ -12,6 +12,10 @@ impl MsgMrFake {
         self.0.bindgen_union_field[idx]
     }
 
+    pub fn set(&mut self, idx: usize, val: u64) {
+        self.0.bindgen_union_field[idx] = val;
+    }
+
     pub unsafe fn mut_ptr(&mut self) -> *mut l4_msg_regs_t {
         &mut self.0 as *mut l4_msg_regs_t
     }
