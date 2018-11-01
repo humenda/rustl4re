@@ -84,6 +84,15 @@ module ox_rcalc-client.conf
 module ox_rcalc-client
 module ex_clntsrv-server
 
+entry ox_rcalc-server
+kernel fiasco -serial_esc
+roottask moe rom/ox_rcalc-server.conf
+module l4re
+module ned
+module ox_rcalc-server.conf
+module ex_clntsrv-client
+module ox_rcalc-server
+
 entry shm_c
 kernel fiasco -serial_esc
 roottask moe rom/shm_c.cfg

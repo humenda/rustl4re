@@ -58,4 +58,3 @@ EXTERN int l4_sndfpage_add_wu(l4_fpage_t const snd_fpage, unsigned long snd_base
                 l4_msgtag_t *tag, l4_utcb_t *u) {
     return l4_sndfpage_add_u(snd_fpage, snd_base, tag, u);
 }
-
