@@ -1,6 +1,9 @@
 #[macro_use]
 mod iface;
+mod serverloop;
 pub mod types;
+
+pub use self::serverloop::Loop;
 
 use core::convert::From;
 use l4_sys::{l4_msgtag_flags::*, l4_msgtag_t, l4_timeout_t, msgtag};
