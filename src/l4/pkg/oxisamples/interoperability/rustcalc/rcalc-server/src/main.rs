@@ -6,7 +6,7 @@ extern crate l4;
 
 // important
 use l4::ipc::types::Dispatch;
-use l4::ipc::MsgTag;
+use l4::ipc::{self, MsgTag};
 use l4_sys::l4_utcb;
 
 iface! {
@@ -35,32 +35,11 @@ fn main() {
     println!("Calculation server starting…");
     let chan = l4re_sys::l4re_env_get_cap("calc_server").expect(
             "Received invalid capability for calculation server.");
-    unsafe {
-        let _ = MsgTag::from(l4_sys::l4_rcv_ep_bind_thread(chan,
-                (*l4re_sys::l4re_env()).main_thread, 0xdeadbeef))
-            .result().expect("failed to bind gate");
-    }
+    let mut srv_impl = Calc::from_impl(chan, CalcServer { });
+    let mut srv_loop = ipc::Loop::new_at(unsafe {
+        (*l4re_sys::l4re_env()).main_thread
+    });
+    srv_loop.register(chan, srv_impl).expect("Failed to register server in loop");
     println!("Waiting for incoming connections");
-
-    let mut label: u64 = unsafe { ::std::mem::uninitialized() };
-    let mut tag = unsafe { ::l4::ipc::MsgTag::from(
-                l4_sys::l4_ipc_wait(l4_sys::l4_utcb(), &mut label,
-                    l4_sys::timeout_never())).result().unwrap()
-    };
-    let mut srv = Calc::from_impl(chan, CalcServer { });
-    loop {
-        tag.result().unwrap();
-        if label != 0xdeadbeef {
-            println!("Hew? Unknown sender {:x}, ignoring that message", label);
-        }
-        unsafe {
-            use l4_sys::l4_utcb_mr;
-            let mr = l4_utcb_mr();
-            use std::mem::transmute;
-            let replytag = srv.dispatch().unwrap().raw();
-            println!("returning result and waiting for next job");
-            tag = MsgTag::from(l4_sys::l4_ipc_reply_and_wait(l4_utcb(),
-                    replytag, &mut label, l4_sys::timeout_never()));
-        }
-    }
+    srv_loop.start();
 }
