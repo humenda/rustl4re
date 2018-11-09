@@ -1,6 +1,9 @@
 #![no_std]
 #![feature(align_offset)]
+#![feature(alloc)]
 // ToDo: ^ stable Rust
+
+extern crate alloc;
 
 extern crate l4_sys;
 #[macro_use]
