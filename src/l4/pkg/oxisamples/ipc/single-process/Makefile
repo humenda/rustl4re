@@ -1,5 +1,5 @@
-PKGDIR	= ../..
-L4DIR	?= $(PKGDIR)/../..
+PKGDIR	= .
+L4DIR	?= $(PKGDIR)/../../../..
 
 TARGET		= basic_ipc
 SRC_RS		= main.rs

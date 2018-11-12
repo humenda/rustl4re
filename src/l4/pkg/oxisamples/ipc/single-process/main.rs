@@ -1,38 +1,22 @@
 //! Simple client-server example
 //!
 //! The client sends a number, the server squares it and returns it. That's it.
-#![feature(libc)]
-// ToDo: ^ -> replace with version from crates.io
 
 extern crate l4_sys as l4;
 extern crate libc;
 
 use std::{thread, time};
 
-use l4::{l4_utcb, l4_umword_t, ipc::msgtag, timeout_never};
+use l4::{l4_cap_idx_t, l4_umword_t, l4_utcb, msgtag, timeout_never};
 
 // ToDo: use from libc
-use l4::pthread_t;
 
-/// simple wrapper to make thread handle `Send`
-struct ThreadHandle {
-    inner: pthread_t,
-}
-
-impl ThreadHandle {
-    pub fn into_inner(self) -> pthread_t { self.inner }
-}
-
-unsafe impl Send for ThreadHandle { }
-
-
-fn client(server: ThreadHandle) {
+fn client(server: l4_cap_idx_t) {
     let mut counter = 1;
-    let server = server.into_inner();
     loop {
         // dump value into Userspace Thread Control Block (UTCB)
         unsafe {
-            (*l4::l4_utcb_mr()).mr[0] = counter;
+            (*l4::l4_utcb_mr()).mr.as_mut()[0] = counter;
         }
         println!("client: value written to register");
         // create message tag; specifies kind of interaction between sender and receiver: protocol,
@@ -43,14 +27,14 @@ fn client(server: ThreadHandle) {
         let send_tag = msgtag(0, 1, 0, 0);
         unsafe {
             // IPC call to capability of server
-            let rcv_tag = l4::l4_ipc_call(l4::pthread_l4_cap(server), l4_utcb(),
-                    send_tag, timeout_never());
+            let rcv_tag = l4::l4_ipc_call(server, l4_utcb(), send_tag,
+                    timeout_never());
             println!("send worked");
             // check for IPC error, if yes, print out the IPC error code, if not, print the received
             // result.
             match l4::l4_ipc_error(rcv_tag, l4_utcb()) {
                 0 => // success
-                    println!("Received: {}\n", (*l4::l4_utcb_mr()).mr[0]),
+                    println!("Received: {}\n", (*l4::l4_utcb_mr()).mr.as_ref()[0]),
                 ipc_error => println!("client: IPC error: {}\n",  ipc_error),
             };
         }
@@ -61,16 +45,11 @@ fn client(server: ThreadHandle) {
 }
 
 /// Server part.
-#[no_mangle]
-pub extern "C" fn main() {
-    // wrap the pthread handle "safely"
-    let server = ThreadHandle { inner: unsafe { libc::pthread_self() as *mut ::std::os::raw::c_void } };
-    let _client = thread::spawn(|| {
-        for i in 0..200 {
-            thread::sleep(::std::time::Duration::from_millis(1000));
-            println!("{}", i);
-        }
-    });//client(server));
+fn main() {
+    // get thread capability using the pthread interface
+    let server: l4_cap_idx_t = unsafe {
+        l4::pthread_l4_cap(libc::pthread_self()) };
+    let _client = thread::spawn(move || client(server));
     // label is used to identify senders (not relevant in our example)
     println!("beef");
     let mut label: l4_umword_t = unsafe { ::std::mem::uninitialized() };
@@ -81,7 +60,6 @@ pub extern "C" fn main() {
     // wait infinitely for messages, see client for more
     let mut tag = unsafe { l4::l4_ipc_wait(l4::l4_utcb(), &mut label,
             timeout_never()) };
-    println!("öh?");
     loop {
         // Check if we had any IPC failure, if yes, print the error code and
         // just wait again.
@@ -97,9 +75,9 @@ pub extern "C" fn main() {
         // the IPC was ok, now take the value out of message register 0 of the
         // UTCB and store the square of it back to it.
         unsafe {
-            let val = (*l4::l4_utcb_mr()).mr[0];
-            (*l4::l4_utcb_mr()).mr[0] = val * val;
-            println!("new value: {}", (*l4::l4_utcb_mr()).mr[0]);
+            let val = (*l4::l4_utcb_mr()).mr.as_ref()[0];
+            (*l4::l4_utcb_mr()).mr.as_mut()[0] = val * val;
+            println!("new value: {}", (*l4::l4_utcb_mr()).mr.as_ref()[0]);
 
             // send reply and wait again for new messages.
             println!("send reply, wait for incoming connections");
