@@ -8,6 +8,7 @@ fn main() {
         .header("bindgen.h")
         .use_core()
         .derive_default(true)
+        .rustified_enum(".*")
         .ctypes_prefix("::libc");
     if let Ok(include_dirs) = ::std::env::var("L4_INCLUDE_DIRS") {
         println!("hi: {}", include_dirs);

@@ -115,7 +115,7 @@ pub unsafe fn l4_factory_create_gate_u(factory: l4_cap_idx_t,
         mr!(v[3] = cap::l4_map_obj_control(0,0));
         mr!(v[4] = cap::l4_obj_fpage(thread_cap, 0,
                                      L4_fpage_rights::L4_FPAGE_RWX as u8)
-            .bindgen_union_field);
+            .raw);
     }
     tag = msgtag(msgtag_label(tag), msgtag_words(tag), items,
             msgtag_flags(tag));
@@ -226,7 +226,7 @@ pub unsafe fn l4_factory_create_add_cstr_u(s: *const u8,
     }
     let v = l4_utcb_mr_u(u);
     mr!(v[w] = L4_varg_type::L4_VARG_TYPE_STRING as usize | (len << 16));
-    let c = &mut (*v).bindgen_union_field[w as usize + 1] as *mut u64 as *mut u8;
+    let c = &mut (*v).mr.as_mut()[w as usize + 1] as *mut u64 as *mut u8;
     ptr::copy_nonoverlapping(s, c, len + 1);
     w = w + 1 + (len + size_of::<l4_umword_t>() - 1) / size_of::<l4_umword_t>();
     tag.raw = (tag.raw & !0x3fi64) | (w as i64 & 0x3fi64);
@@ -245,7 +245,7 @@ pub fn l4_factory_create_add_str_u(s: &str, tag: &mut l4_msgtag_t,
     unsafe {
         let v = l4_utcb_mr_u(u);
         mr!(v[w] = L4_varg_type::L4_VARG_TYPE_STRING as usize | (len << 16));
-        let c = &mut (*v).bindgen_union_field[w as usize + 1] as *mut u64 as *mut u8;
+        let c = &mut (*v).mr.as_mut()[w as usize + 1] as *mut u64 as *mut u8;
         ptr::copy_nonoverlapping(s.as_bytes().as_ptr(), c, len);
         let c = ((c as usize) + len) as *mut u8;
         *c = 0; // add 0-byte
@@ -333,7 +333,7 @@ pub fn l4_factory_create_add_fpage_u(d: l4_fpage_t, tag: &mut l4_msgtag_t,
     unsafe {
         let v = l4_utcb_mr_u(u);
         mr!(v[w] = L4_varg_type::L4_VARG_TYPE_FPAGE as usize | (size_of::<l4_fpage_t>() << 16));
-        mr!(v[w + 1] = d.bindgen_union_field);
+        mr!(v[w + 1] = d.raw);
     }
     w += 2;
     tag.raw = (tag.raw & !0x3fi64) | (w as i64 & 0x3f);

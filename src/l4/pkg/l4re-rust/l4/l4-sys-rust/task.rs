@@ -31,9 +31,9 @@ pub unsafe fn l4_task_map_u(dst_task: l4_cap_idx_t, src_task: l4_cap_idx_t,
    let v = l4_utcb_mr_u(u);
     mr!(v[0] = L4_TASK_MAP_OP);
     mr!(v[3] = l4_map_obj_control(0, 0));
-    mr!(v[4] = l4_obj_fpage(src_task, 0, L4_FPAGE_RWX as u8).bindgen_union_field);
+    mr!(v[4] = l4_obj_fpage(src_task, 0, L4_FPAGE_RWX as u8).raw);
     mr!(v[1] = snd_base);
-    mr!(v[2] = snd_fpage.bindgen_union_field);
+    mr!(v[2] = snd_fpage.raw);
     l4_ipc_call(dst_task, u,
             msgtag(l4_msgtag_protocol::L4_PROTO_TASK as i64, 3, 1, 0),
             timeout_never())
@@ -59,7 +59,7 @@ pub unsafe fn l4_task_unmap_u(task: l4_cap_idx_t, fpage: l4_fpage_t,
     let v = l4_utcb_mr_u(u);
     mr!(v[0] = L4_TASK_UNMAP_OP);
     mr!(v[1] = map_mask);
-    mr!(v[2] = fpage.bindgen_union_field);
+    mr!(v[2] = fpage.raw);
     l4_ipc_call(task, u, msgtag(l4_msgtag_protocol::L4_PROTO_TASK as i64,
                                 3, 0, 0), timeout_never())
 }
@@ -89,7 +89,7 @@ pub unsafe fn l4_task_unmap_batch_u(task: l4_cap_idx_t,
     let v = l4_utcb_mr_u(u);
     mr!(v[0] = L4_TASK_UNMAP_OP as u64);
     mr!(v[1] = map_mask as u64);
-    ptr::copy_nonoverlapping(fpages as *mut u64, &mut (*v).bindgen_union_field[2],
+    ptr::copy_nonoverlapping(fpages as *mut u64, &mut (*v).mr.as_mut()[2],
                              num_fpages as usize);
     l4_ipc_call(task, u, msgtag(l4_msgtag_protocol::L4_PROTO_TASK as i64, 2 + num_fpages, 0, 0),
             timeout_never())
@@ -188,7 +188,7 @@ pub unsafe fn l4_task_add_ku_mem_u(task: l4_cap_idx_t, ku_mem: l4_fpage_t,
         u: *mut l4_utcb_t) -> l4_msgtag_t {
     let v = l4_utcb_mr_u(u);
     mr!(v[0] = L4_TASK_ADD_KU_MEM_OP);
-    mr!(v[1] = ku_mem.bindgen_union_field);
+    mr!(v[1] = ku_mem.raw);
     l4_ipc_call(task, u, msgtag(l4_msgtag_protocol::L4_PROTO_TASK as i64, 2, 0, 0),
             timeout_never())
 }
