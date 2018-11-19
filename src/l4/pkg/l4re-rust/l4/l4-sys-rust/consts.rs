@@ -24,4 +24,7 @@ pub const UTCB_BUF_REGS_OFFSET: isize = UtcbConsts::L4_UTCB_BUF_REGS_OFFSET
 // identical otherwise.
 pub const MSGTAG_ERROR: i64 = l4_msgtag_flags::L4_MSGTAG_ERROR as i64;
 
-
+/// 0 send timeout
+pub const L4_IPC_SEND_TIMEOUT_0: l4_timeout_t = l4_timeout_t {
+    raw: 0x04000000
+};

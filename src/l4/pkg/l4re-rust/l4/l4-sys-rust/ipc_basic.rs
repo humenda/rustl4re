@@ -99,7 +99,7 @@ pub unsafe fn l4_sndfpage_add_u(snd_fpage: l4_fpage_t, snd_base: c_ulong,
 
     let v = l4_utcb_mr_u(utcb);
     mr!(v[i] = snd_base | L4_ITEM_MAP as u64 | L4_ITEM_CONT as u64);
-    mr!(v[i + 1] = snd_fpage.bindgen_union_field);
+    mr!(v[i + 1] = snd_fpage.raw);
 
     *tag = l4_msgtag(l4_msgtag_label(*tag), l4_msgtag_words(*tag),
                    l4_msgtag_items(*tag) as u32 + 1, l4_msgtag_flags(*tag) as u32);
@@ -167,11 +167,7 @@ pub unsafe fn l4_utcb_mr_u(u: *mut l4_utcb_t) -> *mut l4_msg_regs_t {
 /// Return a never-timeout (akin to L4_IPC_TIMEOUT_NEVER)
 #[inline(always)]
 pub fn timeout_never() -> l4_timeout_t {
-    l4_timeout_t {
-        p: __BindgenUnionField::new(),
-        raw: __BindgenUnionField::new(),
-        bindgen_union_field: 0,
-    }
+    l4_timeout_t { raw: 0 }
 }
 
 /// Extract IPC error code from error code
