@@ -4,10 +4,8 @@ extern crate l4re_sys;
 #[macro_use]
 extern crate l4;
 
-// important
-use l4::ipc::types::Dispatch;
-use l4::ipc::{self, MsgTag};
 use l4_sys::l4_utcb;
+use l4::ipc;
 
 iface! {
     mod calc;
@@ -35,10 +33,11 @@ fn main() {
     println!("Calculation server starting…");
     let chan = l4re_sys::l4re_env_get_cap("calc_server").expect(
             "Received invalid capability for calculation server.");
-    let mut srv_impl = Calc::from_impl(chan, CalcServer { });
-    let mut srv_loop = ipc::Loop::new_at(unsafe {
-        (*l4re_sys::l4re_env()).main_thread
-    });
+    let srv_impl = Calc::from_impl(chan, CalcServer { });
+    let mut srv_loop = unsafe {
+        ipc::Loop::new_at(
+        (*l4re_sys::l4re_env()).main_thread, l4_utcb())
+    };
     srv_loop.register(chan, srv_impl).expect("Failed to register server in loop");
     println!("Waiting for incoming connections");
     srv_loop.start();
