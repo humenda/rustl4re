@@ -8,8 +8,7 @@ extern crate libc;
 
 use l4::{l4_ipc_error, l4_msgtag, l4_utcb};
 
-#[no_mangle]
-pub extern "C" fn main() {
+pub fn main() {
     unsafe { // avoid deep nesting of unsafe blocks, just make the whole program unsafe
         unsafe_main();
     }
@@ -24,7 +23,7 @@ pub unsafe fn unsafe_main() {
 
 
     // get IPC gate capability from Lua script (see ../*.cfg)
-    let gate = l4re::l4re_env_get_cap("channel");
+    let gate = l4re::l4re_env_get_cap("channel").unwrap();
     // check whether we got something
     if l4::l4_is_invalid_cap(gate) {
         panic!("No IPC Gate found.");
