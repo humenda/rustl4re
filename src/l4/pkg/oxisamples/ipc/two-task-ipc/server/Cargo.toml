@@ -1,0 +1,11 @@
+[package]
+name = "two_task_ipc-server"
+version = "0.1.0"
+authors = ["streicher <shumenda@gmx.de>"]
+
+[[bin]]
+name = "two_task_ipc-server"
+path = "server.rs"
+
+[dependencies]
+libc = "0.2.43"
