@@ -5,9 +5,10 @@ use std::path::PathBuf;
 
 fn main() {
     let mut bindings = bindgen::Builder::default()
-        .header("bindgen.h")
         .use_core()
-        .ctypes_prefix("::libc");
+        .ctypes_prefix("::libc")
+        .rustified_enum(".*")
+        .header("bindgen.h");
     if let Ok(include_dirs) = ::std::env::var("L4_INCLUDE_DIRS") {
         println!("hi: {}", include_dirs);
         for item in include_dirs.split(" ") {

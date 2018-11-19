@@ -1,14 +1,17 @@
 extern crate l4_sys as l4;
 extern crate l4re_sys as l4re;
+extern crate libc; // only for C type definitions
 
-use l4::l4_cap_idx_t;
-use l4::l4_utcb;
-use l4re::l4_addr_t;
+use l4::{l4_cap_idx_t, l4_utcb,
+    L4_fpage_rights::L4_FPAGE_RWX,
+    l4_msg_item_consts_t::L4_ITEM_MAP,
+};
+use l4re::l4re_rm_flags_t;
 use std::{thread, time};
 use std::mem;
-use std::os::raw::c_void;
+use libc::c_void;
 
-unsafe fn allocate_ds(size_in_bytes: l4_addr_t)
+unsafe fn allocate_ds(size_in_bytes: usize)
         -> Result<(*mut c_void, l4_cap_idx_t), String> {
     // allocate ds capability slot
     let ds = l4::l4re_util_cap_alloc();
@@ -42,8 +45,9 @@ unsafe fn allocate_ds(size_in_bytes: l4_addr_t)
 
     // attach to region map
     let mut virt_addr: *mut c_void = mem::uninitialized();
-    let r = l4re::l4re_rm_attach(&mut virt_addr, size_in_bytes,
-              l4re::L4RE_RM_SEARCH_ADDR as u64, ds, 0, l4re::L4_PAGESHIFT);
+    let r = l4re::l4re_rm_attach(&mut virt_addr, size_in_bytes as u64,
+              l4re_rm_flags_t::L4RE_RM_SEARCH_ADDR as u64, ds, 0,
+              l4::L4_PAGESHIFT as u8);
     if r > 0 { // error, free ds
         l4re::l4re_util_cap_free_um(ds);
         return Err(format!("Allocation failed with exit code {}", r));
@@ -72,8 +76,8 @@ unsafe fn send_cap(ds: l4_cap_idx_t, textlen: usize, dst: l4_cap_idx_t)
     (*mr).mr[0] = textlen as u64;
     // sending a capability requires to registers, one containing the action,
     // the other the flexpage
-    (*mr).mr[1] = l4re::L4_ITEM_MAP as u64;
-    (*mr).mr[2] = l4::l4_obj_fpage(ds, 0, l4::L4_FPAGE_RWX as u8).raw;
+    (*mr).mr[1] = L4_ITEM_MAP as u64;
+    (*mr).mr[2] = l4::l4_obj_fpage(ds, 0, L4_FPAGE_RWX as u8).raw;
     match l4::l4_ipc_error(l4::l4_ipc_call(dst, l4_utcb(),
             l4::l4_msgtag(0, 1, 1, 0), l4::l4_timeout_t { raw: 0 }), l4_utcb()) {
         0 => Ok(()),
@@ -81,15 +85,15 @@ unsafe fn send_cap(ds: l4_cap_idx_t, textlen: usize, dst: l4_cap_idx_t)
     }
 }
 
-#[no_mangle]
-pub extern "C" fn main() {
+pub fn main() {
     unsafe {
         unsafe_main();
     }
 }
 
 unsafe fn unsafe_main() {
-    let server = l4re::l4re_env_get_cap("channel");
+    let server = l4re::l4re_env_get_cap("channel")
+            .expect("Received invalid capability");
     if l4::l4_is_invalid_cap(server) {
         panic!("No IPC Gate found.");
     }
@@ -99,7 +103,7 @@ unsafe fn unsafe_main() {
         s
     });
     let size_in_bytes = l4re::l4_round_page(text.as_bytes().len());
-    let (base, ds) = allocate_ds(size_in_bytes).unwrap();
+    let (base, ds) = allocate_ds(size_in_bytes as usize).unwrap();
     let byteslice = text.as_bytes();
     byteslice.as_ptr().copy_to(base as *mut u8, byteslice.len());
     println!("allocated {:x} B for a string with {:x} B, sending capability",

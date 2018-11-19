@@ -1,0 +1,11 @@
+[package]
+name = "shm_rust-client"
+version = "0.1.0"
+authors = ["streicher <shumenda@gmx.de>"]
+
+[[bin]]
+name = "shm_rust-client"
+path = "client.rs"
+
+[dependencies]
+libc = "0.2.43"

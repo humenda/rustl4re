@@ -3,10 +3,13 @@ extern crate libc;
 extern crate l4re_sys as l4re;
 extern crate l4_sys as l4;
 
-use l4::l4_cap_idx_t;
-use l4::{l4_ipc_error, l4_msgtag, l4_utcb, timeout_never};
-use l4re::l4re_ds_stats_t;
-use std::os::raw::c_void;
+use l4::{l4_cap_idx_t, l4_ipc_error,
+    l4_ipc_tcr_error_t::L4_IPC_ERROR_MASK,
+    l4_msgtag,
+    l4_msg_item_consts_t::*,
+    l4_utcb, timeout_never};
+use l4re::{l4re_ds_stats_t, l4re_rm_flags_t::L4RE_RM_SEARCH_ADDR};
+use libc::c_void;
 
 #[inline]
 unsafe fn setup_utcb(ds: &l4_cap_idx_t) {
@@ -14,21 +17,21 @@ unsafe fn setup_utcb(ds: &l4_cap_idx_t) {
     // to)
     // (see l4sys/include/cxx/ipc_types.h and usage in moe//main.cc:setup_wait() and Small_buf
     // constructor (used in this location)
-    (*l4::l4_utcb_br()).br[0] = ds | l4::L4_RCV_ITEM_SINGLE_CAP as u64
-            |  l4::L4_RCV_ITEM_LOCAL_ID as u64;
+    (*l4::l4_utcb_br()).br[0] = ds | L4_RCV_ITEM_SINGLE_CAP as u64
+            | L4_RCV_ITEM_LOCAL_ID as u64;
     (*l4::l4_utcb_br()).bdr = 0;
 }
 
 
-#[no_mangle]
-pub extern "C" fn main() {
+pub fn main() {
     unsafe { // safe nesting and unsafe, it's all unsafe, really
         unsafe_main()
     }
 }
 
 unsafe fn unsafe_main() {
-    let gate = l4re::l4re_env_get_cap("channel");
+    let gate = l4re::l4re_env_get_cap("channel")
+            .expect("Received invalid IPC gate capability.");
     if l4::l4_is_invalid_cap(gate) {
         panic!("No IPC Gate found.");
     }
@@ -75,7 +78,7 @@ unsafe fn read_message(ds_cap: l4re::l4re_ds_t, length: usize)
     match l4re::l4re_ds_info(ds_cap, &mut stats as *mut l4re_ds_stats_t) {
         0 => (),
         n => panic!("stats info gave error {}\n",
-                    n & (l4::L4_IPC_ERROR_MASK as i32)), 
+                    n & (L4_IPC_ERROR_MASK as i32)), 
     };
     if (stats).size != l4re::l4_round_page(length) as u64 {
         panic!("memory allocation failed: got {:x}, required {:x}",
@@ -87,7 +90,7 @@ unsafe fn read_message(ds_cap: l4re::l4re_ds_t, length: usize)
     let page_size = l4re::l4_round_page(length);
     println!("attaching memory: {:x} bytes", page_size);
     match l4re::l4re_rm_attach((&mut virt_addr) as *mut *mut c_void, page_size,
-            l4re::L4RE_RM_SEARCH_ADDR as u64, ds_cap, 0, l4re::L4_PAGESHIFT) {
+            L4RE_RM_SEARCH_ADDR as u64, ds_cap, 0, l4re::L4_PAGESHIFT as u8) {
         0 => (),
         err => return Err(format!("unable to attach memory from dataspace: {}",
                 err)),
