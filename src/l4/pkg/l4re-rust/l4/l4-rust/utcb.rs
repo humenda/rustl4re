@@ -147,7 +147,7 @@ pub struct Msg {
 impl Msg {
     pub unsafe fn from_raw_mr(mr: *mut l4_msg_regs_t) -> Msg {
         Msg {
-            mr: transmute::<*mut u64, *mut u8>((*mr).bindgen_union_field.as_mut_ptr()),
+            mr: transmute::<*mut u64, *mut u8>((*mr).mr.as_mut().as_mut_ptr()),
             offset: 0
         }
     }
@@ -156,7 +156,7 @@ impl Msg {
         unsafe { // safe, because *every thread MUST have* a UTCB with message registers
             Msg {
                 mr: transmute::<*mut u64, *mut u8>((*l4_utcb_mr())
-                           .bindgen_union_field.as_mut_ptr()),
+                           .mr.as_mut().as_mut_ptr()),
                 offset: 0,
             }
         }

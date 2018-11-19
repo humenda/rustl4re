@@ -1,6 +1,6 @@
 use l4_sys::{*, l4_error_code_t::*, l4_ipc_tcr_error_t::*};
 
-use num_traits::FromPrimitive;
+use num_traits::{FromPrimitive, ToPrimitive};
 use utcb::Utcb;
 
 // for the Type
@@ -123,7 +123,7 @@ impl TcrErr {
         unsafe {
             use num_traits::FromPrimitive;
              FromPrimitive::from_u64(l4_ipc_error(tag, utcb.raw))
-                    .ok_or(Error::UnknownErr(l4_ipc_error(tag, utcb.raw) as isize))
+                    .ok_or(Error::UnknownErr(l4_ipc_error(tag, utcb.raw) as i64))
         }
     }
 }
@@ -139,13 +139,15 @@ pub enum Error {
     /// Description of an invalid argument, optional error code
     InvalidArg(&'static str, Option<isize>),
     /// Unknown error code
-    UnknownErr(isize),
+    UnknownErr(i64),
     /// Protocol error, custom defined protocol error labels passed with an answer using the MSG
     /// msgtag label
     Protocol(i64),
 }
 
 impl Error {
+    pub const INVALID_CAP_CODE: i64 = -65536;
+
     /// Get error from given tag (for current thread)
     #[inline]
     pub fn from_tag_raw(tag: l4_msgtag_t) -> Self {
@@ -168,11 +170,28 @@ impl Error {
     ///
     /// Error codes from L4 IPC are masked and and need to be umasked before converted to an error.
     #[inline(always)]
-    pub fn from_ipc(code: isize) -> Self {
+    pub fn from_ipc(code: i64) -> Self {
+        if code == Self::INVALID_CAP_CODE {
+            return Error::InvalidCap;
+        }
         // applying the mask makes the integer positive, cast to u32 then
-        match TcrErr::from_isize(code & L4_IPC_ERROR_MASK as isize) {
+        match TcrErr::from_u64((code & L4_IPC_ERROR_MASK as i64) as u64) {
             Some(tc) => Error::Tcr(tc),
-            None => Error::UnknownErr(code & L4_IPC_ERROR_MASK as isize),
+            None => Error::UnknownErr(code),
+        }
+    }
+
+    /// Convert an enum instance into a IPC error
+    ///
+    /// IPC errors are transmitted using the label field of the message tag and
+    /// usually negative.
+    pub fn into_ipc_err(&self) -> i64 {
+        match self {
+            Error::Generic(err) => err.to_i64().unwrap() * -1,
+            Error::Tcr(err) => err.to_i64().unwrap() * -1,
+            Error::InvalidCap => -1 * Self::INVALID_CAP_CODE,
+            Error::InvalidArg(_, _) | Error::UnknownErr(_) | Error::Protocol(_)
+                    => -1 * GenericErr::InvalidArg.to_i64().unwrap(),
         }
     }
 }

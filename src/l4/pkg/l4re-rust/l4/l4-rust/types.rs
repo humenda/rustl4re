@@ -1,4 +1,4 @@
-use l4_sys::{*, l4_msgtag_protocol::*};
+use l4_sys::l4_msgtag_protocol::{self, *};
 
 
 /// signed machine word
@@ -12,7 +12,7 @@ macro_rules! enumgenerator {
     ($(#[$global:meta])*
      enum $enum_name:ident {
          $($(#[$docs:meta])*
-           $orig:ident => $new:tt,
+           $orig:path => $new:tt,
          )+
      }) => {
         #[allow(non_snake_case)]
@@ -23,12 +23,13 @@ macro_rules! enumgenerator {
               $new = $orig as isize,)+
         }
         derive_enum_impl!($enum_name: i32; $($orig => $new),*);
+        derive_enum_impl!($enum_name: i64; $($orig => $new),*);
     }
 }
 
 #[doc(hidden)]
 macro_rules! derive_enum_impl {
-    ($enum_name:ident: $type:ty; $($orig:ident => $new:ident),*) => {
+    ($enum_name:ident: $type:ty; $($orig:path => $new:ident),*) => {
         impl ::core::ops::BitAnd<$type> for $enum_name {
             type Output=$type;
             fn bitand(self, rhs: $type) -> $type {
@@ -52,7 +53,7 @@ enumgenerator! {
         /// Negative protocol IDs are reserved for kernel-use.
         L4_PROTO_NONE => None,
         /// Make an exception out of a page fault
-        l4_msgtag_protocol_L4_PROTO_PF_EXCEPTION => PfException,
+        l4_msgtag_protocol::L4_PROTO_PF_EXCEPTION => PfException,
         /// IRQ message
         L4_PROTO_IRQ => Irq,
         /// Page fault message
