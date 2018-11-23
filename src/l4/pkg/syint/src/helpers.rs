@@ -9,11 +9,15 @@ impl MsgMrFake {
     }
 
     pub fn get(&self, idx: usize) -> u64 {
-        self.0.bindgen_union_field[idx]
+    unsafe {
+        self.0.mr.as_ref()[idx]
+        }
     }
 
     pub fn set(&mut self, idx: usize, val: u64) {
-        self.0.bindgen_union_field[idx] = val;
+        unsafe {
+            self.0.mr.as_mut()[idx] = val;
+        }
     }
 
     pub unsafe fn mut_ptr(&mut self) -> *mut l4_msg_regs_t {
