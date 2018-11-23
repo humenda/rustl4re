@@ -78,7 +78,7 @@ tests! {
     }
 
     fn word_count_correct_for_u64() {
-        let (mr, mut msg) = mk_msg_regs();
+        let (_mr, mut msg) = mk_msg_regs();
         unsafe {
             msg.write(0u64).expect("Writing failed");
             msg.write(3u64).expect("Couldn't write to msg");
@@ -87,7 +87,7 @@ tests! {
     }
 
     fn word_count_is_correctly_rounded_up() {
-        let (mr, mut msg) = mk_msg_regs();
+        let (_mr, mut msg) = mk_msg_regs();
         unsafe { msg.write(08).expect("Writing failed"); }
         assert_eq!(msg.words(), 1);
         unsafe { msg.write(42u8).expect("Writing failed"); }

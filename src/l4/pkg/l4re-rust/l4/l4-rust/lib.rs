@@ -7,6 +7,8 @@ extern crate alloc;
 
 extern crate l4_sys;
 #[macro_use]
+extern crate bitflags;
+#[macro_use]
 extern crate num_derive;
 extern crate num_traits;
 

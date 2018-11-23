@@ -1,7 +1,6 @@
-use l4_sys::{self, l4_cap_idx_t, helpers as l4helpers,
-        l4_cap_consts_t_L4_INVALID_CAP};
+use l4_sys::{self, l4_cap_idx_t, helpers as l4helpers, l4_cap_consts_t};
 
-const L4_INVALID_CAP: u64 = l4_cap_consts_t_L4_INVALID_CAP as u64;
+const L4_INVALID_CAP: u64 = l4_cap_consts_t::L4_INVALID_CAP as u64;
 
 extern "C" {
     fn l4_is_invalid_cap_w(c: l4_cap_idx_t) -> u32;
