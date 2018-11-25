@@ -1,6 +1,7 @@
 extern crate l4_sys;
 extern crate l4;
 extern crate l4re_sys;
+extern crate libc;
 
 #[macro_use]
 mod macros;

@@ -1,4 +1,6 @@
-use l4::utcb::*;
+use l4::{
+    cap::{FpageRights, MapType, SendFpage},
+    utcb::*};
 use std::mem::transmute;
 
 use helpers::MsgMrFake;
@@ -63,6 +65,27 @@ tests! {
         }
     }
 
+    fn write_fpage_type_works() {
+        let mut mr = MsgMrFake::new();
+        let mut msg = unsafe {
+            Msg::from_raw_mr(mr.mut_ptr())
+        };
+        // write fpage with the C++ serialisation framework methods
+        unsafe {
+            let fp = ::l4_sys::l4_obj_fpage(0xcafebabe, 0,
+                                        FpageRights::RWX.bits() as u8);
+            write_cxx_snd_fpage(mr.mut_ptr(), fp);
+            let c_mapopts = mr.get(0);
+            let c_fpage = mr.get(1);
+            // write the Rust version
+            let rfp = SendFpage::new(fp.raw, 0, None);
+            msg.reset();
+            SendFpage::write(&mut msg, rfp).unwrap();
+            assert_eq!(mr.get(0), c_mapopts);
+            assert_eq!(mr.get(1), c_fpage);
+        }
+    }
+
     fn read_i64_i64_from_mr() {
         use l4::utcb::*;
         let mut mr = MsgMrFake::new();
@@ -95,4 +118,4 @@ tests! {
         unsafe { msg.write(42u8).expect("Writing failed"); }
         assert_eq!(msg.words(), 1);
     }
-}
+    }
