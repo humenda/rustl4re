@@ -1,6 +1,8 @@
 #include <l4/syint/utcb.h>
 #include <l4/sys/cxx/ipc_basics>
+#include <l4/sys/cxx/ipc_types>
 #include <l4/sys/err.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -34,4 +36,9 @@ extern "C" char *write_bool_long_float() {
     offset = msg_add(v, offset, limit, f);
     msg_add(v, offset, limit, g);
     return v;
+}
+
+extern "C" void write_cxx_snd_fpage(char *v, l4_fpage_t fp) {
+    auto sfp = L4::Ipc::Snd_fpage(fp);
+    msg_add(v, 0, 1024, sfp);
 }

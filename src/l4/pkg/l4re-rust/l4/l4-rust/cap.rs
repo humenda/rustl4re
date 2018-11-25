@@ -2,6 +2,7 @@ use core::ops::{Deref, DerefMut};
 use l4_sys::{self,
         l4_cap_consts_t::{L4_CAP_SHIFT, L4_CAP_MASK, L4_INVALID_CAP_BIT},
         l4_cap_idx_t,
+        l4_msg_item_consts_t::L4_ITEM_MAP,
         L4_fpage_rights::*,
         l4_fpage_t,
         L4_fpage_type::*,
@@ -210,7 +211,7 @@ impl SendFpage {
         // opts and `continue` (enums from this class) are not supported
         Self {
             // AKA _base in the C++ version
-            description: MapType::Map as u64
+            description: L4_ITEM_MAP as u64
                     | (snd_base & (!0u64 << 10))
                     | mt.map(|v| v as u64).unwrap_or_default(),
             fpage: fpage
