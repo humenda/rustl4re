@@ -1,0 +1,2 @@
+This example shares a page between two tasks, allowing them to hold a mutex for
+a data object.
