@@ -45,15 +45,9 @@ pub unsafe fn l4re_env() -> *const l4re_env_t {
 #[inline]
 pub fn l4re_env_get_cap(name: &str) -> Option<l4_cap_idx_t> {
     unsafe {
-        l4re_env_get_cap_e(name, NonNull::new(l4re_env() as *mut l4re_env_t))
+        l4re_env_get_cap_l(name, NonNull::new(l4re_env() as *mut l4re_env_t))
+            .map(|record| record.as_ref().cap)
     }
-}
-
-#[inline]
-unsafe fn l4re_env_get_cap_e(name: &str, e: Option<NonNull<l4re_env_t>>)
-        -> Option<l4_cap_idx_t> {
-    l4re_env_get_cap_l(name, e)
-        .map(|record| record.as_ref().cap)
 }
 
 #[inline]
@@ -63,10 +57,10 @@ unsafe fn l4re_env_get_cap_l(name: &str,
     // functions
     let mut c = e.unwrap().as_ref().caps;
     while !c.is_null() && (*c).flags != !0u64 {
-        c = c.offset(1); // advance one record
         if eq_str_cstr(name, &(*c).name as *const u8) {
             return NonNull::new(c);
         }
+        c = c.offset(1); // advance one record
     }
     None
 }
