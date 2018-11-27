@@ -2,8 +2,8 @@ PKGDIR	= .
 L4DIR	?= $(PKGDIR)/../../../../..
 
 TARGET		= shm_rust-server
-SRC_RS		= server.rs
+SRC_CC		= server.cc
 
-REQUIRES_LIBS    = libdl libpthread libc_be_sig l4re_c-util libc_support_misc l4re-sys-rust l4-sys-rust libl4re-wrapper l4re_c
+REQUIRES_LIBS    = libdl libpthread libc_be_sig l4re_c-util libc_support_misc l4re_c
 
 include $(L4DIR)/mk/prog.mk

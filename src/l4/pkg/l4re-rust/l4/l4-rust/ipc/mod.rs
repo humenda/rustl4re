@@ -45,6 +45,26 @@ enumgenerator! {
 
 const L4_MSGTAG_ERROR_I: isize = L4_MSGTAG_ERROR as isize;
 
+/// Message Tag
+///
+/// Message tags are used for the communication to instruct the kernel which protocol to use for
+/// communication (the label), how many (untyped) words to send, how many typed items to map/grant
+/// and which flags to use for these actions.
+/// When calling another process, the protocol is passed to the server to identify the protocol in
+/// use. During the reply of the service process, the label is used for transmitting error results
+/// and negative numbers are reserved for errors.
+/// Words and items are counted in machine words (`Mword`).
+///
+/// # Examples
+///
+/// ```
+/// // Send 2 (machine) words, 0 items, no flags, no protocol
+/// let _ = msgtag::new(0, 2, 0, 0);
+/// // Send a word and a flex page.
+/// // NOTE: flex page also take up space in the message registers, though they are "typed" words
+/// // and hence do **not** count as a word, even though they take up the space of two words.
+/// let _ = msgtag(0, 1, 1, 0);
+/// ```
 pub struct MsgTag {
     raw: Mword,
 }
