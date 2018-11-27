@@ -1,6 +1,13 @@
-struct Witter: L4::Kobject_t<Witter, L4::Kobject, 0x666, L4::Type_info::Demand_t<1>>
+#include <cstdio>
+#include <l4/re/env>
+#include <l4/re/util/cap_alloc>
+#include <l4/re/util/object_registry>
+#include <l4/re/util/br_manager>
+#include <l4/sys/cxx/ipc_epiface>
+
+struct Witter: L4::Kobject_t<Witter, L4::Kobject, 0x44, L4::Type_info::Demand_t<1>>
 {
-  L4_INLINE_RPC(int, witter, (l4_uint32_t length, L4::Ipc::Cap<L4Re::Dataspace>));
+  L4_INLINE_RPC(int, witter, (l4_uint64_t length, L4::Ipc::Cap<L4Re::Dataspace>));
   typedef L4::Typeid::Rpcs<witter_t> Rpcs;
 };
 
@@ -14,8 +21,6 @@ public:
             printf("no data space capability received, sorry\n");
             return -L4_EINVAL;
         }
-        printf("stopping for now, ToDo\n");
-        return 0;
         int err;
 
         L4::Cap<L4Re::Dataspace> ds_cap = server_iface()->rcv_cap<L4Re::Dataspace>(0);
@@ -27,8 +32,11 @@ public:
         // reserve area to allow attaching a data space; flags = 0 must be set
 
         if ((err = L4Re::Env::env()->rm()->attach(&virt_addr, size_in_bytes,
-                        L4Re::Rm::Search_addr, ds_cap)) < 0)
+                        L4Re::Rm::Search_addr, ds_cap)) < 0) {
+            printf("error while attaching 0x%x bytes from cap idx 0x%x: %d\n",
+                    size_in_bytes, ds_cap.cap(), err);
             return err;
+        }
 
         printf("Received %s\n", (char *)virt_addr);
         L4Re::Env::env()->rm()->detach(virt_addr, &ds_cap);
@@ -38,19 +46,18 @@ public:
 
 
 int main() {
-    static EchoServer echo;
+    static WitterServer witter_srv;
 
     // Register echo server
-    if (!server.registry()->register_obj(&echo, "echo_server").is_valid()) {
-        printf("Could not register my service, is there a 'echo_server' in the caps table?\n");
+    if (!server.registry()->register_obj(&witter_srv, "channel").is_valid()) {
+        printf("Could not register my service, is there a 'witter_server' in the caps table?\n");
         return 1;
     }
 
-    printf("Welcome to the echo server.\nSend me, whatever you'd like seeing echoed.\n");
+    printf("Start wittering here, I'll echo it right back.\n");
 
     // Wait for client requests
     server.loop();
-
     return 0;
 }
 

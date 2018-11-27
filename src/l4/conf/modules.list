@@ -92,14 +92,14 @@ module ox_rcalc-server.conf
 module ex_clntsrv-client
 module ox_rcalc-server
 
-entry shm_c
+entry shm_rust-mixed
 kernel fiasco -serial_esc
-roottask moe rom/shm_c.cfg
+roottask moe rom/shm_rust.cfg
 module l4re
 module ned
-module shm_c.cfg
-module shm_c-client
-module shm_c-server
+module shm_rust.cfg
+module shm_rust-client
+module shm_rust-server
 
 entry syint
 roottask moe rom/syint.cfg

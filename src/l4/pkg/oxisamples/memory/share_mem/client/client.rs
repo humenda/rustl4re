@@ -1,10 +1,16 @@
-extern crate l4_sys as l4;
+extern crate l4_sys;
+#[macro_use]
+extern crate l4;
 extern crate l4re_sys as l4re;
 extern crate libc; // only for C type definitions
 
-use l4::{l4_cap_idx_t, l4_utcb,
+use l4_sys::{l4_cap_idx_t, l4_utcb,
     L4_fpage_rights::L4_FPAGE_RWX,
     l4_msg_item_consts_t::L4_ITEM_MAP,
+};
+use l4::{
+    cap::SendFpage,
+    utcb::Msg,
 };
 use l4re::l4re_rm_flags_t;
 use std::{thread, time};
@@ -14,17 +20,17 @@ use libc::c_void;
 unsafe fn allocate_ds(size_in_bytes: usize)
         -> Result<(*mut c_void, l4_cap_idx_t), String> {
     // allocate ds capability slot
-    let ds = l4::l4re_util_cap_alloc();
-    if l4::l4_is_invalid_cap(ds) {
+    let ds = l4_sys::l4re_util_cap_alloc();
+    if l4_sys::l4_is_invalid_cap(ds) {
         return Err("Unable to acquire capability slot for l4re".into());
     }
     /*
     match l4re::l4re_ds_allocate(ds, 0, size_in_bytes as u64) {
         0 => (),
-        n if n == -(l4::L4_ERANGE as i64) => panic!("Given range outside l4re"),
-        n if n == -(l4::L4_ENOMEM as i64) => panic!("Not enough memory available"),
+        n if n == -(l4_sys::L4_ERANGE as i64) => panic!("Given range outside l4re"),
+        n if n == -(l4_sys::L4_ENOMEM as i64) => panic!("Not enough memory available"),
         n => {
-            let n = l4::ipc_error2code(n as isize);
+            let n = l4_sys::ipc_error2code(n as isize);
             panic!("[err {}]: failed to allocate {:x} bytes for a dataspace with cap index {:x}",
                 n, size_in_bytes, ds);
         }
@@ -47,7 +53,7 @@ unsafe fn allocate_ds(size_in_bytes: usize)
     let mut virt_addr: *mut c_void = mem::uninitialized();
     let r = l4re::l4re_rm_attach(&mut virt_addr, size_in_bytes as u64,
               l4re_rm_flags_t::L4RE_RM_SEARCH_ADDR as u64, ds, 0,
-              l4::L4_PAGESHIFT as u8);
+              l4_sys::L4_PAGESHIFT as u8);
     if r > 0 { // error, free ds
         l4re::l4re_util_cap_free_um(ds);
         return Err(format!("Allocation failed with exit code {}", r));
@@ -68,18 +74,23 @@ unsafe fn free_ds(base: *mut c_void, ds: l4_cap_idx_t) -> Result<(), String> {
 
 unsafe fn send_cap(ds: l4_cap_idx_t, textlen: usize, dst: l4_cap_idx_t)
         -> Result<(), String> {
-    let mr = l4::l4_utcb_mr();
+    let mut msg = Msg::new(); // get access to the message registers
     println!("cap info: index {:x}, destination: {:x}, memory size: {:x}",
              ds, dst, textlen);
+    msg.write(0u64).unwrap(); // OpCode
+    // msg.write(0u64);
     // if flex pages and data words are sent, flex pages need to be the last
     // items
-    (*mr).mr[0] = textlen as u64;
+    msg.write(textlen as u64).unwrap();
     // sending a capability requires to registers, one containing the action,
     // the other the flexpage
-    (*mr).mr[1] = L4_ITEM_MAP as u64;
-    (*mr).mr[2] = l4::l4_obj_fpage(ds, 0, L4_FPAGE_RWX as u8).raw;
-    match l4::l4_ipc_error(l4::l4_ipc_call(dst, l4_utcb(),
-            l4::l4_msgtag(0, 1, 1, 0), l4::l4_timeout_t { raw: 0 }), l4_utcb()) {
+    // ToDo: use Cap interface when passing to function
+    let rfp = SendFpage::new(l4_sys::l4_obj_fpage(ds, 0, L4_FPAGE_RWX as
+                  u8).raw,
+          0, None);
+    msg.write(rfp).unwrap();
+    match l4_sys::l4_ipc_error(l4_sys::l4_ipc_call(dst, l4_utcb(),
+            l4_sys::l4_msgtag(0x44, 2, 1, 0), l4_sys::l4_timeout_t { raw: 0 }), l4_utcb()) {
         0 => Ok(()),
         n => Err(format!("IPC error while sending capability: {}", n)),
     }
@@ -94,7 +105,7 @@ pub fn main() {
 unsafe fn unsafe_main() {
     let server = l4re::l4re_env_get_cap("channel")
             .expect("Received invalid capability");
-    if l4::l4_is_invalid_cap(server) {
+    if l4_sys::l4_is_invalid_cap(server) {
         panic!("No IPC Gate found.");
     }
 
