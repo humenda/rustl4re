@@ -1,6 +1,6 @@
 //! IPC Interface Types
 
-use core::{
+use _core::{
     default::Default,
     ops::{Deref, DerefMut},
     marker::PhantomData
@@ -13,7 +13,7 @@ use super::super::{
 };
 
 /// opcode redefinition, shall be more flexible in the future
-pub type OpCode = i32;
+pub type OpCode = u64;
 
 /// compile-time specification of an opcode for a type
 ///

@@ -196,4 +196,4 @@ impl Error {
     }
 }
 
-pub type Result<T> = ::core::result::Result<T, Error>;
+pub type Result<T> = ::_core::result::Result<T, Error>;

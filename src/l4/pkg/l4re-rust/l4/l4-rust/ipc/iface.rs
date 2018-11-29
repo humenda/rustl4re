@@ -1,10 +1,11 @@
 #[macro_export]
 macro_rules! write_msg {
-    ($funcstruct:ty, $msg_mr:expr, $($arg:expr),*) => {
+    ($funcstruct:ty, $msg_mr:expr, $($arg:ident: $argty:ty),*) => {
         {
             unsafe {
                 $(
-                    $msg_mr.write($arg)?;
+                    <$argty as $crate::utcb::Serialisable>::write(
+                            $msg_mr, $arg)?;
                  )*
             }
             Ok(())
@@ -64,10 +65,9 @@ macro_rules! rpc_func_impl {
 
         impl $name {
             #[inline]
-            #[allow(unused_function)]
             pub fn new() -> $name {
                 $name($crate::ipc::types::Sender(
-                        ::core::marker::PhantomData))
+                        $crate::_core::marker::PhantomData))
             }
         }
     }
@@ -135,14 +135,15 @@ macro_rules! derive_ipc_struct {
                         mr.write(<$iface::$name as $crate::ipc::types::HasOpCode>
                                  ::OP_CODE)?;
                     }
-                    write_msg!($iface::$name, mr, $($argname),*)?;
+                    write_msg!($iface::$name, &mut mr, $($argname: $type),*)?;
                     // get the protocol for the msg tag label
                     let proto = <Self as
                             $crate::ipc::types::HasProtocol>::PROTOCOL_ID;
-                    let tag = $crate::ipc::MsgTag::new(proto, mr.words(), 0, 0);
+                    let tag = $crate::ipc::MsgTag::new(proto, mr.words(),
+                            mr.items(), 0);
                     // IPC — ToDo: no flags, no buffer register items transfered, restag hence
                     // unused
-                    let restag = $crate::ipc::MsgTag::from(unsafe {
+                    let _restag = $crate::ipc::MsgTag::from(unsafe {
                             ::l4_sys::l4_ipc_call(self.cap,
                                     ::l4_sys::l4_utcb(), tag.raw(),
                                     ::l4_sys::timeout_never())
@@ -324,27 +325,36 @@ iface! {
         const PROTOCOL_ID: i64 = 0xdeadbeef;
         fn do_something(&mut self, i: i32) -> u8;
         fn do_something_else(&mut self, u: u64) -> ();
-        fn signal(&mut self, i: u32);
+        fn signal(&mut self);
     }
 }
 */
 
 /*
-mod echoserver {
-    use super::super::types::*; // need to do it here manually
-    use core::marker::PhantomData;
+mod test_impl {
+    use ::utcb::FlexPage;
+    mod echoserver {
+        use ::utcb::FlexPage;
+        pub trait EchoServer {
+            const PROTOCOL_ID: i64 = 0xcafebabe;
+            fn do_something(&mut self, i: i32, a: i64) -> i32;
+            fn do_something_else(&mut self, u: u64) -> u64;
+            fn send_cap(&mut self, c: FlexPage) -> ();
+        }
 
-    pub trait EchoServer {
-        fn do_something(&mut self, i: i32, a: i64) -> i32;
-        fn do_something_else(&mut self, u: u64) -> u64;
+        derive_functors!(0; do_something(i32, i64) -> i32;
+                         do_something_else(u64) -> u64;
+                         send_cap(FlexPage) -> ());
     }
 
-    derive_functors!(0; do_something(i32, i64) -> i32; do_something_else(u64) -> u64);
-}
-
-derive_ipc_struct! {
-    iface EchoServer(echoserver):
-    do_something(i: i32, b: i64) -> ();
-    do_something_else(u: u64) -> u8;
+    derive_ipc_struct! {
+        iface EchoServer(echoserver):
+            do_something(i: i32, b: i64) -> ();
+        do_something_else(u: u64) -> u8;
+        send_cap(c: FlexPage) -> ();
+    }
+    impl<T> ::ipc::types::HasProtocol for EchoServer<T> {
+        const PROTOCOL_ID: i64 = 0xcafebabe;
+    }
 }
 */

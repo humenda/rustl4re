@@ -6,16 +6,24 @@ extern crate libc; // only for C type definitions
 
 use l4_sys::{l4_cap_idx_t, l4_utcb,
     L4_fpage_rights::L4_FPAGE_RWX,
-    l4_msg_item_consts_t::L4_ITEM_MAP,
 };
 use l4::{
-    cap::SendFpage,
-    utcb::Msg,
+    cap,
+    utcb::{FlexPage, FpageRights, Msg},
 };
 use l4re::l4re_rm_flags_t;
 use std::{thread, time};
 use std::mem;
 use libc::c_void;
+
+iface! {
+    mod shm;
+
+    trait Shm {
+        const PROTOCOL_ID: i64 = 0x44;
+        fn witter(&mut self, length: u64, ds: ::l4::utcb::FlexPage) -> bool;
+    }
+}
 
 unsafe fn allocate_ds(size_in_bytes: usize)
         -> Result<(*mut c_void, l4_cap_idx_t), String> {
@@ -74,6 +82,12 @@ unsafe fn free_ds(base: *mut c_void, ds: l4_cap_idx_t) -> Result<(), String> {
 
 unsafe fn send_cap(ds: l4_cap_idx_t, textlen: usize, dst: l4_cap_idx_t)
         -> Result<(), String> {
+    let mut witter = Shm::client(dst);
+    witter.witter(textlen as u64,
+            FlexPage::from_cap(cap::from(ds), FpageRights::RWX, None))
+        .map_err(|e| format!("err: {:?}", e))?;
+    Ok(())
+    /*
     let mut msg = Msg::new(); // get access to the message registers
     println!("cap info: index {:x}, destination: {:x}, memory size: {:x}",
              ds, dst, textlen);
@@ -85,7 +99,7 @@ unsafe fn send_cap(ds: l4_cap_idx_t, textlen: usize, dst: l4_cap_idx_t)
     // sending a capability requires to registers, one containing the action,
     // the other the flexpage
     // ToDo: use Cap interface when passing to function
-    let rfp = SendFpage::new(l4_sys::l4_obj_fpage(ds, 0, L4_FPAGE_RWX as
+    let rfp = FlexPage::new(l4_sys::l4_obj_fpage(ds, 0, L4_FPAGE_RWX as
                   u8).raw,
           0, None);
     msg.write(rfp).unwrap();
@@ -94,6 +108,7 @@ unsafe fn send_cap(ds: l4_cap_idx_t, textlen: usize, dst: l4_cap_idx_t)
         0 => Ok(()),
         n => Err(format!("IPC error while sending capability: {}", n)),
     }
+    */
 }
 
 pub fn main() {
@@ -117,6 +132,7 @@ unsafe fn unsafe_main() {
     let (base, ds) = allocate_ds(size_in_bytes as usize).unwrap();
     let byteslice = text.as_bytes();
     byteslice.as_ptr().copy_to(base as *mut u8, byteslice.len());
+    *(base as *mut u8).offset(byteslice.len() as isize) = 0u8; // add 0-byte
     println!("allocated {:x} B for a string with {:x} B, sending capability",
             size_in_bytes, byteslice.len());
 
