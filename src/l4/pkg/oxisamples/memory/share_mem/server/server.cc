@@ -12,6 +12,22 @@ struct Witter: L4::Kobject_t<Witter, L4::Kobject, 0x44, L4::Type_info::Demand_t<
 };
 
 static L4Re::Util::Registry_server<L4Re::Util::Br_manager_hooks> server;
+void printBits(size_t const size, void const * const ptr)
+{
+    unsigned char *b = (unsigned char*) ptr;
+    unsigned char byte;
+    int i, j;
+
+    for (i=size-1;i>=0;i--)
+    {
+        for (j=7;j>=0;j--)
+        {
+            byte = (b[i] >> j) & 1;
+            printf("%u", byte);
+        }
+    }
+    puts("");
+}
 
 class WitterServer: public L4::Epiface_t<WitterServer, Witter> {
 public:
@@ -21,8 +37,10 @@ public:
             printf("no data space capability received, sorry\n");
             return -L4_EINVAL;
         }
-        int err;
+        auto mr = l4_utcb_mr();
+        printBits(sizeof(l4_uint64_t), &mr->mr[1]);
 
+        int err;
         L4::Cap<L4Re::Dataspace> ds_cap = server_iface()->rcv_cap<L4Re::Dataspace>(0);
         if (!ds_cap.is_valid()) {
             printf("invalid data space capability\n");

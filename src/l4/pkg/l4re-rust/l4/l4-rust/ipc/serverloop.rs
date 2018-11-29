@@ -34,7 +34,7 @@ pub trait LoopHook {
     /// The returned action directly influences the execution of the loop, see the documentation of
     /// [LoopAction](enum.LoopAction.html).
     fn ipc_error(&mut self, _: &mut Loop<Self>, tag: MsgTag) -> LoopAction
-            where Self: ::core::marker::Sized {
+            where Self: ::_core::marker::Sized {
         match tag.result() {
             Ok(_) => unreachable!(),
             Err(e) => LoopAction::ReplyAndWait(MsgTag::new(match e {
@@ -50,7 +50,7 @@ pub trait LoopHook {
 
     // ToDo: docs + rethink Dispatch trait and LoopHook interface to take **any** error interace
     fn application_error(&mut self, _: &mut Loop<Self>, e: Error) -> LoopAction
-            where Self: ::core::marker::Sized {
+            where Self: ::_core::marker::Sized {
         LoopAction::ReplyAndWait(MsgTag::new(match e {
                     Error::Generic(e) => e as i64,
                     Error::Tcr(e) => e as i64,

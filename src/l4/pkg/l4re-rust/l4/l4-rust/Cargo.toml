@@ -21,3 +21,6 @@ default-features = false
 [dependencies.num-derive]
 version = "0.2"
 default-features = false
+
+[features]
+default = []

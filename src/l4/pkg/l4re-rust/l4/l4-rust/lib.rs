@@ -3,6 +3,7 @@
 #![feature(alloc)]
 // ToDo: ^ stable Rust
 
+pub extern crate core as _core;
 extern crate alloc;
 
 extern crate l4_sys;
