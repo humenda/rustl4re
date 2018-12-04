@@ -13,7 +13,7 @@ use super::super::{
 };
 
 /// opcode redefinition, shall be more flexible in the future
-pub type OpCode = u64;
+pub type OpCode = i32;
 
 /// compile-time specification of an opcode for a type
 ///

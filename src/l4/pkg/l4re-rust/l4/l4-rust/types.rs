@@ -17,7 +17,7 @@ macro_rules! enumgenerator {
      }) => {
         #[allow(non_snake_case)]
         $(#[$global])*
-        #[derive(FromPrimitive, ToPrimitive, Debug)]
+        #[derive(Eq, FromPrimitive, PartialEq, ToPrimitive, Debug)]
         pub enum $enum_name {
             $($(#[$docs])*
               $new = $orig as isize,)+
