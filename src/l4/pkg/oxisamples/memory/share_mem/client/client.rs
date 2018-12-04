@@ -4,12 +4,10 @@ extern crate l4;
 extern crate l4re_sys as l4re;
 extern crate libc; // only for C type definitions
 
-use l4_sys::{l4_cap_idx_t, l4_utcb,
-    L4_fpage_rights::L4_FPAGE_RWX,
-};
+use l4_sys::l4_cap_idx_t;
 use l4::{
     cap,
-    utcb::{FlexPage, FpageRights, Msg},
+    utcb::{FlexPage, FpageRights},
 };
 use l4re::l4re_rm_flags_t;
 use std::{thread, time};
@@ -21,10 +19,11 @@ iface! {
 
     trait Shm {
         const PROTOCOL_ID: i64 = 0x44;
-        fn witter(&mut self, length: u64, ds: ::l4::utcb::FlexPage) -> bool;
+        fn witter(&mut self, length: u32, ds: ::l4::utcb::FlexPage) -> bool;
     }
 }
 
+// C-style dataspace allocation
 unsafe fn allocate_ds(size_in_bytes: usize)
         -> Result<(*mut c_void, l4_cap_idx_t), String> {
     // allocate ds capability slot
@@ -80,37 +79,6 @@ unsafe fn free_ds(base: *mut c_void, ds: l4_cap_idx_t) -> Result<(), String> {
     Ok(())
 }
 
-unsafe fn send_cap(ds: l4_cap_idx_t, textlen: usize, dst: l4_cap_idx_t)
-        -> Result<(), String> {
-    let mut witter = Shm::client(dst);
-    witter.witter(textlen as u64,
-            FlexPage::from_cap(cap::from(ds), FpageRights::RWX, None))
-        .map_err(|e| format!("err: {:?}", e))?;
-    Ok(())
-    /*
-    let mut msg = Msg::new(); // get access to the message registers
-    println!("cap info: index {:x}, destination: {:x}, memory size: {:x}",
-             ds, dst, textlen);
-    msg.write(0u64).unwrap(); // OpCode
-    // msg.write(0u64);
-    // if flex pages and data words are sent, flex pages need to be the last
-    // items
-    msg.write(textlen as u64).unwrap();
-    // sending a capability requires to registers, one containing the action,
-    // the other the flexpage
-    // ToDo: use Cap interface when passing to function
-    let rfp = FlexPage::new(l4_sys::l4_obj_fpage(ds, 0, L4_FPAGE_RWX as
-                  u8).raw,
-          0, None);
-    msg.write(rfp).unwrap();
-    match l4_sys::l4_ipc_error(l4_sys::l4_ipc_call(dst, l4_utcb(),
-            l4_sys::l4_msgtag(0x44, 2, 1, 0), l4_sys::l4_timeout_t { raw: 0 }), l4_utcb()) {
-        0 => Ok(()),
-        n => Err(format!("IPC error while sending capability: {}", n)),
-    }
-    */
-}
-
 pub fn main() {
     unsafe {
         unsafe_main();
@@ -128,15 +96,20 @@ unsafe fn unsafe_main() {
         s.push_str("Lots of text. ");
         s
     });
-    let size_in_bytes = l4re::l4_round_page(text.as_bytes().len());
-    let (base, ds) = allocate_ds(size_in_bytes as usize).unwrap();
     let byteslice = text.as_bytes();
+    let size_in_bytes = l4re::l4_round_page(text.as_bytes().len() + 1);
+    let (base, ds) = allocate_ds(size_in_bytes as usize).unwrap();
     byteslice.as_ptr().copy_to(base as *mut u8, byteslice.len());
     *(base as *mut u8).offset(byteslice.len() as isize) = 0u8; // add 0-byte
     println!("allocated {:x} B for a string with {:x} B, sending capability",
             size_in_bytes, byteslice.len());
 
-    send_cap(ds, byteslice.len(), server).unwrap();
+    // send blah blah using the generated client implementation
+    let mut witter = Shm::client(server);
+    witter.witter(byteslice.len() as u32 + 1,
+            FlexPage::from_cap(cap::from(ds), FpageRights::RWX, None))
+        .unwrap();
+
     free_ds(base, ds).unwrap();
     println!("sending successful");
     thread::sleep(time::Duration::new(2, 0));
