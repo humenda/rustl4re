@@ -1,8 +1,8 @@
-use l4_sys::l4_fpage_t;
-
 extern "C" {
     pub fn write_long_float_bool() -> *mut u8;
     pub fn write_bool_long_float() -> *mut u8;
+    pub fn write_u64_u32_u64() -> *mut u8;
+    pub fn write_u32_and_fpage() -> *mut u8;
 }
 
 mod private {
