@@ -42,17 +42,29 @@ macro_rules! tests {
 
 
 macro_rules! assert_eq {
-    ($first:expr, $second:expr) => {
+    ($first:expr, $second:expr, $reason:expr) => {
         let _ = match $first == $second {
             true => Ok::<(), String>(()),
-            false => return Err(format!("{} != {} on {}:{}", $first, $second,
-                                        file!(), line!())),
+            false => return Err(format!("{:?} != {:?} on {}:{}{}", $first, $second,
+                                        file!(), line!(),
+                                        match $reason.len() {
+                                            0 => format!(""),
+                                            _ => format!("\n    {}", $reason),
+                                        })),
         };
+    };
+
+    ($first:expr, $second:expr) => {
+        assert_eq!($first, $second, "");
     }
 }
 
 macro_rules! assert_true {
+    ($condition:expr, $reason:expr) => {
+        assert_eq!($condition, true, $reason);
+    };
+
     ($condition:expr) => {
-        assert_eq!($condition, true);
+        assert_eq!($condition, true, "");
     }
 }

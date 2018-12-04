@@ -1,6 +1,4 @@
-use l4::{
-    cap::{FpageRights, MapType, SendFpage},
-    utcb::*};
+use l4::utcb::*;
 use std::mem::transmute;
 
 use helpers::MsgMrFake;
@@ -65,6 +63,45 @@ tests! {
         }
     }
 
+    fn serialisation_of_bool_long_float_works() {
+        let mut mr = MsgMrFake::new();
+        let mut msg = unsafe {
+            Msg::from_raw_mr(mr.mut_ptr())
+        };
+        unsafe {
+            msg.write(true).expect("ToDo");
+            msg.write(987654u64).expect("Writing failed");
+            msg.write(3.14f32).expect("ToDo");
+        }
+
+        unsafe {
+            let c_res = transmute::<*mut u8, *mut u64>(write_bool_long_float());
+            assert_eq!(*c_res, mr.get(0));
+            assert_eq!(*c_res.offset(1), mr.get(1));
+            assert_eq!(*c_res.offset(2), mr.get(2));
+        }
+    }
+
+    fn serialisation_of_u64_u32_u64_works() {
+        let mut mr = MsgMrFake::new();
+        let mut msg = unsafe {
+            Msg::from_raw_mr(mr.mut_ptr())
+        };
+        unsafe {
+            msg.write(42u64).unwrap();
+            msg.write(1337u32).expect("Writing failed");
+            msg.write(42u64).unwrap();
+        }
+
+        unsafe {
+            let c_res = transmute::<*mut u8, *mut u64>(write_u64_u32_u64());
+            assert_eq!(*c_res, mr.get(0));
+            assert_eq!(*c_res.offset(1), mr.get(1));
+            assert_eq!(*c_res.offset(2), mr.get(2));
+            assert_eq!(*c_res.offset(3), 0);
+        }
+    }
+
     fn write_fpage_type_works() {
         let mut mr = MsgMrFake::new();
         let mut msg = unsafe {
@@ -78,11 +115,36 @@ tests! {
             let c_mapopts = mr.get(0);
             let c_fpage = mr.get(1);
             // write the Rust version
-            let rfp = SendFpage::new(fp.raw, 0, None);
+            let rfp = FlexPage::new(fp.raw, 0, None);
             msg.reset();
-            SendFpage::write(&mut msg, rfp).unwrap();
+            FlexPage::write(&mut msg, rfp).unwrap();
             assert_eq!(mr.get(0), c_mapopts);
             assert_eq!(mr.get(1), c_fpage);
+        }
+    }
+
+    fn serialising_u32_and_fpage_works_as_in_cc() {
+        let mut mr = MsgMrFake::new();
+        let mut msg = unsafe {
+            Msg::from_raw_mr(mr.mut_ptr())
+        };
+        // write fpage with the C++ serialisation framework methods
+        unsafe {
+            let c_side = transmute::<*mut u8, *mut u64>(write_u32_and_fpage());
+            let fp = ::l4_sys::l4_obj_fpage(0xcafebabe, 0,
+                                        FpageRights::RWX.bits() as u8);
+            // write the Rust version
+            msg.write(314u32);
+            let rfp = FlexPage::new(fp.raw, 0, None);
+            // must be written from the flex page to track it as item, not as word (see UTCB
+            // terminologie)
+            FlexPage::write(&mut msg, rfp).unwrap();
+
+            assert_eq!(*c_side, mr.get(0));
+            assert_eq!(*(c_side.offset(1)), mr.get(1));
+            assert_eq!(*(c_side.offset(2)), mr.get(2));
+            assert_eq!(msg.words(), 1);
+            assert_eq!(msg.items(), 1);
         }
     }
 

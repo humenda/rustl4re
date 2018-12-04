@@ -39,6 +39,7 @@ macro_rules! call_mod_tests {
 }
 
 call_mod_tests! {
+    mod ipc;
     mod l4sys;
     mod utcb;
 }
