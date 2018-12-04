@@ -128,7 +128,7 @@ impl TcrErr {
     }
 }
 
-#[derive(Debug)]
+#[derive(Eq, PartialEq, Debug)]
 pub enum Error {
     /// Generic Error Codes
     Generic(GenericErr),
@@ -161,7 +161,7 @@ impl Error {
     #[inline]
     pub fn from_tag_u(tag: l4_msgtag_t, utcb: &Utcb) -> Self {
          match TcrErr::from_tag_u(tag, utcb) {
-             Ok(tc) => Error::Tcr(tc),
+             Ok(e) => Error::Tcr(e),
              Err(e) => e,
          }
     }

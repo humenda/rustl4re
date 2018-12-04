@@ -33,6 +33,12 @@ impl Interface for Untyped {
     }
 }
 
+impl IfaceInit for Untyped {
+    fn new(parent: CapIdx) -> Self {
+        Untyped(parent)
+    }
+}
+
 /// Representation of a L4 Fiasco capability
 ///
 /// This types safely wraps the interaction with capabilities and allows for easy comparison of
