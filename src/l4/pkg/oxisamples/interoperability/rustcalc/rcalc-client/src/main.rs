@@ -1,6 +1,6 @@
 extern crate core;
 extern crate l4_sys;
-extern crate l4re_sys;
+extern crate l4re;
 #[macro_use]
 extern crate l4;
 
@@ -15,7 +15,7 @@ iface! {
 
 fn main() {
     println!("Calculation client starting…");
-    let chan = l4re_sys::l4re_env_get_cap("calc_server").expect(
+    let chan = l4re::sys::l4re_env_get_cap("calc_server").expect(
             "Received invalid capability for calculation server.");
     println!("Trying to contact server");
     let mut client = Calc::client(chan);
