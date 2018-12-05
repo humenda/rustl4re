@@ -1,4 +1,4 @@
-#include <l4/l4re-rust/mem.h>
+#include <l4/l4rust/mem.h>
 #include <l4/re/c/mem_alloc.h>
 #include <l4/re/c/rm.h>
 

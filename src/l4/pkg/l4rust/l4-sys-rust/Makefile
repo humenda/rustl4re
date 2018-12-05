@@ -1,5 +1,5 @@
 PKGDIR ?= .
-L4DIR  ?= $(PKGDIR)/../../../..
+L4DIR  ?= $(PKGDIR)/../../..
 
 TARGET  		= libl4_sys-rust.rlib
 SRC_RS   		= lib.rs
