@@ -1,12 +1,12 @@
 extern crate l4_sys as l4;
-extern crate l4re_sys as l4re;
+extern crate l4re;
 
 use l4::{l4_utcb, l4_msgtag};
 use std::{thread, time};
 
 pub fn main() {
     // retrieve IPC gate from Ned (created in the *.cfg script file
-    let server = l4re::l4re_env_get_cap("channel").unwrap();
+    let server = l4re::sys::l4re_env_get_cap("channel").unwrap();
     // test whether valid cap received
     if l4::l4_is_invalid_cap(server) {
         panic!("No IPC Gate found.");

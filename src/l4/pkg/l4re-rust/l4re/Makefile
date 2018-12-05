@@ -1,8 +1,7 @@
-PKGDIR	= ..
-L4DIR	?= $(PKGDIR)/../..
+PKGDIR	= .
+L4DIR	?= $(PKGDIR)/../../..
 
-TARGET = l4re-rust l4re-sys-rust
-
-l4re-rust: l4re-sys-rust
+TARGET = l4re-rust
 
 include $(L4DIR)/mk/subdir.mk
+

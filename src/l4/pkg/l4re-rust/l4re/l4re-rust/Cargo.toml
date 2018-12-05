@@ -1,5 +1,5 @@
 [package]
-name = "l4re_sys"
+name = "l4re"
 version = "0.1.0"
 authors = ["Sebastian Humenda <shumenda @ gmx . de>"]
 
@@ -11,3 +11,6 @@ bindgen = "0.43.1"
 
 [dependencies]
 libc = "0.2.43"
+
+[features]
+default = []

@@ -1,6 +1,6 @@
 extern crate core;
 extern crate l4_sys;
-extern crate l4re_sys;
+extern crate l4re;
 #[macro_use]
 extern crate l4;
 
@@ -31,12 +31,12 @@ impl calc::Calc for CalcServer {
 
 fn main() {
     println!("Calculation server starting…");
-    let chan = l4re_sys::l4re_env_get_cap("calc_server").expect(
+    let chan = l4re::sys::l4re_env_get_cap("calc_server").expect(
             "Received invalid capability for calculation server.");
     let srv_impl = Calc::from_impl(chan, CalcServer { });
     let mut srv_loop = unsafe {
         ipc::Loop::new_at(
-        (*l4re_sys::l4re_env()).main_thread, l4_utcb())
+        (*l4re::sys::l4re_env()).main_thread, l4_utcb())
     };
     srv_loop.register(chan, srv_impl).expect("Failed to register server in loop");
     println!("Waiting for incoming connections");
