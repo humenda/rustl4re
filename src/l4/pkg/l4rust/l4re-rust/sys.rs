@@ -23,6 +23,7 @@ pub unsafe fn l4re_env() -> *const l4re_env_t {
 /// Each appplication comes with a set of capabilities predefined by its
 /// environment (parent). This function can query for the capability selector
 /// by the given name, returning None if no such  name was found.
+/// It is advised to use l4re::env::get_cap instead.
 #[inline]
 pub fn l4re_env_get_cap(name: &str) -> Option<l4_cap_idx_t> {
     unsafe {

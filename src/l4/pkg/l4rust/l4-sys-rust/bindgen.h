@@ -10,6 +10,6 @@
 #include <pthread-l4.h>
 
 // custom wrapper to make inlined C functions visible
-#include <l4/l4re-rust/ipc.h>
-#include <l4/l4re-rust/env.h>
+#include <l4/l4rust/ipc.h>
+#include <l4/l4rust/env.h>
 

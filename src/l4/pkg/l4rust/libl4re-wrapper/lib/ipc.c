@@ -1,6 +1,6 @@
 #include <pthread-l4.h>
 #include <l4/sys/rcv_endpoint.h>
-#include <l4/l4re-rust/ipc.h>
+#include <l4/l4rust/ipc.h>
 
 EXTERN l4_msg_regs_t *l4_utcb_mr_w() {
     return l4_utcb_mr();

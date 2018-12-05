@@ -38,9 +38,9 @@ unsafe fn allocate_ds(size_in_bytes: usize)
     };
     let mut stats = l4re::sys::l4re_ds_stats_t { size: 0, flags: 0 };
     l4re::sys::l4re_ds_info(ds, &mut stats);
-    if (stats).size != l4re::sys::l4_round_page(size_in_bytes) as u64 {
+    if (stats).size != l4::l4_round_page(size_in_bytes) as u64 {
         panic!("memory allocation failed: got {:x}, required {:x}",
-                 stats.size, l4re::sys::l4_round_page(size_in_bytes));
+                 stats.size, l4::l4_round_page(size_in_bytes));
     }
 
     // attach to region map
@@ -102,7 +102,7 @@ unsafe fn unsafe_main() {
         s.push_str("Lots of text. ");
         s
     });
-    let size_in_bytes = l4re::sys::l4_round_page(text.as_bytes().len());
+    let size_in_bytes = l4::l4_round_page(text.as_bytes().len());
     let (base, ds) = allocate_ds(size_in_bytes as usize).unwrap();
     let byteslice = text.as_bytes();
     byteslice.as_ptr().copy_to(base as *mut u8, byteslice.len());

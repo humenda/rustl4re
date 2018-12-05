@@ -9,7 +9,8 @@ use l4::{
     cap,
     utcb::{FlexPage, FpageRights},
 };
-use l4re::sys::l4re_rm_flags_t;
+use l4re::{env,
+    sys::l4re_rm_flags_t};
 use std::{thread, time};
 use std::mem;
 use libc::c_void;
@@ -86,7 +87,7 @@ pub fn main() {
 }
 
 unsafe fn unsafe_main() {
-    let server = l4re::sys::l4re_env_get_cap("channel")
+    let server: cap::Cap<Witter> = env::get_cap("channel")
             .expect("Received invalid capability");
     if l4_sys::l4_is_invalid_cap(server) {
         panic!("No IPC Gate found.");
