@@ -1,5 +1,6 @@
 #![no_std]
 #![feature(align_offset)]
+#![feature(associated_type_defaults)]
 #![feature(alloc)]
 // ToDo: ^ stable Rust
 

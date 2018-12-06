@@ -87,7 +87,7 @@ pub fn main() {
 }
 
 unsafe fn unsafe_main() {
-    let server: cap::Cap<Witter> = env::get_cap("channel")
+    let server: cap::Cap<Shm> = env::get_cap("channel")
             .expect("Received invalid capability");
     if l4_sys::l4_is_invalid_cap(server) {
         panic!("No IPC Gate found.");
