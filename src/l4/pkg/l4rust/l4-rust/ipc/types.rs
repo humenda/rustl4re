@@ -12,9 +12,6 @@ use super::super::{
     utcb::{Msg, Serialisable}
 };
 
-/// opcode redefinition, shall be more flexible in the future
-pub type OpCode = i32;
-
 /// compile-time specification of an opcode for a type
 ///
 /// The operand code (opcode) is used to identify the message received and
