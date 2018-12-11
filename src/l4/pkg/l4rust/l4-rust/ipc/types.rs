@@ -11,41 +11,20 @@ use super::super::{
     ipc::MsgTag,
     utcb::{Msg, Serialisable}
 };
+use l4_sys::l4_utcb_t;
 
-/// compile-time specification of an opcode for a type
+/// IPC Dispatch Delegation Functionality
 ///
-/// The operand code (opcode) is used to identify the message received and
-/// defines to which server-provided handler it is dispatched.
-pub trait HasOpCode {
-    type OpType;
-    const OP_CODE: Self::OpType;
-}
-
-/// Protocol Identifier
-///
-/// Each protocol should have an idally unique identifier, used at the server
-/// side to distinguish between the IPC protocols available. It is transmitted
-/// within the label field of the message tag. This trait requires this protocol
-/// ID to be specified for an IPC interface.
-pub trait HasProtocol {
-    const PROTOCOL_ID: i64;
-}
-
-/// Opcode-based Function Dispatch
-/// 
-/// A type implementing this trait is able to read an opcode from the message registers and
-/// dispatch to the function implementation accordingly. This trait is independent from the actual
-/// method of function retrieval and just specifies that the type is able to dispatch.
+/// When implementing the server-side logic for an IPC service, the user needs
+/// to implement all required IPC functions and register it with the server
+/// loop. When a new message arrives, the user implementationneeds to dispatch
+/// the message to the correct IPC implementation. This dispatch information is
+/// auto-generated in the interface. Therefore this trait provides a default
+/// implementation to delegate the dispatching to the auto-derived interface
+/// definition, passing the actual arguments back to the user implementation,
+/// once read from the UTCB.
 pub trait Dispatch {
-    /// Dispatch message from client to the user-defined server implementation
-    ///
-    /// Using the operation code (opcode) for each IPC call  defined in an interface, the arguments
-    /// are read from the UTCB and fed into the user-supplied server implementation. Please note
-    /// that the opcode might have been defined automatically, if no arguments were supplied.
-    /// The result of the operation will be written back to the UTCB, errors are
-    /// propagated upward. If the operation was successful, the ready-to-use
-    /// message tag is returned.
-    fn dispatch(&mut self) -> Result<MsgTag>;
+    fn dispatch(&mut self, tag: MsgTag, u: *mut l4_utcb_t) -> Result<MsgTag>;
 }
 
 /// Define a function in a type and allow the derivation of the dual type

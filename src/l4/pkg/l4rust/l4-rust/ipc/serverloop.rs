@@ -79,7 +79,7 @@ pub struct Loop<Hooks: LoopHook> {
     /// UTCB reference
     pub utcb: *mut l4_utcb_t,
     /// List of registered server implementations
-    pub servers: Vec<Box<Dispatch>>,
+    //pub servers: Vec<Box<Dispatch>>,
     /// Loop hooks
     hooks: Option<Hooks>, // prevents double mut borrow
 }
@@ -99,7 +99,7 @@ impl Loop<DefaultHooks> {
         Loop {
             thread: thread,
             utcb: u,
-            servers: Vec::new(),
+            //servers: Vec::new(),
             hooks: Some(DefaultHooks { }),
         }
     }
@@ -111,12 +111,15 @@ impl<T: LoopHook> Loop<T> {
         Loop {
             thread: thread,
             utcb: u,
-            servers: Vec::new(),
+            //servers: Vec::new(),
             hooks: Some(h),
         }
     }
-    pub fn register<Imp>(&mut self, gate: CapIdx, inst: Imp) -> Result<()>
+    pub fn register<Imp>(&mut self, gate: CapIdx, inst: Imp)
+            -> Result<()>
             where Imp: Dispatch + 'static {
+        unimplemented!();
+        /*
         unsafe {
             // pass in vector index as label (ToDo: can I directly use the
             // address to the object in compliance with  the borrow checker?
@@ -126,6 +129,7 @@ impl<T: LoopHook> Loop<T> {
         }
         self.servers.push(Box::new(inst));
         Ok(())
+        */
     }
 
     /// Reply and wait operation
@@ -148,6 +152,8 @@ impl<T: LoopHook> Loop<T> {
     ///
     /// The function will panic if no server implementations were registered.
     pub fn start(&mut self) {
+        unimplemented!();
+        /*
         if self.servers.len() == 0 {
             panic!("Failed to start server loop, no server implementation(s) \
                     registered.");
@@ -176,9 +182,12 @@ impl<T: LoopHook> Loop<T> {
             server_id = tmp1;
             tag = tmp2;
         }
+        */
     }
 
     fn dispatch(&mut self, server_id: u64) -> LoopAction {
+        unimplemented!();
+        /*
         // ToDo: what if not from registered vector, what happens if sender unknown?
         let result = {
             let mut handler = unsafe {
@@ -191,6 +200,7 @@ impl<T: LoopHook> Loop<T> {
             Err(e) => borrow!(self.hooks.application_error(&mut self, e)),
             Ok(tag) => LoopAction::ReplyAndWait(tag),
         }
+        */
     }
 }
 

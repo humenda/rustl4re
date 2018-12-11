@@ -1,6 +1,7 @@
+// ToDo: write opcode here instead of in derive_ipc_calls
 #[macro_export]
 macro_rules! write_msg {
-    ($funcstruct:ty, $msg_mr:expr, $($arg:ident: $argty:ty),*) => {
+    ($msg_mr:expr, $($arg:ident: $argty:ty),*) => {
         {
             unsafe {
                 $(
@@ -96,309 +97,281 @@ macro_rules! derive_functors {
 /// Within a macro, it is impossible to separate the first element from a type list, hence this
 /// helper macro gets the head and yields the opcode type.
 #[macro_export]
-macro_rules! opcode {
-    ($iface:ident; $name:ident) => {
-        <$iface::$name as $crate::ipc::types::HasOpCode>::OpType
-    };
-    ($iface:ident; $name:ident, $($other_names:ident),*) => {
-        <$iface::$name as $crate::ipc::types::HasOpCode>::OpType
-    }
-}
 
 #[macro_export]
-macro_rules! derive_ipc_struct {
-    (iface $traitname:ident($iface:ident):
-     $($name:ident($($argname:ident: $type:ty),*) -> $return:ty;)*
+macro_rules! derive_ipc_calls {
+    ($proto:expr; $($opcode:expr =>
+       fn $name:ident($($argname:ident: $type:ty),*) -> $return:ty;)*
     ) => {
-        pub struct $traitname<T> {
-            cap: $crate::cap::CapIdx,
-            user_impl: T,
-            utcb: $crate::utcb::Utcb,
-        }
-
-        impl $traitname<$crate::ipc::types::Client> {
-            pub fn client(c: $crate::cap::CapIdx)
-                        -> $traitname<$crate::ipc::types::Client> {
-                $traitname {
-                    cap: c,
-                    user_impl: $crate::ipc::types::Client { },
-                    utcb: $crate::utcb::Utcb::current()
+        $(
+            fn $name(&mut self, $($argname: $type),*)
+                        -> $crate::error::Result<$return> {
+                            use $crate::cap::Interface;
+                let mut mr = $crate::utcb::Utcb::current().mr(); // ToDo: nailed to this thread
+                // write opcode
+                unsafe {
+                    mr.write($opcode)?;
+                }
+                write_msg!(&mut mr, $($argname: $type),*)?;
+                // get the protocol for the msg tag label
+                let tag = $crate::ipc::MsgTag::new($proto, mr.words(),
+                        mr.items(), 0);
+                // IPC — ToDo: no flags, no buffer register items transfered, restag hence
+                // unused
+                let _restag = $crate::ipc::MsgTag::from(unsafe {
+                        ::l4_sys::l4_ipc_call(self.cap(),
+                                ::l4_sys::l4_utcb(), tag.raw(),
+                                ::l4_sys::timeout_never())
+                    }).result()?;
+                mr.reset(); // read again from start of registers
+            // return () if "empty" return value, val otherwise
+                unsafe {
+                    <$return as $crate::utcb::Serialisable>::read(
+                            &mut mr)
                 }
             }
-
-            $(
-                pub fn $name(&mut self, $($argname: $type),*)
-                            -> $crate::error::Result<$return> {
-                    let mut mr = self.utcb.mr();
-                    // write opcode
-                    unsafe {
-                        mr.write(<$iface::$name as $crate::ipc::types::HasOpCode>
-                                 ::OP_CODE)?;
-                    }
-                    write_msg!($iface::$name, &mut mr, $($argname: $type),*)?;
-                    // get the protocol for the msg tag label
-                    let proto = <Self as
-                            $crate::ipc::types::HasProtocol>::PROTOCOL_ID;
-                    let tag = $crate::ipc::MsgTag::new(proto, mr.words(),
-                            mr.items(), 0);
-                    // IPC — ToDo: no flags, no buffer register items transfered, restag hence
-                    // unused
-                    let _restag = $crate::ipc::MsgTag::from(unsafe {
-                            ::l4_sys::l4_ipc_call(self.cap,
-                                    ::l4_sys::l4_utcb(), tag.raw(),
-                                    ::l4_sys::timeout_never())
-                        }).result()?;
-                    mr.reset(); // read again from start of registers
-                    // return () if "empty" return value, val otherwise
-                    unsafe {
-                        <$return as $crate::utcb::Serialisable>::read(
-                                &mut mr)
-                    }
-                }
-            )*
-        }
-
-        impl<T> $traitname<$crate::ipc::types::Server<T>> 
-                where T: $iface::$traitname {
-            // ToDo: docstring + provide _u version which also takes utcb; think of better way to
-            // create or receive capability
-            pub fn from_impl(cap: $crate::cap::CapIdx, user_impl: T)
-                    -> $traitname<$crate::ipc::types::Server<T>> {
-                $traitname {
-                    cap: cap,
-                    user_impl: $crate::ipc::types::Server::new(user_impl),
-                    utcb: $crate::utcb::Utcb::current(),
-                }
-            }
-        }
-
-//        impl<T: $iface::$traitname> $crate::ipc::types::Dispatch
-//                for $traitname<$crate::ipc::types::Server<T>> {
-//            fn dispatch(&mut self) ->
-//                    $crate::error::Result<$crate::ipc::MsgTag> {
-//                let mut msg_mr = self.utcb.mr();
-//                let opcode = unsafe {
-//                        msg_mr.read::<$iface::$traitname::OpType>()?
-//                };
-//                $(
-//                    if opcode == <$iface::$name as $crate::ipc::types::HasOpCode>
-//                                ::OP_CODE {
-//                        // ToDo: use result
-//                        unsafe {
-//                            // ToDo: use result -> use for reply
-//                            let user_ret = self.user_impl.$name(
-//                                    $(msg_mr.read::<$type>()?),*
-//                                );
-//                            msg_mr.reset();
-//                            msg_mr.write(user_ret);
-//                            // on return, label/protocol is 0 for success and a custom error code
-//                            // otherwise; negative means some IPC failure
-//                            return Ok($crate::ipc::MsgTag::new(0,
-//                                    msg_mr.words(), 0, 0));
-//                        }
-//                    }
-//                )*
-//                Err($crate::error::Error::InvalidArg("unknown opcode \
-//                        received", Some(opcode as isize)))
-//            }
-//        }
+        )*
     }
 }
 
 #[macro_export]
 macro_rules! iface_back {
     // ideal iface declaration with op codes
-    (mod $iface_name:ident;
-     trait $traitname:ident {
-         const PROTOCOL_ID: i64 = $proto:tt;
-         type OpType = $op_type:tt;
-         $(
-             $op_code:expr => fn $name:ident(&mut self, $($argname:ident: $argtype:ty),*) -> $ret:ty;
-         )*
-     }) => {
-        mod $iface_name {
-            pub trait $traitname: $crate::ipc::types::Dispatch {
-                type OpType = $op_type;
+    (
+        trait $traitname:ident {
+            const PROTOCOL_ID: i64 = $proto:tt;
+            type OpType = $op_type:tt;
             $(
-                fn $name(&mut self, $(argname: $argtype),*) -> $ret;
+                $op_code:expr => fn $name:ident(&mut self,
+                        $($argname:ident: $argtype:ty),*) -> $ret:ty;
+            )*
+        }
+        struct $structname:ident;
+    ) => {
+        pub trait $traitname {
+            type OpType = $op_type;
+            const PROTOCOL_ID: i64 = $proto;
+            $(
+                fn $name(&mut self, $($argname: $argtype),*)
+                        -> $crate::error::Result<$ret>;
             )*
 
-                fn dispatch(&mut self) ->
-                    $crate::error::Result<$crate::ipc::MsgTag> {
-                    let mut msg_mr = unsafe {
-                            $crate::utcb::Utcb::current().mr() // ToDo: allow UTCB spec
-                        };
-                    let opcode = unsafe { msg_mr.read::<$op_type>()? };
-                    $( // iterate over functions and op codes
-                    if opcode == $op_code {
-                        unsafe {
-                            let user_ret = self.$name(
-                                    $(msg_mr.read::<$argtype>()?),*
-                                );
-                            msg_mr.reset();
-                            msg_mr.write(user_ret);
-                            // on return, label/protocol is 0 for success and a custom error code
-                            // otherwise; negative means some IPC failure
-                            return Ok($crate::ipc::MsgTag::new(0,
-                                    msg_mr.words(), 0, 0));
-                        }
+            // ToDo: document why op_dispatch implemented here
+            fn op_dispatch(&mut self, tag: $crate::ipc::MsgTag,
+                    u: *mut ::l4_sys::l4_utcb_t)
+                    -> $crate::error::Result<$crate::ipc::MsgTag> {
+                let mut msg_mr = $crate::utcb::Utcb::from_utcb(u).mr();
+                // ToDo: check for correct protocol
+                let opcode = unsafe { msg_mr.read::<$op_type>()? };
+                $( // iterate over functions and op codes
+                if opcode == $op_code {
+                    unsafe {
+                        let user_ret = self.$name(
+                            $(msg_mr.read::<$argtype>()?),*
+                        )?;
+                        msg_mr.reset();
+                        msg_mr.write(user_ret)?;
+                        // on return, label/protocol is 0 for success and a custom error code
+                        // otherwise; negative means some IPC failure
+                        return Ok($crate::ipc::MsgTag::new(0,
+                                msg_mr.words(), 0, 0));
                     }
+                }
                 )*
                 Err($crate::error::Error::InvalidArg("unknown opcode \
                         received", Some(opcode as isize)))
-                }
             }
         }
-        derive_ipc_struct!(iface $traitname($iface_name):
-            $($name($($argname: $argtype),*) -> $ret;)*);
-        impl<T> $crate::ipc::types::HasProtocol for $traitname<T> {
-            const PROTOCOL_ID: i64 = $proto;
-        }
-    };
 
-    // entry point if no op code given
-    (mod $iface_name:ident;
-     trait $traitname:ident {
-         const PROTOCOL_ID: i64 = $proto:tt;
-         type OpType = $op_type:tt;
-         $(
-             fn $name:ident(&mut self, $($argname:ident: $argtype:ty),*) -> $ret:ty;
-         )*
-     }) => {
+        struct $structname($crate::cap::CapIdx);
+
+        // ToDo: proc macro derives for the two traits
+        impl $crate::cap::Interface for $structname {
+            unsafe fn cap(&self) -> $crate::cap::CapIdx {
+                self.0
+            }
+        }
+        impl $crate::cap::IfaceInit for $structname {
+            fn new(c: $crate::cap::CapIdx) -> $structname {
+                $structname(c)
+            }
+        }
+
+        impl $traitname for $structname {
+            derive_ipc_calls!($proto; $($op_code =>
+                    fn $name($($argname: $argtype),*) -> $ret;)*);
+        }
+    }
+}
+
+#[macro_export]
+macro_rules! iface_enumerate {
+    // match already enumerated interfaces and pass them directly through
+    (
+        trait $traitname:ident {
+            const PROTOCOL_ID: i64 = $proto:tt;
+            type OpType = $op_type:tt;
+            $(
+                $opcode:expr => fn $name:ident(&mut self, $($argname:ident: $argtype:ty),*) -> $ret:ty;
+            )*
+        }
+        struct $struct_name:ident;
+    ) => {
         iface_back! {
-            mod $iface_name;
             trait $traitname {
                 const PROTOCOL_ID: i64 = $proto;
                 type OpType = $op_type;
-                opcode = 0;
+                $(
+                    $opcode => fn $name(&mut self, $($argname: $argtype),*) -> $ret;
+                )*
+            }
+
+            struct $struct_name;
+        }
+    };
+
+    (// match unnumbered interface and start enumerating it
+        trait $traitname:ident {
+            const PROTOCOL_ID: i64 = $proto:tt;
+            type OpType = $op_type:tt;
+            $(
+                fn $name:ident(&mut self,
+                        $($argname:ident: $argtype:ty),*) -> $ret:ty;
+            )*
+        }
+        struct $struct_name:ident;
+     ) => {
+        iface_enumerate! {
+            trait $traitname {
+                const PROTOCOL_ID: i64 = $proto;
+                type OpType = $op_type;
+                current_opcode = 0;
                 {
                 $(
                     fn $name(&mut self, $($argname: $argtype),*) -> $ret;
                 )*
                 }
             }
+            struct $struct_name;
         }
     };
 
-    // match next unnumbered function
-    (mod $iface_name:ident;
-     trait $traitname:ident {
-         const PROTOCOL_ID: i64 = $proto:tt;
-         type OpType = $op_type:tt;
-         opcode = $count:expr;
-         { fn $name:ident(&mut self, $($argname:ident: $argtype:ty),*) -> $ret:ty;
-             $($unmatched:tt)*
-         }
-         $($matched:tt)*
-     }) => {
-        iface_back! {
-            mod $iface_name;
+    (// match next unnumbered function
+        trait $traitname:ident {
+            const PROTOCOL_ID: i64 = $proto:tt;
+            type OpType = $op_type:tt;
+            current_opcode = $count:expr;
+            { fn $name:ident(&mut self, $($argname:ident: $argtype:ty),*) -> $ret:ty;
+                $($unmatched:tt)*
+            }
+            $($matched:tt)*
+        }
+        struct $struct_name:ident;
+     ) => {
+        iface_enumerate! {
             trait $traitname {
                 const PROTOCOL_ID: i64 = $proto;
                 type OpType = $op_type;
-                opcode = $count + 1;
+                current_opcode = $count + 1;
                 { $($unmatched)* }
                 $($matched)*
                 $count => fn $name(&mut self, $($argname: $argtype),*) -> $ret;
             }
+            struct $struct_name;
         }
     };
 
-    // all functions were numbered, call the ideal case (see first matcher)
-    (mod $iface_name:ident;
-     trait $traitname:ident {
-         const PROTOCOL_ID: i64 = $proto:tt;
-         type OpType = $op_type:tt;
-         opcode = $count:expr;
-         { }
-         $($matched:tt)*
-     }) => {
+    (// all functions were numbered, call the ideal case (see first matcher)
+        trait $traitname:ident {
+            const PROTOCOL_ID: i64 = $proto:tt;
+            type OpType = $op_type:tt;
+            current_opcode = $count:expr;
+            { }
+            $($matched:tt)*
+        }
+        struct $struct_name:ident;
+    ) => {
         iface_back! {
-            mod $iface_name;
             trait $traitname {
                 const PROTOCOL_ID: i64 = $proto;
                 type OpType = $op_type;
                 $($matched)*
             }
+
+            struct $struct_name;
         }
     };
 }
 
 #[macro_export]
 macro_rules! iface {
-    // entry point, to be used by the end-user
-    (mod $iface_name:ident;
-     trait $traitname:ident {
-         const PROTOCOL_ID: i64 = $proto:tt;
-         $(
-             fn $name:ident(&mut self, $($argname:ident: $argtype:ty),*) $(-> $ret:ty)*;
-         )*
+    // entry point with optional opcode and return type
+    (trait $traitname:ident {
+        const PROTOCOL_ID: i64 = $proto:tt;
+        $(
+            $($opcode:expr =>)* fn $name:ident(&mut self, $($argname:ident: $argtype:ty),*) $(-> $ret:ty)*;
+        )*
     }) => {
-        iface! {
-            mod $iface_name;
+        $crate::iface! {
             trait $traitname {
                 const PROTOCOL_ID: i64 = $proto;
-                {$(
-                    fn $name($($argname: $argtype),*) $(-> $ret)*;
-                )*}
+                {
+                    fn foo(bar: i32, baz: i32) -> i32;
+                    /*$(
+                    $($opcode =>)* fn $name($($argname: $argtype),*) $(-> $ret)*;
+                )**/}
             }
         }
     };
 
     // matcher for when next IPC function has no ret type
-    (mod $iface_name:ident;
-     trait $traitname:ident {
+    (trait $traitname:ident {
          const PROTOCOL_ID: i64 = $proto:tt;
          {
-             fn $name:ident($($argname:ident: $argtype:ty),*);
+             $($opcode:expr =>)* fn $name:ident($($argname:ident: $argtype:ty),*);
              $($unexpanded:tt)*
          }
          $($expanded:tt)*
     }) => {
         iface! {
-            mod $iface_name;
             trait $traitname {
                 const PROTOCOL_ID: i64 = $proto;
                 { $($unexpanded)* }
                 $($expanded)*
-                fn $name($($argname: $argtype),*) -> ();
+                $($opcode:expr =>)* fn $name($($argname: $argtype),*) -> ();
             }
         }
     };
 
 
-    // matcher for when next IPC function has return type
-    (mod $iface_name:ident;
-     trait $traitname:ident {
-         const PROTOCOL_ID: i64 = $proto:tt;
-         {
-             fn $name:ident($($argname:ident: $argtype:ty),*) -> $ret:ty;
-             $($unexpanded:tt)*
-         }
-         $($expanded:tt)*
+    // match a function with return type
+    (trait $traitname:ident {
+        const PROTOCOL_ID: i64 = $proto:tt;
+        {
+            $($opcode:expr =>)* fn $name:ident($($argname:ident: $argtype:ty),*) -> $ret:ty;
+            $($unexpanded:tt)*
+        }
+        $($expanded:tt)*
     }) => {
         iface! {
-            mod $iface_name;
             trait $traitname {
                 const PROTOCOL_ID: i64 = $proto;
                 { $($unexpanded)* }
                 $($expanded)*
-                fn $name($($argname: $argtype),*) -> $ret;
+                $($opcode:expr =>)* fn $name($($argname: $argtype),*) -> $ret;
             }
         }
     };
 
     // match arm for completely expanded trait definition
-    (mod $iface_name:ident;
-     trait $traitname:ident {
-         const PROTOCOL_ID: i64 = $proto:tt;
-         { }
-         $(
-             fn $name:ident($($argname:ident: $argtype:ty),*) -> $ret:ty;
-         )*
+    (trait $traitname:ident {
+        const PROTOCOL_ID: i64 = $proto:tt;
+        { }
+        $(
+            $($opcode:expr =>)* fn $name:ident($($argname:ident: $argtype:ty),*) -> $ret:ty;
+        )*
     }) => {
-        iface_back! {
-            mod $iface_name;
+        iface_enumerate! {
             trait $traitname {
                 const PROTOCOL_ID: i64 = $proto;
                 type OpType = i32; // ToDo: oip code type is static *here*
@@ -409,11 +382,11 @@ macro_rules! iface {
         }
     };
 
-    ($(unexpanded:tt)*) => { compile_error!("ToDo, proper help message"); };
+    ($($unexpanded:tt)*) => { compile_error!("Invalid interface definition, please consult the documentation"); };
 }
 
+/*
 iface! {
-    mod echoserver;
     trait EchoServer {
         const PROTOCOL_ID: i64 = 0xdeadbeef;
         fn do_something(&mut self, i: i32) -> u8;
@@ -421,32 +394,15 @@ iface! {
         fn signal(&mut self, i: i32);
     }
 }
-
-/*
-mod test_impl {
-    use ::utcb::FlexPage;
-    mod echoserver {
-        use ::utcb::FlexPage;
-        pub trait EchoServer {
-            const PROTOCOL_ID: i64 = 0xcafebabe;
-            fn do_something(&mut self, i: i32, a: i64) -> i32;
-            fn do_something_else(&mut self, u: u64) -> u64;
-            fn send_cap(&mut self, c: FlexPage) -> ();
-        }
-
-        derive_functors!(0; do_something(i32, i64) -> i32;
-                         do_something_else(u64) -> u64;
-                         send_cap(FlexPage) -> ());
-    }
-
-    derive_ipc_struct! {
-        iface EchoServer(echoserver):
-            do_something(i: i32, b: i64) -> ();
-        do_something_else(u: u64) -> u8;
-        send_cap(c: FlexPage) -> ();
-    }
-    impl<T> ::ipc::types::HasProtocol for EchoServer<T> {
-        const PROTOCOL_ID: i64 = 0xcafebabe;
-    }
-}
 */
+
+iface_enumerate! {
+    trait EchoIface {
+        const PROTOCOL_ID: i64 = 0xdeadbeef;
+        type OpType = i32;
+        fn do_something(&mut self, i: i32) -> u8;
+        fn do_something_else(&mut self, u: u64) -> ();
+        fn signal(&mut self, i: i32) -> ();
+    }
+    struct Echo;
+}
