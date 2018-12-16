@@ -2,11 +2,11 @@
 
 use l4_sys::{self, l4_cap_consts_t::L4_CAP_SHIFT,
              l4_addr_t, l4_fpage_t, l4_cap_idx_t};
-use cap::{Cap, CapIdx, Interface};
-use error::{Result};
-use ipc::MsgTag;
-use types::{UMword};
-use utcb::Utcb;
+use crate::cap::{Cap, CapIdx, Interface};
+use crate::error::{Result};
+use crate::ipc::MsgTag;
+use crate::types::{UMword};
+use crate::utcb::Utcb;
 
 // ToDo
 pub static THIS_TASK: Cap<Task> = Cap {

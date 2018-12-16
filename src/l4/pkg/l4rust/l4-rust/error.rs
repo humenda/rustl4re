@@ -1,7 +1,7 @@
 use l4_sys::{*, l4_error_code_t::*, l4_ipc_tcr_error_t::*};
 
 use num_traits::{FromPrimitive, ToPrimitive};
-use utcb::Utcb;
+use crate::utcb::Utcb;
 
 // for the Type
 enumgenerator! {

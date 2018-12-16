@@ -9,10 +9,10 @@ use _core::convert::From;
 use l4_sys::{l4_msgtag_flags::*, l4_msgtag_t, l4_timeout_t, msgtag};
 use num_traits::{FromPrimitive};
 
-use cap::{Cap, Interface};
-use error::{Error, Result};
-use types::{Mword, Protocol, UMword};
-use utcb::Utcb;
+use crate::cap::{Cap, Interface};
+use crate::error::{Error, Result};
+use crate::types::{Mword, Protocol, UMword};
+use crate::utcb::Utcb;
 
 use l4_sys;
 

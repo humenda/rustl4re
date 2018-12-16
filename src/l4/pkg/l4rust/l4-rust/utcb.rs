@@ -9,8 +9,8 @@ use l4_sys::{
         l4_utcb, l4_utcb_br, l4_utcb_mr, l4_utcb_mr_u, l4_utcb_t, l4_msg_regs_t,
         consts::UTCB_GENERIC_DATA_SIZE};
 
-use cap::{Cap, Interface};
-use error::{Error, GenericErr, Result};
+use crate::cap::{Cap, Interface};
+use crate::error::{Error, GenericErr, Result};
 
 const UTCB_DATA_SIZE_IN_BYTES: usize = UTCB_GENERIC_DATA_SIZE
                     * size_of::<l4_umword_t>();

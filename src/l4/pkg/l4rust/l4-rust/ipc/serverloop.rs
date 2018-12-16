@@ -1,4 +1,3 @@
-use alloc::{boxed::Box, vec::Vec};
 use l4_sys::{self, l4_cap_idx_t as CapIdx, l4_timeout_t, l4_utcb_t};
 
 use super::{

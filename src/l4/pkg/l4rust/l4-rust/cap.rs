@@ -4,7 +4,7 @@ use l4_sys::{self,
         l4_cap_idx_t,
 };
 
-use error::{Error, Result};
+use crate::error::{Error, Result};
 
 /// C capability index for FFI interaction.
 pub type CapIdx = l4_cap_idx_t;
