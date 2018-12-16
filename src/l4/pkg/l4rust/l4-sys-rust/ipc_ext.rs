@@ -1,6 +1,5 @@
-use c_api::{*, l4_msgtag_flags::*};
-
-use ipc_basic::{self, l4_utcb};
+use crate::c_api::{*, l4_msgtag_flags::*};
+use crate::ipc_basic::{self, l4_utcb};
 
 #[inline]
 pub fn msgtag(label: i64, words: u32,

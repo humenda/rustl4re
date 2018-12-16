@@ -13,12 +13,12 @@
 use core::ptr;
 use core::mem::size_of;
 
-use c_api::{*, l4_msgtag_protocol as MsgTagProto};
-use cap;
-use consts::UtcbConsts;
-use ipc_basic::{l4_ipc_call, l4_utcb, l4_utcb_mr_u, l4_utcb_br_u, timeout_never};
-use ipc_ext::{msgtag, msgtag_flags, msgtag_label, msgtag_words};
-use helpers;
+use crate::c_api::{*, l4_msgtag_protocol as MsgTagProto};
+use crate::cap;
+use crate::consts::UtcbConsts;
+use crate::ipc_basic::{l4_ipc_call, l4_utcb, l4_utcb_mr_u, l4_utcb_br_u, timeout_never};
+use crate::ipc_ext::{msgtag, msgtag_flags, msgtag_label, msgtag_words};
+use crate::helpers;
 
 /// Create a new task.
 ///
