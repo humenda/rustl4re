@@ -8,11 +8,11 @@
 
 use core::ptr;
 
-use cap::{l4_obj_fpage, l4_map_obj_control};
-use c_api::{*, L4_fpage_rights::*, L4_task_ops::*,
+use crate::cap::{l4_obj_fpage, l4_map_obj_control};
+use crate::c_api::{*, L4_fpage_rights::*, L4_task_ops::*,
         L4_cap_fpage_rights::*, l4_unmap_flags_t::*};
-use ipc_basic::{l4_ipc_call, l4_utcb, l4_utcb_mr_u, timeout_never};
-use ipc_ext::msgtag;
+use crate::ipc_basic::{l4_ipc_call, l4_utcb, l4_utcb_mr_u, timeout_never};
+use crate::ipc_ext::msgtag;
 
 /// Map resources available in the source task to a destination task.
 ///

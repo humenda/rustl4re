@@ -2,9 +2,9 @@
 //!
 //!  The API allows a client to suspend, reboot or shutdown the system.
 
-use c_api::*;
-use ipc_basic::{l4_ipc_call, l4_utcb, l4_utcb_mr_u, timeout_never};
-use ipc_ext::msgtag;
+use crate::c_api::*;
+use crate::ipc_basic::{l4_ipc_call, l4_utcb, l4_utcb_mr_u, timeout_never};
+use crate::ipc_ext::msgtag;
 
 /// Suspend
 pub const L4_PLATFORM_CTL_SYS_SUSPEND_OP: u64  = 0;

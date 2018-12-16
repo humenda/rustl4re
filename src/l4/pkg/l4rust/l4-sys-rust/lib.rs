@@ -4,23 +4,23 @@ extern crate libc;
 
 #[macro_use]
 pub mod helpers;
-mod cap;
 mod c_api;
-pub mod consts;
+mod cap;
+mod consts;
 mod factory;
 mod ipc_basic;
-pub mod ipc_ext;
+mod ipc_ext;
 mod platform;
 mod task;
 
 /// expose public C API
-pub use cap::*;
-pub use c_api::*;
-pub use factory::*;
-pub use ipc_ext::*;
-pub use ipc_basic::*;
-pub use platform::*;
-pub use task::*;
+pub use crate::cap::*;
+pub use crate::c_api::*;
+//pub use crate::factory::*;
+pub use crate::ipc_ext::*;
+pub use crate::ipc_basic::*;
+pub use crate::platform::*;
+//pub use crate::task::*;
 
 const L4_PAGESIZEU: usize = L4_PAGESIZE as usize;
 const L4_PAGEMASKU: l4_addr_t = L4_PAGEMASK as l4_addr_t;

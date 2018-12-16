@@ -1,8 +1,8 @@
 use libc::{c_int, c_uint, c_long, c_ulong};
 
-use c_api::{*, l4_error_code_t::*, l4_msg_item_consts_t::*,
+use crate::c_api::{*, l4_error_code_t::*, l4_msg_item_consts_t::*,
         L4_fpage_control::*};
-use consts::*;
+use crate::consts::*;
 
 ////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////

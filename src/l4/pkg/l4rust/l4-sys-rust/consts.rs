@@ -1,9 +1,9 @@
 //! Type definitions and constants.
-use c_api::*;
+use crate::c_api::*;
 
 /// An alias for the corresponding platform enum
 #[cfg(target_arch = "x86_64")]
-pub use L4_utcb_consts_amd64 as UtcbConsts;
+pub use crate::c_api::L4_utcb_consts_amd64 as UtcbConsts;
 /// An alias for the corresponding platform enum
 #[cfg(target_arch = "x86")]
 pub use L4_utcb_consts_x86 as UtcbConsts;
