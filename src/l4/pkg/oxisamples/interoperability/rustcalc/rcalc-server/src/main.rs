@@ -1,31 +1,51 @@
+#![feature(associated_type_defaults)]
 extern crate core;
 extern crate l4_sys;
 extern crate l4re;
 #[macro_use]
 extern crate l4;
 
-use l4_sys::l4_utcb;
-use l4::ipc;
+use l4_sys::{l4_utcb, l4_utcb_t};
+use l4::{error::Result,
+    ipc,
+    ipc::MsgTag,
+    ipc::types::Dispatch};
 
-iface! {
-    mod calc;
-    trait Calc {
+iface_enumerate! {
+    trait CalcIface {
         const PROTOCOL_ID: i64 = 0x44;
+        type OpType = i32;
         fn sub(&mut self, a: u32, b: u32) -> i32;
         fn neg(&mut self, a: u32) -> i32;
     }
+    struct Calc;
 }
 
-struct CalcServer;
+#[repr(C)]
+struct CalcServer(l4::ipc::Callback);
 
-impl calc::Calc for CalcServer {
-    fn sub(&mut self, a: u32, b: u32) -> i32 {
+unsafe impl l4::ipc::types::Callable for CalcServer { }
+
+impl CalcIface for CalcServer {
+    fn sub(&mut self, a: u32, b: u32) -> Result<i32> {
         let x = a as i32 - b as i32;
-        x
+        Ok(x)
     }
 
-    fn neg(&mut self, a: u32) -> i32 {
-        a as i32 * -1
+    fn neg(&mut self, a: u32) -> Result<i32> {
+        Ok(a as i32 * -1)
+    }
+}
+
+impl Dispatch for CalcServer {
+    fn dispatch(&mut self, tag: MsgTag, u: *mut l4_utcb_t) -> Result<MsgTag> {
+        self.op_dispatch(tag, u)
+    }
+}
+
+impl CalcServer {
+    fn new() -> CalcServer {
+        CalcServer(l4::ipc::server_impl_callback::<CalcServer>)
     }
 }
 
@@ -33,12 +53,12 @@ fn main() {
     println!("Calculation server starting…");
     let chan = l4re::sys::l4re_env_get_cap("calc_server").expect(
             "Received invalid capability for calculation server.");
-    let srv_impl = Calc::from_impl(chan, CalcServer { });
+    let mut srv_impl = CalcServer::new();
     let mut srv_loop = unsafe {
         ipc::Loop::new_at(
         (*l4re::sys::l4re_env()).main_thread, l4_utcb())
     };
-    srv_loop.register(chan, srv_impl).expect("Failed to register server in loop");
+    srv_loop.register(chan, &mut srv_impl).expect("Failed to register server in loop");
     println!("Waiting for incoming connections");
     srv_loop.start();
 }

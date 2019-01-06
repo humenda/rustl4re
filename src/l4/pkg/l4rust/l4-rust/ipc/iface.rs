@@ -162,6 +162,7 @@ macro_rules! iface_back {
                     -> $crate::error::Result<$crate::ipc::MsgTag> {
                 let mut msg_mr = $crate::utcb::Utcb::from_utcb(u).mr();
                 // ToDo: check for correct protocol
+                // ToDo: check for correct number of words
                 let opcode = unsafe { msg_mr.read::<$op_type>()? };
                 $( // iterate over functions and op codes
                 if opcode == $op_code {
