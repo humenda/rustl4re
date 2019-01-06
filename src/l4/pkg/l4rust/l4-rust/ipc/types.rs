@@ -27,6 +27,16 @@ pub trait Dispatch {
     fn dispatch(&mut self, tag: MsgTag, u: *mut l4_utcb_t) -> Result<MsgTag>;
 }
 
+/// Empty marker trait for server-side message dispatch
+///
+/// Types implementing this trait **must** make sure that their first element is
+/// a function pointer pointing to the dispatch method of the
+/// [Dispatch trait](trait.Dispatch.html); use `#[repr(C)]` for a guaranteed
+/// struct member order.  
+/// The function pointer must have the type
+/// `fn(&mut self, MsgTag, *mut l4_utcb_t) -> Result<MsgTag>`.
+pub unsafe trait Callable: Dispatch { }
+
 /// Define a function in a type and allow the derivation of the dual type
 ///
 /// This allows the macro rules to define the type for a sender and derive the receiver part

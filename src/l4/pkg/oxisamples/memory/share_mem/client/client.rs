@@ -1,3 +1,4 @@
+#![feature(associated_type_defaults)]
 extern crate l4_sys;
 #[macro_use]
 extern crate l4;
@@ -15,11 +16,10 @@ use std::{thread, time};
 use std::mem;
 use libc::c_void;
 
-iface! {
-    mod shm;
-
+iface_enumerate! {
     trait Shm {
         const PROTOCOL_ID: i64 = 0x44;
+        type OpType = i32;
         fn witter(&mut self, length: u32, ds: ::l4::utcb::FlexPage) -> bool;
     }
 }
@@ -86,8 +86,12 @@ pub fn main() {
     }
 }
 
+struct ShmClient;
+
+impl Shm for ShmClient { }
+
 unsafe fn unsafe_main() {
-    let server: cap::Cap<Shm> = env::get_cap("channel")
+    let server: cap::Cap<ShmClient> = env::get_cap("channel")
             .expect("Received invalid capability");
     if l4_sys::l4_is_invalid_cap(server) {
         panic!("No IPC Gate found.");
