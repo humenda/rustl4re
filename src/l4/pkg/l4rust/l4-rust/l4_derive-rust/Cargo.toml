@@ -1,0 +1,13 @@
+[package]
+name = "l4_derive"
+version = "0.1.0"
+authors = ["streicher <shumenda@gmx.de>"]
+edition = "2018"
+
+[lib]
+proc-macro = true
+path = "lib.rs"
+
+[dependencies]
+syn = "0.15.24"
+quote = "0.6.10"

@@ -1,15 +1,17 @@
 #![feature(associated_type_defaults)]
 extern crate core;
 extern crate l4_sys;
-extern crate l4re;
-#[macro_use]
+extern crate l4_derive;
 extern crate l4;
+extern crate l4re;
 
 use l4_sys::{l4_utcb, l4_utcb_t};
 use l4::{error::Result,
+    iface_enumerate, iface_back, derive_ipc_calls, write_msg,
     ipc,
     ipc::MsgTag,
     ipc::types::Dispatch};
+use l4_derive::derive_callable;
 
 iface_enumerate! {
     trait CalcIface {
@@ -21,8 +23,11 @@ iface_enumerate! {
     struct Calc;
 }
 
+#[derive_callable]
 #[repr(C)]
-struct CalcServer(l4::ipc::Callback);
+struct CalcServer {
+    remove_me: u8, // ToDo: unused, away
+}
 
 unsafe impl l4::ipc::types::Callable for CalcServer { }
 
@@ -42,13 +47,6 @@ impl Dispatch for CalcServer {
         self.op_dispatch(tag, u)
     }
 }
-
-impl CalcServer {
-    fn new() -> CalcServer {
-        CalcServer(l4::ipc::server_impl_callback::<CalcServer>)
-    }
-}
-
 fn main() {
     println!("Calculation server starting…");
     let chan = l4re::sys::l4re_env_get_cap("calc_server").expect(
