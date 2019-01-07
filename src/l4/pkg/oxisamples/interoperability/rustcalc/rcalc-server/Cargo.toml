@@ -2,6 +2,4 @@
 name = "ox_rcalc-server"
 version = "0.1.0"
 authors = ["Sebastian Humenda <shumenda@gmx.de>"]
-
-#[dependencies]
-#libc = "0.2.43"
+edition = "2018"
