@@ -11,3 +11,4 @@ path = "lib.rs"
 [dependencies]
 syn = "0.15.24"
 quote = "0.6.10"
+proc-macro2 = "0.4.24"

@@ -24,12 +24,7 @@ iface_enumerate! {
 }
 
 #[derive_callable]
-#[repr(C)]
-struct CalcServer {
-    remove_me: u8, // ToDo: unused, away
-}
-
-unsafe impl l4::ipc::types::Callable for CalcServer { }
+struct CalcServer;
 
 impl CalcIface for CalcServer {
     fn sub(&mut self, a: u32, b: u32) -> Result<i32> {
