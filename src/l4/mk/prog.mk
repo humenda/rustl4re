@@ -195,13 +195,40 @@ export L4_BENDER_ARGS=$(strip $(L4_BENDER_ARGS_HEADLESS:%$(lastword $(LINK_PROGR
 # allow rustc to find l4-bender
 export PATH := $(PATH):$(L4DIR)/tool/bin
 _RUST_DEPS = $(addprefix $(OBJ_BASE)/lib/rustlib/,$(filter %rust,$(REQUIRES_LIBS)))
-export CARGO_BUILD_RUSTFLAGS=$(strip $(patsubst -D%,--cfg=%,$(filter -D%,$(CPPFLAGS))) \
-		$(addprefix -L, $(PRIVATE_LIBDIR) $(PRIVATE_LIBDIR_$(OSYSTEM)) $(PRIVATE_LIBDIR_$@) $(PRIVATE_LIBDIR_$@_$(OSYSTEM))) \
+
+# it's no proc macro if no LIBNAME.so is in the host-deps directory; in this
+# case, output the library name verbatim
+is_no_procmacro = $(if $(wildcard $(OBJ_BASE)/lib/rustlib/$(1:-PC%=%)/host-deps/*$(1:-PC%-rust=%)*.so),,$(1))
+is_procmacro = $(if $(wildcard $(OBJ_BASE)/lib/rustlib/$(1:-PC%=%)/host-deps/*$(1:-PC%-rust=%)*.so),$(1))
+# check each library whether it's a proc macro library and only keep those which
+# aren't
+RS_LINK_LIBRARIES=$(foreach LIB,$(strip $(filter -PC%rust,$(BID_LDFLAGS_FOR_LINKING))),$(call is_no_procmacro,$(LIB)))
+
+# replace all -D defines through --cfg flags for rust
+CARGO_BUILD_RUSTFLAGS=$(strip $(patsubst -D%,--cfg=%,$(filter -D%,$(CPPFLAGS)))
+
+# add l4 library paths and the (l4) Rust dependency paths
+# Rust dependencies can have dependencies in the cross-compile target directory
+# and in the directory containing the dependencies of dependencies
+CARGO_BUILD_RUSTFLAGS += $(addprefix -L, $(PRIVATE_LIBDIR) $(PRIVATE_LIBDIR_$(OSYSTEM)) $(PRIVATE_LIBDIR_$@) $(PRIVATE_LIBDIR_$@_$(OSYSTEM))) \
 		$(addprefix -L,$(addsuffix /$(RUST_TARGET),$(_RUST_DEPS))) \
 		$(addprefix -L dependency=,$(addsuffix /$(RUST_TARGET)/deps,$(_RUST_DEPS))) \
 		$(addprefix -L dependency=,$(addsuffix /host-deps,$(_RUST_DEPS))) \
-		$(RSFLAGS)) \
-		$(addprefix -C link-arg=,$(filter-out -PClib%rust,$(BID_LDFLAGS_FOR_LINKING)) $(LIBS) $(EXTRA_LIBS))
+		$(strip $(RSFLAGS)))
+
+# add paths for proc macro crates so that the compiler can locate the shared
+# objects and load them
+CARGO_BUILD_RUSTFLAGS += $(strip $(foreach LIB,\
+		$(strip $(filter -PC%rust,$(BID_LDFLAGS_FOR_LINKING))),\
+			$(strip $(patsubst %,-L $(OBJ_BASE)/lib/rustlib/%/host-deps/,\
+				$(patsubst -PC%,%,$(call is_procmacro,$(LIB)))))))
+
+# add all rust libraries, except for proc macro libraries (which  are executed
+# on the host and hence shouldn't be linked against the resulting binary)
+CARGO_BUILD_RUSTFLAGS += $(addprefix -C link-arg=,$(RS_LINK_LIBRARIES))
+# add remaining linker flags without any rust library
+CARGO_BUILD_RUSTFLAGS += $(addprefix -C link-arg=,$(strip $(filter-out -PC%rust,$(BID_LDFLAGS_FOR_LINKING))))
+export CARGO_BUILD_RUSTFLAGS
 
 export L4_INCLUDE_DIRS=$(filter -I%,$(CPPFLAGS))
 
