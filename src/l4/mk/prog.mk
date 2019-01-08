@@ -218,14 +218,16 @@ CARGO_BUILD_RUSTFLAGS += $(addprefix -L, $(PRIVATE_LIBDIR) $(PRIVATE_LIBDIR_$(OS
 
 # add paths for proc macro crates so that the compiler can locate the shared
 # objects and load them
-CARGO_BUILD_RUSTFLAGS += $(strip $(foreach LIB,\
+PROC_MACRO_LIBS = $(strip $(foreach LIB,\
 		$(strip $(filter -PC%rust,$(BID_LDFLAGS_FOR_LINKING))),\
 			$(strip $(patsubst %,-L $(OBJ_BASE)/lib/rustlib/%/host-deps/,\
 				$(patsubst -PC%,%,$(call is_procmacro,$(LIB)))))))
 
-# add all rust libraries, except for proc macro libraries (which  are executed
-# on the host and hence shouldn't be linked against the resulting binary)
-CARGO_BUILD_RUSTFLAGS += $(addprefix -C link-arg=,$(RS_LINK_LIBRARIES))
+# Add all rust libraries, except for proc macro libraries (which  are executed
+# on the host and hence shouldn't be linked against the resulting binary).  Add
+# proc macro libraries before so that they don't insert a space if empty
+CARGO_BUILD_RUSTFLAGS += $(strip $(PROC_MACRO_LIBS) \
+						 $(addprefix -C link-arg=,$(RS_LINK_LIBRARIES)))
 # add remaining linker flags without any rust library
 CARGO_BUILD_RUSTFLAGS += $(addprefix -C link-arg=,$(strip $(filter-out -PC%rust,$(BID_LDFLAGS_FOR_LINKING))))
 export CARGO_BUILD_RUSTFLAGS
