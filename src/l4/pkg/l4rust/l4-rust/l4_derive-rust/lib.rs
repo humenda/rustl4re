@@ -1,8 +1,9 @@
 extern crate proc_macro;
+extern crate proc_macro2;
 
 use crate::proc_macro::TokenStream;
 use quote::quote;
-use syn::{self, Data};
+use syn::{self, Attribute, Data, Fields, Generics, Visibility};
 
 #[proc_macro_attribute]
 pub fn derive_callable(_a: TokenStream, item: TokenStream) -> TokenStream {
@@ -12,17 +13,28 @@ pub fn derive_callable(_a: TokenStream, item: TokenStream) -> TokenStream {
         _ => panic!("This attribute can only be used on structs"),
     };
     let name = ast.ident;
-    let fields: Vec<_> = structdef.fields.iter().collect();
-    let field_names: Vec<_> = fields.iter().map(|f| f.ident.clone()).collect();
+    match structdef.fields {
+        Fields::Named(_) => gen_named_struct(name, ast.attrs, ast.vis,
+                                             ast.generics, structdef.fields),
+        Fields::Unnamed(_) => panic!("Only named structs or unnamed structs \
+                can be turned into an IPC server."),
+        Fields::Unit => gen_unit_struct(name.into(), ast.attrs, ast.vis, ast.generics),
+    }
+}
+
+fn gen_named_struct(name: proc_macro2::Ident, attrs: Vec<Attribute>,
+                    vis: Visibility, generics: Generics, fields: Fields)
+                    -> proc_macro::TokenStream {
+    // duplicate names and types of fields, because quote! moves them
     let initialiser_names: Vec<_> = fields.iter().map(|f| f.ident.clone()).collect();
     let arg_names: Vec<_> = fields.iter().map(|f| f.ident.clone()).collect();
-    let field_types: Vec<_> = fields.iter().map(|f| f.ty.clone()).collect();
     let arg_types: Vec<_> = fields.iter().map(|f| f.ty.clone()).collect();
     let gen = quote! {
         #[repr(C)]
-        struct #name {
+        #(#attrs)*
+        #vis struct #name #generics {
             __dispatch_ptr: ::l4::ipc::Callback,
-            #(#field_names: #field_types),*
+            #(#fields),*
         }
 
         impl #name {
@@ -35,6 +47,29 @@ pub fn derive_callable(_a: TokenStream, item: TokenStream) -> TokenStream {
                 }
             }
         }
+        unsafe impl crate::l4::ipc::types::Callable for #name { }
+    };
+    gen.into()
+}
+
+fn gen_unit_struct(name: proc_macro2::Ident, attrs: Vec<Attribute>,
+                    vis: Visibility, generics: Generics,)
+                -> proc_macro::TokenStream {
+    let gen = quote! {
+        #[repr(C)]
+        #(#attrs)*
+        #vis struct #name #generics {
+            __dispatch_ptr: ::l4::ipc::Callback
+        }
+
+        impl #name {
+            fn new() -> #name {
+                #name {
+                    __dispatch_ptr: crate::l4::ipc::server_impl_callback::<#name>
+                }
+            }
+        }
+        unsafe impl crate::l4::ipc::types::Callable for #name { }
     };
     gen.into()
 }
