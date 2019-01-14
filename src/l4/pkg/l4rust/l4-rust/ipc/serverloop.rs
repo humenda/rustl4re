@@ -168,7 +168,6 @@ impl<'a, T: LoopHook> Loop<'a, T> {
             let mut label = mem::uninitialized();
             let tag = MsgTag::from(l4_sys::l4_ipc_reply_and_wait(self.utcb,
                      replytag.raw(), &mut label, l4_sys::timeout_never()));
-            libc::printf(b"kernel gave label %ld\n\0".as_ptr() as *const u8, label);
             (label, tag)
         }
     }
@@ -194,7 +193,6 @@ impl<'a, T: LoopHook> Loop<'a, T> {
 
                 // use label to dispatch to registered server implementation
                 false => {
-                    unsafe { libc::printf(b"dispatching to: %ld\n\0".as_ptr() as *const u8, label);}
                     match self.dispatch(tag, label) {
                     LoopAction::Break => break,
                     LoopAction::ReplyAndWait(tag) => tag,
@@ -206,10 +204,10 @@ impl<'a, T: LoopHook> Loop<'a, T> {
         }
     }
 
-    fn dispatch(&mut self, tag: MsgTag, server_id: u64) -> LoopAction {
+    fn dispatch(&mut self, tag: MsgTag, ipc_label: u64) -> LoopAction {
         let result = unsafe {
-            let handler = server_id as *mut c_void;
-            let callable = *(server_id as *mut Callback);
+            let handler = ipc_label as *mut c_void;
+            let callable = *(ipc_label as *mut Callback);
             callable(handler, tag, self.utcb)
         };
         // dispatch received data to user-registered handler
