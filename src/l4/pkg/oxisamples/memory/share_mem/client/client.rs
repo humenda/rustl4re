@@ -22,6 +22,8 @@ iface_enumerate! {
         type OpType = i32;
         fn witter(&mut self, length: u32, ds: ::l4::utcb::FlexPage) -> bool;
     }
+
+    struct ShmClient;
 }
 
 // C-style dataspace allocation
@@ -86,14 +88,11 @@ pub fn main() {
     }
 }
 
-struct ShmClient;
-
-impl Shm for ShmClient { }
-
 unsafe fn unsafe_main() {
-    let server: cap::Cap<ShmClient> = env::get_cap("channel")
+    println!("good morning sir");
+    let mut server: cap::Cap<ShmClient> = env::get_cap("channel")
             .expect("Received invalid capability");
-    if l4_sys::l4_is_invalid_cap(server) {
+    if server.is_invalid() {
         panic!("No IPC Gate found.");
     }
 
@@ -110,8 +109,7 @@ unsafe fn unsafe_main() {
             size_in_bytes, byteslice.len());
 
     // send blah blah using the generated client implementation
-    let mut witter = Shm::client(server);
-    witter.witter(byteslice.len() as u32 + 1,
+    server.witter(byteslice.len() as u32 + 1,
             FlexPage::from_cap(cap::from(ds), FpageRights::RWX, None))
         .unwrap();
 

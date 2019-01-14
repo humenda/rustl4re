@@ -9,9 +9,8 @@ use l4_sys::{l4_utcb, l4_utcb_t};
 use l4::{error::Result,
     iface_enumerate, iface_back, derive_ipc_calls, write_msg,
     ipc,
-    ipc::MsgTag,
-    ipc::types::Dispatch};
-use l4_derive::derive_callable;
+    ipc::MsgTag};
+use l4_derive::l4_callable;
 
 iface_enumerate! {
     trait CalcIface {
@@ -23,7 +22,7 @@ iface_enumerate! {
     struct Calc;
 }
 
-#[derive_callable]
+#[l4_callable]
 struct CalcServer;
 
 impl CalcIface for CalcServer {
@@ -37,11 +36,6 @@ impl CalcIface for CalcServer {
     }
 }
 
-impl Dispatch for CalcServer {
-    fn dispatch(&mut self, tag: MsgTag, u: *mut l4_utcb_t) -> Result<MsgTag> {
-        self.op_dispatch(tag, u)
-    }
-}
 fn main() {
     println!("Calculation server starting…");
     let chan = l4re::sys::l4re_env_get_cap("calc_server").expect(

@@ -1,4 +1,3 @@
-// ToDo: write opcode here instead of in derive_ipc_calls
 #[macro_export]
 macro_rules! write_msg {
     ($msg_mr:expr, $($arg:ident: $argty:ty),*) => {
@@ -107,7 +106,7 @@ macro_rules! derive_ipc_calls {
             fn $name(&mut self, $($argname: $type),*)
                         -> $crate::error::Result<$return> {
                             use $crate::cap::Interface;
-                let mut mr = $crate::utcb::Utcb::current().mr(); // ToDo: nailed to this thread
+                let mut mr = $crate::utcb::Utcb::current().mr();
                 // write opcode
                 unsafe {
                     mr.write($opcode)?;
@@ -116,15 +115,13 @@ macro_rules! derive_ipc_calls {
                 // get the protocol for the msg tag label
                 let tag = $crate::ipc::MsgTag::new($proto, mr.words(),
                         mr.items(), 0);
-                // IPC — ToDo: no flags, no buffer register items transfered, restag hence
-                // unused
                 let _restag = $crate::ipc::MsgTag::from(unsafe {
                         ::l4_sys::l4_ipc_call(self.cap(),
                                 ::l4_sys::l4_utcb(), tag.raw(),
                                 ::l4_sys::timeout_never())
                     }).result()?;
                 mr.reset(); // read again from start of registers
-            // return () if "empty" return value, val otherwise
+                // return () if "empty" return value, val otherwise
                 unsafe {
                     <$return as $crate::utcb::Serialisable>::read(
                             &mut mr)
