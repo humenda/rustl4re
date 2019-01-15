@@ -5,7 +5,7 @@ use _core::{
 use l4_sys::{self, l4_cap_idx_t as CapIdx, l4_timeout_t, l4_utcb_t};
 
 use super::{
-    MsgTag, types::{Callable, Dispatch},
+    MsgTag, types::{Callable, Demand, Dispatch},
     super::error::{Error, Result},
 };
 use libc::c_void;
@@ -147,7 +147,7 @@ impl<'a, T: LoopHook> Loop<'a, T> {
     }
 
     /// Register anything, callee must make sure that passed thing is NOT moved
-    pub fn register<Imp: Callable + Dispatch>(&mut self, gate: CapIdx,
+    pub fn register<Imp: Callable + Dispatch + Demand>(&mut self, gate: CapIdx,
             inst: &'a mut Imp) -> Result<()> {
         unsafe {
             let _ = MsgTag::from(l4_sys::l4_rcv_ep_bind_thread(gate,

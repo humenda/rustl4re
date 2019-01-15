@@ -1,7 +1,11 @@
 use _core::ops::{Deref, DerefMut};
 use l4_sys::{self,
         l4_cap_consts_t::{L4_CAP_SHIFT, L4_INVALID_CAP_BIT},
+        L4_cap_fpage_rights::L4_CAP_FPAGE_RWSD,
         l4_cap_idx_t,
+        l4_default_caps_t::L4_BASE_TASK_CAP,
+        l4_msg_item_consts_t::L4_MAP_ITEM_GRANT,
+        l4_task_map,
 };
 
 use crate::error::{Error, Result};
@@ -141,6 +145,41 @@ impl<T: Interface> Cap<T> {
     #[inline]
     pub unsafe fn raw(&self) -> CapIdx {
         self.interface.cap()
+    }
+
+    /// Transfer a given capability into this capability
+    ///
+    /// This will consume the given source capability and transfer (move) it into the slot of this
+    /// one. `transfer` will consume `self`, allowing an capability interface change along the way.  
+    /// If an invalid source capability is passed or this capability is invalid, an
+    /// `Error::InvalidCap` is returned.
+    ///
+    /// This function is unsafe since the kernel does not care what is in the slots and will carry
+    /// out the operation nevertheless. So if you move a capability from source to this slot, the
+    /// capability from this slot will be ***lost***. From Rust's **memory-safety**-perspective,
+    /// the fnction is safe.
+    pub unsafe fn transfer<U: Interface + IfaceInit>(&mut self, source: Cap<U>)
+                -> Result<Cap<U>> {
+        if !self.is_valid() || source.is_valid() {
+            return Err(Error::InvalidCap);
+        }
+        l4_task_map(L4_BASE_TASK_CAP as u64, L4_BASE_TASK_CAP as u64,
+                    l4_sys::l4_obj_fpage(source.cap(), 0, L4_CAP_FPAGE_RWSD as u8),
+                    self.send_base(L4_MAP_ITEM_GRANT as u64, None) | 0xe0);
+        Ok(Cap::new(self.cap()))
+    }
+
+    /// Return send base for this object
+    ///
+    /// This allows the specification of the send base for an object (default is this object
+    /// itself). If the first parameter is set, the object will be **granted**.
+    /// In other words, it is possible to specify the object space location of this capability for
+    /// map operations.
+    fn send_base(&self, grant: u64, base_cap: Option<l4_cap_idx_t>) -> u64 {
+        unsafe {
+            let base_cap = base_cap.unwrap_or(self.cap());
+            l4_sys::l4_map_obj_control(base_cap, grant)
+        }
     }
 }
 

@@ -37,6 +37,10 @@ pub trait Dispatch {
 /// `fn(&mut self, MsgTag, *mut l4_utcb_t) -> Result<MsgTag>`.
 pub unsafe trait Callable: Dispatch { }
 
+pub trait Demand {
+    const BUFFER_DEMAND: u32;
+}
+
 /// Define a function in a type and allow the derivation of the dual type
 ///
 /// This allows the macro rules to define the type for a sender and derive the receiver part

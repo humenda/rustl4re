@@ -158,6 +158,12 @@ macro_rules! iface_back {
                     u: *mut ::l4_sys::l4_utcb_t)
                     -> $crate::error::Result<$crate::ipc::MsgTag> {
                 let mut msg_mr = $crate::utcb::Utcb::from_utcb(u).mr();
+                // uncover cheating clients
+                if (tag.words() + tag.items() * $crate::utcb::WORDS_PER_ITEM)
+                        > $crate::utcb::Msg::DATA_SIZE {
+                    return Err($crate::error::Error::Generic(
+                            $crate::error::GenericErr::MsgTooShort))
+                }
                 // ToDo: check for correct protocol
                 // ToDo: check for correct number of words
                 let opcode = unsafe { msg_mr.read::<$op_type>()? };
