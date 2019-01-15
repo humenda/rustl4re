@@ -12,6 +12,8 @@ use l4_sys::{
 use crate::cap::{Cap, Interface};
 use crate::error::{Error, GenericErr, Result};
 
+/// Number of words used by an item when written to the message registers
+pub const WORDS_PER_ITEM: usize = 2;
 const UTCB_DATA_SIZE_IN_BYTES: usize = UTCB_GENERIC_DATA_SIZE
                     * size_of::<l4_umword_t>();
 
@@ -158,6 +160,7 @@ pub struct Msg {
 }
 
 impl Msg {
+    pub const DATA_SIZE: usize = UTCB_GENERIC_DATA_SIZE;
     pub unsafe fn from_raw_mr(mr: *mut l4_msg_regs_t) -> Msg {
         Msg {
             mr: transmute::<*mut u64, *mut u8>((*mr).mr.as_mut().as_mut_ptr()),
