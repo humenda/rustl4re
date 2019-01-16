@@ -1,3 +1,21 @@
+/// L4 IPC framework
+///
+/// L4 IPC becomes due to its minimality a comlex affair, which is why this framework assists the
+/// application programmer to implement services easily without the need to understand all
+/// low-level details. As a plus, clients can be auto-derived from the IPC interface definition
+/// shared between client and server.
+///
+/// This interface is binary-compatible with the C++ version. This means that at a few places,
+/// compromises had to be made. In turn, this gives Rustic applications to talk to the rest of the
+/// world. A certain familiarity with L4 IPC is assumed, terms as gate, label, call, flexpage and
+/// UTCB are used frequently.
+///
+/// # Example Application
+///
+/// The following is a very short **hello world** service:
+///
+/// **Client:**
+/// // ToDo: interface which takes fn(IpcString) -> IpcString
 #[macro_use]
 mod iface;
 mod serverloop;
