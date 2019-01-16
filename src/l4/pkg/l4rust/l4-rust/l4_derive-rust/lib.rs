@@ -6,22 +6,42 @@ use crate::proc_macro::TokenStream;
 use quote::quote;
 use syn::{self, Attribute, Data, Fields, Generics, Lit, Meta, Visibility};
 
+/// Derive important IPC traits for an IPC interface
+///
+/// IPC interfaces need to adhere to a few criteria before they can be
+/// registered with the server loop. If you are impatient, use `#[l4_callable]`
+/// on your struct if you are  writing a server without any flex page exchange
+/// and `#[l4_derive(demand = XYZ)]` for the maximum number of capability/flex
+/// page slots for an IPC call of your interface.
+///
+/// For the patient: an interface needs to implement the `Dispatch` and
+/// `Callable`trait. `Callable` is a bit special, since it requires
+/// modifications to the struct itself and this macro makes sure that the user
+/// does not need to bother about this.  
+/// Each server interface may receive capabilities / flex pages, for which it
+/// needs to prepare receive slots, so that the kernel can map it into the own
+/// object space. The maximum over all IPC functions of an interface is called
+/// the `demand` and can be specified as `#[l4_callable(demand = NUM)]`.
 #[proc_macro_attribute]
 pub fn l4_callable(macro_attrs: TokenStream, item: TokenStream) -> TokenStream {
-    let demand = match macro_attrs.is_empty() {
+    // parse the demand from the parenthesis after the macro name or assume 0
+    let demand: u32 = match macro_attrs.is_empty() {
         true => 0,
         false => {
+            // only accept `name = value`or abort otherwise
             let name_val: syn::MetaNameValue = match syn::parse(macro_attrs)
                     .expect("Broken attribute specification") {
                 Meta::NameValue(nv) => nv,
                 _ => panic!("You must specify demand = <num>"),
             };
+            // check for correct key within parenthesis
             if name_val.ident != "demand" {
                 panic!("Unrecognised macro attribute, try \"demand\"");
             }
+            // only accept numbers
             match name_val.lit {
-                Lit::Int(l) => l.value(),
-                _ => panic!("`demand` must be specified as a positive integer")
+                Lit::Int(l) => l.value() as u32,
+                _ => panic!("`demand` must be a positive integer"),
             }
         }
     };
@@ -32,25 +52,32 @@ pub fn l4_callable(macro_attrs: TokenStream, item: TokenStream) -> TokenStream {
         _ => panic!("This attribute can only be used on structs"),
     };
     let name = ast.ident;
+    // we can only insert a new member into a named struct or unit structs.
+    // If we'd insert into a tuple struct, this would move the index of all
+    // existing members, invalidating any user's code.
     match structdef.fields {
         Fields::Named(_) => gen_named_struct(name, ast.attrs, ast.vis,
                                              ast.generics, structdef.fields,
                                              demand),
         Fields::Unnamed(_) => panic!("Only named structs or unnamed structs \
                 can be turned into an IPC server."),
-        Fields::Unit => gen_unit_struct(name.into(), ast.attrs, ast.vis,
-                                        ast.generics, demand),
+        Fields::Unit => gen_named_struct(name, ast.attrs, ast.vis,
+                                             ast.generics, Fields::Unit,
+                                             demand)
+            /*gen_unit_struct(name.into(), ast.attrs, ast.vis,
+                                        ast.generics, demand)*/,
     }
 }
 
 fn gen_named_struct(name: proc_macro2::Ident, attrs: Vec<Attribute>,
                     vis: Visibility, generics: Generics, fields: Fields,
-                    demand: u64)
+                    demand: u32)
                     -> proc_macro::TokenStream {
     // duplicate names and types of fields, because quote! moves them
     let initialiser_names: Vec<_> = fields.iter().map(|f| f.ident.clone()).collect();
     let arg_names: Vec<_> = fields.iter().map(|f| f.ident.clone()).collect();
     let arg_types: Vec<_> = fields.iter().map(|f| f.ty.clone()).collect();
+
     let gen = quote! {
         #[repr(C)]
         #(#attrs)*
@@ -70,34 +97,9 @@ fn gen_named_struct(name: proc_macro2::Ident, attrs: Vec<Attribute>,
             }
         }
         impl crate::l4::ipc::types::Demand for #name {
-            const BUFFER_DEMAND: u32 = #demand as u32;
+            const BUFFER_DEMAND: u32 = #demand;
         }
         unsafe impl crate::l4::ipc::types::Callable for #name { }
-    };
-    gen.into()
-}
-
-fn gen_unit_struct(name: proc_macro2::Ident, attrs: Vec<Attribute>,
-                    vis: Visibility, generics: Generics, demand: u64)
-                -> proc_macro::TokenStream {
-    let gen = quote! {
-        #[repr(C)]
-        #(#attrs)*
-        #vis struct #name #generics {
-            __dispatch_ptr: ::l4::ipc::Callback
-        }
-
-        impl #name {
-            fn new() -> #name {
-                #name {
-                    __dispatch_ptr: crate::l4::ipc::server_impl_callback::<#name>
-                }
-            }
-        }
-        unsafe impl crate::l4::ipc::types::Callable for #name { }
-        impl crate::l4::ipc::types::Demand for #name {
-            const BUFFER_DEMAND: u32 = #demand as u32;
-        }
         impl crate::l4::ipc::types::Dispatch for #name {
             fn dispatch(&mut self, tag: MsgTag, u: *mut l4_utcb_t) -> Result<MsgTag> {
                 self.op_dispatch(tag, u) // auto-generated by iface! macro
