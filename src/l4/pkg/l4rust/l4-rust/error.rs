@@ -138,6 +138,8 @@ pub enum Error {
     InvalidCap,
     /// Description of an invalid argument, optional error code
     InvalidArg(&'static str, Option<isize>),
+    /// an illegal state was reached
+    InvalidState(&'static str),
     /// Unknown error code
     UnknownErr(i64),
     /// Protocol error, custom defined protocol error labels passed with an answer using the MSG
@@ -190,8 +192,10 @@ impl Error {
             Error::Generic(err) => err.to_i64().unwrap() * -1,
             Error::Tcr(err) => err.to_i64().unwrap() * -1,
             Error::InvalidCap => -1 * Self::INVALID_CAP_CODE,
-            Error::InvalidArg(_, _) | Error::UnknownErr(_) | Error::Protocol(_)
+            Error::InvalidArg(_, _) | Error::InvalidState(_)
                     => -1 * GenericErr::InvalidArg.to_i64().unwrap(),
+            Error::UnknownErr(n) | Error::Protocol(n)
+                => n * -1
         }
     }
 }
