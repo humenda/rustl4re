@@ -2,11 +2,20 @@ use _core::{
     marker::PhantomData,
     mem
 };
-use l4_sys::{self, l4_cap_idx_t as CapIdx, l4_timeout_t, l4_utcb_t};
+use l4_sys::{self,
+    l4_buf_regs_t,
+    l4_cap_consts_t::{L4_INVALID_CAP_BIT, L4_CAP_MASK},
+    l4_cap_idx_t as CapIdx, l4_timeout_t,
+    l4_msg_item_consts_t::L4_RCV_ITEM_SINGLE_CAP,
+    l4_utcb_t, l4_utcb_br_u};
 
 use super::{
     MsgTag, types::{Callable, Demand, Dispatch},
-    super::error::{Error, Result},
+};
+use super::super::{
+    cap::{Cap, Interface, IfaceInit},
+    error::{Error, GenericErr, Result},
+    types::UMword,
 };
 use libc::c_void;
 
@@ -46,7 +55,7 @@ pub trait LoopHook {
                     Error::Tcr(e) => e as i64,
                     Error::UnknownErr(e) => e as i64,
                     Error::InvalidCap | Error::InvalidArg(_, _)
-                            | Error::Protocol(_) =>
+                            | Error::Protocol(_) | Error::InvalidState(_) =>
                         panic!("unsupported error type received"),
                 }, 0, 0, 0))
         }
@@ -60,7 +69,7 @@ pub trait LoopHook {
                     Error::Tcr(e) => e as i64,
                     Error::UnknownErr(e) => e as i64,
                     Error::InvalidCap | Error::InvalidArg(_, _)
-                            | Error::Protocol(_) =>
+                            | Error::Protocol(_) | Error::InvalidState(_) =>
                         panic!("unsupported error type received"),
                 }, 0, 0, 0))
     }
@@ -77,6 +86,147 @@ pub trait LoopHook {
     fn setup_wait(_: *mut l4_utcb_t) { }
 }
 
+/// Receive window management for IPC server loop(s)
+///
+/// A buffer manager controls the capability slot allocation and the buffer register setup to
+/// receive and dispatch kernel **items** such as capability flexpages. How and whether
+/// capabilities (etc.) are allocated depends on the policy of each implementor.
+pub trait BufDemand {
+    /// Allocate buffers according to given demand
+    ///
+    /// This function will allocate as many buffers as required for the given
+    /// capability demand. If buffers were allocated before, these are left
+    /// unchanged, only the additional buffers are allocated. If the  given
+    /// demand is smaller than the actual number of allocated buffers, no action
+    /// is performed.  
+    /// A capability beyond the internal buffer size will resultin an
+    /// `Error::InvalidArg` and capability allocation failures in an
+    /// `Error::NoMem`.
+    /// **Note:** memory or I/O flexpages are not supported.
+    fn alloc_capslots(&mut self, demand: u32) -> Result<()>;
+
+    /// Retrieve capability at allocated buffer slot/index
+    ///
+    /// The argument must be within `0 <= index <= self.caps_used`.
+    fn rcv_cap<T>(&self, index: usize) -> Result<Cap<T>>
+                where T: Interface + IfaceInit;
+    /// Set the receive flags for the buffers.
+    ///
+    /// This must be called **before** any buffer has been allocated and fails otherwise.
+    fn set_rcv_cap_flags(&mut self, flags: UMword) -> Result<()>;
+
+    /// Return the maximum number of slots this manager could allocate
+    #[inline]
+    fn max_slots(&self) -> u32;
+
+    /// Return the amount of allocated buffer slots.
+    #[inline]
+    fn caps_used(&self) -> u32;
+
+    /// Set up the UTCB for receiving items
+    ///
+    /// This function instructs where and how to map flexpages on arrival. It is
+    /// usually called by the server loop.
+    fn setup_wait(&mut self, _: *mut l4_utcb_t);
+}
+
+/// A buffer manager not able to receive any capability.
+///
+/// While this limits the server implementations, it might be a handy
+/// optimisation, saving any buffer setup. Since this is a zero-sized struct,
+/// it'll also shrink the memory footprint of the service.
+pub struct Bufferless;
+
+impl BufDemand for Bufferless {
+    fn alloc_capslots(&mut self, demand: u32) -> Result<()> {
+        match demand == 0 {
+            true => Ok(()),
+            false => Err(Error::InvalidArg("buffer allocation not permitted", None)),
+        }
+    }
+
+    fn rcv_cap<T>(&self, _: usize) -> Result<Cap<T>>
+                where T: Interface + IfaceInit {
+        Err(Error::InvalidArg("No buffers allocated", None))
+    }
+
+    fn set_rcv_cap_flags(&mut self, _: UMword) -> Result<()> { Ok(()) }
+
+    #[inline]
+    fn max_slots(&self) -> u32 { 0 }
+    #[inline]
+    fn caps_used(&self) -> u32 { 0 }
+    fn setup_wait(&mut self, _: *mut l4_utcb_t) { }
+}
+
+pub struct BufferManager {
+    /// number of allocated capabilities
+    caps: u32,
+    cap_flags: u64,
+    // ToDo: reimplement this with the (ATM unstable) const generics
+    br: [u64; l4_sys::consts::UtcbConsts::L4_UTCB_GENERIC_BUFFERS_SIZE as usize],
+}
+
+impl BufDemand for BufferManager {
+    fn alloc_capslots(&mut self, demand: u32) -> Result<()> {
+        // take two extra buffers for a possible timeout and a zero terminator
+        if demand + 3 >= self.br.len() as u32 {
+            return Err(Error::InvalidArg("Capability slot demand too large",
+                                         Some(demand as isize)));
+        }
+        while demand > self.caps {
+            let cap = unsafe { l4_sys::l4re_util_cap_alloc() };
+            if (cap & L4_INVALID_CAP_BIT as u64) == 0 {
+                return Err(Error::Generic(GenericErr::NoMem));
+            }
+
+            // safe this cap as a "receive item" in the format that the kernel
+            // understands
+            self.br[self.caps as usize] = cap | L4_RCV_ITEM_SINGLE_CAP as u64
+                    | self.cap_flags;
+            self.caps += 1;
+        }
+        self.br[self.caps as usize] = 0; // terminate receive list
+        Ok(())
+    }
+
+    fn rcv_cap<T>(&self, index: usize) -> Result<Cap<T>>
+            where T: Interface + IfaceInit {
+        match index >= self.caps as usize {
+            true  => Err(Error::InvalidArg("Index not allocated", Some(index as isize))),
+            false => Ok(Cap::<T>::new(self.br[index] & L4_CAP_MASK as u64)),
+        }
+    }
+
+    fn set_rcv_cap_flags(&mut self, flags: UMword) -> Result<()> {
+        if self.cap_flags == 0 {
+            self.cap_flags = flags as u64;
+            return Ok(());
+        }
+        Err(Error::InvalidState("Unable to set buffer flags when capabilities \
+                                were already allocated"))
+    }
+
+    #[inline]
+    fn max_slots(&self) -> u32 {
+        self.br.len() as u32
+    }
+
+    #[inline]
+    fn caps_used(&self) -> u32 {
+        self.caps
+    }
+
+    fn setup_wait(&mut self, u: *mut l4_utcb_t) {
+        unsafe {
+            let br: *mut l4_buf_regs_t = l4_utcb_br_u(u);
+            (*br).bdr = 0;
+            for index in 0usize..(self.caps as usize - 1) {
+                (*br).br[index] = self.br[index];
+            }
+        }
+    }
+}
 /// Server implementation callback from server loop
 ///
 /// Whenever a server object is registered with the server loop, the label associated with the
