@@ -21,7 +21,8 @@ mod iface;
 mod serverloop;
 pub mod types;
 
-pub use self::serverloop::{Callback, Loop, server_impl_callback};
+pub use self::serverloop::{BufDemand, Bufferless, BufferManager,
+    Callback, Loop, LoopBuilder, server_impl_callback};
 
 use _core::convert::From;
 use l4_sys::{l4_msgtag_flags::*, l4_msgtag_t, l4_timeout_t, msgtag};

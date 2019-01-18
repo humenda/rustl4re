@@ -42,9 +42,9 @@ fn main() {
             "Received invalid capability for calculation server.");
     let mut srv_impl = CalcServer::new();
     let mut srv_loop = unsafe {
-        ipc::Loop::new_at(
-        (*l4re::sys::l4re_env()).main_thread, l4_utcb())
-    };
+        ipc::LoopBuilder::new_at((*l4re::sys::l4re_env()).main_thread,
+            l4_utcb())
+    }.build();
     srv_loop.register(chan, &mut srv_impl).expect("Failed to register server in loop");
     println!("Waiting for incoming connections");
     srv_loop.start();
