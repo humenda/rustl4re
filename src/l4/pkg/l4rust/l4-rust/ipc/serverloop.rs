@@ -3,10 +3,11 @@ use _core::{
     mem
 };
 use l4_sys::{self,
+    consts::UtcbConsts::L4_UTCB_GENERIC_BUFFERS_SIZE,
     l4_buf_regs_t,
     l4_cap_consts_t::{L4_INVALID_CAP_BIT, L4_CAP_MASK},
     l4_cap_idx_t as CapIdx, l4_timeout_t,
-    l4_msg_item_consts_t::L4_RCV_ITEM_SINGLE_CAP,
+    l4_msg_item_consts_t::{L4_RCV_ITEM_SINGLE_CAP, L4_RCV_ITEM_LOCAL_ID},
     l4_utcb_t, l4_utcb_br_u};
 
 use super::{
@@ -46,8 +47,9 @@ pub trait LoopHook {
     /// access to the complete thread and server loop state.
     /// The returned action directly influences the execution of the loop, see the documentation of
     /// [LoopAction](enum.LoopAction.html).
-    fn ipc_error(&mut self, _: &mut Loop<Self>, tag: MsgTag) -> LoopAction
-            where Self: ::_core::marker::Sized {
+    fn ipc_error<B>(&mut self, _: &mut Loop<Self, B>, tag: MsgTag)
+                -> LoopAction
+            where Self: ::_core::marker::Sized, B: BufDemand {
         match tag.result() {
             Ok(_) => unreachable!(),
             Err(e) => LoopAction::ReplyAndWait(MsgTag::new(match e {
@@ -62,8 +64,9 @@ pub trait LoopHook {
     }
 
     // ToDo: docs + rethink Dispatch trait and LoopHook interface to take **any** error interace
-    fn application_error(&mut self, _: &mut Loop<Self>, e: Error) -> LoopAction
-            where Self: ::_core::marker::Sized {
+    fn application_error<B>(&mut self, _: &mut Loop<Self, B>, e: Error)
+                -> LoopAction
+            where Self: ::_core::marker::Sized, B: BufDemand {
         LoopAction::ReplyAndWait(MsgTag::new(match e {
                     Error::Generic(e) => e as i64,
                     Error::Tcr(e) => e as i64,
@@ -167,6 +170,16 @@ pub struct BufferManager {
     br: [u64; l4_sys::consts::UtcbConsts::L4_UTCB_GENERIC_BUFFERS_SIZE as usize],
 }
 
+impl BufferManager {
+    pub fn new() -> Self {
+        BufferManager {
+            caps: 0,
+            cap_flags: L4_RCV_ITEM_LOCAL_ID as u64,
+            br: [0u64; L4_UTCB_GENERIC_BUFFERS_SIZE as usize],
+        }
+    }
+}
+
 impl BufDemand for BufferManager {
     fn alloc_capslots(&mut self, demand: u32) -> Result<()> {
         // take two extra buffers for a possible timeout and a zero terminator
@@ -227,6 +240,8 @@ impl BufDemand for BufferManager {
         }
     }
 }
+
+
 /// Server implementation callback from server loop
 ///
 /// Whenever a server object is registered with the server loop, the label associated with the
@@ -252,17 +267,21 @@ pub fn server_impl_callback<T: Callable + Dispatch>(ptr: *mut c_void,
 
 pub type Callback = fn(*mut libc::c_void, MsgTag, *mut l4_utcb_t) -> Result<MsgTag>;
 
-pub struct Loop<'a, Hooks: LoopHook> {
+pub struct Loop<'a, Hooks: LoopHook, BrMgr> {
     /// thread that this server runs in
     thread: CapIdx,
     /// UTCB reference
     pub utcb: *mut l4_utcb_t,
     /// Loop hooks
     hooks: Option<Hooks>, // prevents double mut borrow
+    // buffer manager (receive windows for kernel items)
+    buf_mgr: BrMgr,
     /// lifetime for registered servers from outside
-    outlive_me: PhantomData<&'a Loop<'a, Hooks>>
+    outlive_me: PhantomData<&'a Self>
 }
 
+// allow unwrapping the option from the struct above, using the value and
+// injecting it back
 macro_rules! borrow {
     ($sel:ident.hooks.$func:ident(&mut self, $($arg:ident),*)) => {{ // new scope
         let mut hooks = $sel.hooks.take().unwrap(); // option is never none
@@ -272,26 +291,14 @@ macro_rules! borrow {
     }}
 }
 
-impl<'a> Loop<'a, DefaultHooks> {
-    /// Create new server loop at given thread
-    pub fn new_at(thread: CapIdx, u: *mut l4_utcb_t) -> Loop<'a, DefaultHooks> {
-        Loop {
-            thread: thread,
-            utcb: u,
-            hooks: Some(DefaultHooks { }),
-            outlive_me: PhantomData,
-        }
-    }
-}
-
-impl<'a, T: LoopHook> Loop<'a, T> {
+impl<'a, T: LoopHook, B: BufDemand> Loop<'a, T, B> {
     /// Create new server loop at given thread with specified hooks
-    pub fn new_custom_at(thread: CapIdx, u: *mut l4_utcb_t, h: T) -> Loop<'a, T> {
+    fn new(thread: CapIdx, u: *mut l4_utcb_t, h: T, b: B) -> Loop<'a, T, B> {
         Loop {
             thread: thread,
             utcb: u,
-            //servers: Vec::new(),
             hooks: Some(h),
+            buf_mgr: b,
             outlive_me: PhantomData,
         }
     }
@@ -299,6 +306,7 @@ impl<'a, T: LoopHook> Loop<'a, T> {
     /// Register anything, callee must make sure that passed thing is NOT moved
     pub fn register<Imp: Callable + Dispatch + Demand>(&mut self, gate: CapIdx,
             inst: &'a mut Imp) -> Result<()> {
+        self.buf_mgr.alloc_capslots(<Imp as Demand>::BUFFER_DEMAND)?;
         unsafe {
             let _ = MsgTag::from(l4_sys::l4_rcv_ep_bind_thread(gate,
                    self.thread, inst as *mut _ as *mut c_void as _))
@@ -313,7 +321,7 @@ impl<'a, T: LoopHook> Loop<'a, T> {
     /// C++ version also supports the less performant split of a reply and a wait system call
     /// afterwards, which is omitted here.
     fn reply_and_wait(&mut self, replytag: MsgTag) -> (u64, MsgTag) {
-        // ToDo: missing: setup_wait function
+        self.buf_mgr.setup_wait(self.utcb);
         unsafe {
             let mut label = mem::uninitialized();
             let tag = MsgTag::from(l4_sys::l4_ipc_reply_and_wait(self.utcb,
@@ -329,6 +337,8 @@ impl<'a, T: LoopHook> Loop<'a, T> {
     /// The function will panic if no server implementations were registered.
     pub fn start(&mut self) {
         let mut label: u64 = 0;
+        // called once here for initial wait (see reply_and_wait)
+        self.buf_mgr.setup_wait(self.utcb);
         // initial (open) wait before loop
         let mut tag = unsafe { MsgTag::from(l4_sys::l4_ipc_wait(self.utcb,
                 &mut label, l4_sys::timeout_never()))
@@ -371,3 +381,35 @@ impl<'a, T: LoopHook> Loop<'a, T> {
 pub struct DefaultHooks;
 
 impl LoopHook for DefaultHooks { }
+
+pub struct LoopBuilder<H, B> {
+    thread: CapIdx,
+    utcb: *mut l4_utcb_t,
+    buf_mgr: B,
+    hooks: H
+}
+
+impl LoopBuilder<DefaultHooks, Bufferless> {
+    pub unsafe fn new_at(thcap: CapIdx, u: *mut l4_utcb_t) -> Self {
+        LoopBuilder {
+            thread: thcap,
+            utcb: u,
+            buf_mgr: Bufferless { },
+            hooks: DefaultHooks { },
+        }
+    }
+}
+
+impl<H: LoopHook, B: BufDemand> LoopBuilder<H, B> {
+    pub fn with_buffers(self) -> LoopBuilder<H, BufferManager> {
+        LoopBuilder {
+            thread: self.thread, 
+            utcb: self.utcb,
+            buf_mgr: BufferManager::new(),
+            hooks: self.hooks,
+        }
+    }
+    pub fn build<'a>(self) -> Loop<'a, H, B> {
+        Loop::new(self.thread, self.utcb, self.hooks, self.buf_mgr)
+    }
+}
