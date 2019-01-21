@@ -1,16 +1,17 @@
 use l4_sys::l4_msg_regs_t;
 
 /// Bindgen changed its union generation a few times, abstract from it
-pub struct MsgMrFake(l4_msg_regs_t);
+pub struct UtcbMrFake(l4_msg_regs_t);
 
-impl MsgMrFake {
+impl UtcbMrFake {
     pub fn new() -> Self {
-        MsgMrFake(l4_msg_regs_t::default())
+        UtcbMrFake(l4_msg_regs_t::default())
     }
 
+    // this is dirty
     pub fn get(&self, idx: usize) -> u64 {
-    unsafe {
-        self.0.mr.as_ref()[idx]
+        unsafe {
+            self.0.mr.as_ref()[idx]
         }
     }
 

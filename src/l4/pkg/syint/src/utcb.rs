@@ -1,13 +1,13 @@
 use l4::utcb::*;
 use std::mem::transmute;
 
-use helpers::MsgMrFake;
+use helpers::UtcbMrFake;
 use utcb_cc::*;
 
-fn mk_msg_regs() -> (MsgMrFake, Msg) {
-    let mut mr = MsgMrFake::new();
+fn mk_msg_regs() -> (UtcbMrFake, UtcbMr) {
+    let mut mr = UtcbMrFake::new();
     let msg = unsafe {
-        Msg::from_raw_mr(mr.mut_ptr())
+        UtcbMr::from_mr(mr.mut_ptr())
     };
     (mr, msg)
 }
@@ -46,9 +46,9 @@ tests! {
 
     fn serialisation_of_long_float_bool_same_as_cc() {
         use l4::utcb::*;
-        let mut mr = MsgMrFake::new();
+        let mut mr = UtcbMrFake::new();
         let mut msg = unsafe {
-            Msg::from_raw_mr(mr.mut_ptr())
+            UtcbMr::from_mr(mr.mut_ptr())
         };
         unsafe {
             msg.write(987654u64).expect("Writing failed");
@@ -64,9 +64,9 @@ tests! {
     }
 
     fn serialisation_of_bool_long_float_works() {
-        let mut mr = MsgMrFake::new();
+        let mut mr = UtcbMrFake::new();
         let mut msg = unsafe {
-            Msg::from_raw_mr(mr.mut_ptr())
+            UtcbMr::from_mr(mr.mut_ptr())
         };
         unsafe {
             msg.write(true).expect("ToDo");
@@ -83,9 +83,9 @@ tests! {
     }
 
     fn serialisation_of_u64_u32_u64_works() {
-        let mut mr = MsgMrFake::new();
+        let mut mr = UtcbMrFake::new();
         let mut msg = unsafe {
-            Msg::from_raw_mr(mr.mut_ptr())
+            UtcbMr::from_mr(mr.mut_ptr())
         };
         unsafe {
             msg.write(42u64).unwrap();
@@ -103,9 +103,9 @@ tests! {
     }
 
     fn write_fpage_type_works() {
-        let mut mr = MsgMrFake::new();
+        let mut mr = UtcbMrFake::new();
         let mut msg = unsafe {
-            Msg::from_raw_mr(mr.mut_ptr())
+            UtcbMr::from_mr(mr.mut_ptr())
         };
         // write fpage with the C++ serialisation framework methods
         unsafe {
@@ -124,9 +124,9 @@ tests! {
     }
 
     fn serialising_u32_and_fpage_works_as_in_cc() {
-        let mut mr = MsgMrFake::new();
+        let mut mr = UtcbMrFake::new();
         let mut msg = unsafe {
-            Msg::from_raw_mr(mr.mut_ptr())
+            UtcbMr::from_mr(mr.mut_ptr())
         };
         // write fpage with the C++ serialisation framework methods
         unsafe {
@@ -150,11 +150,11 @@ tests! {
 
     fn read_i64_i64_from_mr() {
         use l4::utcb::*;
-        let mut mr = MsgMrFake::new();
+        let mut mr = UtcbMrFake::new();
         mr.set(0, 284);
         mr.set(1, 989812);
         let mut msg = unsafe {
-            Msg::from_raw_mr(mr.mut_ptr())
+            UtcbMr::from_mr(mr.mut_ptr())
         };
         unsafe {
             assert_eq!(msg.read::<u64>().unwrap(), 284);

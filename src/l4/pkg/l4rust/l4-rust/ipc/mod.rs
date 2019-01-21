@@ -103,14 +103,14 @@ impl MsgTag {
     /// When sending a message, the label field is used for denoting the protocol type, while it is
     /// used for transmitting a result when receiving a message.
     /// When setting protocols, it is advised to use the safer `protocol()` method.
-    pub fn label(&self) -> i32 {
-        (self.raw >> 16) as i32
+    pub fn label(&self) -> i64 {
+        (self.raw >> 16) as i64
     }
 
     /// Get the protocol of the message tag
     ///
     /// This is internally the same as the `label()` function, wrapping the value in a safe
-    /// Protocol enum.
+    /// Protocol enum. This only works for L4-predefined (kernel) protocols.
     pub fn protocol(&self) -> Result<Protocol> {
         Protocol::from_isize(self.raw >> 16).ok_or(
                 Error::InvalidArg("Unknown protocol", Some(self.raw >> 16)))
@@ -121,7 +121,7 @@ impl MsgTag {
     /// The label is a raw number used to identify a protocol when doing a send and usable for
     /// return values when answering a rquest. If a protocol is set, it is advisable to use the
     /// `set_protocol()` method.
-    pub fn set_label(&mut self, l: i32) {
+    pub fn set_label(&mut self, l: i64) {
         self.raw = (self.raw & 0x0ffff) | ((l as isize) << 16)
     }
 
@@ -172,7 +172,7 @@ impl MsgTag {
                   raw: self.raw as i64 }));
         }
         if self.label() < 0 {
-            let gerr = ::num_traits::FromPrimitive::from_i32(self.label());
+            let gerr = ::num_traits::FromPrimitive::from_i64(self.label());
             return Err(match gerr {
                 Some(e) => Error::Generic(e),
                 None => Error::Protocol(
