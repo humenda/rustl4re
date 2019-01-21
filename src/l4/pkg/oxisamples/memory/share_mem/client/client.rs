@@ -18,7 +18,7 @@ use libc::c_void;
 
 iface_enumerate! {
     trait Shm {
-        const PROTOCOL_ID: i64 = 0x44;
+        const PROTOCOL_ID: i64 = 0x42;
         type OpType = i32;
         fn witter(&mut self, length: u32, ds: ::l4::utcb::FlexPage) -> bool;
     }

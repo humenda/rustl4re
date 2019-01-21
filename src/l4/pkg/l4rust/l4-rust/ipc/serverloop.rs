@@ -5,7 +5,7 @@ use _core::{
 use l4_sys::{self,
     consts::UtcbConsts::L4_UTCB_GENERIC_BUFFERS_SIZE,
     l4_buf_regs_t,
-    l4_cap_consts_t::{L4_INVALID_CAP_BIT, L4_CAP_MASK},
+    l4_cap_consts_t::{L4_VALID_CAP_BIT, L4_CAP_MASK},
     l4_cap_idx_t as CapIdx, l4_timeout_t,
     l4_msg_item_consts_t::{L4_RCV_ITEM_SINGLE_CAP, L4_RCV_ITEM_LOCAL_ID},
     l4_utcb_t, l4_utcb_br_u};
@@ -59,7 +59,8 @@ pub trait LoopHook {
                     Error::InvalidCap | Error::InvalidArg(_, _)
                             | Error::Protocol(_) | Error::InvalidState(_) =>
                         panic!("unsupported error type received"),
-                }, 0, 0, 0))
+                } * -1, 0, 0, 0))
+                // ^ by convention, error codes are negative
         }
     }
 
@@ -74,7 +75,8 @@ pub trait LoopHook {
                     Error::InvalidCap | Error::InvalidArg(_, _)
                             | Error::Protocol(_) | Error::InvalidState(_) =>
                         panic!("unsupported error type received"),
-                }, 0, 0, 0))
+                } * -1, 0, 0, 0)
+            ) // ^ by convention, error types are returned as negative integer
     }
 
 
@@ -82,11 +84,6 @@ pub trait LoopHook {
     fn reply_timeout() -> l4_timeout_t {
         l4_sys::consts::L4_IPC_SEND_TIMEOUT_0
     }
-
-    /// Configure the buffer registers for receive operations before the reply
-    /// operation. The default implementation automatically allocates capability
-    /// slots according to the maximum required demand.
-    fn setup_wait(_: *mut l4_utcb_t) { }
 }
 
 /// Receive window management for IPC server loop(s)
@@ -187,9 +184,10 @@ impl BufDemand for BufferManager {
             return Err(Error::InvalidArg("Capability slot demand too large",
                                          Some(demand as isize)));
         }
-        while demand > self.caps {
+        // ToDo: set up is wrong, +1 caps allocated than actually required
+        while demand + 1 > self.caps {
             let cap = unsafe { l4_sys::l4re_util_cap_alloc() };
-            if (cap & L4_INVALID_CAP_BIT as u64) == 0 {
+            if (cap & L4_VALID_CAP_BIT as u64) == 0 {
                 return Err(Error::Generic(GenericErr::NoMem));
             }
 
@@ -323,9 +321,13 @@ impl<'a, T: LoopHook, B: BufDemand> Loop<'a, T, B> {
     fn reply_and_wait(&mut self, replytag: MsgTag) -> (u64, MsgTag) {
         self.buf_mgr.setup_wait(self.utcb);
         unsafe {
-            let mut label = mem::uninitialized();
-            let tag = MsgTag::from(l4_sys::l4_ipc_reply_and_wait(self.utcb,
+            let mut label = 0;
+            let mut tag = MsgTag::from(l4_sys::l4_ipc_reply_and_wait(self.utcb,
                      replytag.raw(), &mut label, l4_sys::timeout_never()));
+            if label == 0 && tag.has_error() {
+                tag = MsgTag::from(l4_sys::l4_ipc_wait(self.utcb,
+                        &mut label, l4_sys::timeout_never()));
+            }
             (label, tag)
         }
     }
@@ -352,11 +354,10 @@ impl<'a, T: LoopHook, B: BufDemand> Loop<'a, T, B> {
                 },
 
                 // use label to dispatch to registered server implementation
-                false => {
-                    match self.dispatch(tag, label) {
+                false => match self.dispatch(tag, label) {
                     LoopAction::Break => break,
                     LoopAction::ReplyAndWait(tag) => tag,
-                }}
+                }
             };
             let (tmp1, tmp2) = self.reply_and_wait(replytag);
             label = tmp1; // prevent shadowing
