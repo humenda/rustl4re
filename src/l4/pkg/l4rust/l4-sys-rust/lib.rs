@@ -16,13 +16,12 @@ mod task;
 /// expose public C API
 pub use crate::cap::*;
 pub use crate::c_api::*;
-//pub use crate::factory::*;
+pub use crate::factory::*;
 pub use crate::ipc_ext::*;
 pub use crate::ipc_basic::*;
 pub use crate::platform::*;
 pub use crate::task::*;
 
-const L4_PAGESIZEU: usize = L4_PAGESIZE as usize;
 const L4_PAGEMASKU: l4_addr_t = L4_PAGEMASK as l4_addr_t;
 const L4_PAGEMASKUSIZE: usize = L4_PAGEMASK as usize;
 

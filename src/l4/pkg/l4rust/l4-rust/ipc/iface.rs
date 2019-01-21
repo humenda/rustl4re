@@ -157,15 +157,19 @@ macro_rules! iface_back {
             fn op_dispatch(&mut self, tag: $crate::ipc::MsgTag,
                     u: *mut ::l4_sys::l4_utcb_t)
                     -> $crate::error::Result<$crate::ipc::MsgTag> {
-                let mut msg_mr = $crate::utcb::Utcb::from_utcb(u).mr();
+                use $crate::utcb::{Utcb, WORDS_PER_ITEM, Consts};
+                let mut msg_mr = Utcb::from_utcb(u).mr();
                 // uncover cheating clients
-                if (tag.words() + tag.items() * $crate::utcb::WORDS_PER_ITEM)
-                        > $crate::utcb::Msg::DATA_SIZE {
+                if (tag.words() + tag.items() * WORDS_PER_ITEM)
+                        > Consts::L4_UTCB_GENERIC_DATA_SIZE as usize {
                     return Err($crate::error::Error::Generic(
-                            $crate::error::GenericErr::MsgTooShort))
+                            $crate::error::GenericErr::MsgTooLong))
                 }
-                // ToDo: check for correct protocol
                 // ToDo: check for correct number of words
+                if tag.label() != Self::PROTOCOL_ID {
+                    return Err($crate::error::Error::Generic(
+                            $crate::error::GenericErr::InvalidProt))
+                }
                 let opcode = unsafe { msg_mr.read::<$op_type>()? };
                 $( // iterate over functions and op codes
                 if opcode == $op_code {
