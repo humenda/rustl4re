@@ -2,21 +2,24 @@
 extern crate core;
 extern crate l4_sys;
 extern crate l4re;
-#[macro_use]
 extern crate l4;
+extern crate l4_derive;
 
 // required for interface initialisation
-use l4::cap::IfaceInit;
+use crate::l4::cap::IfaceInit;
+use crate::l4::{iface, iface_enumerate, iface_back, write_msg, derive_ipc_calls};
+use crate::l4_derive::l4_client;
 
-iface_enumerate! {
-    trait CalcSpec {
+iface! {
+    trait Calculator {
         const PROTOCOL_ID: i64 = 0x44;
-        type OpType = i32;
         fn sub(&mut self, a: u32, b: u32) -> i32;
         fn neg(&mut self, a: u32) -> i32;
     }
-    struct Calc;
 }
+
+#[l4_client(Calculator)]
+struct Calc;
 
 fn main() {
     println!("Calculation client starting…");

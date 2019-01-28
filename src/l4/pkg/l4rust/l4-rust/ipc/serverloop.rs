@@ -1,22 +1,21 @@
 use _core::{
     marker::PhantomData,
-    mem
+        mem::transmute,
 };
 use l4_sys::{self,
-    consts::UtcbConsts::L4_UTCB_GENERIC_BUFFERS_SIZE,
-    l4_buf_regs_t,
-    l4_cap_consts_t::{L4_VALID_CAP_BIT, L4_CAP_MASK},
-    l4_cap_idx_t as CapIdx, l4_timeout_t,
-    l4_msg_item_consts_t::{L4_RCV_ITEM_SINGLE_CAP, L4_RCV_ITEM_LOCAL_ID},
-    l4_utcb_t, l4_utcb_br_u};
+    l4_cap_idx_t as CapIdx,
+    l4_timeout_t,
+    l4_utcb_t
+};
 
 use super::{
-    MsgTag, types::{Callable, Demand, Dispatch},
+    MsgTag,
+    types::{Bufferless, BufferManager, Callable, CapProvider, Demand, Dispatch},
+    serialise::ArgAccess
 };
 use super::super::{
-    cap::{Cap, Interface, IfaceInit},
-    error::{Error, GenericErr, Result},
-    types::UMword,
+    error::{Error, Result},
+    utcb::Utcb,
 };
 use libc::c_void;
 
@@ -47,9 +46,9 @@ pub trait LoopHook {
     /// access to the complete thread and server loop state.
     /// The returned action directly influences the execution of the loop, see the documentation of
     /// [LoopAction](enum.LoopAction.html).
-    fn ipc_error<B>(&mut self, _: &mut Loop<Self, B>, tag: MsgTag)
+    fn ipc_error<C>(&mut self, _: &mut Loop<Self, C>, tag: MsgTag)
                 -> LoopAction
-            where Self: ::_core::marker::Sized, B: BufDemand {
+            where Self: ::_core::marker::Sized, C: CapProvider {
         match tag.result() {
             Ok(_) => unreachable!(),
             Err(e) => LoopAction::ReplyAndWait(MsgTag::new(match e {
@@ -65,9 +64,9 @@ pub trait LoopHook {
     }
 
     // ToDo: docs + rethink Dispatch trait and LoopHook interface to take **any** error interace
-    fn application_error<B>(&mut self, _: &mut Loop<Self, B>, e: Error)
+    fn application_error<C>(&mut self, _: &mut Loop<Self, C>, e: Error)
                 -> LoopAction
-            where Self: ::_core::marker::Sized, B: BufDemand {
+            where Self: ::_core::marker::Sized, C: CapProvider {
         LoopAction::ReplyAndWait(MsgTag::new(match e {
                     Error::Generic(e) => e as i64,
                     Error::Tcr(e) => e as i64,
@@ -86,160 +85,6 @@ pub trait LoopHook {
     }
 }
 
-/// Receive window management for IPC server loop(s)
-///
-/// A buffer manager controls the capability slot allocation and the buffer register setup to
-/// receive and dispatch kernel **items** such as capability flexpages. How and whether
-/// capabilities (etc.) are allocated depends on the policy of each implementor.
-pub trait BufDemand {
-    /// Allocate buffers according to given demand
-    ///
-    /// This function will allocate as many buffers as required for the given
-    /// capability demand. If buffers were allocated before, these are left
-    /// unchanged, only the additional buffers are allocated. If the  given
-    /// demand is smaller than the actual number of allocated buffers, no action
-    /// is performed.  
-    /// A capability beyond the internal buffer size will resultin an
-    /// `Error::InvalidArg` and capability allocation failures in an
-    /// `Error::NoMem`.
-    /// **Note:** memory or I/O flexpages are not supported.
-    fn alloc_capslots(&mut self, demand: u32) -> Result<()>;
-
-    /// Retrieve capability at allocated buffer slot/index
-    ///
-    /// The argument must be within `0 <= index <= self.caps_used`.
-    fn rcv_cap<T>(&self, index: usize) -> Result<Cap<T>>
-                where T: Interface + IfaceInit;
-    /// Set the receive flags for the buffers.
-    ///
-    /// This must be called **before** any buffer has been allocated and fails otherwise.
-    fn set_rcv_cap_flags(&mut self, flags: UMword) -> Result<()>;
-
-    /// Return the maximum number of slots this manager could allocate
-    #[inline]
-    fn max_slots(&self) -> u32;
-
-    /// Return the amount of allocated buffer slots.
-    #[inline]
-    fn caps_used(&self) -> u32;
-
-    /// Set up the UTCB for receiving items
-    ///
-    /// This function instructs where and how to map flexpages on arrival. It is
-    /// usually called by the server loop.
-    fn setup_wait(&mut self, _: *mut l4_utcb_t);
-}
-
-/// A buffer manager not able to receive any capability.
-///
-/// While this limits the server implementations, it might be a handy
-/// optimisation, saving any buffer setup. Since this is a zero-sized struct,
-/// it'll also shrink the memory footprint of the service.
-pub struct Bufferless;
-
-impl BufDemand for Bufferless {
-    fn alloc_capslots(&mut self, demand: u32) -> Result<()> {
-        match demand == 0 {
-            true => Ok(()),
-            false => Err(Error::InvalidArg("buffer allocation not permitted", None)),
-        }
-    }
-
-    fn rcv_cap<T>(&self, _: usize) -> Result<Cap<T>>
-                where T: Interface + IfaceInit {
-        Err(Error::InvalidArg("No buffers allocated", None))
-    }
-
-    fn set_rcv_cap_flags(&mut self, _: UMword) -> Result<()> { Ok(()) }
-
-    #[inline]
-    fn max_slots(&self) -> u32 { 0 }
-    #[inline]
-    fn caps_used(&self) -> u32 { 0 }
-    fn setup_wait(&mut self, _: *mut l4_utcb_t) { }
-}
-
-pub struct BufferManager {
-    /// number of allocated capabilities
-    caps: u32,
-    cap_flags: u64,
-    // ToDo: reimplement this with the (ATM unstable) const generics
-    br: [u64; l4_sys::consts::UtcbConsts::L4_UTCB_GENERIC_BUFFERS_SIZE as usize],
-}
-
-impl BufferManager {
-    pub fn new() -> Self {
-        BufferManager {
-            caps: 0,
-            cap_flags: L4_RCV_ITEM_LOCAL_ID as u64,
-            br: [0u64; L4_UTCB_GENERIC_BUFFERS_SIZE as usize],
-        }
-    }
-}
-
-impl BufDemand for BufferManager {
-    fn alloc_capslots(&mut self, demand: u32) -> Result<()> {
-        // take two extra buffers for a possible timeout and a zero terminator
-        if demand + 3 >= self.br.len() as u32 {
-            return Err(Error::InvalidArg("Capability slot demand too large",
-                                         Some(demand as isize)));
-        }
-        // ToDo: set up is wrong, +1 caps allocated than actually required
-        while demand + 1 > self.caps {
-            let cap = unsafe { l4_sys::l4re_util_cap_alloc() };
-            if (cap & L4_VALID_CAP_BIT as u64) == 0 {
-                return Err(Error::Generic(GenericErr::NoMem));
-            }
-
-            // safe this cap as a "receive item" in the format that the kernel
-            // understands
-            self.br[self.caps as usize] = cap | L4_RCV_ITEM_SINGLE_CAP as u64
-                    | self.cap_flags;
-            self.caps += 1;
-        }
-        self.br[self.caps as usize] = 0; // terminate receive list
-        Ok(())
-    }
-
-    fn rcv_cap<T>(&self, index: usize) -> Result<Cap<T>>
-            where T: Interface + IfaceInit {
-        match index >= self.caps as usize {
-            true  => Err(Error::InvalidArg("Index not allocated", Some(index as isize))),
-            false => Ok(Cap::<T>::new(self.br[index] & L4_CAP_MASK as u64)),
-        }
-    }
-
-    fn set_rcv_cap_flags(&mut self, flags: UMword) -> Result<()> {
-        if self.cap_flags == 0 {
-            self.cap_flags = flags as u64;
-            return Ok(());
-        }
-        Err(Error::InvalidState("Unable to set buffer flags when capabilities \
-                                were already allocated"))
-    }
-
-    #[inline]
-    fn max_slots(&self) -> u32 {
-        self.br.len() as u32
-    }
-
-    #[inline]
-    fn caps_used(&self) -> u32 {
-        self.caps
-    }
-
-    fn setup_wait(&mut self, u: *mut l4_utcb_t) {
-        unsafe {
-            let br: *mut l4_buf_regs_t = l4_utcb_br_u(u);
-            (*br).bdr = 0;
-            for index in 0usize..(self.caps as usize - 1) {
-                (*br).br[index] = self.br[index];
-            }
-        }
-    }
-}
-
-
 /// Server implementation callback from server loop
 ///
 /// Whenever a server object is registered with the server loop, the label associated with the
@@ -255,15 +100,20 @@ impl BufDemand for BufferManager {
 /// `server_impl_callback::<Self>` to the first struct member.
 /// generic function is
 /// usually used as the function pointed to 
-pub fn server_impl_callback<T: Callable + Dispatch>(ptr: *mut c_void,
-        tag: MsgTag, utcb: *mut l4_utcb_t) -> Result<MsgTag> {
+pub fn server_impl_callback<T, C>(ptr: *mut c_void, tag: MsgTag,
+                                  args: *mut c_void)
+        -> Result<MsgTag>
+        where T: Callable + Dispatch, C: CapProvider {
     unsafe {
         let ptr = ptr as *mut T;
-        (*ptr).dispatch(tag, utcb)
+        let args = transmute::<*mut c_void, *mut ArgAccess<C>>(args);
+        let args = transmute::<*mut ArgAccess<C>, &mut ArgAccess<C>>(args);
+        (*ptr).dispatch(tag, args)
     }
 }
 
-pub type Callback = fn(*mut libc::c_void, MsgTag, *mut l4_utcb_t) -> Result<MsgTag>;
+// first c_void is the server struct, the second c_void is the ArgAccess instance
+pub type Callback = fn(*mut libc::c_void, MsgTag, *mut c_void) -> Result<MsgTag>;
 
 pub struct Loop<'a, Hooks: LoopHook, BrMgr> {
     /// thread that this server runs in
@@ -289,9 +139,9 @@ macro_rules! borrow {
     }}
 }
 
-impl<'a, T: LoopHook, B: BufDemand> Loop<'a, T, B> {
+impl<'a, T: LoopHook, C: CapProvider> Loop<'a, T, C> {
     /// Create new server loop at given thread with specified hooks
-    fn new(thread: CapIdx, u: *mut l4_utcb_t, h: T, b: B) -> Loop<'a, T, B> {
+    fn new(thread: CapIdx, u: *mut l4_utcb_t, h: T, b: C) -> Loop<'a, T, C> {
         Loop {
             thread: thread,
             utcb: u,
@@ -366,12 +216,15 @@ impl<'a, T: LoopHook, B: BufDemand> Loop<'a, T, B> {
     }
 
     fn dispatch(&mut self, tag: MsgTag, ipc_label: u64) -> LoopAction {
+        // create argument reader / writer instance with access to the message registers and the
+        // allocated (cap) buffers
+        let mut args = ArgAccess::new(Utcb::from_utcb(self.utcb).mr(), &mut self.buf_mgr);
         let result = unsafe {
             let handler = ipc_label as *mut c_void;
             let callable = *(ipc_label as *mut Callback);
-            callable(handler, tag, self.utcb)
+            callable(handler, tag, &mut args as *mut _ as *mut c_void)
         };
-        // dispatch received data to user-registered handler
+        // dispatch received result to user-registered handler
         match result {
             Err(e) => borrow!(self.hooks.application_error(&mut self, e)),
             Ok(tag) => LoopAction::ReplyAndWait(tag),
@@ -383,10 +236,10 @@ pub struct DefaultHooks;
 
 impl LoopHook for DefaultHooks { }
 
-pub struct LoopBuilder<H, B> {
+pub struct LoopBuilder<H, C> {
     thread: CapIdx,
     utcb: *mut l4_utcb_t,
-    buf_mgr: B,
+    buf_mgr: C,
     hooks: H
 }
 
@@ -401,7 +254,7 @@ impl LoopBuilder<DefaultHooks, Bufferless> {
     }
 }
 
-impl<H: LoopHook, B: BufDemand> LoopBuilder<H, B> {
+impl<H: LoopHook, C: CapProvider> LoopBuilder<H, C> {
     pub fn with_buffers(self) -> LoopBuilder<H, BufferManager> {
         LoopBuilder {
             thread: self.thread, 
@@ -410,7 +263,7 @@ impl<H: LoopHook, B: BufDemand> LoopBuilder<H, B> {
             hooks: self.hooks,
         }
     }
-    pub fn build<'a>(self) -> Loop<'a, H, B> {
+    pub fn build<'a>(self) -> Loop<'a, H, C> {
         Loop::new(self.thread, self.utcb, self.hooks, self.buf_mgr)
     }
 }

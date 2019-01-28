@@ -56,6 +56,11 @@ unsafe fn unsafe_main() {
     // open wait:
     let mut tag = l4::l4_ipc_wait(l4_utcb(), &mut l, l4::timeout_never());
     loop {
+        unsafe {
+        let br = l4::l4_utcb_br();
+        assert_eq!(ds & l4::l4_cap_consts_t::L4_CAP_MASK as u64, (*br).br[0] & l4::l4_cap_consts_t::L4_CAP_MASK as u64);
+        println!("{:x} {:x}", ds, (*br).br[0]);
+        }
         match l4::l4_ipc_error(tag, l4_utcb()) {
             0 => (),
             x => panic!("IPC error {}", x),

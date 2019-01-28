@@ -13,6 +13,7 @@ use l4_sys::{
     consts::{UTCB_GENERIC_DATA_SIZE, UtcbConsts}};
 
 use crate::cap::{Cap, Interface};
+use crate::ipc::Serialisable;
 use crate::error::{Error, GenericErr, Result};
 use crate::types::{Mword, UMword};
 
@@ -95,6 +96,18 @@ impl Utcb {
         }
     }
 
+    /// Create buffer register builder
+    ///
+    /// This returns a builder for the buffer registers. Unlike the raw
+    /// C version, this builder is capable to write byte-granular to the message
+    /// registers, allowing both space and performance-optimisations due to
+    /// alignment. See [UtcbBr](struct.UtcbBr.html) for more details.
+    #[inline]
+    pub fn br(&mut self) -> UtcbBr {
+        unsafe {
+            UtcbBr::from_utcb(self.raw)
+        }
+    }
 
     #[inline(always)]
     pub fn bdr(&self) -> usize {
@@ -103,42 +116,79 @@ impl Utcb {
         }
     }
 }
+/// Flex page types
+#[repr(u8)]
+#[derive(FromPrimitive, ToPrimitive)]
+pub enum FpageType {
+    Special = (L4_FPAGE_SPECIAL as u8) << 4,
+    Memory  = (L4_FPAGE_MEMORY as u8) << 4,
+    Io      = (L4_FPAGE_IO as u8) << 4,
+    Obj     = (L4_FPAGE_OBJ as u8) << 4
+}
 
-pub trait Serialisable: Clone {
-    #[inline]
-    unsafe fn read(m: &mut UtcbMr) -> Result<Self> {
-        m.read::<Self>()
-    }
+/// capability mapping type (flex page type)
+#[repr(u8)]
+#[derive(FromPrimitive, ToPrimitive)]
+pub enum MapType {
+    Map   = L4_MAP_ITEM_MAP as u8,
+    Grant = L4_MAP_ITEM_GRANT as u8,
+}
 
-    #[inline]
-    unsafe fn write(m: &mut UtcbMr, v: Self) -> Result<()> {
-        m.write::<Self>(v)
-    }
-
-    #[inline]
-    unsafe fn write_item(m: &mut UtcbMr, v: Self) -> Result<()> {
-        m.write_item::<Self>(v)
+bitflags! {
+    pub struct FpageRights: u8 {
+        /// executable flex page
+        const X   = L4_FPAGE_X as u8;
+        /// writable flex page
+        const W   = L4_FPAGE_W as u8;
+        /// read-only flex page
+        const R   = L4_FPAGE_RO as u8;
+        /// flex page which is readable and writable
+        const RW  = Self::W.bits | Self::R.bits;
+        /// flex page which is readable and executable
+        const RX  = Self::R.bits | Self::X.bits;
+        /// flex page which is readable, executable and writable
+        const RWX = Self::R.bits | Self::W.bits | Self::X.bits;
     }
 }
 
-macro_rules! impl_serialisable {
-    ($($type:ty),*) => {
-        $(
-            impl Serialisable for $type { }
-        )*
-    }
+/// A flex page is the representation of memory, I/O ports or kernel objects (capabilities)
+/// transferable across task boundaries. Consequently, it carries additional information as access
+/// rights and more.
+/// See the [C API](https://l4re.org/doc/group__l4__fpage__api.html) for a more in-depth
+/// discussion.
+/// Sending a capability requires to registers, one containing the action on the
+/// page, the other the flexpage to be transfered.
+#[repr(C)]
+#[derive(Clone)]
+pub struct SndFlexPage {
+    /// information about base address to send, map mode, etc.
+    description: u64,
+    // the data to transfer, e.g. a capability
+    fpage: u64
 }
 
-impl_serialisable!(i8, i16, i32, i64, i128, u8, u16, u32, u64, u128, f32, f64,
-                   bool, char);
-
-impl Serialisable for () {
-    unsafe fn read(_: &mut UtcbMr) -> Result<()> {
-        Ok(())
+impl SndFlexPage {
+    /// Construct a new flex page
+    ///
+    /// This constructs a new flex page from the raw value of a raw flex page
+    /// (`l4_fpage_t.raw`) and additional information.
+    pub fn new(fpage: u64, snd_base: u64, mt: Option<MapType>) -> Self {
+        // this is taken mostly unmodified from the Gen_Fpage class in `ipc_types`, though cache
+        // opts and `continue` (enums from this class) are not supported
+        Self {
+            // AKA _base in the C++ version
+            description: L4_ITEM_MAP as u64
+                    | (snd_base & (!0u64 << 10))
+                    | mt.map(|v| v as u64).unwrap_or_default(),
+            fpage: fpage
+        }
     }
 
-    unsafe fn write(_: &mut UtcbMr, _: Self) -> Result<()> {
-        Ok(())
+    pub fn from_cap<T: Interface>(c: &Cap<T>, rights: FpageRights,
+                mt: Option<MapType>) -> SndFlexPage {
+        SndFlexPage::new(unsafe {
+                ::l4_sys::l4_obj_fpage(c.cap(), 0, rights.bits() as u8).raw
+            }, 0, mt)
     }
 }
 
@@ -148,7 +198,7 @@ impl Serialisable for () {
 /// aligned to the required type. Returned is a
 /// pointer to the type-aligned memory region.
 #[inline]
-unsafe fn align_with_offset<T>(ptr: *mut u8, offset: usize)
+pub unsafe fn align_with_offset<T>(ptr: *mut u8, offset: usize)
         -> (*mut u8, usize) {
     let ptr = ptr.offset(offset as isize);
     let new_offset = ptr.align_offset(align_of::<T>());
@@ -199,14 +249,14 @@ impl<U: UtcbRegSize> Registers<U> {
     /// Write given value to the next free, type-aligned slot
     ///
     /// The value is aligned and written into the message registers.
-    pub unsafe fn write<T: Serialisable>(&mut self, val: T) 
+    pub unsafe fn write<T: Serialisable>(&mut self, val: &T) 
             -> Result<()> {
         let (ptr, offset) = align_with_offset::<T>(self.buf, self.offset);
         let next = offset + size_of::<T>();
         if next > U::BUF_SIZE {
             return Err(Error::Generic(GenericErr::MsgTooLong));
         }
-        *transmute::<*mut u8, *mut T>(ptr) = val;
+        *transmute::<*mut u8, *mut T>(ptr) = val.clone();
         self.offset = next; // advance offset *behind* element
         Ok(())
     }
@@ -256,13 +306,13 @@ impl<U: UtcbRegSize> Registers<U> {
 /// # Example
 ///
 /// ```
-/// use crate::l4::utcb::{FlexPage, Utcb};
+/// use crate::l4::utcb::{SndFlexPage, Utcb};
 ///
 /// fn main() {
 ///     let mr = Utcb::current()::mr();
 ///     mr.write(42u32);
 ///     mr.write(true); // trve
-///     mr.write(FlexPage::new(0, 0, None));
+///     mr.write(SndFlexPage::new(0, 0, None));
 ///     // see the [Mword](../types/type.Mword.html) type, first two writes
 ///     // fit into one mword
 ///     assert_eq!(mr.words(), 3); // flex page takes two ewords
@@ -285,7 +335,7 @@ impl UtcbMr {
     /// Write given item to the next free, type-aligned slot
     ///
     /// The item (e.g. a flex page) is aligned and written into the message registers.
-    pub unsafe fn write_item<T: Serialisable>(&mut self, val: T) 
+    pub unsafe fn write_item<T: Serialisable>(&mut self, val: &T) 
             -> Result<()> {
         let res = self.regs.write(val)?;
         self.items += 1;
@@ -346,7 +396,7 @@ impl DerefMut for UtcbMr {
 /// # Example
 ///
 /// ```
-/// use crate::l4::utcb::{FlexPage, Utcb};
+/// use crate::l4::utcb::{SndFlexPage, Utcb};
 ///
 /// fn main() {
 ///     let br = Utcb::current()::br();
@@ -382,145 +432,4 @@ impl DerefMut for UtcbBr {
     fn deref_mut(&mut self) -> &mut Self::Target { &mut self.0 }
 }
 
-
-/// Flex page types
-#[repr(u8)]
-#[derive(FromPrimitive, ToPrimitive)]
-pub enum FpageType {
-    Special = (L4_FPAGE_SPECIAL as u8) << 4,
-    Memory  = (L4_FPAGE_MEMORY as u8) << 4,
-    Io      = (L4_FPAGE_IO as u8) << 4,
-    Obj     = (L4_FPAGE_OBJ as u8) << 4
-}
-
-/// capability mapping type (flex page type)
-#[repr(u8)]
-#[derive(FromPrimitive, ToPrimitive)]
-pub enum MapType {
-    Map   = L4_MAP_ITEM_MAP as u8,
-    Grant = L4_MAP_ITEM_GRANT as u8,
-}
-
-bitflags! {
-    pub struct FpageRights: u8 {
-        /// executable flex page
-        const X   = L4_FPAGE_X as u8;
-        /// writable flex page
-        const W   = L4_FPAGE_W as u8;
-        /// read-only flex page
-        const R   = L4_FPAGE_RO as u8;
-        /// flex page which is readable and writable
-        const RW  = Self::W.bits | Self::R.bits;
-        /// flex page which is readable and executable
-        const RX  = Self::R.bits | Self::X.bits;
-        /// flex page which is readable, executable and writable
-        const RWX = Self::R.bits | Self::W.bits | Self::X.bits;
-    }
-}
-
-/// A flex page is the representation of memory, I/O ports or kernel objects (capabilities)
-/// transferable across task boundaries. Consequently, it carries additional information as access
-/// rights and more.
-/// See the [C API](https://l4re.org/doc/group__l4__fpage__api.html) for a more in-depth
-/// discussion.
-/// Sending a capability requires to registers, one containing the action on the
-/// page, the other the flexpage to be transfered.
-#[repr(C)]
-#[derive(Clone)]
-pub struct FlexPage {
-    /// information about base address to send, map mode, etc.
-    description: u64,
-    // the data to transfer, e.g. a capability
-    fpage: u64
-}
-
-impl FlexPage {
-    /// Construct a new flex page
-    ///
-    /// This constructs a new flex page from the raw value of a raw flex page
-    /// (`l4_fpage_t.raw`) and additional information.
-    pub fn new(fpage: u64, snd_base: u64, mt: Option<MapType>) -> Self {
-        // this is taken mostly unmodified from the Gen_Fpage class in `ipc_types`, though cache
-        // opts and `continue` (enums from this class) are not supported
-        Self {
-            // AKA _base in the C++ version
-            description: L4_ITEM_MAP as u64
-                    | (snd_base & (!0u64 << 10))
-                    | mt.map(|v| v as u64).unwrap_or_default(),
-            fpage: fpage
-        }
-    }
-
-    pub fn from_cap<T: Interface>(c: Cap<T>, rights: FpageRights,
-                mt: Option<MapType>) -> FlexPage {
-        FlexPage::new(unsafe {
-                ::l4_sys::l4_obj_fpage(c.cap(), 0, rights.bits() as u8).raw
-            }, 0, mt)
-    }
-}
-
-impl Serialisable for FlexPage {
-    #[inline]
-    unsafe fn write(m: &mut UtcbMr, v: Self) -> Result<()> {
-        m.write_item::<Self>(v)
-    }
-}
-
-//  Gen_fpage(l4_fpage_t const &fp, l4_addr_t snd_base = 0,
-//            Map_type map_type = Map,
-//            Cacheopt cache = None, Continue cont = Last)
-//  : T(L4_ITEM_MAP | (snd_base & (~0UL << 10)) | l4_umword_t(map_type) | l4_umword_t(cache)
-//    | l4_umword_t(cont),
-//    fp.raw)
-//  {}
-//   Gen_fpage(L4::Cap<void> cap, unsigned rights, Map_type map_type = Map)
-//  : T(L4_ITEM_MAP | l4_umword_t(map_type) | (rights & 0xf0),
-//      cap.fpage(rights).raw)
-//  {}
-
-// Send flex-page
-//typedef Gen_fpage<Snd_item> Snd_fpage;
-// Rcv flex-page
-//typedef Gen_fpage<Buf_item> Rcv_fpage;:wq
-//  /**
-//   * Check if the capability has been mapped.
-//   *
-//   * The capability itself can then be retrieved from the cap slot
-//   * that has been provided in the receive operation.
-//   */
-//  bool cap_received() const { return (T::_base & 0x3e) == 0x38; }
-//  /**
-//   * Check if a label was received instead of a mapping.
-//   *
-//   * For IPC gates, if the L4_RCV_ITEM_LOCAL_ID has been set, then
-//   * only the label of the IPC gate will be provided if the gate
-//   * is local to the receiver,
-//   * i.e. the target thread of the IPC gate is in the same task as the
-//   * receiving thread.
-//   *
-//   * The label can be retrieved with Gen_fpage::data().
-//   */
-//  bool id_received() const { return (T::_base & 0x3e) == 0x3c; }
-//  /**
-//   * Check if a local capability id has been received.
-//   *
-//   * If the L4_RCV_ITEM_LOCAL_ID flag has been set by the receiver,
-//   * and sender and receiver are in the same task, then only
-//   * the capability index is transferred.
-//   *
-//   * The capability can be retrieved with Gen_fpage::data(; Rust: FlexPage::fpage).
-//   */
-//  bool local_id_received() const { return (T::_base & 0x3e) == 0x3e; }
-//
-//  /**
-//   * Check if the received item has the compound bit set.
-//   *
-//   * A set compound bit means the next message item of the same type
-//   * will be mapped to the same receive buffer as this message item.
-//   */
-//  bool is_compound() const { return T::_base & 1; }
-//  /// Return the raw flex page descriptor.
-//  l4_umword_t data() const { return T::_data; }
-//  /// Return the raw base descriptor.
-//  l4_umword_t base_x() const { return T::_base; }
 

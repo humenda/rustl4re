@@ -18,11 +18,13 @@
 /// // ToDo: interface which takes fn(IpcString) -> IpcString
 #[macro_use]
 mod iface;
+mod serialise;
 mod serverloop;
 pub mod types;
 
-pub use self::serverloop::{BufDemand, Bufferless, BufferManager,
-    Callback, Loop, LoopBuilder, server_impl_callback};
+pub use self::serialise::{ArgAccess, Serialisable};
+pub use self::serverloop::{Callback, Loop, LoopBuilder, server_impl_callback};
+pub use self::types::{CapProvider, Bufferless, BufferManager};
 
 use _core::convert::From;
 use l4_sys::{l4_msgtag_flags::*, l4_msgtag_t, l4_timeout_t, msgtag};
