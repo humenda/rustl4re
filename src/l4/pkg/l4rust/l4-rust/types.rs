@@ -98,4 +98,3 @@ enumgenerator! {
         L4_PROTO_DEBUGGER => Debugger,
     }
 }
-

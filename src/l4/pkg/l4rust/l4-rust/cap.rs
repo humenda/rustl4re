@@ -116,9 +116,9 @@ impl<T: Interface> Cap<T> {
         }
     }
 
-    pub fn cast<U: Interface + IfaceInit>(self) -> U {
+    pub fn cast<U: Interface + IfaceInit>(self) -> Cap<U> {
         unsafe {
-            U::new(self.cap())
+            Cap { interface: U::new(self.cap()) }
         }
     }
 
@@ -182,8 +182,11 @@ impl<T: Interface> Cap<T> {
         }
     }
 }
-
 pub fn from(c: CapIdx) -> Cap<Untyped> {
     Cap { interface: Untyped { 0: c } }
 }
 
+/// Construct an invalid cap
+pub fn invalid_cap() -> Cap<Untyped> {
+    Cap { interface: Untyped { 0: 0 | L4_INVALID_CAP_BIT as u64 } }
+}
