@@ -5,12 +5,12 @@ extern crate l4_derive;
 extern crate l4;
 extern crate l4re;
 
-use l4_sys::{l4_utcb, l4_utcb_t};
 use l4::{error::Result,
     iface_enumerate, iface_back, derive_ipc_calls, write_msg,
     ipc,
     ipc::MsgTag};
-use l4_derive::l4_callable;
+use l4_derive::l4_server;
+use l4_sys::{l4_utcb};
 
 iface_enumerate! {
     trait CalcIface {
@@ -19,10 +19,9 @@ iface_enumerate! {
         fn sub(&mut self, a: u32, b: u32) -> i32;
         fn neg(&mut self, a: u32) -> i32;
     }
-    struct Calc;
 }
 
-#[l4_callable]
+#[l4_server]
 struct CalcServer;
 
 impl CalcIface for CalcServer {
@@ -40,12 +39,12 @@ fn main() {
     println!("Calculation server starting…");
     let chan = l4re::sys::l4re_env_get_cap("calc_server").expect(
             "Received invalid capability for calculation server.");
-    let mut srv_impl = CalcServer::new();
+    let mut srv_impl = CalcServer::new(chan);
     let mut srv_loop = unsafe {
         ipc::LoopBuilder::new_at((*l4re::sys::l4re_env()).main_thread,
             l4_utcb())
     }.build();
-    srv_loop.register(chan, &mut srv_impl).expect("Failed to register server in loop");
+    srv_loop.register(&mut srv_impl).expect("Failed to register server in loop");
     println!("Waiting for incoming connections");
     srv_loop.start();
 }

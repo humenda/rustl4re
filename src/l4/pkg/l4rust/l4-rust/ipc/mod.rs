@@ -22,9 +22,9 @@ mod serialise;
 mod serverloop;
 pub mod types;
 
-pub use self::serialise::{ArgAccess, Serialisable};
+pub use self::serialise::Serialisable;
 pub use self::serverloop::{Callback, Loop, LoopBuilder, server_impl_callback};
-pub use self::types::{CapProvider, Bufferless, BufferManager};
+pub use self::types::{CapProvider, CapProviderAccess, Bufferless, BufferAccess, BufferManager};
 
 use _core::convert::From;
 use l4_sys::{l4_msgtag_flags::*, l4_msgtag_t, l4_timeout_t, msgtag};
@@ -318,4 +318,3 @@ pub unsafe fn l4_rcv_ep_bind_thread(gate: &Cap, thread: &Cap,
 //                l4_msgtag(l4_msgtag_protocol_L4_PROTO_KOBJECT as i64, 2, 1, 0),
 //                l4_timeout_t { raw: 0 })
 //}
-
