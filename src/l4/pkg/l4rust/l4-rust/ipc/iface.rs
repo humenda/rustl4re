@@ -4,7 +4,7 @@ macro_rules! write_msg {
         {
             unsafe {
                 $(
-                    <$argty as $crate::ipc::Serialisable>::write(&$arg,
+                    <$argty as $crate::ipc::Serialisable>::write($arg,
                             $msg_mr)?;
                  )*
             }
@@ -105,32 +105,32 @@ macro_rules! derive_ipc_calls {
             fn $name(&mut self, $($argname: $type),*)
                         -> $crate::error::Result<$return> 
                             where Self: $crate::cap::Interface {
+                use $crate::ipc::CapProvider;
                 // ToDo: would re-allocate a capability each time; how to control number of
                 // required slots
                 // ToDo: This is client code, yet implemented in the trait, lacking access to
                 // client state, e.g. the buffer allocator
-                let mut bfl = $crate::ipc::types::Bufferless { };
-                let mut arg_rw = $crate::ipc::ArgAccess::new(
-                        $crate::utcb::Utcb::current().mr(),
-                        &mut bfl);
+                let mut caps = $crate::ipc::types::Bufferless { };
+                let mut mr = $crate::utcb::Utcb::current().mr();
                 // write opcode
                 unsafe {
-                    arg_rw.write(&$opcode)?;
+                    mr.write($opcode)?;
                 }
-                write_msg!(&mut arg_rw, $($argname: $type),*)?;
+                write_msg!(&mut mr, $($argname: $type),*)?;
                 // get the protocol for the msg tag label
-                let tag = $crate::ipc::MsgTag::new($proto, arg_rw.words(),
-                        arg_rw.items(), 0);
+                let tag = $crate::ipc::MsgTag::new($proto, mr.words(),
+                        mr.items(), 0);
                 let _restag = $crate::ipc::MsgTag::from(unsafe {
                         ::l4_sys::l4_ipc_call(self.cap(),
                                 ::l4_sys::l4_utcb(), tag.raw(),
                                 ::l4_sys::timeout_never())
                     }).result()?;
-                arg_rw.reset(); // read again from start of registers
+                mr.reset(); // read again from start of registers, `caps` still untouched
                 // return () if "empty" return value, val otherwise
                 unsafe {
+                    let mut cap_buf = caps.access_buffers();
                     <$return as $crate::ipc::Serialisable>::read(
-                            &mut arg_rw)
+                            &mut mr, &mut cap_buf)
                 }
             }
         )*
@@ -150,7 +150,8 @@ macro_rules! iface_back {
             )*
         }
     ) => {
-        pub trait $traitname: $crate::cap::Interface {
+        pub trait $traitname: $crate::cap::Interface
+                    + $crate::ipc::CapProviderAccess {
             type OpType = $op_type;
             const PROTOCOL_ID: i64 = $proto;
             derive_ipc_calls!($proto; $($op_code =>
@@ -158,9 +159,9 @@ macro_rules! iface_back {
 
             // ToDo: document why op_dispatch implemented here
             fn op_dispatch<C>(&mut self, tag: $crate::ipc::MsgTag,
-                    ipc_args: &mut $crate::ipc::ArgAccess<C>)
-                    -> $crate::error::Result<$crate::ipc::MsgTag> 
-                    where C: $crate::ipc::types::CapProvider {
+                    mr: &mut $crate::utcb::UtcbMr,
+                    bufs: &mut $crate::ipc::BufferAccess)
+                    -> $crate::error::Result<$crate::ipc::MsgTag> {
                 // uncover cheating clients
                 if (tag.words() + tag.items() * $crate::utcb::WORDS_PER_ITEM)
                         > $crate::utcb::Consts::L4_UTCB_GENERIC_DATA_SIZE as usize {
@@ -173,20 +174,20 @@ macro_rules! iface_back {
                     return Err($crate::error::Error::Generic(
                             $crate::error::GenericErr::InvalidProt))
                 }
-                let opcode = unsafe { ipc_args.read::<$op_type>()? };
+                let opcode = unsafe { mr.read::<$op_type>()? };
                 $( // iterate over functions and op codes
                 if opcode == $op_code {
                     unsafe {
                         let user_ret = self.$name(
                             $(<$argtype as $crate::ipc::Serialisable>::
-                                read(ipc_args)?),*
+                                read(mr, bufs)?),*
                         )?;
-                        ipc_args.reset();
-                        ipc_args.write(&user_ret)?;
+                        mr.reset(); // reset MRs, not the bufs (not used for sending)
+                        mr.write(user_ret)?;
                         // on return, label/protocol is 0 for success and a custom error code
                         // otherwise; negative means some IPC failure
                         return Ok($crate::ipc::MsgTag::new(0,
-                                ipc_args.words(), ipc_args.items(), 0));
+                                mr.words(), mr.items(), 0));
                     }
                 }
                 )* // ↓ incorrect op code

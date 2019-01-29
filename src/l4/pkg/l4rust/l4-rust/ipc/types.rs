@@ -1,9 +1,10 @@
 //! IPC Interface Types
+use _core::ptr::NonNull;
 
 use super::super::{
-    cap::{Cap, IfaceInit, Interface, invalid_cap},
+    cap::{Cap, CapIdx, IfaceInit, Interface, invalid_cap},
     error::{Error, GenericErr, Result},
-    ipc::{MsgTag, ArgAccess},
+    ipc::MsgTag,
     types::UMword,
     utcb::UtcbMr
 };
@@ -25,7 +26,8 @@ use l4_sys::{consts::UtcbConsts::L4_UTCB_GENERIC_BUFFERS_SIZE,
 /// definition, passing the actual arguments back to the user implementation,
 /// once read from the UTCB.
 pub trait Dispatch {
-    fn dispatch<C: CapProvider>(&mut self, tag: MsgTag, _: &mut ArgAccess<C>) -> Result<MsgTag>;
+    fn dispatch(&mut self, tag: MsgTag, _: &mut UtcbMr,
+                _: &mut BufferAccess) -> Result<MsgTag>;
 }
 
 /// Empty marker trait for server-side message dispatch
@@ -52,6 +54,28 @@ pub trait HasDual {
 
 pub trait ReadReturn<T> {
     fn read(mr: &mut UtcbMr) -> T;
+}
+
+// allow the auto-derived client implementation to expose its buffer manager. This trait is hidden
+// since it is unused by the server and shouldn't be touched by the end user.
+#[doc(hidden)]
+pub trait CapProviderAccess {
+    unsafe fn access_buffers(&mut self) -> BufferAccess {
+        unimplemented!();
+    }
+}
+
+pub struct BufferAccess {
+    pub(crate) ptr: Option<NonNull<CapIdx>>
+}
+
+impl BufferAccess {
+    pub unsafe fn rcv_cap_unchecked<T: IfaceInit>(&mut self) -> Cap<T> {
+        let ptr = self.ptr.unwrap().as_ptr();
+        let read_cap: Cap<T> = Cap::new(*ptr);
+        self.ptr = Some(NonNull::new_unchecked(ptr));
+        read_cap
+    }
 }
 
 /// Receive window management for IPC server loop(s)
@@ -102,6 +126,15 @@ pub trait CapProvider  {
     /// This function instructs where and how to map flexpages on arrival. It is
     /// usually called by the server loop.
     fn setup_wait(&mut self, _: *mut l4_utcb_t);
+
+    /// Get a pointer to the underlying buffer
+    ///
+    /// This is highly unsafe and only advised in situation where the callee can
+    /// make sure that there is a buffer in the buffer manager implementation
+    /// and that it stores enough allocated items. It is undefined behaviour
+    /// otherwise.
+    #[inline]
+    unsafe fn access_buffers(&mut self) -> BufferAccess;
 }
 
 /// A buffer manager not able to receive any capability.
@@ -141,6 +174,12 @@ impl CapProvider for Bufferless {
     #[inline]
     fn caps_used(&self) -> u32 { 0 }
     fn setup_wait(&mut self, _: *mut l4_utcb_t) { }
+
+    /// a non-usable buffer access, containing no pointer
+    #[inline]
+    unsafe fn access_buffers(&mut self) -> BufferAccess {
+        BufferAccess { ptr: None }
+    }
 }
 
 pub struct BufferManager {
@@ -223,6 +262,16 @@ impl CapProvider for BufferManager {
             for index in 0usize..(self.caps as usize - 1) {
                 (*br).br[index] = self.br[index];
             }
+        }
+    }
+
+    /// Get raw access to the allocated buffers
+    /// Using a method on the BufferManager must make sure that they do
+    /// not exceed the allocated buffer of this type (BufferManager).
+    #[inline]
+    unsafe fn access_buffers(&mut self) -> BufferAccess {
+        BufferAccess {
+            ptr: Some(NonNull::new_unchecked(self.br.as_mut_ptr()))
         }
     }
 }

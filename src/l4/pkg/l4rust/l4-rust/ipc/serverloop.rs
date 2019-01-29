@@ -1,7 +1,4 @@
-use _core::{
-    marker::PhantomData,
-        mem::transmute,
-};
+use _core::marker::PhantomData;
 use l4_sys::{self,
     l4_cap_idx_t as CapIdx,
     l4_timeout_t,
@@ -10,12 +7,13 @@ use l4_sys::{self,
 
 use super::{
     MsgTag,
-    types::{Bufferless, BufferManager, Callable, CapProvider, Demand, Dispatch},
-    serialise::ArgAccess
+    types::{Bufferless, BufferAccess, BufferManager, Callable,
+        CapProvider, Demand, Dispatch},
 };
 use super::super::{
+    cap::Interface,
     error::{Error, Result},
-    utcb::Utcb,
+    utcb::{Utcb, UtcbMr},
 };
 use libc::c_void;
 
@@ -100,20 +98,20 @@ pub trait LoopHook {
 /// `server_impl_callback::<Self>` to the first struct member.
 /// generic function is
 /// usually used as the function pointed to 
-pub fn server_impl_callback<T, C>(ptr: *mut c_void, tag: MsgTag,
-                                  args: *mut c_void)
+pub fn server_impl_callback<T>(ptr: *mut c_void, tag: MsgTag,
+                                  mr: &mut UtcbMr,
+                                  bufs: &mut BufferAccess)
         -> Result<MsgTag>
-        where T: Callable + Dispatch, C: CapProvider {
+        where T: Callable + Dispatch {
     unsafe {
         let ptr = ptr as *mut T;
-        let args = transmute::<*mut c_void, *mut ArgAccess<C>>(args);
-        let args = transmute::<*mut ArgAccess<C>, &mut ArgAccess<C>>(args);
-        (*ptr).dispatch(tag, args)
+        (*ptr).dispatch(tag, mr, bufs)
     }
 }
 
 // first c_void is the server struct, the second c_void is the ArgAccess instance
-pub type Callback = fn(*mut libc::c_void, MsgTag, *mut c_void) -> Result<MsgTag>;
+pub type Callback = fn(*mut libc::c_void, MsgTag, &mut UtcbMr,
+                       &mut BufferAccess) -> Result<MsgTag>;
 
 pub struct Loop<'a, Hooks: LoopHook, BrMgr> {
     /// thread that this server runs in
@@ -152,11 +150,11 @@ impl<'a, T: LoopHook, C: CapProvider> Loop<'a, T, C> {
     }
 
     /// Register anything, callee must make sure that passed thing is NOT moved
-    pub fn register<Imp: Callable + Dispatch + Demand>(&mut self, gate: CapIdx,
-            inst: &'a mut Imp) -> Result<()> {
+    pub fn register<Imp>(&mut self, inst: &'a mut Imp) -> Result<()>
+            where Imp: Callable + Dispatch + Demand + Interface {
         self.buf_mgr.alloc_capslots(<Imp as Demand>::BUFFER_DEMAND)?;
-        unsafe {
-            let _ = MsgTag::from(l4_sys::l4_rcv_ep_bind_thread(gate,
+        unsafe { // bind IPC gate with label
+            let _ = MsgTag::from(l4_sys::l4_rcv_ep_bind_thread(inst.cap(),
                    self.thread, inst as *mut _ as *mut c_void as _))
                 .result()?;
         }
@@ -218,11 +216,15 @@ impl<'a, T: LoopHook, C: CapProvider> Loop<'a, T, C> {
     fn dispatch(&mut self, tag: MsgTag, ipc_label: u64) -> LoopAction {
         // create argument reader / writer instance with access to the message registers and the
         // allocated (cap) buffers
-        let mut args = ArgAccess::new(Utcb::from_utcb(self.utcb).mr(), &mut self.buf_mgr);
+        let mut mr = Utcb::from_utcb(self.utcb).mr();
+        // we rely on the user implementation to be auto-derived by the
+        // framework and hence that it reported the correct demand so that this
+        // pointer type accesses valid memory
+        let mut bufs = unsafe { self.buf_mgr.access_buffers() };
         let result = unsafe {
             let handler = ipc_label as *mut c_void;
             let callable = *(ipc_label as *mut Callback);
-            callable(handler, tag, &mut args as *mut _ as *mut c_void)
+            callable(handler, tag, &mut mr, &mut bufs)
         };
         // dispatch received result to user-registered handler
         match result {

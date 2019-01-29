@@ -249,14 +249,14 @@ impl<U: UtcbRegSize> Registers<U> {
     /// Write given value to the next free, type-aligned slot
     ///
     /// The value is aligned and written into the message registers.
-    pub unsafe fn write<T: Serialisable>(&mut self, val: &T) 
+    pub unsafe fn write<T: Serialisable>(&mut self, val: T) 
             -> Result<()> {
         let (ptr, offset) = align_with_offset::<T>(self.buf, self.offset);
         let next = offset + size_of::<T>();
         if next > U::BUF_SIZE {
             return Err(Error::Generic(GenericErr::MsgTooLong));
         }
-        *transmute::<*mut u8, *mut T>(ptr) = val.clone();
+        *transmute::<*mut u8, *mut T>(ptr) = val;
         self.offset = next; // advance offset *behind* element
         Ok(())
     }
@@ -335,7 +335,7 @@ impl UtcbMr {
     /// Write given item to the next free, type-aligned slot
     ///
     /// The item (e.g. a flex page) is aligned and written into the message registers.
-    pub unsafe fn write_item<T: Serialisable>(&mut self, val: &T) 
+    pub unsafe fn write_item<T: Serialisable>(&mut self, val: T) 
             -> Result<()> {
         let res = self.regs.write(val)?;
         self.items += 1;
