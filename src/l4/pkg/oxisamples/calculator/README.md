@@ -1,6 +1,6 @@
 The L4Re snapshot usually comes with a demonstration client/server
 implementation, providing a simple calculator for two operations.  This
-directory contains the rust-side implementations and three configuration files:
+directory contains the rustified implementations and three configuration files:
 
 -   `rcalc-client.conf`: for using the Rust client with the C++ server
 -   `rcalc-server`: for using the Rust (calculator) server with the C++ client
