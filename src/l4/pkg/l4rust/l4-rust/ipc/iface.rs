@@ -158,7 +158,7 @@ macro_rules! iface_back {
                     fn $name($($argname: $argtype),*) -> $ret;)*);
 
             // ToDo: document why op_dispatch implemented here
-            fn op_dispatch<C>(&mut self, tag: $crate::ipc::MsgTag,
+            fn op_dispatch(&mut self, tag: $crate::ipc::MsgTag,
                     mr: &mut $crate::utcb::UtcbMr,
                     bufs: &mut $crate::ipc::BufferAccess)
                     -> $crate::error::Result<$crate::ipc::MsgTag> {

@@ -7,8 +7,7 @@ extern crate l4re;
 
 use l4::{error::Result,
     iface_enumerate, iface_back, derive_ipc_calls, write_msg,
-    ipc,
-    ipc::MsgTag};
+    ipc};
 use l4_derive::l4_server;
 use l4_sys::{l4_utcb};
 
