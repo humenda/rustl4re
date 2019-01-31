@@ -29,6 +29,7 @@ pub trait IfaceInit: Interface {
 }
 
 /// Untyped Capability
+#[derive(Clone)]
 pub struct Untyped(CapIdx);
 
 impl Interface for Untyped {
@@ -147,7 +148,7 @@ impl<T: Interface> Cap<T> {
         self.interface.cap()
     }
 
-    /// Transfer a given capability into this capability
+    /// Transfer a given capability into the capability slot (AKA index) of **this** capability.
     ///
     /// This will consume the given source capability and transfer (move) it into the slot of this
     /// one. `transfer` will consume `self`, allowing an capability interface change along the way.  
@@ -155,12 +156,12 @@ impl<T: Interface> Cap<T> {
     /// `Error::InvalidCap` is returned.
     ///
     /// This function is unsafe since the kernel does not care what is in the slots and will carry
-    /// out the operation nevertheless. So if you move a capability from source to this slot, the
+    /// out the operation nevertheless. So if you transfer a capability from source to this slot, the
     /// capability from this slot will be ***lost***. From Rust's **memory-safety**-perspective,
     /// the fnction is safe.
     pub unsafe fn transfer<U: Interface + IfaceInit>(&mut self, source: Cap<U>)
                 -> Result<Cap<U>> {
-        if !self.is_valid() || source.is_valid() {
+        if !self.is_valid() || !source.is_valid() {
             return Err(Error::InvalidCap);
         }
         l4_task_map(L4_BASE_TASK_CAP as u64, L4_BASE_TASK_CAP as u64,

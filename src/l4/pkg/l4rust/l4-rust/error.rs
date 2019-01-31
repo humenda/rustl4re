@@ -1,3 +1,4 @@
+use core::fmt::Formatter;
 use l4_sys::{*, l4_error_code_t::*, l4_ipc_tcr_error_t::*};
 
 use num_traits::{FromPrimitive, ToPrimitive};
@@ -145,6 +146,21 @@ pub enum Error {
     /// Protocol error, custom defined protocol error labels passed with an answer using the MSG
     /// msgtag label
     Protocol(i64),
+}
+
+impl _core::fmt::Display for Error {
+    fn fmt(&self, f: &mut Formatter) -> _core::fmt::Result {
+        match self {
+            Error::Generic(e) => write!(f, "Generic L4 error code: {}",
+                        e.to_i64().unwrap()),
+            Error::Tcr(i) => write!(f, "IPC error: {}", i.to_i64().unwrap()),
+            Error::InvalidCap => write!(f, "Invalid capability"),
+            Error::InvalidArg(r, _arg) => write!(f, "Invalid argument '{}'", r),
+            Error::InvalidState(r) => write!(f, "Invalid state: {}", r),
+            Error::UnknownErr(u) => write!(f, "Unknown error code {}", u),
+            Error::Protocol(p) => write!(f, "Unknown protocol requested: {}", p),
+        }
+    }
 }
 
 impl Error {

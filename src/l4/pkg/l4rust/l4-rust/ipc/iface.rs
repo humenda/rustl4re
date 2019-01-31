@@ -4,8 +4,7 @@ macro_rules! write_msg {
         {
             unsafe {
                 $(
-                    <$argty as $crate::ipc::Serialisable>::write($arg,
-                            $msg_mr)?;
+                    <$argty as $crate::ipc::Serialisable>::write($arg, $msg_mr)?;
                  )*
             }
             Ok(())
@@ -371,11 +370,12 @@ macro_rules! iface {
 }
 
 // for debugging purposes
+use crate::cap::{Cap, Untyped};
 iface! {
     trait EchoServer {
         const PROTOCOL_ID: i64 = 0xdeadbeef;
         fn do_something(&mut self, i: i32) -> u8;
-        fn do_something_else(&mut self, u: u64) -> ();
-        fn signal(&mut self, i: i32) -> ();
+        fn do_something_else(&mut self, ds: Cap<Untyped>, u: bool) -> ();
+        fn signal(&mut self, i: i32);
     }
 }

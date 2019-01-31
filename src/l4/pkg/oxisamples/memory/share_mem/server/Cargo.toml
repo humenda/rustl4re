@@ -2,6 +2,7 @@
 name = "shm_rust-server"
 version = "0.1.0"
 authors = ["streicher <shumenda@gmx.de>"]
+edition = "2018"
 
 [[bin]]
 name = "shm_rust-server"

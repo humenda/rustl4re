@@ -53,9 +53,7 @@ pub trait LoopHook {
                     Error::Generic(e) => e as i64,
                     Error::Tcr(e) => e as i64,
                     Error::UnknownErr(e) => e as i64,
-                    Error::InvalidCap | Error::InvalidArg(_, _)
-                            | Error::Protocol(_) | Error::InvalidState(_) =>
-                        panic!("unsupported error type received"),
+                    _ => panic!("{:?}", e),
                 } * -1, 0, 0, 0))
                 // ^ by convention, error codes are negative
         }
@@ -69,9 +67,11 @@ pub trait LoopHook {
                     Error::Generic(e) => e as i64,
                     Error::Tcr(e) => e as i64,
                     Error::UnknownErr(e) => e as i64,
+                    Error::Protocol(p) => panic!("Client requested unknown \
+                                                 protocol: {}", p),
                     Error::InvalidCap | Error::InvalidArg(_, _)
-                            | Error::Protocol(_) | Error::InvalidState(_) =>
-                        panic!("unsupported error type received"),
+                            | Error::InvalidState(_) =>
+                        panic!("Error in server implementation: {:?}", e),
                 } * -1, 0, 0, 0)
             ) // ^ by convention, error types are returned as negative integer
     }
