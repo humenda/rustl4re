@@ -89,7 +89,6 @@ unsafe impl Serialisable for SndFlexPage {
     }
 }
 
-
 unsafe impl<T: Interface + IfaceInit + Clone> Serialisable for Cap<T> {
     /// Read a capability from the given capability slice
     ///

@@ -25,3 +25,4 @@ default-features = false
 
 [features]
 default = []
+without_std = []

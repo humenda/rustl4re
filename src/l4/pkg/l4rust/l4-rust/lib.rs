@@ -1,11 +1,12 @@
 #![no_std]
+#![cfg_attr(feature="without_std", no_std)]
+
+// ToDo: things to be stabilised in Rust:
 #![feature(align_offset)]
 #![feature(associated_type_defaults)]
-#![feature(alloc)]
-// ToDo: ^ stable Rust
 
+#[cfg(not(without_std))]
 pub extern crate core as _core;
-extern crate alloc;
 
 extern crate l4_sys;
 #[macro_use]

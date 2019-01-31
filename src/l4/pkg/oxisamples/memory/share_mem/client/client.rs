@@ -1,14 +1,15 @@
 #![feature(associated_type_defaults)]
 extern crate l4_sys;
-#[macro_use]
+extern crate l4_derive;
 extern crate l4;
 extern crate l4re;
 extern crate libc; // only for C type definitions
 
+use l4_derive::l4_client;
 use l4_sys::l4_cap_idx_t;
 use l4::{
-    cap,
-    utcb::{FlexPage, FpageRights},
+    cap::{self, Cap, Untyped},
+    iface, iface_enumerate, iface_back, write_msg, derive_ipc_calls,
 };
 use l4re::{env,
     sys::l4re_rm_flags_t};
@@ -16,15 +17,15 @@ use std::{thread, time};
 use std::mem;
 use libc::c_void;
 
-iface_enumerate! {
+iface! {
     trait Shm {
         const PROTOCOL_ID: i64 = 0x42;
-        type OpType = i32;
-        fn witter(&mut self, length: u32, ds: ::l4::utcb::FlexPage) -> bool;
+        fn witter(&mut self, length: u32, ds: Cap<Untyped>) -> bool;
     }
-
-    struct ShmClient;
 }
+
+#[l4_client(Shm)]
+struct ShmClient;
 
 // C-style dataspace allocation
 unsafe fn allocate_ds(size_in_bytes: usize)
@@ -90,7 +91,7 @@ pub fn main() {
 
 unsafe fn unsafe_main() {
     println!("good morning sir");
-    let mut server: cap::Cap<ShmClient> = env::get_cap("channel")
+    let mut server: Cap<ShmClient> = env::get_cap("channel")
             .expect("Received invalid capability");
     if server.is_invalid() {
         panic!("No IPC Gate found.");
@@ -105,12 +106,11 @@ unsafe fn unsafe_main() {
     let (base, ds) = allocate_ds(size_in_bytes as usize).unwrap();
     byteslice.as_ptr().copy_to(base as *mut u8, byteslice.len());
     *(base as *mut u8).offset(byteslice.len() as isize) = 0u8; // add 0-byte
-    println!("allocated {:x} B for a string with {:x} B, sending capability",
-            size_in_bytes, byteslice.len());
+    println!("allocated {:x} B for a string with {:x} B, sending capability index 0x{:x}",
+            size_in_bytes, byteslice.len(), ds);
 
     // send blah blah using the generated client implementation
-    server.witter(byteslice.len() as u32 + 1,
-            FlexPage::from_cap(cap::from(ds), FpageRights::RWX, None))
+    server.witter(byteslice.len() as u32 + 1, cap::from(ds))
         .unwrap();
 
     free_ds(base, ds).unwrap();
