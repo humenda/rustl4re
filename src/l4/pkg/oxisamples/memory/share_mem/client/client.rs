@@ -5,12 +5,9 @@ extern crate l4;
 extern crate l4re;
 extern crate libc; // only for C type definitions
 
-use l4_derive::l4_client;
+use l4_derive::{iface, l4_client};
 use l4_sys::l4_cap_idx_t;
-use l4::{
-    cap::{self, Cap, Untyped},
-    iface, iface_enumerate, iface_back, write_msg, derive_ipc_calls,
-};
+use l4::cap::{self, Cap, Untyped};
 use l4re::{env,
     sys::l4re_rm_flags_t};
 use std::{thread, time};

@@ -1,4 +1,5 @@
 #![recursion_limit="128"]
+#![feature(proc_macro_diagnostic)]
 extern crate proc_macro;
 extern crate proc_macro2;
 
@@ -8,6 +9,8 @@ use crate::proc_macro::TokenStream;
 use quote::quote;
 use syn::{self, Attribute, Data, Fields, Generics, Ident, Lit,
         NestedMeta, Meta, Visibility};
+
+mod iface;
 
 /// Derive important IPC traits for an IPC interface
 ///
@@ -216,6 +219,32 @@ fn gen_client_struct(name: proc_macro2::Ident, attrs: Vec<Attribute>,
             unsafe fn access_buffers(&mut self) -> l4::ipc::BufferAccess {
                 use l4::ipc::CapProvider;
                 self.__slots.access_buffers()
+            }
+        }
+    };
+    gen.into()
+}
+
+// ToDo: docs fopr this macro and **parse** docs for trait; auto-derive demand
+#[proc_macro]
+pub fn iface(tokens: TokenStream) -> TokenStream {
+    let iface::RawIface {
+        iface_name, iface_attrs, methods
+    } = syn::parse_macro_input!(tokens as iface::RawIface);
+    let parsed_iface_attrs = iface::parse_iface_attributes(iface_name.clone(),
+            &iface_attrs).unwrap();
+    if parsed_iface_attrs.is_empty() {
+        return parsed_iface_attrs.into();
+    }
+    let methods = iface::enumerate_iface_methods(&methods).unwrap();
+    if methods.is_empty() {
+        return parsed_iface_attrs.into();
+    }
+    let gen = quote! {
+        l4::iface_enumerate! {
+            trait #iface_name {
+                #parsed_iface_attrs
+                #methods
             }
         }
     };

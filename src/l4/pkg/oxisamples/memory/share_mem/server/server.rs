@@ -8,9 +8,8 @@ use l4_sys::*;
 use l4::{error::Result,
     ipc,
     cap::{self, Cap, Untyped},
-    iface, iface_enumerate, write_msg, iface_back, derive_ipc_calls,
 };
-use l4_derive::l4_server;
+use l4_derive::{iface, l4_server};
 
 iface! {
     trait Shm {
