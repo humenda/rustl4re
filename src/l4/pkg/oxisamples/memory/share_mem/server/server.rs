@@ -10,6 +10,7 @@ use l4::{error::Result,
     cap::{self, Cap, Untyped},
 };
 use l4_derive::{iface, l4_server};
+use l4re::OwnedCap;
 
 iface! {
     trait Shm {
@@ -23,11 +24,7 @@ struct ShmServer;
 
 impl Shm for ShmServer {
     fn witter(&mut self, length: u32, ds: Cap<Untyped>) -> Result<bool> {
-        let ds = unsafe {
-            let mut c = cap::from(l4re::sys::l4re_util_cap_alloc());
-            c.transfer(ds)?;
-            c // ^ move cap index from loop receive slot into own binding
-        };
+        let ds = OwnedCap::from(ds)?;
         panic!("Not implemented!");
     }
 }
