@@ -6,9 +6,8 @@ extern crate l4;
 extern crate l4_derive;
 
 // required for interface initialisation
-use crate::l4::cap::IfaceInit;
-use crate::l4::{iface, iface_enumerate, iface_back, write_msg, derive_ipc_calls};
-use crate::l4_derive::l4_client;
+use l4::cap::IfaceInit;
+use l4_derive::{iface, l4_client};
 
 iface! {
     trait Calculator {

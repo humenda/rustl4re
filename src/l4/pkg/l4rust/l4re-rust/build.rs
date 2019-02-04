@@ -10,7 +10,6 @@ fn main() {
         .rustified_enum(".*")
         .header("bindgen.h");
     if let Ok(include_dirs) = ::std::env::var("L4_INCLUDE_DIRS") {
-        println!("hi: {}", include_dirs);
         for item in include_dirs.split(" ") {
             bindings = bindings.clang_arg(item);
         }

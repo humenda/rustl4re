@@ -27,7 +27,7 @@ macro_rules! unroll_types {
     };
 
     (($head:ty, $($tail:ty),*) -> $ret:ty) => {
-        $crate::ipc::types::Sender<$head, unroll_types!(($($tail),*) -> $ret)>
+        $crate::ipc::types::Sender<$head, $crate::unroll_types!(($($tail),*) -> $ret)>
     }
 }
 
@@ -36,20 +36,20 @@ macro_rules! rpc_func {
     ($opcode:expr => $name:ident() -> $ret:ty) => {
         #[allow(non_snake_case)]
         pub struct $name($crate::ipc::types::Return<$ret>);
-        rpc_func_impl!($name, $crate::ipc::types::OpCode, $opcode);
+        $crate::rpc_func_impl!($name, $crate::ipc::types::OpCode, $opcode);
     };
 
     ($opcode:expr => $name:ident($type:ty) -> $ret:ty) => {
         #[allow(non_snake_case)]
         pub struct $name($crate::ipc::types::Sender<$type,
                 $crate::ipc::types::Return<$ret>>);
-        rpc_func_impl!($name, $crate::ipc::types::OpCode, $opcode);
+        $crate::rpc_func_impl!($name, $crate::ipc::types::OpCode, $opcode);
     };
 
     ($opcode:expr => $name:ident($head:ty, $($tail:ty),*) -> $ret:ty) => {
         #[allow(non_snake_case)]
         pub struct $name($crate::ipc::types::Sender<$head,
-                         unroll_types!(($($tail),*) -> $ret)>);
+                         $crate::unroll_types!(($($tail),*) -> $ret)>);
         rpc_func_impl!($name, $crate::ipc::types::OpCode, $opcode);
     }
 }
@@ -77,15 +77,15 @@ macro_rules! derive_functors {
     ($count:expr;) => ();
 
     ($count:expr; $name:ident($($types:ty),*) -> $ret:ty) => { // se below
-        rpc_func!($count => $name($($types),*) -> $ret);
+        $crate::rpc_func!($count => $name($($types),*) -> $ret);
     };
 
     ($count:expr;
             $name:ident($($types:ty),*) -> $ret1:ty; // head of function list
                 $($more:ident($($othertypes:ty),*) -> $ret2:ty);* // ← tail
     ) => { // return type
-        rpc_func!($count => $name($($types),*) -> $ret1);
-        derive_functors!($count + 1; $($more($($othertypes),*) -> $ret2);*);
+        $crate::rpc_func!($count => $name($($types),*) -> $ret1);
+        $crate::derive_functors!($count + 1; $($more($($othertypes),*) -> $ret2);*);
     }
 }
 
@@ -115,7 +115,7 @@ macro_rules! derive_ipc_calls {
                 unsafe {
                     mr.write($opcode)?;
                 }
-                write_msg!(&mut mr, $($argname: $type),*)?;
+                $crate::write_msg!(&mut mr, $($argname: $type),*)?;
                 // get the protocol for the msg tag label
                 let tag = $crate::ipc::MsgTag::new($proto, mr.words(),
                         mr.items(), 0);
@@ -153,7 +153,7 @@ macro_rules! iface_back {
                     + $crate::ipc::CapProviderAccess {
             type OpType = $op_type;
             const PROTOCOL_ID: i64 = $proto;
-            derive_ipc_calls!($proto; $($op_code =>
+            $crate::derive_ipc_calls!($proto; $($op_code =>
                     fn $name($($argname: $argtype),*) -> $ret;)*);
 
             // ToDo: document why op_dispatch implemented here
@@ -209,7 +209,7 @@ macro_rules! iface_enumerate {
             )*
         }
     ) => {
-        iface_back! {
+        $crate::iface_back! {
             trait $traitname {
                 const PROTOCOL_ID: i64 = $proto;
                 type OpType = $op_type;
@@ -230,7 +230,7 @@ macro_rules! iface_enumerate {
             )*
         }
      ) => {
-        iface_enumerate! {
+        $crate::iface_enumerate! {
             trait $traitname {
                 const PROTOCOL_ID: i64 = $proto;
                 type OpType = $op_type;
@@ -255,7 +255,7 @@ macro_rules! iface_enumerate {
             $($matched:tt)*
         }
      ) => {
-        iface_enumerate! {
+        $crate::iface_enumerate! {
             trait $traitname {
                 const PROTOCOL_ID: i64 = $proto;
                 type OpType = $op_type;
@@ -276,7 +276,7 @@ macro_rules! iface_enumerate {
             $($matched:tt)*
         }
     ) => {
-        iface_back! {
+        $crate::iface_back! {
             trait $traitname {
                 const PROTOCOL_ID: i64 = $proto;
                 type OpType = $op_type;

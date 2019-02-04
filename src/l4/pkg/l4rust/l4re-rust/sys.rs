@@ -8,6 +8,7 @@ use libc::{c_int, c_long, c_ulong, c_void};
 
 include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
 
+pub use L4re_protocols as L4ReProtocols;
 ////////////////////////////////////////////////////////////////////////////////
 // Custom types
 

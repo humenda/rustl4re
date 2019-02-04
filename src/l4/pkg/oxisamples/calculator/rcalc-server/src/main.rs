@@ -5,16 +5,13 @@ extern crate l4_derive;
 extern crate l4;
 extern crate l4re;
 
-use l4::{error::Result,
-    iface_enumerate, iface_back, derive_ipc_calls, write_msg,
-    ipc};
-use l4_derive::l4_server;
+use l4::{error::Result, ipc};
+use l4_derive::{iface, l4_server};
 use l4_sys::{l4_utcb};
 
-iface_enumerate! {
+iface! {
     trait CalcIface {
         const PROTOCOL_ID: i64 = 0x44;
-        type OpType = i32;
         fn sub(&mut self, a: u32, b: u32) -> i32;
         fn neg(&mut self, a: u32) -> i32;
     }
