@@ -9,5 +9,8 @@ extern crate libc;
 extern crate l4_sys;
 
 pub mod env;
-pub mod sys;
+mod cap;
 //pub mod mem;
+pub mod sys;
+
+pub use cap::OwnedCap;
