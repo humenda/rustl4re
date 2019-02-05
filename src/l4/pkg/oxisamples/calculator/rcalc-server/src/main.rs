@@ -9,18 +9,14 @@ use l4::{error::Result, ipc};
 use l4_derive::{iface, l4_server};
 use l4_sys::{l4_utcb};
 
-iface! {
-    trait CalcIface {
-        const PROTOCOL_ID: i64 = 0x44;
-        fn sub(&mut self, a: u32, b: u32) -> i32;
-        fn neg(&mut self, a: u32) -> i32;
-    }
-}
+// include shared interface definition (located relative to the directory of
+// this file)
+include!("../../interface.rs");
 
 #[l4_server]
 struct CalcServer;
 
-impl CalcIface for CalcServer {
+impl Calculator for CalcServer {
     fn sub(&mut self, a: u32, b: u32) -> Result<i32> {
         let x = a as i32 - b as i32;
         Ok(x)

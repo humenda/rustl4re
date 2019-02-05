@@ -9,13 +9,9 @@ extern crate l4_derive;
 use l4::cap::IfaceInit;
 use l4_derive::{iface, l4_client};
 
-iface! {
-    trait Calculator {
-        const PROTOCOL_ID: i64 = 0x44;
-        fn sub(&mut self, a: u32, b: u32) -> i32;
-        fn neg(&mut self, a: u32) -> i32;
-    }
-}
+// include shared interface definition (located relative to the directory of
+// this file)
+include!("../../interface.rs");
 
 #[l4_client(Calculator)]
 struct Calc;
