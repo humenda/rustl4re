@@ -5,6 +5,7 @@
 
 extern crate core as _core;
 extern crate l4;
+extern crate l4_derive;
 extern crate libc;
 extern crate l4_sys;
 

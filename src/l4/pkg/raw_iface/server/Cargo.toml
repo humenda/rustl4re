@@ -1,0 +1,11 @@
+[package]
+name = "server"
+version = "0.1.0"
+authors = ["streicher <shumenda@gmx.de>"]
+edition = "2018"
+
+[dependencies]
+
+[[bin]]
+name = "raw_iface-server"
+path = "server.rs"
