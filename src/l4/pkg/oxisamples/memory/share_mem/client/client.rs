@@ -14,12 +14,8 @@ use std::{thread, time};
 use std::mem;
 use libc::c_void;
 
-iface! {
-    trait Shm {
-        const PROTOCOL_ID: i64 = 0x42;
-        fn witter(&mut self, length: u32, ds: Cap<Untyped>) -> bool;
-    }
-}
+// include IPC interface definition
+include!("../interface.rs");
 
 #[l4_client(Shm)]
 struct ShmClient;
