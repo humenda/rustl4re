@@ -94,19 +94,27 @@ impl quote::ToTokens for IfaceAttr {
     }
 }
 
-// convenience helper to ease reporting errors with spans
+// reply with an error so that function above can return empty TokenStream; the
+// error already got registered globally with the error() function
 macro_rules! err {
     ($obj_with_span:expr, $msg:literal) => {{
         $obj_with_span.span().unstable().error($msg).emit();
-        return Ok(proc_macro2::TokenStream::new());
+        return Err(syn::Error::new($obj_with_span.span(), $msg));
     }}
+}
+
+pub struct ParsedIfaceAttrs {
+    pub protocol: syn::Expr,
+    pub opattrs: Vec<syn::Attribute>,
+    pub optype: syn::Type,
 }
 
 // Interfaces can have only a handful meta attributes. One is the PROTOCOL_ID,
 // which is mandatory. Optional is the OpType and if it wasn't specified, it'll
 // default to i32.
 pub fn parse_iface_attributes(outer: syn::Ident, attrs: &Vec<IfaceAttr>)
-        -> Result<proc_macro2::TokenStream> {
+        -> Result<ParsedIfaceAttrs> {
+//        -> Result<proc_macro2::TokenStream> {
     let mut opattrs = Vec::new();
     // default to a OpType of i32
     let mut optype: syn::Type = syn::Type::Verbatim(syn::TypeVerbatim {
@@ -132,11 +140,18 @@ pub fn parse_iface_attributes(outer: syn::Ident, attrs: &Vec<IfaceAttr>)
         err!(outer, "No protocol id (PROTOCOL_ID) specified");
     }
     let protocol = protocol.unwrap().clone(); // we know it's there
-    Ok(quote! {
+    Ok(ParsedIfaceAttrs {
+        protocol, opattrs, optype,
+    })
+}
+
+pub fn gen_iface_attrs(if_attrs: ParsedIfaceAttrs) -> proc_macro2::TokenStream {
+    let ParsedIfaceAttrs { protocol, opattrs, optype } = if_attrs;
+    quote! {
         const PROTOCOL_ID: i64 = #protocol;
         #(#opattrs)*
         type OpType = #optype;
-    })
+    }
 }
 
 // ToDo: no enumeration yet

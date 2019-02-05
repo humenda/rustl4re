@@ -225,20 +225,27 @@ fn gen_client_struct(name: proc_macro2::Ident, attrs: Vec<Attribute>,
     gen.into()
 }
 
-// ToDo: docs fopr this macro and **parse** docs for trait; auto-derive demand
+macro_rules! proc_try {
+    ($match:expr) => {
+        match $match {
+            Ok(x) => x,
+            Err(_) => return proc_macro2::TokenStream::new().into(),
+        }
+    }
+}
+
+// ToDo: docs for this macro and **parse** docs for trait; auto-derive demand
 #[proc_macro]
 pub fn iface(tokens: TokenStream) -> TokenStream {
     let iface::RawIface {
         iface_name, iface_attrs, methods
     } = syn::parse_macro_input!(tokens as iface::RawIface);
-    let parsed_iface_attrs = iface::parse_iface_attributes(iface_name.clone(),
-            &iface_attrs).unwrap();
-    if parsed_iface_attrs.is_empty() {
-        return parsed_iface_attrs.into();
-    }
+    let parser_results = proc_try!(iface::parse_iface_attributes(
+            iface_name.clone(), &iface_attrs));
+    let parsed_iface_attrs = iface::gen_iface_attrs(parser_results);
     let methods = iface::enumerate_iface_methods(&methods).unwrap();
     if methods.is_empty() {
-        return parsed_iface_attrs.into();
+        return methods.into();
     }
     let gen = quote! {
         l4::iface_enumerate! {
