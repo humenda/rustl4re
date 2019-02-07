@@ -179,36 +179,40 @@ $(LINK_INCR_TARGETS):%.a: $(OBJS) $(LIBDEPS) $(foreach x,$(LINK_INCR_TARGETS),$(
 ################################################################################
 # Rust target
 
-# paths to all source files to that make recompiles on changes (ToDo: Rust
-# supports generating dep-info)
-SRC_FILES = $(strip $(shell find $(abspath $(abspath $(SRC_DIR))/$(dir $(firstword $(SRC_RS)))) -name '*.rs'))
-
 ifneq ($(SRC_RS),)
+include $(L4DIR)/mk/cargo.mk
+
 contains=$(findstring $(1),$(strip $(TARGET)))
 ifeq ($(and $(call contains,-), $(call contains,lib), $(call contains,.rlib))),)
 $(error A library target has to have a name like libFOO-rust.rlib, while FOO is the name of your library and rust a freely choosable suffix required by rustc.)
 endif
-
-# The CARG* variables are exported to instruct Cargo where to find and how to
-# use libraries. They are exported to be passed to the subprocess.
-L4_LIBDIRECTORIES=$(filter -L%,$(LDFLAGS))
-# rust dependencies, special treatment
-_RUST_DEPS = $(addprefix $(OBJ_BASE)/lib/rustlib/,$(filter %rust,$(REQUIRES_LIBS)))
-# add flags: normal lib dirs, rust lib dirs, rust dependency lib dirs, --cfg's
-export CARGO_BUILD_RUSTFLAGS=$(strip $(L4_LIBDIRECTORIES) $(patsubst -D%,--cfg%,$(filter -D%,$(LDFLAGS))) $(RSFLAGS) \
-		$(addprefix -L,$(addsuffix /$(RUST_TARGET),$(_RUST_DEPS))) \
-		$(addprefix -L dependency=,$(addsuffix /$(RUST_TARGET)/deps,$(_RUST_DEPS))) \
-		$(addprefix -L dependency=,$(addsuffix /host-deps,$(_RUST_DEPS))))
-
-# This can be used from the build script to get access to all l4-related
-# include files
-export L4_INCLUDE_DIRS=$(filter -I%,$(CPPFLAGS))
 
 ifneq ($(DEBUG),)
 ifeq ($(filter -g,$(RSFLAGS)),)
 RSFLAGS += -g
 endif
 endif
+
+# The CARG* variables are exported to instruct Cargo where to find and how to
+# use libraries. They are exported to be passed to the subprocess.
+L4_LIBDIRECTORIES=$(filter -L%,$(LDFLAGS))
+
+# add BID defines, replace -D through --cfg and strip =1 (Rust features are on
+# or off)
+CARGO_BUILD_RUSTFLAGS=$(strip $(patsubst %=1,%,\
+		$(patsubst -D%,--cfg=%,$(filter -D%,$(CPPFLAGS)))))
+# Add libraries; treat proc macros (run on the host) and normal rust libraries
+# (linked into the target binary) differently
+CARGO_BUILD_RUSTFLAGS += $(strip $(PROC_MACRO_LIBDIRS) $(L4_LIBDIRECTORIES) \
+		$(addprefix -L,$(addsuffix /$(RUST_TARGET),$(_RUST_DEP_PATHS))) \
+		$(addprefix -L dependency=,$(addsuffix /$(RUST_TARGET)/deps,$(_RUST_DEP_PATHS))) \
+		$(addprefix -L dependency=,$(addsuffix /host-deps,$(_RUST_DEP_PATHS))) \
+		$(RSFLAGS))
+
+
+# This can be used from the build script to get access to all l4-related
+# include files
+export L4_INCLUDE_DIRS=$(filter -I%,$(CPPFLAGS))
 
 # $(1) SRC $(2) DST in $OBJ_BASE/lib/rustlib/PKGNAME
 mklink_rustlib=$(VERBOSE)rm -f $(OBJ_BASE)/lib/rustlib/$(PKGNAME)/$(2) \
@@ -218,12 +222,15 @@ mklink_rustlib=$(VERBOSE)rm -f $(OBJ_BASE)/lib/rustlib/$(PKGNAME)/$(2) \
 $(strip $(TARGET)): $(SRC_FILES)
 	@echo 'Building rlib...'
 	$(if $(VERBOSE),,@echo CARGO_BUILD_RUSTFLAGS=$(CARGO_BUILD_RUSTFLAGS))
-	$(VERBOSE)cargo build $(if $(VERBOSE),,-v) --release \
+	$(VERBOSE)CARGO_BUILD_RUSTFLAGS='$(CARGO_BUILD_RUSTFLAGS)' \
+		cargo build $(if $(VERBOSE),,-v) --release \
 			--target=$(RUST_TARGET) \
 			--manifest-path=$(PKGDIR)/Cargo.toml
 	@$(BUILT_MESSAGE)
 	$(VERBOSE)[ -d $(OBJ_BASE)/lib/rustlib/$(PKGNAME) ] || \
-		mkdir -p $(OBJ_BASE)/lib/rustlib/$(PKGNAME)
+		mkdir -p $(RLIB_BASE)/$(PKGNAME)
+	@if [ -z $(call is_procmacro,$(PKGNAME)) ]; then \
+		mv $(CARGO_BUILD_TARGET_DIR)/$(RUST_TARGET)/release/$(patsubst %-rust.rlib,%.rlib,$@) $(CARGO_BUILD_TARGET_DIR)/$(RUST_TARGET)/release/$@; fi
 	$(call mklink_rustlib,$(CARGO_BUILD_TARGET_DIR)/release/deps,host-deps)
 	$(call mklink_rustlib,$(CARGO_BUILD_TARGET_DIR)/$(RUST_TARGET)/release,$(RUST_TARGET))
 endif # SRC_RS is defined
