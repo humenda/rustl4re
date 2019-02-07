@@ -175,9 +175,8 @@ $(TARGET): $(OBJS) $(LIBDEPS)
 	@$(BUILT_MESSAGE)
 else # rust target rule
 
-# paths to all source files to that make recompiles on changes (ToDo: Rust
-# supports generating dep-info)
-SRC_FILES = $(strip $(shell find $(abspath $(abspath $(SRC_DIR))/$(dir $(firstword $(SRC_RS)))) -name '*.rs'))
+# deefines a few functions and variables used below
+include $(L4DIR)/mk/cargo.mk
 
 ifneq ($(firstword $(notdir $(LINK_PROGRAM))),l4-bender)
 $(error Rust compilation is only supported for l4-bender, got $(firstword $(notdir $(LINK_PROGRAM))))
@@ -192,17 +191,6 @@ endif
 # strip first word (l4-bender path) and last word (-- delimiter)
 L4_BENDER_ARGS_HEADLESS=$(strip $(LINK_PROGRAM:$(firstword $(LINK_PROGRAM))%=%))
 export L4_BENDER_ARGS=$(strip $(L4_BENDER_ARGS_HEADLESS:%$(lastword $(LINK_PROGRAM))=%))
-# allow rustc to find l4-bender
-export PATH := $(PATH):$(L4DIR)/tool/bin
-_RUST_DEPS = $(addprefix $(OBJ_BASE)/lib/rustlib/,$(filter %rust,$(REQUIRES_LIBS)))
-
-# it's no proc macro if no LIBNAME.so is in the host-deps directory; in this
-# case, output the library name verbatim
-is_no_procmacro = $(if $(wildcard $(OBJ_BASE)/lib/rustlib/$(1:-PC%=%)/host-deps/*$(1:-PC%-rust=%)*.so),,$(1))
-is_procmacro = $(if $(wildcard $(OBJ_BASE)/lib/rustlib/$(1:-PC%=%)/host-deps/*$(1:-PC%-rust=%)*.so),$(1))
-# check each library whether it's a proc macro library and only keep those which
-# aren't
-RS_LINK_LIBRARIES=$(foreach LIB,$(strip $(filter -PC%rust,$(BID_LDFLAGS_FOR_LINKING))),$(call is_no_procmacro,$(LIB)))
 
 # replace all -D defines through --cfg flags for rust
 CARGO_BUILD_RUSTFLAGS=$(strip $(patsubst -D%,--cfg=%,$(filter -D%,$(CPPFLAGS)))
@@ -210,26 +198,15 @@ CARGO_BUILD_RUSTFLAGS=$(strip $(patsubst -D%,--cfg=%,$(filter -D%,$(CPPFLAGS)))
 # add l4 library paths and the (l4) Rust dependency paths
 # Rust dependencies can have dependencies in the cross-compile target directory
 # and in the directory containing the dependencies of dependencies
-CARGO_BUILD_RUSTFLAGS += $(addprefix -L, $(PRIVATE_LIBDIR) $(PRIVATE_LIBDIR_$(OSYSTEM)) $(PRIVATE_LIBDIR_$@) $(PRIVATE_LIBDIR_$@_$(OSYSTEM))) \
-		$(addprefix -L,$(addsuffix /$(RUST_TARGET),$(_RUST_DEPS))) \
-		$(addprefix -L dependency=,$(addsuffix /$(RUST_TARGET)/deps,$(_RUST_DEPS))) \
-		$(addprefix -L dependency=,$(addsuffix /host-deps,$(_RUST_DEPS))) \
-		$(strip $(RSFLAGS)))
+CARGO_BUILD_RUSTFLAGS += $(strip \
+		$(addprefix -L , $(PRIVATE_LIBDIR) $(PRIVATE_LIBDIR_$(OSYSTEM)) $(PRIVATE_LIBDIR_$@) $(PRIVATE_LIBDIR_$@_$(OSYSTEM))) \
+		$(addprefix -L ,$(addsuffix /$(RUST_TARGET),$(_RUST_DEP_PATHS))) \
+		$(addprefix -L dependency=,$(addsuffix /$(RUST_TARGET)/deps,$(_RUST_DEP_PATHS))) \
+		$(addprefix -L dependency=,$(addsuffix /host-deps,$(_RUST_DEP_PATHS))) \
+		$(RSFLAGS)))
 
-# add paths for proc macro crates so that the compiler can locate the shared
-# objects and load them
-PROC_MACRO_LIBS = $(strip $(foreach LIB,\
-		$(strip $(filter -PC%rust,$(BID_LDFLAGS_FOR_LINKING))),\
-			$(strip $(patsubst %,-L $(OBJ_BASE)/lib/rustlib/%/host-deps/,\
-				$(patsubst -PC%,%,$(call is_procmacro,$(LIB)))))))
-
-# Add all rust libraries, except for proc macro libraries (which  are executed
-# on the host and hence shouldn't be linked against the resulting binary).  Add
-# proc macro libraries before so that they don't insert a space if empty
-CARGO_BUILD_RUSTFLAGS += $(strip $(PROC_MACRO_LIBS) \
-						 $(addprefix -C link-arg=,$(RS_LINK_LIBRARIES)))
-# add remaining linker flags without any rust library
-CARGO_BUILD_RUSTFLAGS += $(addprefix -C link-arg=,$(strip $(filter-out -PC%rust,$(BID_LDFLAGS_FOR_LINKING))))
+CARGO_BUILD_RUSTFLAGS += $(strip $(PROC_MACRO_LIBDIRS) \
+                         $(addprefix -C link-arg=,$(strip $(filter-out -PC%rust,$(BID_LDFLAGS_FOR_LINKING)))))
 export CARGO_BUILD_RUSTFLAGS
 
 export L4_INCLUDE_DIRS=$(filter -I%,$(CPPFLAGS))
