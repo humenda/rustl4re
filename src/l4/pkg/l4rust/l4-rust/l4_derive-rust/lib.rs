@@ -3,14 +3,26 @@
 extern crate proc_macro;
 extern crate proc_macro2;
 
+#[macro_use]
+mod macros;
+mod iface;
+
 use std::str::FromStr;
 
-use crate::proc_macro::TokenStream;
+use proc_macro::TokenStream;
 use quote::quote;
 use syn::{self, Attribute, Data, Fields, Generics, Ident, Lit,
-        NestedMeta, Meta, Visibility};
+        NestedMeta, Meta, Result, Visibility};
 
-mod iface;
+macro_rules! proc_try {
+    ($match:expr) => {
+        match $match {
+            Ok(x) => x,
+            Err(_) => return proc_macro2::TokenStream::new().into(),
+        }
+    }
+}
+
 
 /// Derive important IPC traits for an IPC interface
 ///
@@ -137,9 +149,8 @@ pub fn l4_client(macro_attrs: TokenStream, item: TokenStream) -> TokenStream {
     }
     let mut trait_name = None;
     let mut demand: u32 = 0;
-    parse_client_meta(syn::parse(macro_attrs)
-                .expect("Please specify at least a valid IPC trait name"),
-        &mut trait_name, &mut demand);
+    proc_try!(parse_client_meta(proc_try!(syn::parse(macro_attrs)),
+        &mut trait_name, &mut demand));
     let trait_name = trait_name.expect("No IPC trait specified");
 
     let ast: syn::DeriveInput = syn::parse(item).expect("Unable to parse struct definition.");
@@ -159,30 +170,31 @@ pub fn l4_client(macro_attrs: TokenStream, item: TokenStream) -> TokenStream {
 }
 
 fn parse_client_meta(meta: syn::Meta, name: &mut Option<Ident>,
-                      demand: &mut u32) {
+                      demand: &mut u32) -> Result<()> {
     // recursively parse meta arguments to macro
     match meta {
         Meta::Word(tn) => *name = Some(tn),
         Meta::NameValue(nv) => {
             if nv.ident != "demand" {
-                panic!("Only `demand = NUM` allowed");
+                err!(nv.ident, "Only `demand = NUM` allowed");
             }
             *demand = match nv.lit {
                 Lit::Int(i) => i.value() as u32,
-                _ => panic!("Demand can only be a positive integer number"),
+                _ => err!(nv.ident, "Demand can only be a positive integer number"),
             };
         },
         Meta::List(ml) => {
             for thing in ml.nested.into_iter() {
                 match thing {
-                    NestedMeta::Meta(nm) => parse_client_meta(nm, name, demand),
-                    _ => panic!("Invalid attribute: only trait name and \
-                            demand are allowed"),
-                }
+                    NestedMeta::Meta(nm) => parse_client_meta(nm, name, demand)?,
+                    // couldn't find a span to attach my error to
+                    _ => panic!("Invalid attribute: \
+                            only trait name and demand are allowed"),
+                };
             }
         },
     }
-
+    Ok(())
 }
 
 fn gen_client_struct(name: proc_macro2::Ident, attrs: Vec<Attribute>,
@@ -225,28 +237,22 @@ fn gen_client_struct(name: proc_macro2::Ident, attrs: Vec<Attribute>,
     gen.into()
 }
 
-macro_rules! proc_try {
-    ($match:expr) => {
-        match $match {
-            Ok(x) => x,
-            Err(_) => return proc_macro2::TokenStream::new().into(),
-        }
-    }
-}
-
 // ToDo: docs for this macro and **parse** docs for trait; auto-derive demand
 #[proc_macro]
 pub fn iface(tokens: TokenStream) -> TokenStream {
     let iface::RawIface {
         iface_name, iface_attrs, methods
     } = syn::parse_macro_input!(tokens as iface::RawIface);
+
+    // validate interface
     let parser_results = proc_try!(iface::parse_iface_attributes(
             iface_name.clone(), &iface_attrs));
+    let methods = proc_try!(iface::parse_iface_methods(&methods));
+
+    // generate new code, first the interface-relevant "meta" attributes such as
+    // protocol ID, then methods
     let parsed_iface_attrs = iface::gen_iface_attrs(parser_results);
-    let methods = iface::enumerate_iface_methods(&methods).unwrap();
-    if methods.is_empty() {
-        return methods.into();
-    }
+    let methods = iface::gen_iface_methods(&methods);
     let gen = quote! {
         l4::iface_enumerate! {
             trait #iface_name {

@@ -65,7 +65,7 @@ macro_rules! impl_serialisable {
 }
 
 impl_serialisable!(i8, i16, i32, i64, i128, u8, u16, u32, u64, u128, f32, f64,
-                   bool, char);
+                   usize, isize, bool, char);
 
 unsafe impl Serialisable for () {
     unsafe fn read(_: &mut UtcbMr, _: &mut BufferAccess) -> Result<()> {
@@ -86,6 +86,31 @@ unsafe impl Serialisable for SndFlexPage {
     #[inline]
     unsafe fn read(_: &mut UtcbMr, _: &mut BufferAccess) -> Result<Self> {
         unimplemented!("flex pages are read by the concrete type, e.g. Cap");
+    }
+}
+
+unsafe impl<T: Serialisable> Serialisable for Option<T> {
+    #[inline]
+    unsafe fn read(mr: &mut UtcbMr, _: &mut BufferAccess) -> Result<Self> {
+        let val = mr.read::<T>()?; // 
+        Ok(match mr.read::<bool>()? { // Option is valid?
+            true => Some(val),
+            false => Option::<T>::None
+        })
+    }
+
+    #[inline]
+    unsafe fn write(self, mr: &mut UtcbMr) -> Result<()> {
+        match self {
+            None => {
+                mr.skip::<T>()?;
+                mr.write::<bool>(false)
+            },
+            Some(val) => {
+                mr.write::<T>(val)?;
+                mr.write::<bool>(true)
+            }
+        }
     }
 }
 

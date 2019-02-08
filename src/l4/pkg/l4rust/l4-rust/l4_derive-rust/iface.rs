@@ -1,3 +1,4 @@
+use proc_macro2::{Span, TokenStream};
 use quote::quote;
 use std::str::FromStr;
 use syn::{braced,
@@ -69,7 +70,7 @@ impl Parse for IfaceAttr {
 
 // duck typing
 impl IfaceAttr {
-    fn span(&self) -> proc_macro2::Span {
+    fn span(&self) -> Span {
         match self {
             IfaceAttr::Const(x) => x.span(),
             IfaceAttr::Type(x) => x.span(),
@@ -78,14 +79,14 @@ impl IfaceAttr {
 }
 
 impl quote::ToTokens for IfaceAttr {
-    fn to_tokens(&self, t: &mut proc_macro2::TokenStream) {
+    fn to_tokens(&self, t: &mut TokenStream) {
         match self {
             IfaceAttr::Const(x) => x.to_tokens(t),
             IfaceAttr::Type(x) => x.to_tokens(t),
         };
     }
 
-    fn into_token_stream(self) -> proc_macro2::TokenStream
+    fn into_token_stream(self) -> TokenStream
             where Self: Sized {
         match self {
             IfaceAttr::Const(t) => t.into_token_stream(),
@@ -96,12 +97,6 @@ impl quote::ToTokens for IfaceAttr {
 
 // reply with an error so that function above can return empty TokenStream; the
 // error already got registered globally with the error() function
-macro_rules! err {
-    ($obj_with_span:expr, $msg:literal) => {{
-        $obj_with_span.span().unstable().error($msg).emit();
-        return Err(syn::Error::new($obj_with_span.span(), $msg));
-    }}
-}
 
 pub struct ParsedIfaceAttrs {
     pub protocol: syn::Expr,
@@ -114,11 +109,11 @@ pub struct ParsedIfaceAttrs {
 // default to i32.
 pub fn parse_iface_attributes(outer: syn::Ident, attrs: &Vec<IfaceAttr>)
         -> Result<ParsedIfaceAttrs> {
-//        -> Result<proc_macro2::TokenStream> {
+//        -> Result<TokenStream> {
     let mut opattrs = Vec::new();
     // default to a OpType of i32
     let mut optype: syn::Type = syn::Type::Verbatim(syn::TypeVerbatim {
-            tts: proc_macro2::TokenStream::from_str("i32").unwrap() });
+            tts: TokenStream::from_str("i32").unwrap() });
     let mut protocol: Option<syn::Expr> = None;
     for attr in attrs.iter() {
         match attr {
@@ -145,7 +140,7 @@ pub fn parse_iface_attributes(outer: syn::Ident, attrs: &Vec<IfaceAttr>)
     })
 }
 
-pub fn gen_iface_attrs(if_attrs: ParsedIfaceAttrs) -> proc_macro2::TokenStream {
+pub fn gen_iface_attrs(if_attrs: ParsedIfaceAttrs) -> TokenStream {
     let ParsedIfaceAttrs { protocol, opattrs, optype } = if_attrs;
     quote! {
         const PROTOCOL_ID: i64 = #protocol;
@@ -155,8 +150,8 @@ pub fn gen_iface_attrs(if_attrs: ParsedIfaceAttrs) -> proc_macro2::TokenStream {
 }
 
 // ToDo: no enumeration yet
-pub fn enumerate_iface_methods(methods: &Vec<syn::TraitItemMethod>)
-        -> Result<proc_macro2::TokenStream> {
+pub fn parse_iface_methods(methods: &Vec<syn::TraitItemMethod>)
+        -> Result<Vec<syn::TraitItemMethod>> {
     for method in methods {
         // expected `fn(&mut self, …) -> ret;} (ret is optional)
         let sig = &method.sig;
@@ -175,8 +170,21 @@ pub fn enumerate_iface_methods(methods: &Vec<syn::TraitItemMethod>)
             err!(method.default, "No default implementation allowed");
         }
     }
+    // ToDo: doc strings cause soe weird found-a-hash error when used in quotes,
+    // so strip  them
+    let methods = methods.iter().map(|m| {
+        let mut m = m.clone();
+        m.attrs.clear();
+        m
+    }).collect();
+    // we don't mutate an element at the moment, so just clone the vector
+    Ok(methods)
+}
+
+pub fn gen_iface_methods(methods: &Vec<syn::TraitItemMethod>)
+        -> TokenStream {
     let gen = quote! {
         #(#methods)*
     };
-    Ok(gen.into())
+    gen.into()
 }
