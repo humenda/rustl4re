@@ -178,3 +178,8 @@ pub fn timeout_never() -> l4_timeout_t {
 pub fn ipc_error2code(code: isize) -> u64 {
     (code & l4_ipc_tcr_error_t::L4_IPC_ERROR_MASK as isize) as u64
 }
+
+/// Default protocol used by IPC interfaces
+pub const PROTO_ANY: i64 = 0;
+/// Empty protocol for empty APIs
+pub const PROTO_EMPTY: i64 = -19;

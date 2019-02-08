@@ -290,10 +290,24 @@ impl<U: UtcbRegSize> Registers<U> {
                 _ => 1
             }) as u32
     }
+
     /// Reset internal offset to beginning of message registers
     #[inline]
     pub fn reset(&mut self) {
         self.offset = 0
+    }
+
+    /// Skip the amount of memory that the given type would occupy
+    pub fn skip<T: Serialisable>(&mut self) -> Result<()> {
+        let (_, offset) = unsafe {
+            align_with_offset::<T>(self.buf, self.offset)
+        };
+        let next = offset + size_of::<T>();
+        if next > U::BUF_SIZE {
+            return Err(Error::Generic(GenericErr::MsgTooLong));
+        }
+        self.offset = next; // advance offset *behind* element
+        Ok(())
     }
 }
 
