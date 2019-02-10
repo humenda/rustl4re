@@ -48,7 +48,7 @@ mod serialise;
 mod serverloop;
 pub mod types;
 
-pub use self::serialise::Serialisable;
+pub use self::serialise::{Serialiser, Serialisable};
 pub use self::serverloop::{Callback, Loop, LoopBuilder, server_impl_callback};
 pub use self::types::{CapProvider, CapProviderAccess, Bufferless, BufferAccess, BufferManager};
 
