@@ -5,9 +5,11 @@ use super::super::{
     utcb::{SndFlexPage, FpageRights, UtcbMr},
 };
 
-/// Mark a trait as serialisable by the IPC framework
+pub unsafe trait Serialisable: Clone { }
+
+/// Implementation (de)serialisation for a type
 ///
-/// This trait serves both as a marker trait and a dispatcher trait. It marks a
+/// This trait serves both as a serialisation and dispatcher trait. It marks a
 /// type as being serialisable in its layout to the message registers and
 /// readable again. Since this procedure needs to be repeatable on the C++ side
 /// as well, great care has been taken. This is usually safe for primitive
@@ -22,11 +24,7 @@ use super::super::{
 /// kernel buffer store (if capabilities are being transfered), etc. This
 /// description applies both for reading and writing. For examples of
 /// implementors, see the Flex Page and Cap(ability) types.
-///
-/// **Note:** The implementor may trust that `ArgAccess` contains a values when
-/// reading the message registers or the kernel buffer objects. It is **always**
-/// the responsibility of the callee to make sure that they are valid.
-pub unsafe trait Serialisable: Clone {
+pub unsafe trait Serialiser where Self: Sized {
     /// Read a value of `Self`
     ///
     /// Read a value of `Self` from given
@@ -37,29 +35,29 @@ pub unsafe trait Serialisable: Clone {
     /// before the framework passes the slice and the implementing type for this method is a
     /// `Cap<T>`, a capability needs to be within the slice.
     #[inline]
-    unsafe fn read(mr: &mut UtcbMr, _: &mut BufferAccess) -> Result<Self> {
-        mr.read::<Self>() // most types are read from here
-    }
+    unsafe fn read(mr: &mut UtcbMr, _: &mut BufferAccess) -> Result<Self>;
 
     /// Write a value of this type to the message registers
     ///
     /// Offset and alignment are automatically calculated by the `ArgAccess`.
     #[inline]
-    unsafe fn write(self, mr: &mut UtcbMr) -> Result<()> {
-        mr.write::<Self>(self)
-    }
-
-    /// Write an item for sending
-    #[inline]
-    unsafe fn write_item(self, mr: &mut UtcbMr) -> Result<()> {
-        mr.write_item::<Self>(self)
-    }
+    unsafe fn write(self, mr: &mut UtcbMr) -> Result<()>;
 }
 
 macro_rules! impl_serialisable {
     ($($type:ty),*) => {
         $(
             unsafe impl Serialisable for $type { }
+            unsafe impl Serialiser for $type {
+                #[inline]
+                unsafe fn read(mr: &mut UtcbMr, _: &mut BufferAccess) -> Result<Self> {
+                    mr.read::<Self>() // most types are read from here
+                }
+                #[inline]
+                unsafe fn write(self, mr: &mut UtcbMr) -> Result<()> {
+                    mr.write::<Self>(self)
+                }
+            }
         )*
     }
 }
@@ -67,17 +65,16 @@ macro_rules! impl_serialisable {
 impl_serialisable!(i8, i16, i32, i64, i128, u8, u16, u32, u64, u128, f32, f64,
                    usize, isize, bool, char);
 
-unsafe impl Serialisable for () {
-    unsafe fn read(_: &mut UtcbMr, _: &mut BufferAccess) -> Result<()> {
-        Ok(())
-    }
-
-    unsafe fn write(self, _: &mut UtcbMr) -> Result<()> {
-        Ok(())
-    }
+unsafe impl Serialisable for () { }
+unsafe impl Serialiser for () {
+    #[inline]
+    unsafe fn read(_: &mut UtcbMr, _: &mut BufferAccess) -> Result<()> { Ok(()) }
+    #[inline]
+    unsafe fn write(self, _: &mut UtcbMr) -> Result<()> { Ok(()) }
 }
 
-unsafe impl Serialisable for SndFlexPage {
+unsafe impl Serialisable for SndFlexPage { }
+unsafe impl Serialiser for SndFlexPage {
     #[inline]
     unsafe fn write(self, mr: &mut UtcbMr) -> Result<()> {
         mr.write_item::<Self>(self)
@@ -89,10 +86,10 @@ unsafe impl Serialisable for SndFlexPage {
     }
 }
 
-unsafe impl<T: Serialisable> Serialisable for Option<T> {
+unsafe impl<T: Serialisable> Serialiser for Option<T> {
     #[inline]
-    unsafe fn read(mr: &mut UtcbMr, _: &mut BufferAccess) -> Result<Self> {
-        let val = mr.read::<T>()?; // 
+    unsafe fn read(mr: &mut UtcbMr, _: &mut BufferAccess) -> Result<Option<T>> {
+        let val = mr.read::<T>()?;
         Ok(match mr.read::<bool>()? { // Option is valid?
             true => Some(val),
             false => Option::<T>::None
@@ -114,7 +111,7 @@ unsafe impl<T: Serialisable> Serialisable for Option<T> {
     }
 }
 
-unsafe impl<T: Interface + IfaceInit + Clone> Serialisable for Cap<T> {
+unsafe impl<T: Interface + IfaceInit> Serialiser for Cap<T> {
     /// Read a capability from the given capability slice
     ///
     /// The slice must be constructed such that the first entry is the capability to be read, this

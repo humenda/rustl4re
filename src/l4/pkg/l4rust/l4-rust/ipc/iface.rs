@@ -4,7 +4,7 @@ macro_rules! write_msg {
         {
             unsafe {
                 $(
-                    <$argty as $crate::ipc::Serialisable>::write($arg, $msg_mr)?;
+                    <$argty as $crate::ipc::Serialiser>::write($arg, $msg_mr)?;
                  )*
             }
             Ok(())
@@ -101,7 +101,7 @@ macro_rules! derive_ipc_calls {
        fn $name:ident($($argname:ident: $type:ty),*) -> $return:ty;)*
     ) => {
         $(
-            fn $name(&mut self, $($argname: $type),*)
+            fn $name(&mut self $(, $argname: $type)*)
                         -> $crate::error::Result<$return> 
                             where Self: $crate::cap::Interface {
                 use $crate::ipc::CapProvider;
@@ -128,7 +128,7 @@ macro_rules! derive_ipc_calls {
                 // return () if "empty" return value, val otherwise
                 unsafe {
                     let mut cap_buf = caps.access_buffers();
-                    <$return as $crate::ipc::Serialisable>::read(
+                    <$return as $crate::ipc::Serialiser>::read(
                             &mut mr, &mut cap_buf)
                 }
             }
@@ -144,8 +144,8 @@ macro_rules! iface_back {
             const PROTOCOL_ID: i64 = $proto:tt;
             type OpType = $op_type:tt;
             $(
-                $op_code:expr => fn $name:ident(&mut self,
-                        $($argname:ident: $argtype:ty),*) -> $ret:ty;
+                $op_code:expr => fn $name:ident(&mut self
+                        $(, $argname:ident: $argtype:ty)*) -> $ret:ty;
             )*
         }
     ) => {
@@ -178,11 +178,11 @@ macro_rules! iface_back {
                 if opcode == $op_code {
                     unsafe {
                         let user_ret = self.$name(
-                            $(<$argtype as $crate::ipc::Serialisable>::
+                            $(<$argtype as $crate::ipc::Serialiser>::
                                 read(mr, bufs)?),*
                         )?;
                         mr.reset(); // reset MRs, not the bufs (not used for sending)
-                        mr.write(user_ret)?;
+                        <$ret as $crate::ipc::Serialiser>::write(user_ret, mr)?;
                         // on return, label/protocol is 0 for success and a custom error code
                         // otherwise; negative means some IPC failure
                         return Ok($crate::ipc::MsgTag::new(0,
@@ -205,7 +205,7 @@ macro_rules! iface_enumerate {
             const PROTOCOL_ID: i64 = $proto:tt;
             type OpType = $op_type:tt;
             $(
-                $opcode:expr => fn $name:ident(&mut self, $($argname:ident: $argtype:ty),*) -> $ret:ty;
+                $opcode:expr => fn $name:ident(&mut self $(, $argname:ident: $argtype:ty)*) -> $ret:ty;
             )*
         }
     ) => {
@@ -214,7 +214,7 @@ macro_rules! iface_enumerate {
                 const PROTOCOL_ID: i64 = $proto;
                 type OpType = $op_type;
                 $(
-                    $opcode => fn $name(&mut self, $($argname: $argtype),*) -> $ret;
+                    $opcode => fn $name(&mut self $(, $argname: $argtype)*) -> $ret;
                 )*
             }
         }
@@ -225,8 +225,8 @@ macro_rules! iface_enumerate {
             const PROTOCOL_ID: i64 = $proto:tt;
             type OpType = $op_type:tt;
             $(
-                fn $name:ident(&mut self,
-                        $($argname:ident: $argtype:ty),*) -> $ret:ty;
+                fn $name:ident(&mut self
+                        $(, $argname:ident: $argtype:ty)*) -> $ret:ty;
             )*
         }
      ) => {
@@ -237,7 +237,7 @@ macro_rules! iface_enumerate {
                 current_opcode = 0;
                 {
                 $(
-                    fn $name(&mut self, $($argname: $argtype),*) -> $ret;
+                    fn $name(&mut self $(, $argname: $argtype)*) -> $ret;
                 )*
                 }
             }
@@ -249,7 +249,7 @@ macro_rules! iface_enumerate {
             const PROTOCOL_ID: i64 = $proto:tt;
             type OpType = $op_type:tt;
             current_opcode = $count:expr;
-            { fn $name:ident(&mut self, $($argname:ident: $argtype:ty),*) -> $ret:ty;
+            { fn $name:ident(&mut self $(, $argname:ident: $argtype:ty)*) -> $ret:ty;
                 $($unmatched:tt)*
             }
             $($matched:tt)*
@@ -262,7 +262,7 @@ macro_rules! iface_enumerate {
                 current_opcode = $count + 1;
                 { $($unmatched)* }
                 $($matched)*
-                $count => fn $name(&mut self, $($argname: $argtype),*) -> $ret;
+                $count => fn $name(&mut self $(, $argname: $argtype)*) -> $ret;
             }
         }
     };
@@ -369,13 +369,16 @@ macro_rules! iface {
     ($($unexpanded:tt)*) => { compile_error!("Invalid interface definition, please consult the documentation"); };
 }
 
+/*
 // for debugging purposes
 use crate::cap::{Cap, Untyped};
-iface! {
+iface_enumerate! {
     trait EchoServer {
         const PROTOCOL_ID: i64 = 0xdeadbeef;
+        type OpType = i32;
         fn do_something(&mut self, i: i32) -> u8;
         fn do_something_else(&mut self, ds: Cap<Untyped>, u: bool) -> ();
-        fn signal(&mut self, i: i32);
+        fn signal(&mut self) -> ();
     }
 }
+*/

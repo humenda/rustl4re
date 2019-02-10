@@ -29,7 +29,6 @@ pub trait IfaceInit: Interface {
 }
 
 /// Untyped Capability
-#[derive(Clone)]
 pub struct Untyped(CapIdx);
 
 impl Interface for Untyped {
@@ -48,7 +47,6 @@ impl IfaceInit for Untyped {
 ///
 /// This types safely wraps the interaction with capabilities and allows for easy comparison of
 /// capability handles.
-#[derive(Clone)]
 pub struct Cap<T: Interface> {
     pub(crate) interface: T,
 }
