@@ -1,10 +1,11 @@
 //! IPC Interface Types
-use _core::ptr::NonNull;
+use _core::{ptr::NonNull, mem::transmute};
 
 use super::super::{
     cap::{Cap, CapIdx, IfaceInit, Interface, invalid_cap},
     error::{Error, GenericErr, Result},
     ipc::MsgTag,
+    ipc::serialise::{Serialisable, Serialiser},
     types::UMword,
     utcb::UtcbMr
 };
@@ -275,3 +276,41 @@ impl CapProvider for BufferManager {
         }
     }
 }
+
+pub struct Array<'a, Len, T> {
+    inner: &'a [T],
+    // (l4) c++ arrays use different slice length by default
+    _len_type: ::core::marker::PhantomData<Len>,
+}
+
+unsafe impl<'a, Len, T> Serialiser for Array<'a, Len, T> 
+        where Len: num::NumCast + Serialisable, T: Serialisable{
+    #[inline]
+    unsafe fn read(mr: &mut UtcbMr, _: &mut BufferAccess) -> Result<Self> {
+        Ok(Array {
+            inner: transmute::<_, &'a [T]>(mr.read_slice::<Len, T>()?),
+            _len_type: ::core::marker::PhantomData,
+        })
+    }
+    unsafe fn write(self, mr: &mut UtcbMr) -> Result<()> {
+        // default array in C++ is unsigned short - should be flexible
+        mr.write_slice::<Len, T>(self.inner)
+    }
+}
+
+impl<'a, Len, T> From<&'a [T]> for Array<'a, Len, T> 
+        where Len: Serialisable + num::NumCast, T: Serialisable {
+    fn from(sl: &'a [T]) -> Self {
+        Array {
+            inner: sl,
+            _len_type: ::core::marker::PhantomData,
+        }
+    }
+}
+
+/// Default C++-Compatible Array
+///
+/// This array uses an u16 to encode the length, a good default choice from the
+/// C++ framework given the length of the message registers. Use this as the
+/// default array / slice type.
+pub type BufArray<'a, T> = Array<'a, u16, T>;

@@ -141,6 +141,29 @@ fn gen_server_struct(name: proc_macro2::Ident, attrs: Vec<Attribute>,
     gen.into()
 }
 
+#[proc_macro]
+pub fn l4_client_fake(item: TokenStream) -> TokenStream {
+    let ast: syn::DeriveInput = syn::parse(item).expect("Unable to parse struct definition.");
+    let structdef = match ast.data {
+        Data::Struct(ds) => ds,
+        _ => panic!("This attribute can only be used on structs"),
+    };
+    let name = ast.ident;
+    let mut str: String = name.to_string();
+    str.push_str("Provider");
+    let trait_name = syn::Ident::new(&str, name.span());
+    let demand: u32 = 1;
+
+    // only unit structs are accepted, because cap types generally don't have members (in fact, the
+    // only valid member is inserted)
+    match structdef.fields {
+        Fields::Unnamed(_) | Fields::Named(_) => panic!("Only unit structs (no data \
+                fields) can be turned into an IPC client."),
+        Fields::Unit => gen_client_struct(name, ast.attrs, ast.vis,
+                                             ast.generics, trait_name, demand)
+    }
+}
+
 #[proc_macro_attribute]
 pub fn l4_client(macro_attrs: TokenStream, item: TokenStream) -> TokenStream {
     // parse trait name for IPC communication
