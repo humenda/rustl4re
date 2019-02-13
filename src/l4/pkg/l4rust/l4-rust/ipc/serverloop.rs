@@ -63,16 +63,7 @@ pub trait LoopHook {
     fn application_error<C>(&mut self, _: &mut Loop<Self, C>, e: Error)
                 -> LoopAction
             where Self: ::_core::marker::Sized, C: CapProvider {
-        LoopAction::ReplyAndWait(MsgTag::new(match e {
-                    Error::Generic(e) => e as i64,
-                    Error::Tcr(e) => e as i64,
-                    Error::UnknownErr(e) => e as i64,
-                    Error::Protocol(p) => panic!("Client requested unknown \
-                                                 protocol: {}", p),
-                    Error::InvalidCap | Error::InvalidArg(_, _)
-                            | Error::InvalidState(_) =>
-                        panic!("Error in server implementation: {:?}", e),
-                } * -1, 0, 0, 0)
+        LoopAction::ReplyAndWait(MsgTag::new(e.into_ipc_err(), 0, 0, 0)
             ) // ^ by convention, error types are returned as negative integer
     }
 

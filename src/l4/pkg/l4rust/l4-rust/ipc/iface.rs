@@ -120,9 +120,9 @@ macro_rules! derive_ipc_calls {
                 let tag = $crate::ipc::MsgTag::new($proto, mr.words(),
                         mr.items(), 0);
                 let _restag = $crate::ipc::MsgTag::from(unsafe {
-                        ::l4_sys::l4_ipc_call(self.cap(),
-                                ::l4_sys::l4_utcb(), tag.raw(),
-                                ::l4_sys::timeout_never())
+                        $crate::sys::l4_ipc_call(self.cap(),
+                                $crate::sys::l4_utcb(), tag.raw(),
+                                $crate::sys::timeout_never())
                     }).result()?;
                 mr.reset(); // read again from start of registers, `caps` still untouched
                 // return () if "empty" return value, val otherwise

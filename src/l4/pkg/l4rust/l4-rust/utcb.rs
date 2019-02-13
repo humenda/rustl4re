@@ -281,6 +281,23 @@ impl<U: UtcbRegSize> Registers<U> {
         Ok(val)
     }
 
+    pub unsafe fn write_slice<Len, T>(&mut self, val: &[T]) -> Result<()>
+            where Len: Serialisable + num::NumCast, T: Serialisable {
+        self.write::<Len>(Len::from::<usize>(val.len())
+                          .ok_or(Error::Generic(GenericErr::Arg2Big))?)?;
+        let (ptr, offset) = align_with_offset::<T>(self.buf, self.offset);
+        let end = offset + size_of::<T>() * val.len();
+        l4_err_if!(end > U::BUF_SIZE => Generic, MsgTooLong);
+        val.as_ptr().copy_to_nonoverlapping(transmute::<*mut u8, *mut T>(ptr),
+                                       val.len());
+        self.offset = end; // advance offset *behind* element
+        Ok(())
+    }
+
+    pub fn read_slice<Len, T: Serialisable>(&mut self) -> Result<&[T]> {
+        unimplemented!();
+    }
+
     /// Mwords written to this buffer (rounded up)
     #[inline]
     pub fn words(&self) -> u32 {

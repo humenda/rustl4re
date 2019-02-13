@@ -1,7 +1,7 @@
 use super::types::BufferAccess;
 use super::super::{
     cap::{Cap, IfaceInit, Interface},
-    error::Result,
+    error::{Error, Result},
     utcb::{SndFlexPage, FpageRights, UtcbMr},
 };
 
@@ -125,5 +125,26 @@ unsafe impl<T: Interface + IfaceInit> Serialiser for Cap<T> {
     unsafe fn write(self, mr: &mut UtcbMr) -> Result<()> {
         let fp = SndFlexPage::from_cap(&self, FpageRights::RWX, None);
         fp.write(mr)
+    }
+}
+
+#[cfg(not(without_std))]
+unsafe impl<'a> Serialiser for &'a str {
+    #[inline]
+    unsafe fn read(mr: &mut UtcbMr, _: &mut BufferAccess) -> Result<Self> {
+        let slice = mr.read_slice::<usize, u8>()?;
+        let length = match slice.last() == Some(&0u8) {
+            true => slice.len() - 1,
+            false => slice.len()
+        };
+        core::str::from_utf8(core::slice::from_raw_parts(slice.as_ptr(),
+                length))
+            .map_err(|e| Error::InvalidEncoding(Some(e)))
+    }
+
+    #[inline]
+    unsafe fn write(self, mr: &mut UtcbMr) -> Result<()> {
+        mr.write_slice::<usize, u8>(self.as_bytes())?;
+        mr.write::<u8>(0u8) // 0-byte for C string
     }
 }

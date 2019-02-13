@@ -146,6 +146,8 @@ pub enum Error {
     /// Protocol error, custom defined protocol error labels passed with an answer using the MSG
     /// msgtag label
     Protocol(i64),
+    /// Invalid string encoding (required UTF-8)
+    InvalidEncoding(Option<core::str::Utf8Error>),
 }
 
 impl _core::fmt::Display for Error {
@@ -159,12 +161,22 @@ impl _core::fmt::Display for Error {
             Error::InvalidState(r) => write!(f, "Invalid state: {}", r),
             Error::UnknownErr(u) => write!(f, "Unknown error code {}", u),
             Error::Protocol(p) => write!(f, "Unknown protocol requested: {}", p),
+            Error::InvalidEncoding(e) => {
+                match e {
+                    None => write!(f, "Invalid encoding"),
+                    Some(e) => {
+                        write!(f, "Invalid encoding: ")?;
+                        e.fmt(f)
+                    }
+                }
+            },
         }
     }
 }
 
 impl Error {
-    pub const INVALID_CAP_CODE: i64 = -65536;
+    pub const INVALID_CAP_CODE: i64 = -65540;
+    pub const INVALID_ENCODING: i64 = -65541;
 
     /// Get error from given tag (for current thread)
     #[inline]
@@ -189,9 +201,11 @@ impl Error {
     /// Error codes from L4 IPC are masked and and need to be umasked before converted to an error.
     #[inline(always)]
     pub fn from_ipc(code: i64) -> Self {
-        if code == Self::INVALID_CAP_CODE {
-            return Error::InvalidCap;
-        }
+        match code {
+            Self::INVALID_CAP_CODE => return Error::InvalidCap,
+            Self::INVALID_ENCODING => return Error::InvalidEncoding(None),
+            _ => (),
+        };
         // applying the mask makes the integer positive, cast to u32 then
         match TcrErr::from_u64((code & L4_IPC_ERROR_MASK as i64) as u64) {
             Some(tc) => Error::Tcr(tc),
@@ -210,6 +224,7 @@ impl Error {
             Error::InvalidCap => -1 * Self::INVALID_CAP_CODE,
             Error::InvalidArg(_, _) | Error::InvalidState(_)
                     => -1 * GenericErr::InvalidArg.to_i64().unwrap(),
+            Error::InvalidEncoding(_) => -1 * Self::INVALID_ENCODING,
             Error::UnknownErr(n) | Error::Protocol(n)
                 => n * -1
         }
@@ -217,3 +232,30 @@ impl Error {
 }
 
 pub type Result<T> = ::_core::result::Result<T, Error>;
+
+/// Short-hand macro for several `l4::error::Error`  cases
+///
+/// # Example
+///
+/// ```
+/// l4_err!(generic, OutOfBounds), Error::Generic(GenericErr::OutOfBounds);
+/// ```
+#[macro_export]
+macro_rules! l4_err {
+    (Generic, $err:ident) => {
+        return Err($crate::error::Error::Generic($crate::error::GenericErr::$err))
+    };
+
+    (InvalidEncoding($err:expr)) => {
+        return Err($crate::error::Error::InvalidEncoding($err));
+    }
+}
+
+#[macro_export]
+macro_rules! l4_err_if {
+    ($condition:expr => $($token:tt)*) => {
+        if $condition {
+            l4_err!($($token)*);
+        }
+    }
+}
