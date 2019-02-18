@@ -1,0 +1,2 @@
+Memory management: I'm aware that these functions create memory leaks. You are
+welcome to fix them.

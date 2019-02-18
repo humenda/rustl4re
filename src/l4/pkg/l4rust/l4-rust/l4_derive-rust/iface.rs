@@ -8,6 +8,14 @@ use syn::{braced,
     Token
 };
 
+macro_rules! raw_type {
+    ($($raw:tt)*) => {
+        syn::Type::Verbatim(syn::TypeVerbatim {
+                tts: TokenStream::from_str($($raw)*).unwrap() 
+        })
+    }
+}
+
 // parsed interface bits
 pub struct RawIface {
     pub iface_name: Ident,
@@ -112,8 +120,7 @@ pub fn parse_iface_attributes(outer: syn::Ident, attrs: &Vec<IfaceAttr>)
 //        -> Result<TokenStream> {
     let mut opattrs = Vec::new();
     // default to a OpType of i32
-    let mut optype: syn::Type = syn::Type::Verbatim(syn::TypeVerbatim {
-            tts: TokenStream::from_str("i32").unwrap() });
+    let mut optype: syn::Type = raw_type!("i32");
     let mut protocol: Option<syn::Expr> = None;
     for attr in attrs.iter() {
         match attr {
@@ -174,7 +181,12 @@ pub fn parse_iface_methods(methods: &Vec<syn::TraitItemMethod>)
     // so strip  them
     let methods = methods.iter().map(|m| {
         let mut m = m.clone();
-        m.attrs.clear();
+        m.attrs.clear(); // ToDo: doc strings cause sytnax error, are transformed to #[""] and that doesn't work in quote!
+        m.sig.decl.output = match m.sig.decl.output {
+            syn::ReturnType::Type(a, b) => syn::ReturnType::Type(a, b),
+            syn::ReturnType::Default => syn::ReturnType::Type(
+                    syn::parse(TokenStream::from_str("->").unwrap().into()).unwrap(), Box::new(raw_type!("()")))
+        };
         m
     }).collect();
     // we don't mutate an element at the moment, so just clone the vector
