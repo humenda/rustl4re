@@ -15,6 +15,9 @@ use l4_sys::{consts::UtcbConsts::L4_UTCB_GENERIC_BUFFERS_SIZE,
     l4_msg_item_consts_t::{L4_RCV_ITEM_SINGLE_CAP, L4_RCV_ITEM_LOCAL_ID},
     l4_utcb_br_u, l4_utcb_t,
 };
+#[cfg(feature = "std")]
+use std::vec::Vec;
+
 
 /// IPC Dispatch Delegation Functionality
 ///
@@ -308,9 +311,24 @@ impl<'a, Len, T> From<&'a [T]> for Array<'a, Len, T>
     }
 }
 
+impl<'a, Len, T> Into<&'a [T]> for Array<'a, Len, T>
+        where Len: Serialisable + num::NumCast, T: Serialisable {
+    fn into(self) -> &'a [T] {
+        self.inner
+    }
+}
+
 /// Default C++-Compatible Array
 ///
 /// This array uses an u16 to encode the length, a good default choice from the
 /// C++ framework given the length of the message registers. Use this as the
 /// default array / slice type.
 pub type BufArray<'a, T> = Array<'a, u16, T>;
+
+#[cfg(feature="std")]
+impl<'a, T: Serialisable> core::convert::Into<Vec<T>> for BufArray<'a, T> {
+    fn into(self) -> Vec<T> {
+        let slice: &[T] = self.into();
+        Vec::from(slice)
+    }
+}

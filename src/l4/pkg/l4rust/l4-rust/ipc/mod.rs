@@ -50,7 +50,7 @@ pub mod types;
 
 pub use self::serialise::{Serialiser, Serialisable};
 pub use self::serverloop::{Callback, Loop, LoopBuilder, server_impl_callback};
-pub use self::types::{CapProvider, CapProviderAccess, Bufferless, BufferAccess, BufferManager};
+pub use self::types::*;
 
 use _core::convert::From;
 use l4_sys::{l4_msgtag_flags::*, l4_msgtag_t, l4_timeout_t, msgtag};

@@ -102,6 +102,15 @@ module shm_rust_base.cfg
 module shm_rust_base-client
 module shm_rust_base-server
 
+entry array_example
+kernel fiasco -serial_esc
+roottask moe rom/array.cfg
+module l4re
+module ned
+module array.cfg
+module array-client
+module array-server
+
 entry raw_iface
 kernel fiasco -serial_esc
 roottask moe rom/raw_iface.cfg
@@ -110,7 +119,6 @@ module ned
 module raw_iface.cfg
 module raw_iface-client
 module raw_iface-server
-
 
 entry syint
 roottask moe rom/syint.cfg

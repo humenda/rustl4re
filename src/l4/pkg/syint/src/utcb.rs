@@ -1,4 +1,8 @@
-use l4::utcb::*;
+use l4::{
+    ipc::Serialiser,
+    utcb::SndFlexPage as FlexPage,
+    utcb::*
+};
 use std::mem::transmute;
 
 use helpers::UtcbMrFake;
@@ -117,7 +121,7 @@ tests! {
             // write the Rust version
             let rfp = FlexPage::new(fp.raw, 0, None);
             msg.reset();
-            FlexPage::write(&mut msg, rfp).unwrap();
+            FlexPage::write(rfp, &mut msg).unwrap();
             assert_eq!(mr.get(0), c_mapopts);
             assert_eq!(mr.get(1), c_fpage);
         }
@@ -134,11 +138,11 @@ tests! {
             let fp = ::l4_sys::l4_obj_fpage(0xcafebabe, 0,
                                         FpageRights::RWX.bits() as u8);
             // write the Rust version
-            msg.write(314u32);
+            msg.write(314u32).unwrap();
             let rfp = FlexPage::new(fp.raw, 0, None);
             // must be written from the flex page to track it as item, not as word (see UTCB
             // terminologie)
-            FlexPage::write(&mut msg, rfp).unwrap();
+            FlexPage::write(rfp, &mut msg).unwrap();
 
             assert_eq!(*c_side, mr.get(0));
             assert_eq!(*(c_side.offset(1)), mr.get(1));
@@ -180,4 +184,30 @@ tests! {
         unsafe { msg.write(42u8).expect("Writing failed"); }
         assert_eq!(msg.words(), 1);
     }
+
+    fn strings_are_correctly_serialised() {
+        // expect length + strings with 0-byte (length counts 0-byte)
+        let (buf, mut msg) = mk_msg_regs();
+        let string = String::from("Hello, world!");
+        unsafe { msg.write::<String>(string).unwrap() }
+        assert_eq!(msg.words(), 3);
+        msg.reset();
+        unsafe {
+            assert_eq!(msg.read::<u64>().unwrap(), 13u64);
+            println!("blah");
+            assert_eq!(msg.read::<u64>().unwrap(), 13u64);
+            assert_eq!(msg.read::<char>().unwrap(), 'H');
+            for _ in 0..12 {
+                let _ = msg.read::<char>().unwrap();
+            }
+            assert_eq!(msg.read::<u8>().unwrap(), 0);
+        }
+        // toDo: length, 0-byte
+        ()
     }
+/*
+    fn strings_without_0_bytes_deserialised();
+
+    fn strings_with_0bytes_serialised();
+    */
+}

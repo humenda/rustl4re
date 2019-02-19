@@ -197,6 +197,8 @@ macro_rules! iface_back {
     }
 }
 
+// ToDo: functionality should be implemented by proc macro, this macro should support life time
+// parameters such as `fn bla<'a>(…)`
 #[macro_export]
 macro_rules! iface_enumerate {
     // match already enumerated interfaces and pass them directly through
@@ -285,88 +287,6 @@ macro_rules! iface_enumerate {
 
         }
     };
-}
-
-#[macro_export]
-macro_rules! iface {
-    // entry point with return type
-    (trait $traitname:ident {
-        const PROTOCOL_ID: i64 = $proto:tt;
-        $(
-            fn $name:ident(&mut self, $($argname:ident: $argtype:ty),*) $(-> $ret:ty)?;
-        )*
-    }) => {
-        $crate::iface! {
-            trait $traitname {
-                const PROTOCOL_ID: i64 = $proto;
-                {
-                    $(
-                    fn $name($($argname: $argtype),*) $(-> $ret)?;
-                    )*
-                }
-            }
-        }
-    };
-
-    // matcher for next IPC function having no return type
-    (trait $traitname:ident {
-         const PROTOCOL_ID: i64 = $proto:tt;
-         {
-             fn $name:ident($($argname:ident: $argtype:ty),*);
-             $($unexpanded:tt)*
-         }
-         $($expanded:tt)*
-    }) => {
-        $crate::iface! {
-            trait $traitname {
-                const PROTOCOL_ID: i64 = $proto;
-                { $($unexpanded)* }
-                $($expanded)*
-                fn $name($($argname: $argtype),*) -> ();
-            }
-        }
-    };
-
-
-    // match a function with return type
-    (trait $traitname:ident {
-        const PROTOCOL_ID: i64 = $proto:tt;
-        {
-            fn $name:ident($($argname:ident: $argtype:ty),*) -> $ret:ty;
-            $($unexpanded:tt)*
-        }
-        $($expanded:tt)*
-    }) => {
-        $crate::iface! {
-            trait $traitname {
-                const PROTOCOL_ID: i64 = $proto;
-                { $($unexpanded)* }
-                $($expanded)*
-                fn $name($($argname: $argtype),*) -> $ret;
-            }
-        }
-    };
-
-    // match arm for completely expanded trait definition
-    (trait $traitname:ident {
-        const PROTOCOL_ID: i64 = $proto:tt;
-        { }
-        $(
-            fn $name:ident($($argname:ident: $argtype:ty),*) -> $ret:ty;
-        )*
-    }) => {
-        $crate::iface_enumerate! {
-            trait $traitname {
-                const PROTOCOL_ID: i64 = $proto;
-                type OpType = i32; // ToDo: should be flexible
-                $(
-                    fn $name(&mut self, $($argname: $argtype),*) -> $ret;
-                )*
-            }
-        }
-    };
-
-    ($($unexpanded:tt)*) => { compile_error!("Invalid interface definition, please consult the documentation"); };
 }
 
 /*

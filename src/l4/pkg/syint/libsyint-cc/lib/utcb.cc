@@ -5,6 +5,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <l4/sys/cxx/ipc_array>
+#include <l4/sys/cxx/ipc_string>
 
 using namespace L4::Ipc::Msg;
 
@@ -54,6 +56,7 @@ extern "C" void write_cxx_snd_fpage(char *v, l4_fpage_t fp) {
     auto sfp = L4::Ipc::Snd_fpage(fp);
     msg_add(v, 0, 1024, sfp);
 }
+
 extern "C" char *write_u32_and_fpage() {
     char *v = (char *)malloc(1024);
     memset(v, 0, 1024);
