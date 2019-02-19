@@ -1,0 +1,11 @@
+[package]
+name = "array-client"
+version = "0.1.0"
+authors = ["Sebastian Humenda <shumenda@gmx.de>"]
+edition = "2018"
+
+[[bin]]
+name = "array-client"
+path = "client.rs"
+
+[dependencies]

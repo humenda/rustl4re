@@ -1,9 +1,10 @@
-#![no_std]
-#![cfg_attr(feature="without_std", no_std)]
-
 // ToDo: things to be stabilised in Rust:
 #![feature(align_offset)]
 #![feature(associated_type_defaults)]
+
+#![no_std]
+#[cfg(feature = "std")]
+extern crate std;
 
 #[cfg(not(without_std))]
 pub extern crate core as _core;

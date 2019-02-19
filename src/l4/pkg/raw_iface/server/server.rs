@@ -19,6 +19,9 @@ fn main() {
     println!("waiting for incoming connections");
     // Wait for requests from any thread. No timeout, i.e. wait forever. Note that the label of the
     // sender will be placed in `label`.
+    for i in (*l4::sys::l4_utcb_mr()).mr.iter_mut() {
+        *i = 0x6666666666666666;
+    }
     let mut tag = sys::l4_ipc_wait(sys::l4_utcb(), &mut label,
             sys::l4_timeout_t { raw: 0 });
     loop {
@@ -40,9 +43,20 @@ fn main() {
         // back to it
         println!("op code (as i32): {:x}", (*core::mem::transmute::<*mut u64, *mut i32>(
                     (*sys::l4_utcb_mr()).mr.as_mut_ptr())));
-        println!("first word: {:x}", (*sys::l4_utcb_mr()).mr[1] as u64);
-        println!("second word: {:x}", (*sys::l4_utcb_mr()).mr[2] as u64);
-        println!("third word: {:x}", (*sys::l4_utcb_mr()).mr[3] as u64);
+        println!("first word: {:x}", (*l4::sys::l4_utcb_mr()).mr[0]);
+        println!("second word: {:x}", (*l4::sys::l4_utcb_mr()).mr[1]);
+        let mut charray = &(*sys::l4_utcb_mr()).mr[2] as *const _ as *const u8;
+        while *charray != 0 {
+            let ch = *charray;
+            print!("{:x}({}) ", ch, ch as char);
+            charray = charray.offset(1);
+        }
+        println!();
+        if *charray == 0 {
+            let length = charray as *const u32;
+            println!("le1: {:x}", *length);
+            println!("le2: {:x}", *(length.offset(1)));
+        }
         let ms = std::time::Duration::from_millis(1000);
         tag = sys::l4_ipc_reply_and_wait(sys::l4_utcb(), sys::l4_msgtag(0, 0, 0, 0),
                               &mut label, sys::l4_timeout_t { raw: 0 });

@@ -16,6 +16,7 @@ use crate::cap::{Cap, Interface};
 use crate::ipc::Serialisable;
 use crate::error::{Error, GenericErr, Result};
 use crate::types::{Mword, UMword};
+use num::{NumCast, cast::ToPrimitive};
 
 /// UTCB constants (architecture-specific)
 pub use crate::l4_sys::consts::UtcbConsts as Consts;
@@ -281,10 +282,10 @@ impl<U: UtcbRegSize> Registers<U> {
         Ok(val)
     }
 
-    pub unsafe fn write_slice<Len, T>(&mut self, val: &[T]) -> Result<()>
-            where Len: Serialisable + num::NumCast, T: Serialisable {
-        self.write::<Len>(Len::from::<usize>(val.len())
-                          .ok_or(Error::Generic(GenericErr::Arg2Big))?)?;
+    #[inline]
+    unsafe fn write_slice_len<Len, T>(&mut self, len: Len, val: &[T]) -> Result<()>
+            where Len: Serialisable + NumCast, T: Serialisable {
+        self.write::<Len>(len)?;
         let (ptr, offset) = align_with_offset::<T>(self.buf, self.offset);
         let end = offset + size_of::<T>() * val.len();
         l4_err_if!(end > U::BUF_SIZE => Generic, MsgTooLong);
@@ -294,8 +295,27 @@ impl<U: UtcbRegSize> Registers<U> {
         Ok(())
     }
 
-    pub fn read_slice<Len, T: Serialisable>(&mut self) -> Result<&[T]> {
-        unimplemented!();
+    pub unsafe fn write_slice<Len, T>(&mut self, val: &[T]) -> Result<()>
+            where Len: Serialisable + NumCast, T: Serialisable {
+        self.write_slice_len::<Len, T>(Len::from::<usize>(val.len())
+                          .ok_or(Error::Generic(GenericErr::Arg2Big))?, val)
+    }
+
+    // Serialise a &str as a C-compatible, 0-terminated UTF-8 string.
+    pub unsafe fn write_str(&mut self, val: &str) -> Result<()> {
+        self.write_slice_len::<usize, u8>(val.len() + 1, val.as_bytes())?;
+        self.write::<u8>(0)
+    }
+
+    pub unsafe fn read_slice<Len, T>(&mut self) -> Result<&[T]>
+            where Len: Serialisable + ToPrimitive, T: Serialisable {
+        let len = ToPrimitive::to_usize(&self.read::<Len>()?)
+                .ok_or(Error::Generic(GenericErr::InvalidArg))?;
+        let (ptr, offset) = align_with_offset::<T>(self.buf, self.offset);
+        let end = offset + size_of::<T>() * len;
+        l4_err_if!(end > U::BUF_SIZE => Generic, OutOfBounds);
+        self.offset = end; // advance offset *behind* element
+        Ok(core::slice::from_raw_parts(ptr as *const _, len))
     }
 
     /// Mwords written to this buffer (rounded up)
@@ -311,7 +331,7 @@ impl<U: UtcbRegSize> Registers<U> {
     /// Reset internal offset to beginning of message registers
     #[inline]
     pub fn reset(&mut self) {
-        self.offset = 0
+        self.offset = 0;
     }
 
     /// Skip the amount of memory that the given type would occupy
@@ -320,9 +340,7 @@ impl<U: UtcbRegSize> Registers<U> {
             align_with_offset::<T>(self.buf, self.offset)
         };
         let next = offset + size_of::<T>();
-        if next > U::BUF_SIZE {
-            return Err(Error::Generic(GenericErr::MsgTooLong));
-        }
+        l4_err_if!(next > U::BUF_SIZE => Generic, MsgTooLong);
         self.offset = next; // advance offset *behind* element
         Ok(())
     }

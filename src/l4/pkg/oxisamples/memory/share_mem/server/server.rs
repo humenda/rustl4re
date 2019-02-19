@@ -1,16 +1,19 @@
 #![feature(associated_type_defaults)]
-extern crate l4_sys;
 extern crate l4;
 extern crate l4_derive;
 extern crate l4re;
+extern crate libc;
 
-use l4_sys::*;
-use l4::{error::Result,
-    ipc,
-    cap::{Cap, Untyped},
+use l4::{cap::Cap,
+    error::Result,
+    ipc, l4_err,
+    sys::l4_utcb,
 };
 use l4_derive::{iface, l4_server};
-use l4re::OwnedCap;
+use l4re::{
+    mem::DataspaceProvider,
+    OwnedCap
+};
 
 // include IPC interface definition
 include!("../interface.rs");
@@ -19,33 +22,27 @@ include!("../interface.rs");
 struct ShmServer;
 
 impl Shm for ShmServer {
-    fn witter(&mut self, length: u32, ds: Cap<Untyped>) -> Result<bool> {
-        let ds = OwnedCap::from(ds)?;
+    fn witter(&mut self, length: u32, ds: Cap<Dataspace>) -> Result<bool> {
+        let mut ds = OwnedCap::from(ds)?;
+        let _msg = read_message(&mut ds, length as usize)?;
         panic!("Not implemented!");
     }
 }
 
-unsafe fn read_message(ds: Cap<Untyped>, length: usize)
-        -> core::result::Result<String, String> {
-    use l4re::sys::{l4re_ds_stats_t, l4re_ds_info};
-    use l4::{cap::Interface, sys::l4_ipc_tcr_error_t::L4_IPC_ERROR_MASK};
-    use core::ffi::c_void;
-    let mut stats: l4re_ds_stats_t = std::mem::uninitialized();
-    match l4re_ds_info(ds.cap(), &mut stats as *mut l4re_ds_stats_t) {
-        0 => (),
-        n => panic!("stats info gave error {}\n",
-                    n & (L4_IPC_ERROR_MASK as i32)), 
-    };
-    if (stats).size != l4::sys::l4_round_page(length) as u64 {
-        panic!("memory allocation failed: got {:x}, required {:x}",
-                 stats.size, l4::sys::l4_round_page(length));
+fn read_message(ds: &mut Cap<Dataspace>, length: usize)
+        -> Result<String> {
+            // ToDo: error handling
+    let info = ds.info()?;
+    if info.size != l4::sys::l4_round_page(length) as u64 {
+        l4_err!(generic, OutOfBounds);
     }
-
-    let mut virt_addr: *mut c_void = std::mem::uninitialized();
+    unimplemented!();
+    /*
+    let mut virt_addr: *mut libc::c_void = std::mem::uninitialized();
     // reserve area to allow attaching a data space; flags = 0 must be set
     let page_size = l4::sys::l4_round_page(length);
     println!("attaching memory: {:x} bytes", page_size);
-    match l4re::sys::l4re_rm_attach((&mut virt_addr) as *mut *mut c_void as _, page_size,
+    match l4re::sys::l4re_rm_attach((&mut virt_addr) as *mut *mut libc::c_void as _, page_size,
             l4re::sys::l4re_rm_flags_t::L4RE_RM_SEARCH_ADDR as u64, ds.cap(), 0, l4::sys::L4_PAGESHIFT as u8) {
         0 => (),
         err => return Err(format!("unable to attach memory from dataspace: {}",
@@ -62,7 +59,9 @@ unsafe fn read_message(ds: Cap<Untyped>, length: usize)
     println!("detaching memory…");
     l4re::sys::l4re_rm_detach(virt_addr as _);
     msg.map_err(|e| e.to_string())
+    */
 }
+
 fn main() {
     let chan = l4re::sys::l4re_env_get_cap("channel").expect(
             "Received invalid channel capability.");

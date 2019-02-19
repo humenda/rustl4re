@@ -1,7 +1,7 @@
 use super::types::BufferAccess;
 use super::super::{
     cap::{Cap, IfaceInit, Interface},
-    error::{Error, Result},
+    error::Result,
     utcb::{SndFlexPage, FpageRights, UtcbMr},
 };
 
@@ -128,7 +128,9 @@ unsafe impl<T: Interface + IfaceInit> Serialiser for Cap<T> {
     }
 }
 
-#[cfg(not(without_std))]
+//#[cfg(feature="std")]
+unsafe impl<'a> Serialisable for &'a str { }
+//#[cfg(feature="std")]
 unsafe impl<'a> Serialiser for &'a str {
     #[inline]
     unsafe fn read(mr: &mut UtcbMr, _: &mut BufferAccess) -> Result<Self> {
@@ -139,12 +141,40 @@ unsafe impl<'a> Serialiser for &'a str {
         };
         core::str::from_utf8(core::slice::from_raw_parts(slice.as_ptr(),
                 length))
-            .map_err(|e| Error::InvalidEncoding(Some(e)))
+            .map_err(|e| crate::error::Error::InvalidEncoding(Some(e)))
     }
 
     #[inline]
     unsafe fn write(self, mr: &mut UtcbMr) -> Result<()> {
-        mr.write_slice::<usize, u8>(self.as_bytes())?;
-        mr.write::<u8>(0u8) // 0-byte for C string
+        mr.write_str(self)
+    }
+}
+
+//#[cfg(feature="std")]
+unsafe impl Serialisable for std::string::String { }
+//#[cfg(feature="std")]
+unsafe impl Serialiser for std::string::String {
+    #[inline]
+    unsafe fn read(mr: &mut UtcbMr, x: &mut BufferAccess) -> Result<Self> {
+        Ok(std::string::String::from(<&str as Serialiser>::read(mr, x)?))
+    }
+
+    #[inline]
+    unsafe fn write(self, mr: &mut UtcbMr) -> Result<()> {
+        mr.write_str(&self)
+    }
+}
+
+#[cfg(feature="std")]
+unsafe impl<T: Serialisable> Serialiser for std::vec::Vec<T> {
+    #[inline]
+    unsafe fn read(mr: &mut UtcbMr, x: &mut BufferAccess) -> Result<Self> {
+        let slice: &[T] = super::types::BufArray::read(mr, x)?.into();
+        Ok(std::vec::Vec::from(slice))
+    }
+
+    #[inline]
+    unsafe fn write(self, mr: &mut UtcbMr) -> Result<()> {
+        mr.write_slice::<u16, T>(self.as_slice())
     }
 }
