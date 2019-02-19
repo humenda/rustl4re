@@ -280,6 +280,16 @@ impl CapProvider for BufferManager {
     }
 }
 
+/// An IPC array (reference) type
+///
+/// This array wraps safely the access to a region in the message registers. It
+/// can be treated like a slice. Operations on it are unsafe, because the
+/// message registers might be overwritten at any time due to a syscall taking
+/// place. This type should therefore only be used to copy data out / in **or**
+/// with ***great*** care (and if performance is crucial).
+///
+/// Note that this array can be constructed from a slice and also supports the
+/// conversion into a vector via the `Into` trait.
 pub struct Array<'a, Len, T> {
     inner: &'a [T],
     // (l4) c++ arrays use different slice length by default
@@ -318,13 +328,6 @@ impl<'a, Len, T> Into<&'a [T]> for Array<'a, Len, T>
     }
 }
 
-/// Default C++-Compatible Array
-///
-/// This array uses an u16 to encode the length, a good default choice from the
-/// C++ framework given the length of the message registers. Use this as the
-/// default array / slice type.
-pub type BufArray<'a, T> = Array<'a, u16, T>;
-
 #[cfg(feature="std")]
 impl<'a, T: Serialisable> core::convert::Into<Vec<T>> for BufArray<'a, T> {
     fn into(self) -> Vec<T> {
@@ -332,3 +335,10 @@ impl<'a, T: Serialisable> core::convert::Into<Vec<T>> for BufArray<'a, T> {
         Vec::from(slice)
     }
 }
+
+/// Default C++-Compatible Array
+///
+/// This array uses an u16 to encode the length, a good default choice from the
+/// C++ framework given the length of the message registers. Use this as the
+/// default array / slice type.
+pub type BufArray<'a, T> = Array<'a, u16, T>;
