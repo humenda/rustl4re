@@ -13,14 +13,30 @@ use proc_macro::TokenStream;
 use quote::quote;
 use syn::{self, Attribute, Data, Fields, Generics, Ident, Lit,
         NestedMeta, Meta, Result, Visibility};
+use syn::spanned::Spanned;
+use syn::parse_macro_input;
 
-macro_rules! proc_try {
+macro_rules! proc_err {
+    // an error string spanning the whole macro invocation
+    ($lit:literal) => {
+        return syn::Error::new(proc_macro2::Span::call_site(), $lit)
+                .to_compile_error().into();
+    };
+
+    // use given span to emit error message with location info
+    ($span:expr, $lit:literal) => {
+        return syn::Error::new($span.span(), $lit)
+                .to_compile_error().into();
+    };
+
+
+    // same as err!: use given syn::Error to emit the error message
     ($match:expr) => {
         match $match {
             Ok(x) => x,
-            Err(_) => return proc_macro2::TokenStream::new().into(),
+            Err(e) => return e.to_compile_error().into(),
         }
-    }
+    };
 }
 
 
@@ -47,19 +63,15 @@ pub fn l4_server(macro_attrs: TokenStream, item: TokenStream) -> TokenStream {
         true => 0,
         false => {
             // only accept `name = value`or abort otherwise
-            let name_val: syn::MetaNameValue = match syn::parse(macro_attrs)
-                    .expect("Broken attribute specification") {
-                Meta::NameValue(nv) => nv,
-                _ => panic!("You must specify demand = <num>"),
-            };
-            // check for correct key within parenthesis
+            let name_val = parse_macro_input!(macro_attrs
+                    as syn::MetaNameValue);
             if name_val.ident != "demand" {
-                panic!("Unrecognised macro attribute, try \"demand\"");
+                proc_err!("Unrecognised macro attribute, try \"demand\"");
             }
             // only accept numbers
             match name_val.lit {
                 Lit::Int(l) => l.value() as u32,
-                _ => panic!("`demand` must be a positive integer"),
+                _ => proc_err!(name_val, "`demand` must be a positive integer"),
             }
         }
     };
@@ -67,210 +79,119 @@ pub fn l4_server(macro_attrs: TokenStream, item: TokenStream) -> TokenStream {
     let ast: syn::DeriveInput = syn::parse(item).expect("Unable to parse struct definition.");
     let structdef = match ast.data {
         Data::Struct(ds) => ds,
-        _ => panic!("This attribute can only be used on structs"),
+        _ => proc_err!("Attribute can only be used on structs"),
     };
     let name = ast.ident;
     // we can only insert a new member into a named struct or unit structs.
     // If we'd insert into a tuple struct, this would move the index of all
     // existing members, invalidating any user's code.
     match structdef.fields {
-        Fields::Named(_) => gen_server_struct(name, ast.attrs, ast.vis,
+        Fields::Named(_) => clntsrv::gen_server_struct(name, ast.attrs, ast.vis,
                                              ast.generics, structdef.fields,
                                              demand),
-        Fields::Unnamed(_) => panic!("Only named structs or unnamed structs \
+        Fields::Unnamed(_) => proc_err!("Only named structs or unnamed structs \
                 can be turned into an IPC server."),
-        Fields::Unit => gen_server_struct(name, ast.attrs, ast.vis,
+        Fields::Unit => clntsrv::gen_server_struct(name, ast.attrs, ast.vis,
                                              ast.generics, Fields::Unit,
                                              demand),
     }
 }
 
-fn gen_server_struct(name: proc_macro2::Ident, attrs: Vec<Attribute>,
-                    vis: Visibility, generics: Generics, fields: Fields,
-                    demand: u32)
-                    -> proc_macro::TokenStream {
-    // duplicate names and types of fields, because quote! moves them
-    let initialiser_names: Vec<_> = fields.iter().map(|f| f.ident.clone()).collect();
-    let arg_names: Vec<_> = fields.iter().map(|f| f.ident.clone()).collect();
-    let arg_types: Vec<_> = fields.iter().map(|f| f.ty.clone()).collect();
-
-    let gen = quote! {
-        #[repr(C)]
-        #(#attrs)*
-        #vis struct #name #generics {
-            __dispatch_ptr: ::l4::ipc::Callback,
-            __cap: crate::l4::cap::CapIdx,
-            #(#fields),*
-        }
-
-        impl #name {
-            /// Create a new #name instance
-            ///
-            /// The first argument is the IPC gate that this server is bound to.
-            /// For example: `#name::new(my_cap, #(#arg_names),*)`.
-            fn new(cap: l4::cap::CapIdx, #(#arg_names: #arg_types),*) -> #name {
-                #name {
-                    __dispatch_ptr: crate::l4::ipc::server_impl_callback::<#name>,
-                    __cap: cap,
-                    #(
-                        #initialiser_names
-                    ),*
-                }
-            }
-        }
-        impl crate::l4::ipc::types::Demand for #name {
-            const BUFFER_DEMAND: u32 = #demand;
-        }
-        unsafe impl crate::l4::ipc::types::Callable for #name { }
-        impl crate::l4::ipc::types::Dispatch for #name {
-            fn dispatch(&mut self, tag: crate::l4::ipc::MsgTag,
-                        mr: &mut l4::utcb::UtcbMr,
-                        bufs: &mut l4::ipc::BufferAccess)
-                    -> crate::l4::error::Result<crate::l4::ipc::MsgTag> {
-                // op_dispatch is auto-generated by the iface! macro
-                self.op_dispatch(tag, mr, bufs)
-            }
-        }
-        impl l4::cap::Interface for #name {
-            unsafe fn cap(&self) -> l4::cap::CapIdx {
-                self.__cap
-            }
-        }
-        impl l4::ipc::CapProviderAccess for #name { }
-    };
-    gen.into()
-}
-
-#[proc_macro]
-pub fn l4_client_fake(item: TokenStream) -> TokenStream {
-    let ast: syn::DeriveInput = syn::parse(item).expect("Unable to parse struct definition.");
-    let structdef = match ast.data {
-        Data::Struct(ds) => ds,
-        _ => panic!("This attribute can only be used on structs"),
-    };
-    let name = ast.ident;
-    let mut str: String = name.to_string();
-    str.push_str("Provider");
-    let trait_name = syn::Ident::new(&str, name.span());
-    let demand: u32 = 1;
-
-    // only unit structs are accepted, because cap types generally don't have members (in fact, the
-    // only valid member is inserted)
-    match structdef.fields {
-        Fields::Unnamed(_) | Fields::Named(_) => panic!("Only unit structs (no data \
-                fields) can be turned into an IPC client."),
-        Fields::Unit => gen_client_struct(name, ast.attrs, ast.vis,
-                                             ast.generics, trait_name, demand)
-    }
-}
-
+/// Derive a l4 client implementation
+///
+/// This attribute prepares a unit (empty) struct to be used as client-side IPC
+/// interface. The trait name of the IPC interface to be derived is mandatory,
+/// the demand (number of maximum capabilities to be received) is optional and
+/// defaults to 0.
+///
+/// Example:
+///
+/// ```norun
+/// iface! {
+///     trait Calculation { … }
+/// }
+///
+/// #[l4_client(Calculation, 0)]
+/// struct Calculator;
+/// ```
 #[proc_macro_attribute]
 pub fn l4_client(macro_attrs: TokenStream, item: TokenStream) -> TokenStream {
     // parse trait name for IPC communication
     if macro_attrs.is_empty() {
-        panic!("At least the IPC trait to derive must be specified");
+        proc_err!("No IPC interface specified");
     }
-    let mut trait_name = None;
-    let mut demand: u32 = 0;
-    proc_try!(parse_client_meta(proc_try!(syn::parse(macro_attrs)),
-        &mut trait_name, &mut demand));
-    let trait_name = trait_name.expect("No IPC trait specified");
+    let parsed_attrs = parse_macro_input!(macro_attrs as syn::AttributeArgs);
+    let (trait_name, demand) = proc_err!(parse_client_meta(parsed_attrs));
 
     let ast: syn::DeriveInput = syn::parse(item).expect("Unable to parse struct definition.");
     let structdef = match ast.data {
         Data::Struct(ds) => ds,
-        _ => panic!("This attribute can only be used on structs"),
+        _ => proc_err!("Attribute can only be used on structs"),
     };
     let name = ast.ident;
     // only unit structs are accepted, because cap types generally don't have members (in fact, the
     // only valid member is inserted)
     match structdef.fields {
-        Fields::Unnamed(_) | Fields::Named(_) => panic!("Only unit structs (no data \
+        Fields::Unnamed(_) | Fields::Named(_) => proc_err!("Only unit structs (no data \
                 fields) can be turned into an IPC client."),
         Fields::Unit => gen_client_struct(name, ast.attrs, ast.vis,
                                              ast.generics, trait_name, demand)
     }
 }
 
-fn parse_client_meta(meta: syn::Meta, name: &mut Option<Ident>,
-                      demand: &mut u32) -> Result<()> {
-    // recursively parse meta arguments to macro
-    match meta {
-        Meta::Word(tn) => *name = Some(tn),
-        Meta::NameValue(nv) => {
-            if nv.ident != "demand" {
-                err!(nv.ident, "Only `demand = NUM` allowed");
-            }
-            *demand = match nv.lit {
-                Lit::Int(i) => i.value() as u32,
-                _ => err!(nv.ident, "Demand can only be a positive integer number"),
-            };
-        },
-        Meta::List(ml) => {
-            for thing in ml.nested.into_iter() {
-                match thing {
-                    NestedMeta::Meta(nm) => parse_client_meta(nm, name, demand)?,
-                    // couldn't find a span to attach my error to
-                    _ => panic!("Invalid attribute: \
-                            only trait name and demand are allowed"),
-                };
-            }
-        },
-    }
-    Ok(())
-}
-
-fn gen_client_struct(name: proc_macro2::Ident, attrs: Vec<Attribute>,
-                    vis: Visibility, generics: Generics, trait_name: Ident,
-                    demand: u32)
-                -> proc_macro::TokenStream {
-    let slot_type: syn::Type = match demand {
-        0 => syn::parse(TokenStream::from_str("l4::ipc::Bufferless").unwrap()).unwrap(),
-        _ => syn::parse(TokenStream::from_str("l4::ipc::BufferManager").unwrap()).unwrap()
-    };
-    let gen = quote! {
-        #(#attrs)*
-        #vis struct #name #generics {
-            __cap: crate::l4::cap::CapIdx,
-            __slots: #slot_type,
-        }
-
-        impl crate::l4::cap::Interface for #name {
-            unsafe fn cap(&self) -> crate::l4::cap::CapIdx {
-                self.__cap
-            }
-        }
-        impl crate::l4::cap::IfaceInit for #name {
-            fn new(c: crate::l4::cap::CapIdx) -> Self {
-                #name {
-                    __cap: c,
-                    __slots: <#slot_type as l4::ipc::CapProvider>::new(),
-                }
-            }
-        }
-        impl #trait_name for #name { }
-
-        impl l4::ipc::CapProviderAccess for #name {
-            unsafe fn access_buffers(&mut self) -> l4::ipc::BufferAccess {
-                use l4::ipc::CapProvider;
-                self.__slots.access_buffers()
-            }
-        }
-    };
-    gen.into()
-}
-
-// ToDo: docs for this macro and **parse** docs for trait; auto-derive demand
+/// L4 IPC interface definition
+///
+/// In its simplest form, IPC on L4 is a series of wait, send, and reply
+/// operations (plus their joined versions). Message registers are filled with
+/// words and items (the latter being references to kernel objects which are
+/// treated different). It sounds very simple, but due to their simplicity,
+/// interactions can get very complex. IPC interfaces allow the developer to
+/// define an interface which is very close to a normal Rust interface, with the
+/// benefit the a lot of the server code and almost all client code is
+/// auto-derived. The user does not need to deal with the low-level details such
+/// as string, vector or capability deserialisation and can focus on the
+/// protocol itself.
+///
+/// Example:
+///
+/// ```
+/// use l4_derive::iface;
+///
+/// iface! {
+///     trait Example {
+///         const PROTOCOL_ID = 98765432;
+///         fn signal(&mut self);
+///         fn sum(&mut self, x: Vec<i32>) -> i64;
+///         fn greet(&mut self, how: String) -> String;
+///     }
+/// }
+/// ```
+///
+/// The differ areences to a normal trait:
+///
+/// -   The `PROTOCOL_ID` is mandatory and should ideally name a system-unique
+///     protocol identifier to discriminate the communication from other IPC
+///     interfaces.
+/// -   Each function needs to have `&mut self` as first argument.
+/// -   Functions return either `()` (if nothing was specified) or the specified
+///     type; servers implementing the trait *must* wrap the specified return
+///     type within `l4::error::Result`.
+/// -   It is possible to specify `type OpType = <TYPE>` and it defaults to an
+///     i32. The opcode is used to identify the requested operation and is set
+///     to i32 for C++ compatibility.
+///
+/// The [`l4_client`](fn.l4_client.html) and [`l4_server`](fn.l4_server.html)
+/// explain the usage of an interface.
 #[proc_macro]
 pub fn iface(tokens: TokenStream) -> TokenStream {
     let iface::RawIface {
         iface_name, iface_attrs, methods
-    } = syn::parse_macro_input!(tokens as iface::RawIface);
+    } = parse_macro_input!(tokens as iface::RawIface);
 
     // validate interface
-    let parser_results = proc_try!(iface::parse_iface_attributes(
+    let parser_results = proc_err!(iface::parse_iface_attributes(
             iface_name.clone(), &iface_attrs));
-    let methods = proc_try!(iface::parse_iface_methods(&methods));
+    let methods = proc_err!(iface::parse_iface_methods(&methods));
 
     // generate new code, first the interface-relevant "meta" attributes such as
     // protocol ID, then methods

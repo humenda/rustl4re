@@ -18,7 +18,6 @@ pub struct DsStats {
     pub flags: u64,
 }
 
-// TODO: replace through proc macro attribute
 unsafe impl l4::ipc::Serialisable for DsStats { }
 unsafe impl l4::ipc::Serialiser for DsStats {
     #[inline]
@@ -32,7 +31,9 @@ unsafe impl l4::ipc::Serialiser for DsStats {
 }
 
 //#[l4_client(DataspaceProvider, demand = 1)]
-l4_derive::l4_client_fake!(pub struct Dataspace;);
+//l4_derive::l4_client_fake!(pub struct Dataspace;);
+#[l4_client(DataspaceProvider, demand = 1)]
+pub struct Dataspace;
 
 // used as return type for the **deprecated** phys() method of the DataspaceProvider trait
 #[derive(Clone)]

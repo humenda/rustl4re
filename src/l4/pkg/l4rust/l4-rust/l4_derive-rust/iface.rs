@@ -1,3 +1,4 @@
+//! functions required to implement the iface! macro
 use proc_macro2::{Span, TokenStream};
 use quote::quote;
 use std::str::FromStr;
@@ -7,15 +8,6 @@ use syn::{braced,
     spanned::Spanned,
     Token
 };
-
-macro_rules! raw_type {
-    ($($raw:tt)*) => {
-        syn::Type::Verbatim(syn::TypeVerbatim {
-                tts: TokenStream::from_str($($raw)*).unwrap() 
-        })
-    }
-}
-
 // parsed interface bits
 pub struct RawIface {
     pub iface_name: Ident,
@@ -103,9 +95,6 @@ impl quote::ToTokens for IfaceAttr {
     }
 }
 
-// reply with an error so that function above can return empty TokenStream; the
-// error already got registered globally with the error() function
-
 pub struct ParsedIfaceAttrs {
     pub protocol: syn::Expr,
     pub opattrs: Vec<syn::Attribute>,
@@ -117,7 +106,6 @@ pub struct ParsedIfaceAttrs {
 // default to i32.
 pub fn parse_iface_attributes(outer: syn::Ident, attrs: &Vec<IfaceAttr>)
         -> Result<ParsedIfaceAttrs> {
-//        -> Result<TokenStream> {
     let mut opattrs = Vec::new();
     // default to a OpType of i32
     let mut optype: syn::Type = raw_type!("i32");

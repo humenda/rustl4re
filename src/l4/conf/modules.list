@@ -101,12 +101,12 @@ module shm_rust_base.cfg
 module shm_rust_base-client
 module shm_rust_base-server
 
-entry array_example
+entry ox_array
 kernel fiasco -serial_esc
 roottask moe rom/array.cfg
 module l4re
 module ned
-module array.cfg
+module ox_array.cfg
 module array-client
 module array-server
 
