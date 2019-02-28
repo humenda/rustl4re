@@ -1,18 +1,17 @@
 #![recursion_limit="128"]
-#![feature(proc_macro_diagnostic)]
+//#![feature(proc_macro_diagnostic)]
 extern crate proc_macro;
 extern crate proc_macro2;
+extern crate lazy_static;
 
 #[macro_use]
 mod macros;
+mod clntsrv;
+mod export;
 mod iface;
 
-use std::str::FromStr;
-
 use proc_macro::TokenStream;
-use quote::quote;
-use syn::{self, Attribute, Data, Fields, Generics, Ident, Lit,
-        NestedMeta, Meta, Result, Visibility};
+use syn::{self, Data, Fields, Lit};
 use syn::spanned::Spanned;
 use syn::parse_macro_input;
 
@@ -121,7 +120,7 @@ pub fn l4_client(macro_attrs: TokenStream, item: TokenStream) -> TokenStream {
         proc_err!("No IPC interface specified");
     }
     let parsed_attrs = parse_macro_input!(macro_attrs as syn::AttributeArgs);
-    let (trait_name, demand) = proc_err!(parse_client_meta(parsed_attrs));
+    let (trait_name, demand) = proc_err!(clntsrv::parse_client_meta(parsed_attrs));
 
     let ast: syn::DeriveInput = syn::parse(item).expect("Unable to parse struct definition.");
     let structdef = match ast.data {
@@ -134,7 +133,7 @@ pub fn l4_client(macro_attrs: TokenStream, item: TokenStream) -> TokenStream {
     match structdef.fields {
         Fields::Unnamed(_) | Fields::Named(_) => proc_err!("Only unit structs (no data \
                 fields) can be turned into an IPC client."),
-        Fields::Unit => gen_client_struct(name, ast.attrs, ast.vis,
+        Fields::Unit => clntsrv::gen_client_struct(name, ast.attrs, ast.vis,
                                              ast.generics, trait_name, demand)
     }
 }
@@ -184,26 +183,17 @@ pub fn l4_client(macro_attrs: TokenStream, item: TokenStream) -> TokenStream {
 /// explain the usage of an interface.
 #[proc_macro]
 pub fn iface(tokens: TokenStream) -> TokenStream {
-    let iface::RawIface {
-        iface_name, iface_attrs, methods
-    } = parse_macro_input!(tokens as iface::RawIface);
+    let parsed_iface = parse_macro_input!(tokens as iface::Iface);
+    iface::gen_iface(&parsed_iface).into()
+}
 
-    // validate interface
-    let parser_results = proc_err!(iface::parse_iface_attributes(
-            iface_name.clone(), &iface_attrs));
-    let methods = proc_err!(iface::parse_iface_methods(&methods));
-
-    // generate new code, first the interface-relevant "meta" attributes such as
-    // protocol ID, then methods
-    let parsed_iface_attrs = iface::gen_iface_attrs(parser_results);
-    let methods = iface::gen_iface_methods(&methods);
-    let gen = quote! {
-        l4::iface_enumerate! {
-            trait #iface_name {
-                #parsed_iface_attrs
-                #methods
-            }
-        }
-    };
-    gen.into()
+#[proc_macro]
+pub fn iface_export(input: TokenStream) -> TokenStream {
+// parse proc macro input (used as conversion options)
+    let opts: export::ExportOptions = proc_err!(syn::parse(input));
+    // read Iface struct
+    let iface = proc_err!(export::parse_external_iface(&opts.input_file));
+    let cpp = proc_err!(export::gen_cpp_interface(&iface, &opts));
+    print!("{}", cpp);
+    unimplemented!();
 }

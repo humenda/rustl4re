@@ -1,6 +1,12 @@
 //! attributes to generate client and server implementations
+use proc_macro::TokenStream;
+use quote::quote;
+use syn::{Attribute, Fields, Generics, Ident, Lit, Meta, NestedMeta,
+        Result, Visibility};
+use syn::spanned::Spanned;
+use std::str::FromStr;
 
-fn gen_server_struct(name: proc_macro2::Ident, attrs: Vec<Attribute>,
+pub fn gen_server_struct(name: proc_macro2::Ident, attrs: Vec<Attribute>,
                     vis: Visibility, generics: Generics, fields: Fields,
                     demand: u32)
                     -> proc_macro::TokenStream {
@@ -56,7 +62,7 @@ fn gen_server_struct(name: proc_macro2::Ident, attrs: Vec<Attribute>,
     gen.into()
 }
 
-fn parse_client_meta(meta: syn::AttributeArgs) -> Result<(Ident, u32)> {
+pub fn parse_client_meta(meta: syn::AttributeArgs) -> Result<(Ident, u32)> {
     let mut traitname = None;
     let mut demand = 0;
     for item in meta {
@@ -79,12 +85,12 @@ fn parse_client_meta(meta: syn::AttributeArgs) -> Result<(Ident, u32)> {
         };
     }
     if traitname.is_none() {
-        proc_err!("No IPC interface trait specified");
+        err!("No IPC interface trait specified");
     }
     Ok((traitname.unwrap(), demand))
 }
 
-fn gen_client_struct(name: proc_macro2::Ident, attrs: Vec<Attribute>,
+pub fn gen_client_struct(name: proc_macro2::Ident, attrs: Vec<Attribute>,
                     vis: Visibility, generics: Generics, trait_name: Ident,
                     demand: u32)
                 -> proc_macro::TokenStream {
@@ -123,5 +129,3 @@ fn gen_client_struct(name: proc_macro2::Ident, attrs: Vec<Attribute>,
     };
     gen.into()
 }
-
-

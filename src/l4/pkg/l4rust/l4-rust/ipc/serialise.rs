@@ -5,9 +5,15 @@ use super::super::{
     utcb::{SndFlexPage, FpageRights, UtcbMr},
 };
 
+/// Unsafe marker trait for serialisable types
+///
+/// A type is serialisable if it can be represented as a type compatible with
+/// one in C++ and if it can be copied  across task boundaries safely. Primitive
+/// types such as bool or u32 are `Serialisable`, complex types need to the
+/// [Serialiser](trait.Serialiser.html) trait.
 pub unsafe trait Serialisable: Clone { }
 
-/// Implementation (de)serialisation for a type
+/// (De)serialisation for complex data types
 ///
 /// This trait serves both as a serialisation and dispatcher trait. It marks a
 /// type as being serialisable in its layout to the message registers and
@@ -150,7 +156,7 @@ unsafe impl<'a> Serialiser for &'a str {
     }
 }
 
-//#[cfg(feature="std")]
+#[cfg(feature="std")]
 unsafe impl Serialisable for std::string::String { }
 //#[cfg(feature="std")]
 unsafe impl Serialiser for std::string::String {

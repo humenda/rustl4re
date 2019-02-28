@@ -18,6 +18,7 @@ pub struct DsStats {
     pub flags: u64,
 }
 
+// the struct is #[repr(C)] and hence the default implementation can be used
 unsafe impl l4::ipc::Serialisable for DsStats { }
 unsafe impl l4::ipc::Serialiser for DsStats {
     #[inline]
@@ -30,12 +31,10 @@ unsafe impl l4::ipc::Serialiser for DsStats {
     }
 }
 
-//#[l4_client(DataspaceProvider, demand = 1)]
-//l4_derive::l4_client_fake!(pub struct Dataspace;);
 #[l4_client(DataspaceProvider, demand = 1)]
 pub struct Dataspace;
 
-// used as return type for the **deprecated** phys() method of the DataspaceProvider trait
+/// used as return type for the **deprecated** phys() method of the DataspaceProvider trait
 #[derive(Clone)]
 #[repr(C)]
 pub struct DeprecatedPhys {
@@ -53,8 +52,9 @@ unsafe impl l4::ipc::Serialiser for DeprecatedPhys {
         mr.write::<Self>(self)
     }
 }
+
 // ToDo: this interface is not functional, the map operation is **broken**; it serves mostly as a
-// marker trait and needs to be fixed
+// marker trait and needs to be fixed; only the info() operation is tested
 iface! {
     trait DataspaceProvider {
         const PROTOCOL_ID: i64 = PROTO_DATASPACE;

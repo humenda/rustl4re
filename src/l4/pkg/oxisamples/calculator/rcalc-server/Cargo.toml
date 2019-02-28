@@ -3,3 +3,4 @@ name = "ox_rcalc-server"
 version = "0.1.0"
 authors = ["Sebastian Humenda <shumenda@gmx.de>"]
 edition = "2018"
+build = "build.rs"

@@ -11,37 +11,7 @@
 /// compromises had to be made. In turn, this gives Rustic applications to talk to the rest of the
 /// world. A certain familiarity with L4 IPC is assumed, terms as gate, label, call, flexpage and
 /// UTCB are used frequently.
-///
-/// Primitive types can be used as method and return parameters, though
-/// references are not allowed. Capabilities can be mapped by specifying them as
-/// a input parameter/return parameter. C++ interfaces define writable output
-/// references as parameters, the Rust interface uses the return type.
-///
-/// # Example
-///
-/// Interface definition:
-///
-/// ```
-/// iface! {
-///     trait Calculator {
-///         const PROTOCOL_ID: i64 = 0xbadcafe; // mandatory protocol label
-///         type OpType = i32; // can be omitted, set to i32 by default for C++ compat
-///         // &mut self is mandatory
-///         fn add(&mut self, a: i32, b: i32) -> i32;
-///         // sum up all  numbers from the given dataspace, the documentation
-///         // explains more; the dataspace interface is defined in the l4re
-///         // crate
-///         /// read `n` numbers from the given dataspaces which is rounded to
-///         /// the page size of `n * L4_PAGESIZE`.
-///         fn sum(&mut self, n: u64, ds: Cap<l4re::mem::Dataspace>) -> u64;
-///     }
-/// }
-///
-/// More information can be found at the
-/// [#[l4_server]](l4_derive/macro.l4_server.html)
-/// and
-/// [#[l4_client]](l4_derive/macro.l4_client.html)
-/// macros.
+
 #[macro_use]
 mod iface;
 mod serialise;
