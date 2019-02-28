@@ -9,9 +9,10 @@ proc-macro = true
 path = "lib.rs"
 
 [dependencies]
+lazy_static = "1.2.0"
 quote = "0.6.11"
 proc-macro2 = "0.4.27"
 
 [dependencies.syn]
 version = "0.15.26"
-features = ["derive", "clone-impls", "full", "parsing", "printing", "proc-macro"]
+features = ["derive", "clone-impls", "full", "parsing", "printing", "proc-macro", "extra-traits"]

@@ -2,20 +2,24 @@
 use proc_macro2::{Span, TokenStream};
 use quote::quote;
 use std::str::FromStr;
-use syn::{braced,
+use syn::{Attribute,
+    braced,
     Ident,
     parse::{Parse, ParseStream, Result},
     spanned::Spanned,
-    Token
+    Token, Type
 };
-// parsed interface bits
-pub struct RawIface {
-    pub iface_name: Ident,
-    pub iface_attrs: Vec<IfaceAttr>,
+
+/// Parsed IPC interface
+pub struct Iface {
+    pub name: Ident,
+    pub protocol: syn::Expr,
+    pub opattrs: Vec<syn::Attribute>,
+    pub optype: syn::Type,
     pub methods: Vec<syn::TraitItemMethod>,
 }
 
-impl Parse for RawIface {
+impl Parse for Iface {
     fn parse(input: ParseStream) -> Result<Self> {
         let _: Token![trait] = input.parse()?;
         let iface_name = input.parse()?;
@@ -30,20 +34,57 @@ impl Parse for RawIface {
                 syn::TraitItem::Type(c) =>
                         iface_attrs.push(IfaceAttr::Type(c)),
                 syn::TraitItem::Method(c) => methods.push(c),
-                thing => {
-                    thing.span().unstable().error("Only methods, associated \
-                            consts and associated types allowed").emit();
-                    panic!();
-                }
+                thing => err!(thing, "Only methods, associated consts and \
+                         associated types allowed"),
             }
         }
-        Ok(RawIface {
-            iface_name,
-            iface_attrs,
-            methods
+        // validate attributes and extract relevant info
+        let (protocol, opattrs, optype) = Iface::parse_iface_attributes(
+                &iface_name, &iface_attrs)?;
+        // validate ethods
+        parse_iface_methods(&methods)?;
+        Ok(Iface {
+            name: iface_name, protocol: protocol,
+            opattrs: opattrs, optype: optype,
+            methods: methods
         })
     }
 }
+
+// Interfaces can have only a handful meta attributes. One is the PROTOCOL_ID,
+// which is mandatory. Optional is the OpType and if it wasn't specified, it'll
+// default to i32.
+impl Iface {
+    pub fn parse_iface_attributes(outer: &syn::Ident, attrs: &Vec<IfaceAttr>)
+            -> Result<(syn::Expr, Vec<Attribute>, Type)> {
+        let mut opattrs = Vec::new();
+        // default to a OpType of i32
+        let mut optype: syn::Type = raw_type!("i32");
+        let mut protocol: Option<syn::Expr> = None;
+        for attr in attrs.iter() {
+            match attr {
+                IfaceAttr::Const(c) if c.ident == "PROTOCOL_ID" => match &c.default {
+                    Some((_, expr)) => protocol = Some(expr.clone()),
+                    None => err!(c, "Missing protocol ID"),
+                },
+                IfaceAttr::Type(t) if t.ident == "OpType" => match &t.default {
+                    None => err!(t.ident, "No operand type specified"),
+                    Some((_, tt)) => {
+                        optype = tt.clone();
+                        opattrs = t.attrs.clone();
+                    }
+                },
+                _ => err!(attr, "Illegal interface attribute specified"),
+            }
+        }
+        if protocol.is_none() {
+            err!(outer, "No protocol id (PROTOCOL_ID) specified");
+        }
+        let protocol = protocol.unwrap().clone(); // we know it's there
+        Ok((protocol, opattrs, optype))
+    }
+}
+
 
 /// IPC interface attributes
 ///
@@ -95,55 +136,6 @@ impl quote::ToTokens for IfaceAttr {
     }
 }
 
-pub struct ParsedIfaceAttrs {
-    pub protocol: syn::Expr,
-    pub opattrs: Vec<syn::Attribute>,
-    pub optype: syn::Type,
-}
-
-// Interfaces can have only a handful meta attributes. One is the PROTOCOL_ID,
-// which is mandatory. Optional is the OpType and if it wasn't specified, it'll
-// default to i32.
-pub fn parse_iface_attributes(outer: syn::Ident, attrs: &Vec<IfaceAttr>)
-        -> Result<ParsedIfaceAttrs> {
-    let mut opattrs = Vec::new();
-    // default to a OpType of i32
-    let mut optype: syn::Type = raw_type!("i32");
-    let mut protocol: Option<syn::Expr> = None;
-    for attr in attrs.iter() {
-        match attr {
-            IfaceAttr::Const(c) if c.ident == "PROTOCOL_ID" => match &c.default {
-                Some((_, expr)) => protocol = Some(expr.clone()),
-                None => err!(c, "Missing protocol ID"),
-            },
-            IfaceAttr::Type(t) if t.ident == "OpType" => match &t.default {
-                None => err!(t.ident, "No operand type specified"),
-                Some((_, tt)) => {
-                    optype = tt.clone();
-                    opattrs = t.attrs.clone();
-                }
-            },
-            _ => err!(attr, "Illegal interface attribute specified"),
-        }
-    }
-    if protocol.is_none() {
-        err!(outer, "No protocol id (PROTOCOL_ID) specified");
-    }
-    let protocol = protocol.unwrap().clone(); // we know it's there
-    Ok(ParsedIfaceAttrs {
-        protocol, opattrs, optype,
-    })
-}
-
-pub fn gen_iface_attrs(if_attrs: ParsedIfaceAttrs) -> TokenStream {
-    let ParsedIfaceAttrs { protocol, opattrs, optype } = if_attrs;
-    quote! {
-        const PROTOCOL_ID: i64 = #protocol;
-        #(#opattrs)*
-        type OpType = #optype;
-    }
-}
-
 // ToDo: no enumeration yet
 pub fn parse_iface_methods(methods: &Vec<syn::TraitItemMethod>)
         -> Result<Vec<syn::TraitItemMethod>> {
@@ -181,10 +173,15 @@ pub fn parse_iface_methods(methods: &Vec<syn::TraitItemMethod>)
     Ok(methods)
 }
 
-pub fn gen_iface_methods(methods: &Vec<syn::TraitItemMethod>)
-        -> TokenStream {
+pub fn gen_iface(iface: &Iface) -> TokenStream {
+    let Iface { name, protocol, opattrs, optype, methods } = iface;
     let gen = quote! {
-        #(#methods)*
+        trait #name {
+            const PROTOCOL_ID: i64 = #protocol;
+            #(#opattrs)*
+            type OpType = #optype;
+            #(#methods)*
+        }
     };
     gen.into()
 }
