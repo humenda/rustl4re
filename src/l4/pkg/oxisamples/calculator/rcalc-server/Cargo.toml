@@ -4,3 +4,7 @@ version = "0.1.0"
 authors = ["Sebastian Humenda <shumenda@gmx.de>"]
 edition = "2018"
 build = "build.rs"
+
+[build-dependencies]
+# ToDo: this is temporary until Cargo is capable of passing rustc flags 
+l4_derive = { path = "../../../l4rust/l4-rust/l4_derive-rust" }

@@ -9,7 +9,7 @@ path = "lib.rs"
 
 [dependencies]
 num = "0.2"
-libc = "0.2.43"
+libc = { git = "https://github.com/humenda/libc" }
 
 [dependencies.bitflags]
 version = "1.0"

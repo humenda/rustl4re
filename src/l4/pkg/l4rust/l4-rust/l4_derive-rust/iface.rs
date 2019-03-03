@@ -1,6 +1,6 @@
 //! functions required to implement the iface! macro
 use proc_macro2::{Span, TokenStream};
-use quote::quote;
+use quote::{quote, ToTokens};
 use std::str::FromStr;
 use syn::{Attribute,
     braced,
@@ -16,7 +16,7 @@ pub struct Iface {
     pub protocol: syn::Expr,
     pub opattrs: Vec<syn::Attribute>,
     pub optype: syn::Type,
-    pub methods: Vec<syn::TraitItemMethod>,
+    pub methods: Vec<IfaceMethod>,
 }
 
 impl Parse for Iface {
@@ -33,7 +33,8 @@ impl Parse for Iface {
                         iface_attrs.push(IfaceAttr::Const(c)),
                 syn::TraitItem::Type(c) =>
                         iface_attrs.push(IfaceAttr::Type(c)),
-                syn::TraitItem::Method(c) => methods.push(c),
+                syn::TraitItem::Method(c) => methods.push(
+                        IfaceMethod::Unnumbered(c)),
                 thing => err!(thing, "Only methods, associated consts and \
                          associated types allowed"),
             }
@@ -41,8 +42,8 @@ impl Parse for Iface {
         // validate attributes and extract relevant info
         let (protocol, opattrs, optype) = Iface::parse_iface_attributes(
                 &iface_name, &iface_attrs)?;
-        // validate ethods
-        parse_iface_methods(&methods)?;
+        // validate and enumerate methods
+        enumerate_iface_methods(&mut methods)?;
         Ok(Iface {
             name: iface_name, protocol: protocol,
             opattrs: opattrs, optype: optype,
@@ -136,51 +137,114 @@ impl quote::ToTokens for IfaceAttr {
     }
 }
 
-// ToDo: no enumeration yet
-pub fn parse_iface_methods(methods: &Vec<syn::TraitItemMethod>)
-        -> Result<Vec<syn::TraitItemMethod>> {
-    for method in methods {
-        // expected `fn(&mut self, …) -> ret;} (ret is optional)
-        let sig = &method.sig;
-        if sig.constness.is_some() {
-            err!(sig.constness.unwrap(), "Const fn functions not allowed");
-        }
-        // test for &mut self
-        match sig.decl.inputs.iter().next() {
-            None => err!(sig, "First parameter must be &mut self"),
-            Some(x) => match x {
-                syn::FnArg::SelfRef(x) if x.mutability.is_some() => { },
-                _ => err!(x, "First parameter must be &mut self"),
-            }
-        }
-        if method.default.is_some() {
-            err!(method.default, "No default implementation allowed");
+pub enum IfaceMethod {
+    Unnumbered(syn::TraitItemMethod),
+    Numbered(i32, syn::TraitItemMethod)
+}
+
+impl IfaceMethod {
+    pub fn same_type(&self, other: &Self) -> bool {
+        let num = |x: &Self| match x {
+            IfaceMethod::Unnumbered(_) => 0,
+            IfaceMethod::Numbered(_, _) => 1,
+        };
+        num(self) == num(other)
+    }
+
+    pub fn inner_mut(&mut self) -> &mut syn::TraitItemMethod {
+        match self {
+            IfaceMethod::Unnumbered(ref mut m) => m,
+            IfaceMethod::Numbered(_, ref mut m) => m,
         }
     }
-    // ToDo: doc strings cause soe weird found-a-hash error when used in quotes,
-    // so strip  them
-    let methods = methods.iter().map(|m| {
-        let mut m = m.clone();
-        m.attrs.clear(); // ToDo: doc strings cause sytnax error, are transformed to #[""] and that doesn't work in quote!
-        m.sig.decl.output = match m.sig.decl.output {
-            syn::ReturnType::Type(a, b) => syn::ReturnType::Type(a, b),
+
+    pub fn inner_ref(&self) -> &syn::TraitItemMethod {
+        match self {
+            IfaceMethod::Unnumbered(ref m) => m,
+            IfaceMethod::Numbered(_, ref m) => m,
+        }
+    }
+
+    pub fn set_opcode_if_unnumbered(&mut self, opcode: i32) {
+        match self {
+            IfaceMethod::Unnumbered(m) => *self = IfaceMethod::Numbered(opcode, m.clone()),
+            IfaceMethod::Numbered(_, _) => { }
+        };
+    }
+}
+
+impl ToTokens for IfaceMethod {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
+        match self {
+            IfaceMethod::Unnumbered(_) => panic!("Trying to generate trait method without opcode"),
+            IfaceMethod::Numbered(num, ref m) => {
+                let mut ts = proc_macro2::TokenStream::from_str(&format!(
+                        "{} => ", num)).unwrap();
+                m.to_tokens(&mut ts);
+                tokens.extend(ts);
+            }
+        }
+    }
+}
+
+pub fn enumerate_iface_methods(methods: &mut Vec<IfaceMethod>)
+        -> Result<()> {
+    // check whether all numbered or unnumbered
+    if methods.len() == 0 {
+        err!("Empty interfaces not allowed");
+    }
+    // check that all methods are either numbered or unnumbered
+    if !methods.iter().all(|m| m.same_type(methods.first().unwrap())) {
+        err!("Found methods both with and without an opcode");
+    }
+    
+    let mut opcode = 0;
+    for method in methods {
+        {
+            // expected `fn(&mut self, …) -> ret;} (ret is optional)
+            let sig = &method.inner_ref().sig;
+            if sig.constness.is_some() {
+                err!(sig.constness.unwrap(), "Const fn functions not allowed");
+            }
+            // test for &mut self
+            match sig.decl.inputs.iter().next() {
+                None => err!(sig, "First parameter must be &mut self"),
+                Some(x) => match x {
+                    syn::FnArg::SelfRef(x) if x.mutability.is_some() => { },
+                    _ => err!(x, "First parameter must be &mut self"),
+                }
+            }
+        }
+        if method.inner_ref().default.is_some() {
+            err!(method.inner_ref().default,
+                    "No default implementation allowed");
+        }
+        // ToDo: doc strings cause soe weird found-a-hash error when used in quotes,
+        // so strip  them
+        method.inner_mut().attrs.clear();
+        method.inner_mut().sig.decl.output = match &method.inner_ref().sig.decl.output {
+            syn::ReturnType::Type(a, b) => syn::ReturnType::Type(*a,
+                    Box::new(*b.clone())),
             syn::ReturnType::Default => syn::ReturnType::Type(
                     syn::parse(TokenStream::from_str("->").unwrap().into()).unwrap(), Box::new(raw_type!("()")))
         };
-        m
-    }).collect();
+        method.set_opcode_if_unnumbered(opcode);
+        opcode += 1;
+    }
     // we don't mutate an element at the moment, so just clone the vector
-    Ok(methods)
+    Ok(())
 }
 
 pub fn gen_iface(iface: &Iface) -> TokenStream {
     let Iface { name, protocol, opattrs, optype, methods } = iface;
     let gen = quote! {
-        trait #name {
-            const PROTOCOL_ID: i64 = #protocol;
-            #(#opattrs)*
-            type OpType = #optype;
-            #(#methods)*
+        l4::iface_back! {
+            trait #name {
+                const PROTOCOL_ID: i64 = #protocol;
+                #(#opattrs)*
+                type OpType = #optype;
+                #(#methods)*
+            }
         }
     };
     gen.into()
