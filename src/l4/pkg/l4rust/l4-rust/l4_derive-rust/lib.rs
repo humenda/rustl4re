@@ -1,5 +1,4 @@
 #![recursion_limit="128"]
-//#![feature(proc_macro_diagnostic)]
 extern crate proc_macro;
 extern crate proc_macro2;
 extern crate lazy_static;
@@ -14,6 +13,8 @@ use proc_macro::TokenStream;
 use syn::{self, Data, Fields, Lit};
 use syn::spanned::Spanned;
 use syn::parse_macro_input;
+use std::fs::File;
+use std::io::Write;
 
 macro_rules! proc_err {
     // an error string spanning the whole macro invocation
@@ -27,7 +28,6 @@ macro_rules! proc_err {
         return syn::Error::new($span.span(), $lit)
                 .to_compile_error().into();
     };
-
 
     // same as err!: use given syn::Error to emit the error message
     ($match:expr) => {
@@ -189,11 +189,25 @@ pub fn iface(tokens: TokenStream) -> TokenStream {
 
 #[proc_macro]
 pub fn iface_export(input: TokenStream) -> TokenStream {
-// parse proc macro input (used as conversion options)
+    // parse proc macro input (used as conversion options)
     let opts: export::ExportOptions = proc_err!(syn::parse(input));
     // read Iface struct
     let iface = proc_err!(export::parse_external_iface(&opts.input_file));
     let cpp = proc_err!(export::gen_cpp_interface(&iface, &opts));
-    print!("{}", cpp);
-    unimplemented!();
+    let fname = match opts.output_file {
+        None => {
+            let mut s = opts.input_file.clone();
+            if s.ends_with(".rs") {
+                s.truncate(s.len() - 2);
+            }
+            s.push_str("h");
+            s
+        },
+        Some(x) => x,
+    };
+    let mut fs = proc_err!(File::create(fname).map_err(|e|
+            syn::Error::new(proc_macro2::Span::call_site(), e.to_string())));
+    proc_err!(fs.write_all(cpp.as_bytes()).map_err(|e|
+            syn::Error::new(proc_macro2::Span::call_site(), e.to_string())));
+    TokenStream::new()
 }

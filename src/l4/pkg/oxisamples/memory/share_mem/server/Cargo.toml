@@ -8,5 +8,9 @@ edition = "2018"
 name = "shm_rust-server"
 path = "server.rs"
 
+[build-dependencies]
+# This dirty solution is required until BID / Cargo integration works better
+l4_derive = { path = "../../../../l4rust/l4-rust/l4_derive-rust/" }
+
 [dependencies]
 libc = "0.2.43"

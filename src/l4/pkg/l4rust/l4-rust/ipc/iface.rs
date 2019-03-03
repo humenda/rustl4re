@@ -290,15 +290,16 @@ macro_rules! iface_enumerate {
 }
 
 /*
+//
 // for debugging purposes
 use crate::cap::{Cap, Untyped};
-iface_enumerate! {
+iface_back! {
     trait EchoServer {
         const PROTOCOL_ID: i64 = 0xdeadbeef;
         type OpType = i32;
-        fn do_something(&mut self, i: i32) -> u8;
-        fn do_something_else(&mut self, ds: Cap<Untyped>, u: bool) -> ();
-        fn signal(&mut self) -> ();
+        0 => fn do_something(&mut self, i: i32) -> u8;
+        1 => fn do_something_else(&mut self, ds: Cap<Untyped>, u: bool) -> ();
+        2 => fn signal(&mut self) -> ();
     }
 }
 */
