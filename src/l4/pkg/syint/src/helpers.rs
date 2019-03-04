@@ -1,27 +1,41 @@
 use l4_sys::l4_msg_regs_t;
+use l4::utcb::UtcbMr;
 
-/// Bindgen changed its union generation a few times, abstract from it
-pub struct UtcbMrFake(l4_msg_regs_t);
+pub struct UtcbMrFake {
+    mem: Vec<u64>, // typical msg register count on x86_64
+    mr: UtcbMr,
+}
 
 impl UtcbMrFake {
     pub fn new() -> Self {
-        UtcbMrFake(l4_msg_regs_t::default())
+        let mut v = vec![0u64; 63];
+        let ptr = v.as_mut_slice().as_mut_ptr();
+        UtcbMrFake {
+            mem: v,
+            mr: unsafe { UtcbMr::from_mr(ptr as *mut _) }
+        }
     }
 
-    // this is dirty
     pub fn get(&self, idx: usize) -> u64 {
-        unsafe {
-            self.0.mr.as_ref()[idx]
-        }
+        self.mem.get(idx).unwrap().clone()
     }
 
     pub fn set(&mut self, idx: usize, val: u64) {
-        unsafe {
-            self.0.mr.as_mut()[idx] = val;
-        }
+        self.mem.insert(idx, val);
     }
 
     pub unsafe fn mut_ptr(&mut self) -> *mut l4_msg_regs_t {
-        &mut self.0 as *mut l4_msg_regs_t
+        self.mem.as_mut_slice().as_mut_ptr() as *mut l4_msg_regs_t
+    }
+
+    pub fn msg(&mut self) -> &mut UtcbMr {
+        &mut self.mr
     }
 }
+
+impl std::fmt::Debug for UtcbMrFake {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
+        self.mem.fmt(f)
+    }
+}
+

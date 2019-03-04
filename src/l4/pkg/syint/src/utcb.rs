@@ -1,5 +1,5 @@
 use l4::{
-    ipc::Serialiser,
+    ipc::{CapProvider, Serialiser},
     utcb::SndFlexPage as FlexPage,
     utcb::*
 };
@@ -7,14 +7,6 @@ use std::mem::transmute;
 
 use helpers::UtcbMrFake;
 use utcb_cc::*;
-
-fn mk_msg_regs() -> (UtcbMrFake, UtcbMr) {
-    let mut mr = UtcbMrFake::new();
-    let msg = unsafe {
-        UtcbMr::from_mr(mr.mut_ptr())
-    };
-    (mr, msg)
-}
 
 tests! {
     fn msgtag_reimplementation_work_the_same_way() {
@@ -49,15 +41,11 @@ tests! {
 //    }
 
     fn serialisation_of_long_float_bool_same_as_cc() {
-        use l4::utcb::*;
         let mut mr = UtcbMrFake::new();
-        let mut msg = unsafe {
-            UtcbMr::from_mr(mr.mut_ptr())
-        };
         unsafe {
-            msg.write(987654u64).expect("Writing failed");
-            msg.write(3.14f32).expect("ToDo");
-            msg.write(true).expect("ToDo");
+            mr.msg().write(987654u64).expect("Writing failed");
+            mr.msg().write(3.14f32).expect("ToDo");
+            mr.msg().write(true).expect("ToDo");
         }
 
         unsafe {
@@ -69,13 +57,10 @@ tests! {
 
     fn serialisation_of_bool_long_float_works() {
         let mut mr = UtcbMrFake::new();
-        let mut msg = unsafe {
-            UtcbMr::from_mr(mr.mut_ptr())
-        };
         unsafe {
-            msg.write(true).expect("ToDo");
-            msg.write(987654u64).expect("Writing failed");
-            msg.write(3.14f32).expect("ToDo");
+            mr.msg().write(true).expect("ToDo");
+            mr.msg().write(987654u64).expect("Writing failed");
+            mr.msg().write(3.14f32).expect("ToDo");
         }
 
         unsafe {
@@ -88,13 +73,10 @@ tests! {
 
     fn serialisation_of_u64_u32_u64_works() {
         let mut mr = UtcbMrFake::new();
-        let mut msg = unsafe {
-            UtcbMr::from_mr(mr.mut_ptr())
-        };
         unsafe {
-            msg.write(42u64).unwrap();
-            msg.write(1337u32).expect("Writing failed");
-            msg.write(42u64).unwrap();
+            mr.msg().write(42u64).expect("Writing failed");
+            mr.msg().write(1337u32).expect("Writing failed");
+            mr.msg().write(42u64).unwrap();
         }
 
         unsafe {
@@ -108,9 +90,6 @@ tests! {
 
     fn write_fpage_type_works() {
         let mut mr = UtcbMrFake::new();
-        let mut msg = unsafe {
-            UtcbMr::from_mr(mr.mut_ptr())
-        };
         // write fpage with the C++ serialisation framework methods
         unsafe {
             let fp = ::l4_sys::l4_obj_fpage(0xcafebabe, 0,
@@ -120,8 +99,8 @@ tests! {
             let c_fpage = mr.get(1);
             // write the Rust version
             let rfp = FlexPage::new(fp.raw, 0, None);
-            msg.reset();
-            FlexPage::write(rfp, &mut msg).unwrap();
+            mr.msg().reset();
+            FlexPage::write(rfp, &mut mr.msg()).unwrap();
             assert_eq!(mr.get(0), c_mapopts);
             assert_eq!(mr.get(1), c_fpage);
         }
@@ -129,83 +108,119 @@ tests! {
 
     fn serialising_u32_and_fpage_works_as_in_cc() {
         let mut mr = UtcbMrFake::new();
-        let mut msg = unsafe {
-            UtcbMr::from_mr(mr.mut_ptr())
-        };
         // write fpage with the C++ serialisation framework methods
         unsafe {
             let c_side = transmute::<*mut u8, *mut u64>(write_u32_and_fpage());
             let fp = ::l4_sys::l4_obj_fpage(0xcafebabe, 0,
                                         FpageRights::RWX.bits() as u8);
             // write the Rust version
-            msg.write(314u32).unwrap();
+            mr.msg().write(314u32).unwrap();
             let rfp = FlexPage::new(fp.raw, 0, None);
             // must be written from the flex page to track it as item, not as word (see UTCB
             // terminologie)
-            FlexPage::write(rfp, &mut msg).unwrap();
+            FlexPage::write(rfp, &mut mr.msg()).unwrap();
 
             assert_eq!(*c_side, mr.get(0));
             assert_eq!(*(c_side.offset(1)), mr.get(1));
             assert_eq!(*(c_side.offset(2)), mr.get(2));
-            assert_eq!(msg.words(), 1);
-            assert_eq!(msg.items(), 1);
+            assert_eq!(mr.msg().words(), 1);
+            assert_eq!(mr.msg().items(), 1);
         }
     }
 
     fn read_i64_i64_from_mr() {
-        use l4::utcb::*;
         let mut mr = UtcbMrFake::new();
         mr.set(0, 284);
         mr.set(1, 989812);
-        let mut msg = unsafe {
-            UtcbMr::from_mr(mr.mut_ptr())
-        };
         unsafe {
-            assert_eq!(msg.read::<u64>().unwrap(), 284);
-            assert_eq!(msg.read::<u64>().unwrap(), 989812);
+            assert_eq!(mr.msg().read::<u64>().unwrap(), 284);
+            assert_eq!(mr.msg().read::<u64>().unwrap(), 989812);
         }
     }
 
     fn word_count_correct_for_u64() {
-        let (_mr, mut msg) = mk_msg_regs();
+        let mut mr = UtcbMrFake::new();
         unsafe {
-            msg.write(0u64).expect("Writing failed");
-            msg.write(3u64).expect("Couldn't write to msg");
+            mr.msg().write(0u64).expect("Writing failed");
+            mr.msg().write(3u64).expect("Couldn't write to msg");
         }
-        assert_eq!(msg.words(), 2);
+        assert_eq!(mr.msg().words(), 2);
     }
 
     fn word_count_is_correctly_rounded_up() {
-        let (_mr, mut msg) = mk_msg_regs();
-        unsafe { msg.write(08).expect("Writing failed"); }
-        assert_eq!(msg.words(), 1);
-        unsafe { msg.write(42u8).expect("Writing failed"); }
-        assert_eq!(msg.words(), 1);
-        unsafe { msg.write(42u8).expect("Writing failed"); }
-        assert_eq!(msg.words(), 1);
+        let mut mr = UtcbMrFake::new();
+        unsafe { mr.msg().write(08).expect("Writing failed"); }
+        assert_eq!(mr.msg().words(), 1);
+        unsafe { mr.msg().write(42u8).expect("Writing failed"); }
+        assert_eq!(mr.msg().words(), 1);
+        unsafe { mr.msg().write(42u8).expect("Writing failed"); }
+        assert_eq!(mr.msg().words(), 1);
+    }
+
+    fn slices_are_written_correctly() {
+        let mut mr = UtcbMrFake::new();
+        unsafe {
+            mr.msg().write_slice::<usize, u64>(&[1, 2, 3, 4, 5]).unwrap();
+            mr.msg().reset();
+            // length matches
+            assert_eq!(mr.get(0), 5);
+            for i in 1usize..6 {
+                assert_eq!(mr.get(i), i as u64,
+                    format!("expected {}, got {}", i + 1, mr.get(i)));
+            }
+        }
+    }
+
+    fn slices_are_read_correctly() {
+        let mut mr = UtcbMrFake::new();
+        unsafe {
+            // we trust this function due to the test above
+            mr.msg().write_slice::<usize, u64>(&[1, 2, 3, 4, 5]).unwrap();
+            mr.msg().reset();
+            let slice = mr.msg().read_slice::<usize, u64>().unwrap();
+            // length matches
+            // assert_eq!(slice.len(), 5);
+            assert_eq!(slice.len(), 5);
+            for i in 0usize..5 {
+                assert_eq!(*slice.get(i).unwrap(), (i + 1) as u64,
+                    format!("expected {}, got {}", i + 1, slice.get(i).unwrap()));
+            }
+        }
     }
 
     fn strings_are_correctly_serialised() {
         // expect length + strings with 0-byte (length counts 0-byte)
-        let (buf, mut msg) = mk_msg_regs();
+        let mut mr = UtcbMrFake::new();
         let string = String::from("Hello, world!");
-        unsafe { msg.write::<String>(string).unwrap() }
-        assert_eq!(msg.words(), 3);
-        msg.reset();
+        unsafe { mr.msg().write_str(&string).unwrap() }
+        assert_eq!(mr.msg().words(), 3);
+        mr.msg().reset();
         unsafe {
-            assert_eq!(msg.read::<u64>().unwrap(), 13u64);
-            println!("blah");
-            assert_eq!(msg.read::<u64>().unwrap(), 13u64);
-            assert_eq!(msg.read::<char>().unwrap(), 'H');
+            assert_eq!(mr.msg().read::<usize>().unwrap(), 14usize);
+            assert_eq!(mr.msg().read::<u8>().unwrap(), 'H' as u8);
             for _ in 0..12 {
-                let _ = msg.read::<char>().unwrap();
+                let _ = mr.msg().read::<u8>().unwrap();
             }
-            assert_eq!(msg.read::<u8>().unwrap(), 0);
+            assert_eq!(mr.msg().read::<u8>().unwrap(), 0);
         }
-        // toDo: length, 0-byte
         ()
     }
-/*
+
+    fn strings_are_correctly_deserialised() {
+        // expect length + strings with 0-byte (length counts 0-byte)
+        let mut mr = UtcbMrFake::new();
+        let string = String::from("Hello, world!");
+        // form the tedst above, we know that this works:
+        unsafe { mr.msg().write_str(&string).unwrap() }
+        mr.msg().reset();
+        let mut buf_fake = l4::ipc::Bufferless;
+        let greeting = unsafe {
+            String::read(&mut mr.msg(), &mut buf_fake.access_buffers()).unwrap()
+        };
+        assert_eq!(greeting.len(), 13);
+        assert_true!(greeting.starts_with("Hello"));
+    }
+    /*
     fn strings_without_0_bytes_deserialised();
 
     fn strings_with_0bytes_serialised();
