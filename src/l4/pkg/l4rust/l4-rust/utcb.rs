@@ -282,10 +282,12 @@ impl<U: UtcbRegSize> Registers<U> {
         Ok(val)
     }
 
+    /// Write a slice
     #[inline]
-    unsafe fn write_slice_len<Len, T>(&mut self, len: Len, val: &[T]) -> Result<()>
+    pub unsafe fn write_slice<Len, T>(&mut self, val: &[T]) -> Result<()>
             where Len: Serialisable + NumCast, T: Serialisable {
-        self.write::<Len>(len)?;
+        self.write::<Len>(NumCast::from(val.len())
+                .ok_or(Error::Generic(GenericErr::InvalidArg))?)?;
         let (ptr, offset) = align_with_offset::<T>(self.buf, self.offset);
         let end = offset + size_of::<T>() * val.len();
         l4_err_if!(end > U::BUF_SIZE => Generic, MsgTooLong);
@@ -295,16 +297,18 @@ impl<U: UtcbRegSize> Registers<U> {
         Ok(())
     }
 
-    pub unsafe fn write_slice<Len, T>(&mut self, val: &[T]) -> Result<()>
-            where Len: Serialisable + NumCast, T: Serialisable {
-        self.write_slice_len::<Len, T>(Len::from::<usize>(val.len())
-                          .ok_or(Error::Generic(GenericErr::Arg2Big))?, val)
-    }
-
     // Serialise a &str as a C-compatible, 0-terminated UTF-8 string.
     pub unsafe fn write_str(&mut self, val: &str) -> Result<()> {
-        self.write_slice_len::<usize, u8>(val.len() + 1, val.as_bytes())?;
-        self.write::<u8>(0)
+        self.write::<usize>(NumCast::from(val.len() + 1)
+                .ok_or(Error::Generic(GenericErr::InvalidArg))?)?;
+
+        let (ptr, offset) = align_with_offset::<u8>(self.buf, self.offset);
+        let end = offset + size_of::<u8>() * val.len();
+        l4_err_if!(end > U::BUF_SIZE => Generic, MsgTooLong);
+        val.as_ptr().copy_to_nonoverlapping(ptr,
+                                       val.len());
+        self.offset = end; // advance offset *behind* element
+        self.write::<u8>(0u8)
     }
 
     pub unsafe fn read_slice<Len, T>(&mut self) -> Result<&[T]>
@@ -417,6 +421,12 @@ impl UtcbMr {
     pub fn words(&self) -> u32 {
         self.regs.words() - (self.items * 2) // subtract number of typed items
         //                   ^ items: 2 Mwords, kernel action and object
+    }
+
+    /// Reset state to start operations from beginning of registers
+    pub fn reset(&mut self) {
+        self.items = 0;
+        self.regs.reset();
     }
 }
 

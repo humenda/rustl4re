@@ -64,9 +64,7 @@ pub trait ReadReturn<T> {
 // since it is unused by the server and shouldn't be touched by the end user.
 #[doc(hidden)]
 pub trait CapProviderAccess {
-    unsafe fn access_buffers(&mut self) -> BufferAccess {
-        unimplemented!();
-    }
+    unsafe fn access_buffers(&mut self) -> BufferAccess;
 }
 
 pub struct BufferAccess {

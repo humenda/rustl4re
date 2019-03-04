@@ -1,4 +1,4 @@
-use super::types::BufferAccess;
+use super::types::{BufferAccess};
 use super::super::{
     cap::{Cap, IfaceInit, Interface},
     error::Result,
@@ -157,8 +157,7 @@ unsafe impl<'a> Serialiser for &'a str {
 }
 
 #[cfg(feature="std")]
-unsafe impl Serialisable for std::string::String { }
-//#[cfg(feature="std")]
+#[cfg(feature="std")]
 unsafe impl Serialiser for std::string::String {
     #[inline]
     unsafe fn read(mr: &mut UtcbMr, x: &mut BufferAccess) -> Result<Self> {
