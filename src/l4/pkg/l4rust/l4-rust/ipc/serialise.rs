@@ -135,8 +135,7 @@ unsafe impl<T: Interface + IfaceInit> Serialiser for Cap<T> {
 }
 
 //#[cfg(feature="std")]
-unsafe impl<'a> Serialisable for &'a str { }
-//#[cfg(feature="std")]
+#[cfg(feature="std")]
 unsafe impl<'a> Serialiser for &'a str {
     #[inline]
     unsafe fn read(mr: &mut UtcbMr, _: &mut BufferAccess) -> Result<Self> {
