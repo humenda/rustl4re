@@ -238,7 +238,7 @@ pub type Result<T> = ::_core::result::Result<T, Error>;
 /// # Example
 ///
 /// ```
-/// l4_err!(generic, OutOfBounds), Error::Generic(GenericErr::OutOfBounds);
+/// l4_err!(Generic, OutOfBounds), Error::Generic(GenericErr::OutOfBounds);
 /// ```
 #[macro_export]
 macro_rules! l4_err {

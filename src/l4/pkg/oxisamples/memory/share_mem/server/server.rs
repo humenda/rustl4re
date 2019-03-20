@@ -34,7 +34,7 @@ fn read_message(ds: &mut Cap<Dataspace>, length: usize)
             // ToDo: error handling
     let info = ds.info()?;
     if info.size != l4::sys::l4_round_page(length) as u64 {
-        l4_err!(generic, OutOfBounds);
+        l4_err!(Generic, OutOfBounds);
     }
     unimplemented!();
     /*
