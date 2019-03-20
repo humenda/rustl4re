@@ -7,4 +7,4 @@ build = "build.rs"
 
 [build-dependencies]
 # ToDo: this is temporary until Cargo is capable of passing rustc flags 
-l4_derive = { path = "../../../l4rust/l4-rust/l4_derive-rust" }
+l4_derive = { path = "../../../l4rust/l4_derive-rust" }

@@ -57,7 +57,11 @@ pub fn gen_server_struct(name: proc_macro2::Ident, attrs: Vec<Attribute>,
                 self.__cap
             }
         }
-        impl l4::ipc::CapProviderAccess for #name { }
+        impl l4::ipc::CapProviderAccess for #name {
+            unsafe fn access_buffers(&mut self) -> l4::ipc::BufferAccess {
+                panic!("Not implemented for servers");
+            }
+        }
     };
     gen.into()
 }

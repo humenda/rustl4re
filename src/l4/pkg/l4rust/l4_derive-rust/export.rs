@@ -142,11 +142,17 @@ pub fn parse_external_iface(filename: &str) -> Result<Iface> {
 
 // translate type from Rust to C++
 // Returned is the fully translated type name (including generics); required
-// namespace_usg and includes will be added to the given sets.
+// namespace_usg and includes will be added to the given sets.; empty Strings are allowed for unit
+// structs which cannot be translated to C++ types, since they don't reserve any space
 fn translate_type(ty: &syn::Type, namespace_usg: &mut HashSet<String>,
         includes: &mut HashSet<String>) -> Result<String> {
+    let ty = match ty {
+        syn::Type::Path(p) => p,
+        syn::Type::Tuple(tp) if tp.elems.is_empty() => return Ok(String::new()),
+        _ => err!("Unrecognised type expression")
+    };
+
     // only accept Type::Path(…)
-    let ty = ifletelse!(ty => syn::Type::Path; "Unrecognised type expression");
     // use only last segment (e.g. l4::cap::Cap, use only Cap)
     let segment = match ty.path.segments.last() {
         None => err!(ty, "Invalid type specification"),
@@ -189,7 +195,10 @@ fn translate_type(ty: &syn::Type, namespace_usg: &mut HashSet<String>,
         _ => err!(format!("Only types with generic types supported, got: {:?}",
                 segment.arguments)),
     };
-    Ok(translated)
+    match translated == "()" {
+        true => Ok(String::new()), // C++ doesn't have zero-sized types
+        false => Ok(translated),
+    }
 }
 
 pub fn gen_cpp_interface(iface: &Iface, opts: &ExportOptions) -> Result<String> {
@@ -277,7 +286,9 @@ fn gen_cpp_rpc_method(method: &TraitItemMethod,
     // return type
     if let syn::ReturnType::Type(_, ty) = &method.sig.decl.output {
         let ty = translate_type(ty, namespace_usg, includes)?;
-        cpp.push_str(&format!(", {} *{}", ty, new_var(&mut used_vars)));
+        if !ty.is_empty() { // no return type
+            cpp.push_str(&format!(", {} *{}", ty, new_var(&mut used_vars)));
+        }
     }
     cpp.push_str(");\n");
     Ok(cpp)
