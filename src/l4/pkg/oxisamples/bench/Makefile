@@ -1,6 +1,6 @@
 PKGDIR	?= ..
 L4DIR	?= $(PKGDIR)/../..
 
-TARGET = rcalc-client
+TARGET = bench1-primitive bench2-string
 
 include $(L4DIR)/mk/subdir.mk
