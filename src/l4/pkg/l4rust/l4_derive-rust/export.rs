@@ -30,7 +30,7 @@ lazy_static::lazy_static! {
         map.insert("bool", "bool");
 		map.insert("Option", "Opt");
 		map.insert("Cap", "Cap");
-		map.insert("String", "String");
+		map.insert("String", "String<>"); // need <>, otherwise strange template errors
         map
     };
 
