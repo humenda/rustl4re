@@ -1,0 +1,9 @@
+[package]
+name = "bench1-server"
+version = "0.1.0"
+authors = ["Sebastian Humenda <shumenda@gmx.de>"]
+edition = "2018"
+build = "build.rs"
+
+[build-dependencies]
+l4_derive = { path = "../../../../l4rust/l4_derive-rust" }
