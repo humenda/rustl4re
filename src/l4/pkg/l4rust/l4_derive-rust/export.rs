@@ -40,7 +40,7 @@ lazy_static::lazy_static! {
         // cpp type: (namespace, includefile)
 		map.insert("Opt", ("L4::Ipc::Opt", Some("l4/sys/cxx/ipc_types")));
 		map.insert("Cap", ("L4::Cap", Some("l4/sys/capability")));
-		map.insert("String", ("L4::Ipc::String", Some("l4/sys/cxx/ipc_String")));
+		map.insert("String", ("L4::Ipc::String", Some("l4/sys/cxx/ipc_string")));
         map
     };
 }
@@ -290,6 +290,6 @@ fn gen_cpp_rpc_method(method: &TraitItemMethod,
             cpp.push_str(&format!(", {} *{}", ty, new_var(&mut used_vars)));
         }
     }
-    cpp.push_str(");\n");
+    cpp.push_str("));\n");
     Ok(cpp)
 }
