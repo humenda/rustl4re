@@ -135,54 +135,11 @@ module shm_c.cfg
 module shm_c-client
 module shm_c-server
 
-entry hello-shared
-roottask moe --init=rom/ex_hello_shared
-module l4re
-module ex_hello_shared
-module libld-l4.so
-module libl4util.so
-module libl4sys.so
-module libl4sys-direct.so
-module libdl.so
-module lib4re.so
-module lib4re-util.so
-module libc_support_misc.so
-module libc_be_socket_noop.so
-module libc_be_l4refile.so
-module libc_be_l4re.so
-module libsupc++.so
-module libuc_c.so
-module libpthread.so
-
-entry[arch=x86|amd64] framebuffer-example
-roottask moe rom/x86-fb.cfg
-module x86-fb.cfg
+entry bench1-primitive_cc
+kernel fiasco -serial_esc
+roottask moe rom/bench1-primitive_cc.cfg
 module l4re
 module ned
-module io
-module x86-legacy.devs
-module x86-fb.io
-module fb-drv
-module mag
-module ex_fb_spectrum_cc
-
-entry[arch=x86|amd64|arm] L4Linux-basic
-roottask moe rom/l4lx.cfg
-module l4lx.cfg
-module l4re
-module ned
-module vmlinuz
-module[perl] "ramdisk-$ENV{ARCH}.rd"
-
-entry[arch=x86|amd64] L4Linux-mag
-moe l4lx-gfx.cfg
-module l4re
-module ned
-module io
-module fb-drv
-module mag
-module x86-legacy.devs
-module l4lx-x86.io
-module vmlinuz
-module[perl] "ramdisk-$ENV{ARCH}.rd"
-
+module bench1-primitive_cc.cfg
+module bench1-client_cc
+module bench1-server_cc
