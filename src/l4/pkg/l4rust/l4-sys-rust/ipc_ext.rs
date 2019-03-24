@@ -4,9 +4,7 @@ use crate::ipc_basic::{self, l4_utcb};
 #[inline]
 pub fn msgtag(label: i64, words: u32,
         items: u32, flags: u32) -> l4_msgtag_t {
-    unsafe {
-        ipc_basic::l4_msgtag(label, words, items, flags)
-    }
+    ipc_basic::l4_msgtag(label, words, items, flags)
 }
 
 #[inline]

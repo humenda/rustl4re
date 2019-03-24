@@ -43,10 +43,16 @@ pub unsafe fn l4_ipc_wait(utcb: *mut l4_utcb_t, label: *mut l4_umword_t,
     l4_ipc_wait_w(utcb, label, timeout)
 }
 
+/// This function only serves compatibility. One can use the MsgTag struct from the l4 crate
+/// instead.
 #[inline]
-pub unsafe fn l4_msgtag(label: c_long, words: c_uint, items: c_uint,
+pub fn l4_msgtag(label: c_long, words: c_uint, items: c_uint,
                         flags: c_uint) -> l4_msgtag_t {
-    l4_msgtag_w(label, words, items, flags)
+    l4_msgtag_t {
+        raw: (label << 16) | (words & 0x3f) as l4_mword_t
+                | ((items & 0x3f) << 6) as l4_mword_t
+                | (flags & 0xf000) as l4_mword_t
+    }
 }
 
 #[must_use]

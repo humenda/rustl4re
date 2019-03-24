@@ -93,7 +93,14 @@ impl MsgTag {
     /// flags.
     #[inline]
     pub fn new(label: i64, words: u32, items: u32, flags: u32) -> MsgTag {
-        MsgTag { raw: msgtag(label, words, items, flags).raw as Mword }
+        use core::intrinsics::transmute;
+        MsgTag {
+            // the C type is a wrapper type and we reimplement its creation function in
+            // l4_sys::ipc_basic anyway. We want to safe every cycle here.
+            raw: unsafe {
+                transmute::<l4_msgtag_t, Mword>(msgtag(label, words, items, flags))
+            }
+        }
     }
 
     /// Get the assigned label
