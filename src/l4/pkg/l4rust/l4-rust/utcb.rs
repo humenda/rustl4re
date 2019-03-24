@@ -254,9 +254,7 @@ impl<U: UtcbRegSize> Registers<U> {
             -> Result<()> {
         let (ptr, offset) = align_with_offset::<T>(self.buf, self.offset);
         let next = offset + size_of::<T>();
-        if next > U::BUF_SIZE {
-            return Err(Error::Generic(GenericErr::MsgTooLong));
-        }
+        l4_err_if!(next > U::BUF_SIZE => Generic, MsgTooLong);
         *transmute::<*mut u8, *mut T>(ptr) = val;
         self.offset = next; // advance offset *behind* element
         Ok(())
@@ -274,9 +272,7 @@ impl<U: UtcbRegSize> Registers<U> {
     pub unsafe fn read<T: Serialisable>(&mut self)  -> Result<T> {
         let (ptr, offset) = align_with_offset::<T>(self.buf, self.offset);
         let next = offset + size_of::<T>();
-        if next > U::BUF_SIZE {
-            return Err(Error::Generic(GenericErr::MsgTooLong));
-        }
+        l4_err_if!(next > U::BUF_SIZE => Generic, MsgTooLong);
         self.offset = next;
         let val: T = (*transmute::<*mut u8, *mut T>(ptr)).clone();
         Ok(val)
