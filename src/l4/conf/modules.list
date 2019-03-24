@@ -135,6 +135,14 @@ module shm_c.cfg
 module shm_c-client
 module shm_c-server
 
+entry bench1-primitive
+roottask moe rom/bench1-primitive.cfg
+module l4re
+module ned
+module bench1-primitive.cfg
+module bench1-client
+module bench1-server
+
 entry bench1-primitive_cc
 kernel fiasco -serial_esc
 roottask moe rom/bench1-primitive_cc.cfg
