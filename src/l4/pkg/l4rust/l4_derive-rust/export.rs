@@ -234,7 +234,7 @@ pub fn gen_cpp_interface(iface: &Iface, opts: &ExportOptions) -> Result<String> 
     cpp_iface.push_str("  typedef L4::Typeid::Rpcs<");
     rpcs.iter().for_each(|n| cpp_iface.push_str(&format!("{}_t, ", n)));
     cpp_iface.truncate(cpp_iface.len() - 2); // strip last ", "
-    cpp_iface.push_str("> Rpcs;\n}\n");
+    cpp_iface.push_str("> Rpcs;\n};\n");
 
     let mut preamble = String::new();
     includes.iter().for_each(|x| preamble.push_str(&format!("#include <{}>\n", x)));
