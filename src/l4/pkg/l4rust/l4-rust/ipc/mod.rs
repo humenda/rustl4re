@@ -108,6 +108,7 @@ impl MsgTag {
     /// When sending a message, the label field is used for denoting the protocol type, while it is
     /// used for transmitting a result when receiving a message.
     /// When setting protocols, it is advised to use the safer `protocol()` method.
+    #[inline]
     pub fn label(&self) -> i64 {
         (self.raw >> 16) as i64
     }
