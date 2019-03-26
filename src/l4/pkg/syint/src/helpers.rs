@@ -21,7 +21,7 @@ impl UtcbMrFake {
     }
 
     pub fn set(&mut self, idx: usize, val: u64) {
-        self.mem.insert(idx, val);
+        self.mem[idx] = val;
     }
 
     pub unsafe fn mut_ptr(&mut self) -> *mut l4_msg_regs_t {
