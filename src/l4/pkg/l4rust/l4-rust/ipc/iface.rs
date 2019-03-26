@@ -157,6 +157,7 @@ macro_rules! iface_back {
                     fn $name($($argname: $argtype),*) -> $ret;)*);
 
             // ToDo: document why op_dispatch implemented here
+            #[inline]
             fn op_dispatch(&mut self, tag: $crate::ipc::MsgTag,
                     mr: &mut $crate::utcb::UtcbMr,
                     bufs: &mut $crate::ipc::BufferAccess)
@@ -174,9 +175,9 @@ macro_rules! iface_back {
                             $crate::error::GenericErr::InvalidProt))
                 }
                 let opcode = unsafe { mr.read::<$op_type>()? };
+                match opcode {
                 $( // iterate over functions and op codes
-                if opcode == $op_code {
-                    unsafe {
+                    $op_code => unsafe {
                         let user_ret = self.$name(
                             $(<$argtype as $crate::ipc::Serialiser>::
                                 read(mr, bufs)?),*
@@ -185,13 +186,13 @@ macro_rules! iface_back {
                         <$ret as $crate::ipc::Serialiser>::write(user_ret, mr)?;
                         // on return, label/protocol is 0 for success and a custom error code
                         // otherwise; negative means some IPC failure
-                        return Ok($crate::ipc::MsgTag::new(0,
-                                mr.words(), mr.items(), 0));
-                    }
-                }
+                        Ok($crate::ipc::MsgTag::new(0,
+                                mr.words(), mr.items(), 0))
+                    },
                 )* // ↓ incorrect op code
-                Err($crate::error::Error::InvalidArg("unknown opcode \
+                    _ => Err($crate::error::Error::InvalidArg("unknown opcode \
                         received", Some(opcode as isize)))
+                }
             }
         }
     }
