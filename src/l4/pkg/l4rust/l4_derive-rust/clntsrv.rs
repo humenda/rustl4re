@@ -44,6 +44,7 @@ pub fn gen_server_struct(name: proc_macro2::Ident, attrs: Vec<Attribute>,
         }
         unsafe impl crate::l4::ipc::types::Callable for #name { }
         impl crate::l4::ipc::types::Dispatch for #name {
+            #[inline]
             fn dispatch(&mut self, tag: crate::l4::ipc::MsgTag,
                         mr: &mut l4::utcb::UtcbMr,
                         bufs: &mut l4::ipc::BufferAccess)

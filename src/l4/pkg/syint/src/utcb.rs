@@ -128,7 +128,7 @@ tests! {
         }
     }
 
-    fn read_i64_i64_from_mr() {
+    fn read_u64_u64_from_mr() {
         let mut mr = UtcbMrFake::new();
         mr.set(0, 284);
         mr.set(1, 989812);

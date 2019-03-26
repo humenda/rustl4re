@@ -30,6 +30,7 @@ use std::vec::Vec;
 /// definition, passing the actual arguments back to the user implementation,
 /// once read from the UTCB.
 pub trait Dispatch {
+    #[inline]
     fn dispatch(&mut self, tag: MsgTag, _: &mut UtcbMr,
                 _: &mut BufferAccess) -> Result<MsgTag>;
 }
