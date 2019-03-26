@@ -23,11 +23,11 @@ int main() {
     l4_uint32_t val2 = 5;
     l4_int32_t res = 0;
     std::vector<unsigned long> v;
-    v.reserve(1000);
+    v.reserve(100000);
 
     printf("[cc] Starting primitive subtraction test\n");
 
-    for (unsigned int i = 0; i < 1000; i++) {
+    for (unsigned int i = 0; i < 100000; i++) {
         auto start = l4_rdtsc();
 #ifndef TEST_STRING
         if (server->sub(val1, val2, &res)) {

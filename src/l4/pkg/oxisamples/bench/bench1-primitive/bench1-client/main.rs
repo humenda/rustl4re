@@ -24,8 +24,8 @@ fn main() {
     println!("Starting primitive subtraction test");
     #[cfg(test_string)]
     println!("Starting string ping pong test");
-    let mut cycles = Vec::with_capacity(1000);
-    for _ in 0..1000 {
+    let mut cycles = Vec::with_capacity(100000);
+    for _ in 0..100000 {
         #[cfg(test_string)]
         let freshly_allocated = String::from("luoiufsadoifpiuyxpoibcxvdf");
         let start_counter = unsafe { rdtsc() };
