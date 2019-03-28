@@ -21,7 +21,8 @@ pub fn gen_server_struct(name: proc_macro2::Ident, attrs: Vec<Attribute>,
         #vis struct #name #generics {
             __dispatch_ptr: ::l4::ipc::Callback,
             __cap: crate::l4::cap::CapIdx,
-            #(#fields),*
+            #fields
+            __pin: core::marker::PhantomPinned
         }
 
         impl #name {
@@ -33,9 +34,8 @@ pub fn gen_server_struct(name: proc_macro2::Ident, attrs: Vec<Attribute>,
                 #name {
                     __dispatch_ptr: crate::l4::ipc::server_impl_callback::<#name>,
                     __cap: cap,
-                    #(
-                        #initialiser_names
-                    ),*
+                    #(#initialiser_names,)*
+                    __pin: core::marker::PhantomPinned
                 }
             }
         }
@@ -108,6 +108,7 @@ pub fn gen_client_struct(name: proc_macro2::Ident, attrs: Vec<Attribute>,
         #vis struct #name #generics {
             __cap: crate::l4::cap::CapIdx,
             __slots: #slot_type,
+            __pin: core::marker::PhantomPinned,
         }
 
         impl crate::l4::cap::Interface for #name {
@@ -120,6 +121,7 @@ pub fn gen_client_struct(name: proc_macro2::Ident, attrs: Vec<Attribute>,
                 #name {
                     __cap: c,
                     __slots: <#slot_type as l4::ipc::CapProvider>::new(),
+                    __pin: core::marker::PhantomPinned,
                 }
             }
         }

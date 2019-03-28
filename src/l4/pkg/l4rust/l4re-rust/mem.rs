@@ -1,3 +1,5 @@
+// ToDo: proc macros didn't support doc comments at some point, make them support doc strings and
+// reformat the two interfaces
 use l4::{
     cap::Cap,
     utcb::SndFlexPage as FlexPage,

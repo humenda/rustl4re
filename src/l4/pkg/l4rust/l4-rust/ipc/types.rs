@@ -43,6 +43,8 @@ pub trait Dispatch {
 /// struct member order.  
 /// The function pointer must have the type
 /// `fn(&mut self, MsgTag, *mut l4_utcb_t) -> Result<MsgTag>`.
+/// To avoid moves of the object, a struct should also be pinned, e.g. by containing a
+/// core::marker::PhantomPinned.
 pub unsafe trait Callable: Dispatch { }
 
 pub trait Demand {
