@@ -9,9 +9,9 @@ use syn::spanned::Spanned;
 
 use super::iface::Iface;
 
-/// Mappings from Rust to C types. Generics are stripped and treated separately,
-/// so `Option<u32>` will be looked up as `Option` and `u32`.
 lazy_static::lazy_static! {
+    /// Mappings from Rust to C types. Generics are stripped and treated separately,
+    /// so `Option<u32>` will be looked up as `Option` and `u32`.
     static ref RUST2CPP_TYPE: HashMap<&'static str, &'static str> = {
         let mut map = HashMap::new();
         map.insert("char", "char");
