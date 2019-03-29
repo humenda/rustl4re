@@ -207,9 +207,10 @@ impl From<l4_msgtag_t> for MsgTag {
 /// Call to given destination and block for answer.
 #[inline(always)]
 pub fn call<T: Interface>(dest: &Cap<T>, utcb: &mut Utcb,
-        tag: l4_msgtag_t, timeout: l4_timeout_t) -> MsgTag {
+        tag: MsgTag, timeout: l4_timeout_t) -> MsgTag {
     unsafe {
-        MsgTag::from(l4_sys::l4_ipc_call(dest.raw(), utcb.raw, tag, timeout))
+        MsgTag::from(l4_sys::l4_ipc_call(dest.raw(), utcb.raw, tag.raw(),
+                timeout))
     }
 }
 

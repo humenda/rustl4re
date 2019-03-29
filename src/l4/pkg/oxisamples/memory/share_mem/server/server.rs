@@ -18,7 +18,7 @@ use l4re::{
 // include IPC interface definition
 include!("../interface.rs");
 
-#[l4_server(demand = 1)]
+#[l4_server(Shm)]
 struct ShmServer;
 
 impl Shm for ShmServer {
@@ -33,14 +33,14 @@ fn read_message(ds: &mut Cap<Dataspace>, length: usize)
         -> Result<String> {
             // ToDo: error handling
     let info = ds.info()?;
-    if info.size != l4::sys::l4_round_page(length) as u64 {
+    if info.size != l4::sys::round_page(length) as u64 {
         l4_err!(Generic, OutOfBounds);
     }
     unimplemented!();
     /*
     let mut virt_addr: *mut libc::c_void = std::mem::uninitialized();
     // reserve area to allow attaching a data space; flags = 0 must be set
-    let page_size = l4::sys::l4_round_page(length);
+    let page_size = l4::sys::round_page(length);
     println!("attaching memory: {:x} bytes", page_size);
     match l4re::sys::l4re_rm_attach((&mut virt_addr) as *mut *mut libc::c_void as _, page_size,
             l4re::sys::l4re_rm_flags_t::L4RE_RM_SEARCH_ADDR as u64, ds.cap(), 0, l4::sys::L4_PAGESHIFT as u8) {

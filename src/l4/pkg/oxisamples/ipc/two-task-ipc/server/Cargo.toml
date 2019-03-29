@@ -8,4 +8,4 @@ name = "two_task_ipc-server"
 path = "server.rs"
 
 [dependencies]
-libc = "0.2.43"
+libc = "0.2.50"

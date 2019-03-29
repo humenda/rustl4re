@@ -53,8 +53,12 @@ pub fn gen_server_struct(name: proc_macro2::Ident, attrs: Vec<Attribute>,
                 self.op_dispatch(tag, mr, bufs)
             }
         }
+        impl l4::ipc::Demand for #name {
+            const CAP_DEMAND: u8 = <Self as #trait_name>::CAP_DEMAND;
+        }
         impl l4::cap::Interface for #name {
-            unsafe fn cap(&self) -> l4::cap::CapIdx {
+            #[inline]
+            unsafe fn raw(&self) -> l4::cap::CapIdx {
                 self.__cap
             }
         }
@@ -112,7 +116,8 @@ pub fn gen_client_struct(name: proc_macro2::Ident, attrs: Vec<Attribute>,
         }
 
         impl crate::l4::cap::Interface for #name {
-            unsafe fn cap(&self) -> crate::l4::cap::CapIdx {
+            #[inline]
+            unsafe fn raw(&self) -> crate::l4::cap::CapIdx {
                 self.__cap
             }
         }

@@ -33,3 +33,6 @@ pub use crate::utcb::*;
 pub mod sys {
     pub use l4_sys::*;
 }
+
+// a few re-exports
+pub use sys::{round_page, trunc_page};

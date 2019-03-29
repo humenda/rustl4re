@@ -33,7 +33,8 @@ pub struct Task {
 //                   Type_info::Demand_t<2> >
 
 impl Interface for Task {
-    unsafe fn cap(&self) -> CapIdx {
+    #[inline]
+    unsafe fn raw(&self) -> CapIdx {
         self.cap
     }
 }
