@@ -23,6 +23,13 @@ impl<T: IfaceInit> OwnedCap<T> {
             false => Err(Error::InvalidCap),
         }
     }
+
+    /// Return a copy of the internal `Cap<T>`
+    pub fn cap(&self) -> Cap<T> {
+        unsafe {
+            Cap::<T>::new(self.0.raw())
+        }
+    }
 }
 
 impl<T: IfaceInit> Deref for OwnedCap<T> {
@@ -41,7 +48,7 @@ impl<T: IfaceInit> DerefMut for OwnedCap<T> {
 impl<T: IfaceInit> Drop for OwnedCap<T> {
     fn drop(&mut self) {
         unsafe { // free allocated capability index
-            l4::sys::l4re_util_cap_free(self.0.cap());
+            l4::sys::l4re_util_cap_free(self.0.raw());
         }
     }
 }

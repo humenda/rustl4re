@@ -143,9 +143,9 @@ impl<'a, T: LoopHook, C: CapProvider> Loop<'a, T, C> {
     /// Register anything, callee must make sure that passed thing is NOT moved
     pub fn register<Imp>(&mut self, inst: &'a mut Imp) -> Result<()>
             where Imp: Callable + Dispatch + Demand + Interface {
-        self.buf_mgr.alloc_capslots(<Imp as Demand>::BUFFER_DEMAND)?;
+        self.buf_mgr.alloc_capslots(<Imp as Demand>::CAP_DEMAND)?;
         unsafe { // bind IPC gate with label
-            let _ = MsgTag::from(l4_sys::l4_rcv_ep_bind_thread(inst.cap(),
+            let _ = MsgTag::from(l4_sys::l4_rcv_ep_bind_thread(inst.raw(),
                    self.thread, inst as *mut _ as *mut c_void as _))
                 .result()?;
         }

@@ -33,7 +33,7 @@ unsafe impl l4::ipc::Serialiser for DsStats {
     }
 }
 
-#[l4_client(DataspaceProvider, demand = 1)]
+#[l4_client(DataspaceProvider)]
 pub struct Dataspace;
 
 /// used as return type for the **deprecated** phys() method of the DataspaceProvider trait
@@ -47,7 +47,7 @@ unsafe impl l4::ipc::Serialisable for DeprecatedPhys { }
 unsafe impl l4::ipc::Serialiser for DeprecatedPhys {
     #[inline]
     unsafe fn read(mr: &mut l4::utcb::UtcbMr, _: &mut l4::ipc::BufferAccess) -> l4::error::Result<Self> {
-        mr.read::<Self>() // most types are read from here
+        mr.read::<Self>()
     }
     #[inline]
     unsafe fn write(self, mr: &mut l4::utcb::UtcbMr) -> l4::error::Result<()> {

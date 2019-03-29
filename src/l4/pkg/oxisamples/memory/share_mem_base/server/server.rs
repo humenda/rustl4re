@@ -92,17 +92,17 @@ unsafe fn read_message(ds_cap: l4re_ds_t, length: usize)
         n => panic!("stats info gave error {}\n",
                     n & (L4_IPC_ERROR_MASK as i32)), 
     };
-    if (stats).size != l4::l4_round_page(length) as u64 {
+    if (stats).size != l4::round_page(length) as u64 {
         panic!("memory allocation failed: got {:x}, required {:x}",
-                 stats.size, l4::l4_round_page(length));
+                 stats.size, l4::round_page(length));
     }
 
     let mut virt_addr: *mut c_void = std::mem::uninitialized();
     // reserve area to allow attaching a data space; flags = 0 must be set
-    let page_size = l4::l4_round_page(length);
+    let page_size = l4::round_page(length);
     println!("attaching memory: {:x} bytes", page_size);
-    match l4re_rm_attach((&mut virt_addr) as *mut *mut c_void as _, page_size,
-            L4RE_RM_SEARCH_ADDR as u64, ds_cap, 0, l4::L4_PAGESHIFT as u8) {
+    match l4re_rm_attach((&mut virt_addr) as *mut *mut c_void as _,
+            page_size as u64, L4RE_RM_SEARCH_ADDR as u64, ds_cap, 0, l4::L4_PAGESHIFT as u8) {
         0 => (),
         err => return Err(format!("unable to attach memory from dataspace: {}",
                 err)),

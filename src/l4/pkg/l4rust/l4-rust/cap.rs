@@ -17,7 +17,8 @@ pub type CapIdx = l4_cap_idx_t;
 ///
 /// This marker trait identifies an object to provide a service through a capability.
 pub trait Interface {
-    unsafe fn cap(&self) -> CapIdx;
+    #[inline]
+    unsafe fn raw(&self) -> CapIdx;
 }
 
 
@@ -32,7 +33,9 @@ pub trait IfaceInit: Interface {
 pub struct Untyped(CapIdx);
 
 impl Interface for Untyped {
-    unsafe fn cap(&self) -> CapIdx {
+
+    #[inline]
+    unsafe fn raw(&self) -> CapIdx {
         self.0
     }
 }
@@ -68,13 +71,13 @@ impl<T: Interface> DerefMut for Cap<T> {
 impl<T: Interface> PartialEq<Cap<T>> for Cap<T> {
     fn eq(&self, other: &Cap<T>) -> bool {
         unsafe {
-            (self.interface.cap() >> L4_CAP_SHIFT as u64) == (other.raw() >> L4_CAP_SHIFT as u64)
+            (self.interface.raw() >> L4_CAP_SHIFT as u64) == (other.raw() >> L4_CAP_SHIFT as u64)
         }
     }
 
     fn ne(&self, other: &Cap<T>) -> bool {
         unsafe {
-            (self.interface.cap() >> L4_CAP_SHIFT as u64)
+            (self.interface.raw() >> L4_CAP_SHIFT as u64)
                 != (other.raw() >> L4_CAP_SHIFT as u64)
         }
     }
@@ -83,13 +86,13 @@ impl<T: Interface> PartialEq<Cap<T>> for Cap<T> {
 impl<T: Interface> PartialEq<CapIdx> for Cap<T> {
     fn eq(&self, other: &CapIdx) -> bool {
         unsafe {
-            (self.interface.cap() >> L4_CAP_SHIFT as usize) == (other >> L4_CAP_SHIFT as usize)
+            (self.interface.raw() >> L4_CAP_SHIFT as usize) == (other >> L4_CAP_SHIFT as usize)
         }
     }
 
     fn ne(&self, other: &CapIdx) -> bool {
         unsafe {
-            (self.interface.cap() >> L4_CAP_SHIFT as usize)
+            (self.interface.raw() >> L4_CAP_SHIFT as usize)
                 != (other >> L4_CAP_SHIFT as usize)
         }
     }
@@ -104,21 +107,21 @@ impl<T: Interface + IfaceInit> Cap<T> {
 impl<T: Interface> Cap<T> {
     pub fn cast<U: Interface + IfaceInit>(self) -> Cap<U> {
         unsafe {
-            Cap { interface: U::new(self.cap()) }
+            Cap { interface: U::new(self.raw()) }
         }
     }
 
     #[inline]
     pub fn is_valid(&self) -> bool {
         unsafe {
-            (self.interface.cap() & L4_INVALID_CAP_BIT as u64) == 0
+            (self.interface.raw() & L4_INVALID_CAP_BIT as u64) == 0
         }
     }
 
     #[inline]
     pub fn is_invalid(&self) -> bool {
         unsafe {
-            (self.interface.cap() & L4_INVALID_CAP_BIT as u64) != 0
+            (self.interface.raw() & L4_INVALID_CAP_BIT as u64) != 0
         }
     }
 
@@ -130,7 +133,7 @@ impl<T: Interface> Cap<T> {
     /// the `Cap<T>` type.
     #[inline]
     pub unsafe fn raw(&self) -> CapIdx {
-        self.interface.cap()
+        self.interface.raw()
     }
 
     /// Transfer a given capability into the capability slot (AKA index) of **this** capability.
@@ -149,8 +152,9 @@ impl<T: Interface> Cap<T> {
             return Err(Error::InvalidCap);
         }
         l4_task_map(L4_BASE_TASK_CAP as u64, L4_BASE_TASK_CAP as u64,
-                    l4_sys::l4_obj_fpage(source.cap(), 0, L4_CAP_FPAGE_RWSD as u8),
-                    self.send_base(L4_MAP_ITEM_GRANT as u64, None) | 0xe0);
+                    l4_sys::l4_obj_fpage(source.raw(), 0, L4_CAP_FPAGE_RWSD as u8),
+                    self.send_base(L4_MAP_ITEM_GRANT as u64, None)
+                            as super::sys::l4_addr_t | 0xe0);
         Ok(())
     }
 
@@ -162,7 +166,7 @@ impl<T: Interface> Cap<T> {
     /// map operations.
     fn send_base(&self, grant: u64, base_cap: Option<l4_cap_idx_t>) -> u64 {
         unsafe {
-            let base_cap = base_cap.unwrap_or(self.cap());
+            let base_cap = base_cap.unwrap_or(self.raw());
             l4_sys::l4_map_obj_control(base_cap, grant)
         }
     }
@@ -172,6 +176,7 @@ pub fn from(c: CapIdx) -> Cap<Untyped> {
 }
 
 /// Construct an invalid cap
+#[inline]
 pub fn invalid_cap() -> Cap<Untyped> {
     Cap { interface: Untyped { 0: 0 | L4_INVALID_CAP_BIT as u64 } }
 }

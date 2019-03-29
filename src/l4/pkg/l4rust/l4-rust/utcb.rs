@@ -187,7 +187,7 @@ impl SndFlexPage {
     pub fn from_cap<T: Interface>(c: &Cap<T>, rights: FpageRights,
                 mt: Option<MapType>) -> SndFlexPage {
         SndFlexPage::new(unsafe {
-                ::l4_sys::l4_obj_fpage(c.cap(), 0, rights.bits() as u8).raw
+                ::l4_sys::l4_obj_fpage(c.raw(), 0, rights.bits() as u8).raw
             }, 0, mt)
     }
 }

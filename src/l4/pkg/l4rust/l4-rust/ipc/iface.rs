@@ -120,7 +120,7 @@ macro_rules! derive_ipc_calls {
                 let tag = $crate::ipc::MsgTag::new($proto, mr.words(),
                         mr.items(), 0);
                 let _restag = $crate::ipc::MsgTag::from(unsafe {
-                        $crate::sys::l4_ipc_call(self.cap(),
+                        $crate::sys::l4_ipc_call(self.raw(),
                                 $crate::sys::l4_utcb(), tag.raw(),
                                 $crate::sys::timeout_never())
                     }).result()?;
