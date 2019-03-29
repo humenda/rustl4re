@@ -10,8 +10,7 @@ mod export;
 mod iface;
 
 use proc_macro::TokenStream;
-use syn::{self, Data, Fields, Lit};
-use syn::spanned::Spanned;
+use syn::{self, Data, Fields};
 use syn::parse_macro_input;
 use std::fs::File;
 use std::io::Write;
@@ -57,23 +56,11 @@ macro_rules! proc_err {
 /// the `demand` and can be specified as `#[l4_server(demand = NUM)]`.
 #[proc_macro_attribute]
 pub fn l4_server(macro_attrs: TokenStream, item: TokenStream) -> TokenStream {
-    // parse the demand from the parenthesis after the macro name or assume 0
-    let demand: u32 = match macro_attrs.is_empty() {
-        true => 0,
-        false => {
-            // only accept `name = value`or abort otherwise
-            let name_val = parse_macro_input!(macro_attrs
-                    as syn::MetaNameValue);
-            if name_val.ident != "demand" {
-                proc_err!("Unrecognised macro attribute, try \"demand\"");
-            }
-            // only accept numbers
-            match name_val.lit {
-                Lit::Int(l) => l.value() as u32,
-                _ => proc_err!(name_val, "`demand` must be a positive integer"),
-            }
-        }
-    };
+    if macro_attrs.is_empty() {
+        proc_err!("IPC trait missing, use l4_server(TRAITNAME)");
+    }
+    let trait_name = parse_macro_input!(macro_attrs
+                    as syn::Ident);
 
     let ast: syn::DeriveInput = syn::parse(item).expect("Unable to parse struct definition.");
     let structdef = match ast.data {
@@ -87,12 +74,12 @@ pub fn l4_server(macro_attrs: TokenStream, item: TokenStream) -> TokenStream {
     match structdef.fields {
         Fields::Named(_) => clntsrv::gen_server_struct(name, ast.attrs, ast.vis,
                                              ast.generics, structdef.fields,
-                                             demand),
+                                             &trait_name),
         Fields::Unnamed(_) => proc_err!("Only named structs or unnamed structs \
                 can be turned into an IPC server."),
         Fields::Unit => clntsrv::gen_server_struct(name, ast.attrs, ast.vis,
                                              ast.generics, Fields::Unit,
-                                             demand),
+                                             &trait_name),
     }
 }
 

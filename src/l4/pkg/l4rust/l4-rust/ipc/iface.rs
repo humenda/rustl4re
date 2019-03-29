@@ -142,6 +142,7 @@ macro_rules! iface_back {
     (
         trait $traitname:ident {
             const PROTOCOL_ID: i64 = $proto:tt;
+            const CAP_DEMAND: u8 = $caps:literal;
             type OpType = $op_type:tt;
             $(
                 $op_code:expr => fn $name:ident(&mut self
@@ -153,6 +154,7 @@ macro_rules! iface_back {
                     + $crate::ipc::CapProviderAccess {
             type OpType = $op_type;
             const PROTOCOL_ID: i64 = $proto;
+            const CAP_DEMAND: u8 = $caps;
             $crate::derive_ipc_calls!($proto; $($op_code =>
                     fn $name($($argname: $argtype),*) -> $ret;)*);
 
@@ -196,98 +198,6 @@ macro_rules! iface_back {
             }
         }
     }
-}
-
-// ToDo: functionality should be implemented by proc macro, this macro should support life time
-// parameters such as `fn bla<'a>(…)`
-#[macro_export]
-macro_rules! iface_enumerate {
-    // match already enumerated interfaces and pass them directly through
-    (
-        trait $traitname:ident {
-            const PROTOCOL_ID: i64 = $proto:tt;
-            type OpType = $op_type:tt;
-            $(
-                $opcode:expr => fn $name:ident(&mut self $(, $argname:ident: $argtype:ty)*) -> $ret:ty;
-            )*
-        }
-    ) => {
-        $crate::iface_back! {
-            trait $traitname {
-                const PROTOCOL_ID: i64 = $proto;
-                type OpType = $op_type;
-                $(
-                    $opcode => fn $name(&mut self $(, $argname: $argtype)*) -> $ret;
-                )*
-            }
-        }
-    };
-
-    (// match unnumbered interface and start enumerating it
-        trait $traitname:ident {
-            const PROTOCOL_ID: i64 = $proto:tt;
-            type OpType = $op_type:tt;
-            $(
-                fn $name:ident(&mut self
-                        $(, $argname:ident: $argtype:ty)*) -> $ret:ty;
-            )*
-        }
-     ) => {
-        $crate::iface_enumerate! {
-            trait $traitname {
-                const PROTOCOL_ID: i64 = $proto;
-                type OpType = $op_type;
-                current_opcode = 0;
-                {
-                $(
-                    fn $name(&mut self $(, $argname: $argtype)*) -> $ret;
-                )*
-                }
-            }
-        }
-    };
-
-    (// match next unnumbered function
-        trait $traitname:ident {
-            const PROTOCOL_ID: i64 = $proto:tt;
-            type OpType = $op_type:tt;
-            current_opcode = $count:expr;
-            { fn $name:ident(&mut self $(, $argname:ident: $argtype:ty)*) -> $ret:ty;
-                $($unmatched:tt)*
-            }
-            $($matched:tt)*
-        }
-     ) => {
-        $crate::iface_enumerate! {
-            trait $traitname {
-                const PROTOCOL_ID: i64 = $proto;
-                type OpType = $op_type;
-                current_opcode = $count + 1;
-                { $($unmatched)* }
-                $($matched)*
-                $count => fn $name(&mut self $(, $argname: $argtype)*) -> $ret;
-            }
-        }
-    };
-
-    (// all functions were numbered, call the ideal case (see first matcher)
-        trait $traitname:ident {
-            const PROTOCOL_ID: i64 = $proto:tt;
-            type OpType = $op_type:tt;
-            current_opcode = $count:expr;
-            { }
-            $($matched:tt)*
-        }
-    ) => {
-        $crate::iface_back! {
-            trait $traitname {
-                const PROTOCOL_ID: i64 = $proto;
-                type OpType = $op_type;
-                $($matched)*
-            }
-
-        }
-    };
 }
 
 /*

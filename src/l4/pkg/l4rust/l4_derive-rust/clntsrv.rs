@@ -8,12 +8,13 @@ use std::str::FromStr;
 
 pub fn gen_server_struct(name: proc_macro2::Ident, attrs: Vec<Attribute>,
                     vis: Visibility, generics: Generics, fields: Fields,
-                    demand: u32)
+                    trait_name: &syn::Ident)
                     -> proc_macro::TokenStream {
     // duplicate names and types of fields, because quote! moves them
     let initialiser_names: Vec<_> = fields.iter().map(|f| f.ident.clone()).collect();
     let arg_names: Vec<_> = fields.iter().map(|f| f.ident.clone()).collect();
     let arg_types: Vec<_> = fields.iter().map(|f| f.ty.clone()).collect();
+    let field_iter = fields.iter();
 
     let gen = quote! {
         #[repr(C)]
@@ -21,7 +22,7 @@ pub fn gen_server_struct(name: proc_macro2::Ident, attrs: Vec<Attribute>,
         #vis struct #name #generics {
             __dispatch_ptr: ::l4::ipc::Callback,
             __cap: crate::l4::cap::CapIdx,
-            #fields
+            #(#field_iter,)*
             __pin: core::marker::PhantomPinned
         }
 
@@ -38,9 +39,6 @@ pub fn gen_server_struct(name: proc_macro2::Ident, attrs: Vec<Attribute>,
                     __pin: core::marker::PhantomPinned
                 }
             }
-        }
-        impl crate::l4::ipc::types::Demand for #name {
-            const BUFFER_DEMAND: u32 = #demand;
         }
         unsafe impl crate::l4::ipc::types::Callable for #name { }
         impl crate::l4::ipc::types::Dispatch for #name {

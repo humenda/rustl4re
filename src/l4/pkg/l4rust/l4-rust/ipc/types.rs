@@ -48,7 +48,7 @@ pub trait Dispatch {
 pub unsafe trait Callable: Dispatch { }
 
 pub trait Demand {
-    const BUFFER_DEMAND: u32;
+    const CAP_DEMAND: u8;
 }
 
 /// Define a function in a type and allow the derivation of the dual type
@@ -102,7 +102,7 @@ pub trait CapProvider  {
                 where T: Interface + IfaceInit;
     /// Return the amount of allocated buffer slots.
     #[inline]
-    fn caps_used(&self) -> u32;
+    fn caps_used(&self) -> u8;
 
     /// Allocate buffers according to given demand
     ///
@@ -115,7 +115,7 @@ pub trait CapProvider  {
     /// `Error::InvalidArg` and capability allocation failures in an
     /// `Error::NoMem`.
     /// **Note:** memory or I/O flexpages are not supported.
-    fn alloc_capslots(&mut self, demand: u32) -> Result<()>;
+    fn alloc_capslots(&mut self, cap_demand: u8) -> Result<()>;
 
     /// Set the receive flags for the buffers.
     ///
@@ -154,8 +154,8 @@ impl CapProvider for Bufferless {
         Bufferless { }
     }
 
-    fn alloc_capslots(&mut self, demand: u32) -> Result<()> {
-        match demand == 0 {
+    fn alloc_capslots(&mut self, cap_demand: u8) -> Result<()> {
+        match cap_demand == 0 {
             true => Ok(()),
             false => Err(Error::InvalidArg("buffer allocation not permitted", None)),
         }
@@ -177,7 +177,7 @@ impl CapProvider for Bufferless {
     #[inline]
     fn max_slots(&self) -> u32 { 0 }
     #[inline]
-    fn caps_used(&self) -> u32 { 0 }
+    fn caps_used(&self) -> u8 { 0 }
     fn setup_wait(&mut self, _: *mut l4_utcb_t) { }
 
     /// a non-usable buffer access, containing no pointer
@@ -189,7 +189,7 @@ impl CapProvider for Bufferless {
 
 pub struct BufferManager {
     /// number of allocated capabilities
-    caps: u32,
+    caps: u8,
     cap_flags: u64,
     // ToDo: reimplement this with the (ATM unstable) const generics
     br: [u64; l4_sys::consts::UtcbConsts::L4_UTCB_GENERIC_BUFFERS_SIZE as usize],
@@ -204,14 +204,15 @@ impl CapProvider for BufferManager {
         }
     }
 
-    fn alloc_capslots(&mut self, demand: u32) -> Result<()> {
-        // take two extra buffers for a possible timeout and a zero terminator
-        if demand + 3 >= self.br.len() as u32 {
+    fn alloc_capslots(&mut self, cap_demand: u8) -> Result<()> {
+        // take two extra buffers for a possible timeout and a zero terminator (taken from the c++
+        // version)
+        if cap_demand + 3 >= self.br.len() as u8 {
             return Err(Error::InvalidArg("Capability slot demand too large",
-                                         Some(demand as isize)));
+                    Some(cap_demand as isize)));
         }
         // ToDo: set up is wrong, +1 caps allocated than actually required
-        while demand + 1 > self.caps {
+        while cap_demand + 1 > self.caps {
             let cap = unsafe { l4_sys::l4re_util_cap_alloc() };
             if (cap & L4_INVALID_CAP_BIT as u64) != 0 {
                 return Err(Error::Generic(GenericErr::NoMem));
@@ -256,7 +257,7 @@ impl CapProvider for BufferManager {
     }
 
     #[inline]
-    fn caps_used(&self) -> u32 {
+    fn caps_used(&self) -> u8 {
         self.caps
     }
 

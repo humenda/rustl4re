@@ -4,6 +4,7 @@ use quote::{quote, ToTokens};
 use std::str::FromStr;
 use syn::{Attribute,
     braced,
+    FnArg,
     Ident,
     parse::{Parse, ParseStream, Result},
     spanned::Spanned,
@@ -16,6 +17,7 @@ pub struct Iface {
     pub protocol: syn::Expr,
     pub opattrs: Vec<syn::Attribute>,
     pub optype: syn::Type,
+    pub demand: Demand,
     pub methods: Vec<IfaceMethod>,
 }
 
@@ -44,9 +46,12 @@ impl Parse for Iface {
                 &iface_name, &iface_attrs)?;
         // validate and enumerate methods
         enumerate_iface_methods(&mut methods)?;
+        // parse demand
+        let demand = count_demand(&methods);
         Ok(Iface {
             name: iface_name, protocol: protocol,
             opattrs: opattrs, optype: optype,
+            demand,
             methods: methods
         })
     }
@@ -236,11 +241,13 @@ pub fn enumerate_iface_methods(methods: &mut Vec<IfaceMethod>)
 }
 
 pub fn gen_iface(iface: &Iface) -> TokenStream {
-    let Iface { name, protocol, opattrs, optype, methods } = iface;
+    let Iface { name, protocol, opattrs, optype, demand, methods } = iface;
+    let caps = demand.caps;
     let gen = quote! {
         l4::iface_back! {
             trait #name {
                 const PROTOCOL_ID: i64 = #protocol;
+                const CAP_DEMAND: u8 = #caps;
                 #(#opattrs)*
                 type OpType = #optype;
                 #(#methods)*
@@ -248,4 +255,43 @@ pub fn gen_iface(iface: &Iface) -> TokenStream {
         }
     };
     gen.into()
+}
+
+/// Receive window demand for a receive endpoint
+pub struct Demand {
+    caps: u8, // more to come
+}
+
+pub fn count_demand(methods: &Vec<IfaceMethod>) -> Demand {
+    let caps = methods.iter().fold(0u8, |count, method| {
+        let sig = &method.inner_ref().sig;
+        // add old count + n capabilities
+        count + sig.decl.inputs.iter().filter(|arg| {
+            // only count "proper" types, no self references, etc.
+            let ty = match *arg {
+                FnArg::Ignored(ty) => ty,
+                FnArg::Captured(argty) => &argty.ty,
+                _ => return false, // do not count
+            };
+            // only accept "paths" such as foo::bar
+            let ty = match ty {
+                syn::Type::Path(p) => p,
+                _ => return false,
+            };
+            // get baz of foo::bar::baz
+            let segment = match ty.path.segments.last() {
+                None => return false, // empty type?
+                Some(segment) => match segment {
+                    syn::punctuated::Pair::Punctuated(t, _) => t,
+                    syn::punctuated::Pair::End(t) => t,
+                },
+            };
+            // finaly, get actual type string
+            match segment.ident.to_string().as_str() {
+                "Cap" => true, // count + 1
+                _ => false,
+            }
+        }).count() as u8
+    });
+    Demand { caps }
 }

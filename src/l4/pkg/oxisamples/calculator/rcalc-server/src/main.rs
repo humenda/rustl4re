@@ -13,7 +13,7 @@ use l4_sys::{l4_utcb};
 // this file)
 include!("../../interface.rs");
 
-#[l4_server]
+#[l4_server(Calculator)]
 struct CalcServer;
 
 impl Calculator for CalcServer {

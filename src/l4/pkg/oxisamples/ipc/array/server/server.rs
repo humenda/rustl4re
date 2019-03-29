@@ -11,7 +11,7 @@ use l4::error::Result;
 
 include!("../interface.rs");
 
-#[l4_server]
+#[l4_server(ArrayHub)]
 struct ArraySrv;
 
 impl ArrayHub for ArraySrv {
