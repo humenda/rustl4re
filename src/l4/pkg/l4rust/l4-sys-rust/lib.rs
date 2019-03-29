@@ -26,7 +26,7 @@ const L4_PAGEMASKU: l4_addr_t = L4_PAGEMASK as l4_addr_t;
 const L4_PAGEMASKUSIZE: usize = L4_PAGEMASK as usize;
 
 #[inline]
-pub fn l4_trunc_page(address: l4_addr_t) -> l4_addr_t {
+pub fn trunc_page(address: l4_addr_t) -> l4_addr_t {
     address & L4_PAGEMASKU
 }
 
@@ -35,14 +35,6 @@ pub fn l4_trunc_page(address: l4_addr_t) -> l4_addr_t {
 /// The given address is rounded up to the next minimal page boundary. On most architectures this is a 4k
 /// page. Check `L4_PAGESIZE` for the minimal page size.
 #[inline]
-pub fn l4_round_page(address: usize) -> l4_addr_t {
+pub fn round_page(address: usize) -> l4_addr_t {
     ((address + L4_PAGESIZE as usize - 1usize) & (L4_PAGEMASK as usize)) as l4_addr_t
 }
-
-/// the function above makes interfacing with l4 C code easy, that one below is more appropriate
-/// (and potentially more efficient) for Rust code
-#[inline]
-pub fn l4_trunc_page_u(address: usize) -> usize {
-    address & L4_PAGEMASKUSIZE
-}
-
