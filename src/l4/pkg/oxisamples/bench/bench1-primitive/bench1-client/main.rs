@@ -25,9 +25,9 @@ fn main() {
     #[cfg(test_string)]
     println!("Starting string ping pong test");
     let mut cycles = Vec::with_capacity(100000);
+    #[cfg(test_string)]
+    let freshly_allocated = String::from("Premature optimization is the root of all evil. Yet we should not pass up our opportunities in that critical 3%.");
     for _ in 0..100000 {
-        #[cfg(test_string)]
-        let freshly_allocated = String::from("luoiufsadoifpiuyxpoibcxvdf");
         let start_counter = unsafe { rdtsc() };
         #[cfg(not(test_string))]
         let _ = client.sub(9, 8).unwrap();

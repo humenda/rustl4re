@@ -29,9 +29,8 @@ impl Bencher for BenchServer {
 
 fn main() {
     println!("Starting benchmark server");
-    let chan = l4re::sys::l4re_env_get_cap("channel").expect(
+    let chan = l4re::env::get_cap::<BenchServer>("channel").expect(
             "Received invalid capability for benchmark server.");
-    let mut srv_impl = BenchServer::new(chan);
     let mut srv_loop = unsafe {
         ipc::LoopBuilder::new_at((*l4re::sys::l4re_env()).main_thread,
             l4_utcb())

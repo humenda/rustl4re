@@ -12,6 +12,7 @@
 using std::max_element;
 using std::min_element;
 
+const char* MY_MESSAGE = "Premature optimization is the root of all evil. Yet we should not pass up our opportunities in that critical 3%.";
 int main() {
     L4::Cap<Bencher> server = L4Re::Env::env()->get_cap<Bencher>("channel");
     if (!server.is_valid()) {
@@ -19,36 +20,42 @@ int main() {
         return 1;
     }
 
+#ifndef TEST_STRING
     l4_uint32_t val1 = 8;
     l4_uint32_t val2 = 5;
     l4_int32_t res = 0;
-    std::vector<unsigned long> v;
-    v.reserve(100000);
+#endif
+    std::vector<unsigned long> cycles;
+    cycles.reserve(100000);
 
     printf("[cc] Starting primitive subtraction test\n");
 
+#ifdef TEST_STRING
+    auto knuth = L4::Ipc::String<>(MY_MESSAGE);
+    auto out = L4::Ipc::String<char>((char *)malloc((knuth.length + 1) * sizeof(char)));
+#endif
     for (unsigned int i = 0; i < 100000; i++) {
         auto start = l4_rdtsc();
 #ifndef TEST_STRING
-        if (server->sub(val1, val2, &res)) {
+        if (server->sub(val1, val2, &res))
 #else
-            // ToDo: not functional
-        if (server->strpingpong(....)) {
+        if (server->strpingpong(knuth, out))
 #endif
+        {
             printf("Error talking to server\n");
             return 1;
         }
         auto end = l4_rdtsc();
-        v.push_back(end - start);
+        cycles.push_back(end - start);
     }
-    std::sort(v.begin(), v.end());
+    std::sort(cycles.begin(), cycles.end());
 
-    printf("min: %lu\n", *min_element(std::begin(v), std::end(v)));
-    printf("max: %lu\n", *max_element(std::begin(v), std::end(v)));
+    printf("min: %lu\n", *min_element(std::begin(cycles), std::end(cycles)));
+    printf("max: %lu\n", *max_element(std::begin(cycles), std::end(cycles)));
     int sum = 0;
-    for (unsigned int i = 0; i < (unsigned int)v.size(); sum += v[i]);
-    printf("avg: %lu\n", sum / v.size());
-    printf("median: %lu\n", v[500]);
+    for (unsigned int i = 0; i < (unsigned int)cycles.size(); sum += cycles[i]);
+    printf("avg: %lu\n", sum / cycles.size());
+    printf("median: %lu\n", cycles[500]);
 
     return 0;
 }

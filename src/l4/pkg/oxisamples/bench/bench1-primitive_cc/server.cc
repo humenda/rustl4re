@@ -20,9 +20,8 @@ public:
   }
 
 #ifdef TEST_STRING
-  int op_strpingpong(Bencher::Rights, L4::Ipc::Array_in_buf<char, unsigned long> const &s, String<> *a) {
-      (void)s; (void)a;
-    //a->copy_in(s.data);
+  int op_strpingpong(Bencher::Rights, L4::Ipc::String<> s, String<char> &a) {
+    a.copy_in(s.data);
     return 0;
   }
 #endif
