@@ -151,3 +151,20 @@ module ned
 module bench1-primitive_cc.cfg
 module bench1-client_cc
 module bench1-server_cc
+
+entry bench2-string
+roottask moe rom/bench2-string.cfg
+module l4re
+module ned
+module bench2-string.cfg
+module bench2-client
+module bench1-server
+
+entry bench2-string_cc
+kernel fiasco -serial_esc
+roottask moe rom/bench2-string_cc.cfg
+module l4re
+module ned
+module bench2-string_cc.cfg
+module bench2-client_cc
+module bench1-server_cc

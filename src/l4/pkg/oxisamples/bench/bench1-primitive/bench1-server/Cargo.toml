@@ -5,5 +5,9 @@ authors = ["Sebastian Humenda <shumenda@gmx.de>"]
 edition = "2018"
 build = "build.rs"
 
+[[bin]]
+name = "bench1-server"
+path = "main.rs"
+
 [build-dependencies]
 l4_derive = { path = "../../../../l4rust/l4_derive-rust" }

@@ -11,9 +11,9 @@ use l4_sys::{l4_utcb};
 
 // include shared interface definition (located relative to the directory of
 // this file)
-include!("../../../interface.rs");
+include!("../../interface.rs");
 
-#[l4_server]
+#[l4_server(Bencher)]
 struct BenchServer;
 
 impl Bencher for BenchServer {
@@ -29,8 +29,9 @@ impl Bencher for BenchServer {
 
 fn main() {
     println!("Starting benchmark server");
-    let chan = l4re::env::get_cap::<BenchServer>("channel").expect(
+    let chan = l4re::env::get_cap::<l4::cap::Untyped>("channel").expect(
             "Received invalid capability for benchmark server.");
+    let mut srv_impl = BenchServer::new(unsafe { chan.raw() });
     let mut srv_loop = unsafe {
         ipc::LoopBuilder::new_at((*l4re::sys::l4re_env()).main_thread,
             l4_utcb())

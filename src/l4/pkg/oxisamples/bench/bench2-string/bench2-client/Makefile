@@ -1,6 +1,7 @@
 PKGDIR	= .
 L4DIR	?= $(PKGDIR)/../../../../..
 
+RSFLAGS += --cfg test_string
 TARGET		= bench2-client
 SRC_RS		= main.rs
 

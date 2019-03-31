@@ -1,6 +1,4 @@
 #![feature(associated_type_defaults)]
-#[cfg(feature = "test_string")]
-
 extern crate core;
 extern crate l4_sys;
 extern crate l4re;
@@ -25,9 +23,10 @@ fn main() {
     #[cfg(test_string)]
     println!("Starting string ping pong test");
     let mut cycles = Vec::with_capacity(100000);
-    #[cfg(test_string)]
-    let freshly_allocated = String::from("Premature optimization is the root of all evil. Yet we should not pass up our opportunities in that critical 3%.");
     for _ in 0..100000 {
+        // value is moved, hence reallocate it
+        #[cfg(test_string)]
+        let freshly_allocated = String::from("Premature optimization is the root of all evil. Yet we should not pass up our opportunities in that critical 3%.");
         let start_counter = unsafe { rdtsc() };
         #[cfg(not(test_string))]
         let _ = client.sub(9, 8).unwrap();

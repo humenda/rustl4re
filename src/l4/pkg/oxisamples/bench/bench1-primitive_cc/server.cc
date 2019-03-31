@@ -13,35 +13,32 @@ static L4Re::Util::Registry_server<L4Re::Util::Br_manager_hooks> server;
 
 class Bench_server : public L4::Epiface_t<Bench_server, Bencher>
 {
-public:
-  int op_sub(Bencher::Rights, l4_uint32_t a, l4_uint32_t b, l4_int32_t &res) {
-    res = (l4_int32_t)a - b;
-    return 0;
-  }
+    public:
+        int op_sub(Bencher::Rights, l4_uint32_t a, l4_uint32_t b, l4_int32_t &res) {
+            res = (l4_int32_t)a - b;
+            return 0;
+        }
 
-#ifdef TEST_STRING
-  int op_strpingpong(Bencher::Rights, L4::Ipc::String<> s, String<char> &a) {
-    a.copy_in(s.data);
-    return 0;
-  }
-#endif
+        int op_strpingpong(Bencher::Rights, L4::Ipc::String<> s, String<char> &a) {
+            a.copy_in(s.data);
+            return 0;
+        }
 };
 
 
-int
+    int
 main()
 {
-  static Bench_server bench;
+    static Bench_server bench;
 
-  // Register Bench server
-  if (!server.registry()->register_obj(&bench, "channel").is_valid())
-    {
-      printf("Could not register my service, is there a 'channel' in the caps table?\n");
-      return 1;
+    // Register Bench server
+    if (!server.registry()->register_obj(&bench, "channel").is_valid()) {
+        printf("Could not register my service, is there a 'channel' in the caps table?\n");
+        return 1;
     }
 
-  // Wait for client requests
-  server.loop();
+    // Wait for client requests
+    server.loop();
 
-  return 0;
+    return 0;
 }
