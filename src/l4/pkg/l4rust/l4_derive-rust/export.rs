@@ -43,6 +43,15 @@ lazy_static::lazy_static! {
 		map.insert("String", ("L4::Ipc::String", Some("l4/sys/cxx/ipc_string")));
         map
     };
+
+    // certain types use different output types (AKA return typees)
+    static ref RUST2CPP_OUTPUT:
+            HashMap<&'static str, &'static str> = {
+        let mut map = HashMap::new();
+        // Rust type: Cpp output type (return type)
+		map.insert("String", "String<char>");
+        map
+    };
 }
  
 pub struct ExportOptions {
@@ -145,7 +154,8 @@ pub fn parse_external_iface(filename: &str) -> Result<Iface> {
 // namespace_usg and includes will be added to the given sets.; empty Strings are allowed for unit
 // structs which cannot be translated to C++ types, since they don't reserve any space
 fn translate_type(ty: &syn::Type, namespace_usg: &mut HashSet<String>,
-        includes: &mut HashSet<String>) -> Result<String> {
+        includes: &mut HashSet<String>,
+        is_output: bool) -> Result<String> {
     let ty = match ty {
         syn::Type::Path(p) => p,
         syn::Type::Tuple(tp) if tp.elems.is_empty() => return Ok(String::new()),
@@ -165,6 +175,11 @@ fn translate_type(ty: &syn::Type, namespace_usg: &mut HashSet<String>,
     let main = segment.ident.to_string();
     let mut translated = String::from(*RUST2CPP_TYPE.get(main.as_str()).unwrap_or(
             &main.as_str()));
+    if is_output {
+        // if output differs from input, use this, otherwise use normal C++ type
+        translated = String::from(*RUST2CPP_OUTPUT.get(
+            &main.as_str()).unwrap_or(&translated.as_str()));
+    }
     if let Some((usg, incl)) = CPPTYPE2NAMESPACE.get(main.as_str()) {
         namespace_usg.insert(format!("{}", usg));
         if let Some(incl) = incl {
@@ -182,7 +197,7 @@ fn translate_type(ty: &syn::Type, namespace_usg: &mut HashSet<String>,
                     syn::GenericArgument::Lifetime(_) => (), // ignore those
                     syn::GenericArgument::Type(t) =>
                         transformed_generics.push_str(&translate_type(&t,
-                                namespace_usg, includes)?),
+                                namespace_usg, includes, is_output)?),
                     _ => err!(args, "Invalid type parameter"),
                 }
                 transformed_generics.push_str(", ");
@@ -277,7 +292,7 @@ fn gen_cpp_rpc_method(method: &TraitItemMethod,
             false => used_vars.push(name.clone()),
         };
         // serialise the argument type to a string
-        let argtype = translate_type(argtype, namespace_usg, includes)?;
+        let argtype = translate_type(argtype, namespace_usg, includes, false)?;
         if idx > 1 { // skip self and no comma before first argument
             cpp.push_str(", ");
         }
@@ -285,9 +300,9 @@ fn gen_cpp_rpc_method(method: &TraitItemMethod,
     }
     // return type
     if let syn::ReturnType::Type(_, ty) = &method.sig.decl.output {
-        let ty = translate_type(ty, namespace_usg, includes)?;
+        let ty = translate_type(ty, namespace_usg, includes, true)?;
         if !ty.is_empty() { // no return type
-            cpp.push_str(&format!(", {} *{}", ty, new_var(&mut used_vars)));
+            cpp.push_str(&format!(", {}& {}", ty, new_var(&mut used_vars)));
         }
     }
     cpp.push_str("));\n");
