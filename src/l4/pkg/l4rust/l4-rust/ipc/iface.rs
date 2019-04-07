@@ -107,8 +107,6 @@ macro_rules! derive_ipc_calls {
                 use $crate::ipc::CapProvider;
                 // ToDo: would re-allocate a capability each time; how to control number of
                 // required slots
-                // ToDo: This is client code, yet implemented in the trait, lacking access to
-                // client state, e.g. the buffer allocator
                 let mut caps = $crate::ipc::types::Bufferless { };
                 let mut mr = $crate::utcb::Utcb::current().mr();
                 // write opcode
