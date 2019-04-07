@@ -26,3 +26,4 @@ default-features = false
 [features]
 default = ["std"]
 std = []
+bench_serialisation = []
