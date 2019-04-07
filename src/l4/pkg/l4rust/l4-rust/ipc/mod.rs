@@ -22,7 +22,9 @@ pub use self::serialise::{Serialiser, Serialisable};
 pub use self::serverloop::{Callback, Loop, LoopBuilder, server_impl_callback};
 pub use self::types::*;
 
-use _core::convert::From;
+use _core::{convert::From,
+    mem::transmute,
+};
 use l4_sys::{l4_msgtag_flags::*, l4_msgtag_t, l4_timeout_t, msgtag};
 use num_traits::{FromPrimitive};
 
@@ -160,7 +162,7 @@ impl MsgTag {
     }
 
     /// Test if flags indicate an error.
-    #[inline]
+    #[inline(always)]
     pub fn has_error(&self) -> bool {
         (self.raw & L4_MSGTAG_ERROR_I) != 0
     }
@@ -174,16 +176,12 @@ impl MsgTag {
     #[inline]
     pub fn result(self) -> Result<MsgTag> {
         if self.has_error() {
-            return Err(Error::from_tag_raw(l4_msgtag_t {
-                  raw: self.raw as i64 }));
+            return unsafe {
+                Err(Error::from_tag_raw(transmute::<Mword, l4_msgtag_t>(self.raw)))
+            }
         }
         if self.label() < 0 {
-            let gerr = ::num_traits::FromPrimitive::from_i64(self.label());
-            return Err(match gerr {
-                Some(e) => Error::Generic(e),
-                None => Error::Protocol(
-                    self.label() as i64)
-            })
+            return Err(Error::from_ipc(self.label()));
         }
         Ok(self)
     }

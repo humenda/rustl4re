@@ -207,8 +207,8 @@ impl Error {
             _ => (),
         };
         // applying the mask makes the integer positive, cast to u32 then
-        match TcrErr::from_u64((code & L4_IPC_ERROR_MASK as i64) as u64) {
-            Some(tc) => Error::Tcr(tc),
+        match GenericErr::from_u64(code.abs() as u64) {
+            Some(tc) => Error::Generic(tc),
             None => Error::UnknownErr(code),
         }
     }
