@@ -133,19 +133,11 @@ unsafe impl<T: Interface + IfaceInit> Serialiser for Cap<T> {
     }
 }
 
-//#[cfg(feature="std")]
 #[cfg(feature="std")]
 unsafe impl<'a> Serialiser for &'a str {
     #[inline]
     unsafe fn read(mr: &mut UtcbMr, _: &mut BufferAccess) -> Result<Self> {
-        let slice = mr.read_slice::<usize, u8>()?;
-        let length = match slice.last() == Some(&0u8) {
-            true => slice.len() - 1,
-            false => slice.len()
-        };
-        core::str::from_utf8(core::slice::from_raw_parts(slice.as_ptr(),
-                length))
-            .map_err(|e| crate::error::Error::InvalidEncoding(Some(e)))
+        mr.read_str()
     }
 
     #[inline]
@@ -159,7 +151,8 @@ unsafe impl<'a> Serialiser for &'a str {
 unsafe impl Serialiser for std::string::String {
     #[inline]
     unsafe fn read(mr: &mut UtcbMr, x: &mut BufferAccess) -> Result<Self> {
-        Ok(std::string::String::from(<&str as Serialiser>::read(mr, x)?))
+        use std::borrow::ToOwned;
+        Ok(mr.read_str()?.to_owned())
     }
 
     #[inline]
