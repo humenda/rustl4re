@@ -255,6 +255,7 @@ impl<U: UtcbRegSize> Registers<U> {
     /// Write given value to the next free, type-aligned slot
     ///
     /// The value is aligned and written into the message registers.
+    #[inline]
     pub unsafe fn write<T: Serialisable>(&mut self, val: T) 
             -> Result<()> {
         let ptr = align::<T>(self.buf);
@@ -275,6 +276,7 @@ impl<U: UtcbRegSize> Registers<U> {
     /// the pointer to the UTCB, with which the object was constructed is valid
     /// and that the memory region behind  has the length of
     /// `UTCB_DATA_SIZE_IN_BYTES`.
+    #[inline]
     pub unsafe fn read<T: Serialisable>(&mut self)  -> Result<T> {
         let ptr = align::<T>(self.buf);
         let next = ptr.offset(size_of::<T>() as isize);
@@ -286,7 +288,6 @@ impl<U: UtcbRegSize> Registers<U> {
     }
 
     /// Write a slice
-    #[inline]
     pub unsafe fn write_slice<Len, T>(&mut self, val: &[T]) -> Result<()>
             where Len: Serialisable + NumCast, T: Serialisable {
         self.write::<Len>(NumCast::from(val.len())
@@ -324,6 +325,26 @@ impl<U: UtcbRegSize> Registers<U> {
         l4_err_if!(end as usize - self.base as usize > U::BUF_SIZE => Generic, OutOfBounds);
         self.buf = end; // advance offset behind last element
         Ok(core::slice::from_raw_parts(ptr as *const _, len))
+    }
+
+    /// Read a str from the message registers
+    ///
+    /// This is not a copy, but operates on the bytes of the message registers.
+    /// Copy this string ASAP and at least before the next IPC takes place.
+    /// 0-bytes from C strings will be discarded
+    pub unsafe fn read_str<'a>(&mut self) -> Result<&'a str> {
+        let len = self.read::<usize>()?;
+        let end = self.buf.offset(len as isize);
+        l4_err_if!(end as usize - self.base as usize > U::BUF_SIZE => Generic, OutOfBounds);
+        let str = core::str::from_utf8(
+                core::slice::from_raw_parts(self.buf,  // ↓ match 0-byte (C str?)
+                        match *end.offset(-1) {
+                            0 => len - 1,
+                            _ => len
+                        }))
+            .map_err(|e| crate::error::Error::InvalidEncoding(Some(e)))?;
+        self.buf = end; // advance offset behind last element
+        Ok(str)
     }
 
     /// Mwords written to this buffer (rounded up)
