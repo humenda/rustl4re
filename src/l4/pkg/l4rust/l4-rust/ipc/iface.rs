@@ -2,9 +2,10 @@
 macro_rules! write_msg {
     ($msg_mr:expr, $($arg:ident: $argty:ty),*) => {
         {
+            use $crate::ipc::Serialiser;
             unsafe {
                 $(
-                    <$argty as $crate::ipc::Serialiser>::write($arg, $msg_mr)?;
+                    <$argty>::write($arg, $msg_mr)?;
                  )*
             }
             Ok(())
@@ -104,6 +105,7 @@ macro_rules! derive_ipc_calls {
             fn $name(&mut self $(, $argname: $type)*)
                         -> $crate::error::Result<$return> 
                             where Self: $crate::cap::Interface {
+                                use $crate::ipc::Serialiser;
                 use $crate::ipc::CapProvider;
                 // ToDo: would re-allocate a capability each time; how to control number of
                 // required slots
@@ -126,7 +128,7 @@ macro_rules! derive_ipc_calls {
                 // return () if "empty" return value, val otherwise
                 unsafe {
                     let mut cap_buf = caps.access_buffers();
-                    <$return as $crate::ipc::Serialiser>::read(
+                    <$return>::read(
                             &mut mr, &mut cap_buf)
                 }
             }
@@ -156,20 +158,26 @@ macro_rules! iface_back {
             $crate::derive_ipc_calls!($proto; $($op_code =>
                     fn $name($($argname: $argtype),*) -> $ret;)*);
 
-            // ToDo: document why op_dispatch implemented here
+            // op_dispatch is auto-generated, since the dispatch "paths" are
+            // known statically. To allow the automated implementation for each
+            // server struct, op_dispatch is a hidden method on this trait. It
+            // is hence also implemented for each client, a price that we need
+            // to pay to get it auto-implemented for a server. The server then
+            // implements the Dispatch trait by calling op_dispatch, which it
+            // can expect to be always there.
             #[inline]
+            #[doc(hidden)]
             fn op_dispatch(&mut self, tag: $crate::ipc::MsgTag,
                     mr: &mut $crate::utcb::UtcbMr,
                     bufs: &mut $crate::ipc::BufferAccess)
                     -> $crate::error::Result<$crate::ipc::MsgTag> {
+                use $crate::ipc::Serialiser;
                 // uncover cheating clients
                 if (tag.words() + tag.items() * $crate::utcb::WORDS_PER_ITEM)
                         > $crate::utcb::Consts::L4_UTCB_GENERIC_DATA_SIZE as usize {
                     return Err($crate::error::Error::Generic(
                             $crate::error::GenericErr::MsgTooLong))
                 }
-                // ToDo: check for correct number of words **AND** **important** correct number of
-                // items
                 if tag.label() != Self::PROTOCOL_ID {
                     return Err($crate::error::Error::Generic(
                             $crate::error::GenericErr::InvalidProt))
