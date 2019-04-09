@@ -1,6 +1,5 @@
 #![feature(associated_type_defaults)]
 extern crate core;
-extern crate l4_sys;
 extern crate l4re;
 extern crate l4;
 extern crate l4_derive;
@@ -15,6 +14,7 @@ include!("../../interface.rs");
 #[l4_client(Bencher)]
 struct Bench;
 
+#[cfg(bench_serialisation)]
 fn format_min_median_max<F>(description: &str, f: F)
         where F: FnMut(&'static l4::ClientCall) -> i64 {
     let aggregated = unsafe { l4::CLIENT_MEASUREMENTS.as_slice() };
@@ -55,6 +55,12 @@ fn main() {
              "Global",
              cycles.iter().min().unwrap(),
              cycles[l4::MEASURE_RUNS / 2], cycles.iter().max().unwrap());
+    #[cfg(bench_serialisation)]
+    { evaluate_microbenchmarks(); }
+}
+
+#[cfg(bench_serialisation)]
+fn evaluate_microbenchmarks() {
     // time call start to serialisation
     format_min_median_max("call start to arg srl", |x: &l4::ClientCall| {
         x.arg_serialisation_start - x.call_start

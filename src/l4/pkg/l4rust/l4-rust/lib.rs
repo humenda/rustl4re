@@ -92,7 +92,6 @@ pub static mut SERVER_MEASUREMENTS: Measurements<ServerDispatch> = Measurements 
     index: 0usize,
 };
 
-#[cfg(bench_serialisation)]
 pub const MEASURE_RUNS: usize = 100000;
 
 #[cfg(bench_serialisation)]

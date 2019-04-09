@@ -28,6 +28,10 @@ class Bench_server : public L4::Epiface_t<Bench_server, Bencher>
             //a.copy_in(s.data);
             return 0;
         }
+
+        int op_check_dataspace(Bencher::Rights, l4_uint64_t size, L4::Ipc::Snd_fpage const &fpage) {
+            printf("unimplemented!\n");
+        }
 };
 
 
