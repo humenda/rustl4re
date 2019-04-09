@@ -1,5 +1,6 @@
 extern crate lazy_static;
 use proc_macro::TokenStream;
+use quote::ToTokens;
 use std::{collections::{HashMap, HashSet},
     string::ToString,
     str::FromStr};
@@ -41,6 +42,8 @@ lazy_static::lazy_static! {
 		map.insert("Opt", ("L4::Ipc::Opt", Some("l4/sys/cxx/ipc_types")));
 		map.insert("Cap", ("L4::Cap", Some("l4/sys/capability")));
 		map.insert("String", ("L4::Ipc::String", Some("l4/sys/cxx/ipc_string")));
+		// l4re
+		map.insert("Dataspace", ("L4Re::Dataspace", Some("l4/re/dataspace")));
         map
     };
 
@@ -159,7 +162,16 @@ fn translate_type(ty: &syn::Type, namespace_usg: &mut HashSet<String>,
     let ty = match ty {
         syn::Type::Path(p) => p,
         syn::Type::Tuple(tp) if tp.elems.is_empty() => return Ok(String::new()),
-        _ => err!("Unrecognised type expression")
+        _ => {
+            let mut ts = proc_macro2::TokenStream::new();
+            ty.to_tokens(&mut ts);
+            let ty = ts.to_string();
+            // unit type?
+            match ty.chars().filter(|&c| !c.is_whitespace()).collect::<String>().as_str() {
+                "()" => return Ok(String::new()),
+                _ => err!(format!("Unrecognised type expression: {}", ty))
+            };
+        }
     };
 
     // only accept Type::Path(…)
