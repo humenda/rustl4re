@@ -22,6 +22,21 @@
 #include <l4/sys/cxx/ipc_types>
 #include <l4/sys/__typeinfo.h>
 
+#ifdef BENCH_SERIALISATION
+typedef struct {
+    l4_int64_t arg_srl_start;
+    l4_int64_t arg_srl_end;
+    l4_int64_t call_start;
+    l4_int64_t ret_desrl_start;
+    l4_int64_t ret_desrl_end;
+} ClientCall;
+#define MEASURE_RUNS 100000
+ClientCall CLIENT_MEASUREMENTS[MEASURE_RUNS];
+l4_uint64_t CLIENT_MEASUREMENTS_IDX = 0;
+#include <l4/util/rdtsc.h>
+#endif
+
+
 /**
  * \file l4/sys/cxx/ipc_iface  Interface Definition Language
  * \sa L4_RPC, L4_INLINE_RPC, L4::Ipc::Call L4::Ipc::Send_only,
@@ -690,6 +705,9 @@ Rpc_inline_call<OP, CLASS, R (ARGS...), FLAGS>::
   typedef typename Kobject_typeid<CLASS>::Iface::Rpcs Rpcs;
   typedef typename Rpcs::template Rpc<OP> Opt;
   typedef Detail::Part<ipc_type, typename Rpcs::opcode_type> Args;
+#ifdef BENCH_SERIALISATION
+  CLIENT_MEASUREMENTS[CLIENT_MEASUREMENTS_IDX].arg_srl_start  = l4_rdtsc();
+#endif
 
   l4_msg_regs_t *mrs = l4_utcb_mr_u(utcb);
 
@@ -730,11 +748,17 @@ Rpc_inline_call<OP, CLASS, R (ARGS...), FLAGS>::
 
       brs->br[bytes / Word_bytes] = 0;
     }
+#ifdef BENCH_SERIALISATION
+  CLIENT_MEASUREMENTS[CLIENT_MEASUREMENTS_IDX].arg_srl_end = l4_rdtsc();
+#endif
 
 
   // here we do the actual IPC ---------------------------------
   l4_msgtag_t t;
   t = l4_msgtag(CLASS::Protocol, send_words, send_items, 0);
+#ifdef BENCH_SERIALISATION
+  CLIENT_MEASUREMENTS[CLIENT_MEASUREMENTS_IDX].call_start = l4_rdtsc();
+#endif
   // do the call (Q: do we need support for timeouts?)
   if (flags_type::Is_call)
     t = l4_ipc_call(cap.cap(), utcb, t, flags_type::timeout());
@@ -748,6 +772,10 @@ Rpc_inline_call<OP, CLASS, R (ARGS...), FLAGS>::
     }
 
   // unmarshalling starts here ---------------------------------
+
+#ifdef BENCH_SERIALISATION
+  CLIENT_MEASUREMENTS[CLIENT_MEASUREMENTS_IDX].ret_desrl_start = l4_rdtsc();
+#endif
 
   // bail out early in the case of an IPC error
   if (L4_UNLIKELY(t.has_error()))
@@ -776,6 +804,10 @@ Rpc_inline_call<OP, CLASS, R (ARGS...), FLAGS>::
 
   if (L4_UNLIKELY(err < 0))
     return return_err<R>(-L4_EMSGTOOSHORT);
+#ifdef BENCH_SERIALISATION
+  CLIENT_MEASUREMENTS[CLIENT_MEASUREMENTS_IDX].ret_desrl_end = l4_rdtsc();
+  CLIENT_MEASUREMENTS_IDX++;
+#endif
 
   return return_code<R>(t);
 }
