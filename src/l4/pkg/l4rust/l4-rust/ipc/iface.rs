@@ -187,11 +187,11 @@ macro_rules! iface_back {
                 $( // iterate over functions and op codes
                     $op_code => unsafe {
                         let user_ret = self.$name(
-                            $(<$argtype as $crate::ipc::Serialiser>::
+                            $(<$argtype>::
                                 read(mr, bufs)?),*
                         )?;
                         mr.reset(); // reset MRs, not the bufs (not used for sending)
-                        <$ret as $crate::ipc::Serialiser>::write(user_ret, mr)?;
+                        <$ret>::write(user_ret, mr)?;
                         // on return, label/protocol is 0 for success and a custom error code
                         // otherwise; negative means some IPC failure
                         Ok($crate::ipc::MsgTag::new(0,
