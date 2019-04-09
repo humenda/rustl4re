@@ -4,6 +4,8 @@
 #include <l4/re/util/object_registry>
 #include <l4/re/util/br_manager>
 #include <l4/sys/cxx/ipc_epiface>
+#include <string.h>
+#include <stdlib.h>
 
 #include "../interface.h"
 
@@ -20,7 +22,10 @@ class Bench_server : public L4::Epiface_t<Bench_server, Bencher>
         }
 
         int op_strpingpong(Bencher::Rights, L4::Ipc::String<> s, String<char> &a) {
-            a.copy_in(s.data);
+            auto base = (char *)malloc(s.length + 1);
+            memcpy(base, s.data, s.length);
+            memcpy(a.data, base, s.length);
+            //a.copy_in(s.data);
             return 0;
         }
 };

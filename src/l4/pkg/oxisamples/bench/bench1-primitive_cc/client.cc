@@ -64,9 +64,6 @@ int main() {
         auto end = l4_rdtsc();
         cycles.push_back(end - start);
 #ifdef TEST_STRING
-        if (out.data[0] == 'P') {
-            printf("error, got string: %s\n", out.data);
-        }
         free(out.data);
 #endif
     }
@@ -78,6 +75,7 @@ int main() {
             *min_element(std::begin(cycles), std::end(cycles)),
             cycles[MEASURE_RUNS / 2],
             *max_element(std::begin(cycles), std::end(cycles)));
+#ifdef BENCH_SERIALISATION
     // client argument serialisation duration
     format_min_median_max("client argument srl", [](ClientCall c) {
         return c.arg_srl_end - c.arg_srl_start;
@@ -94,6 +92,6 @@ int main() {
     format_min_median_max("return value desrl", [](ClientCall c) {
         return c.ret_desrl_end - c.ret_desrl_start;
     });
-
+#endif
     return 0;
 }

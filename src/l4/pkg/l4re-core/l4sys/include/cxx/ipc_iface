@@ -22,6 +22,7 @@
 #include <l4/sys/cxx/ipc_types>
 #include <l4/sys/__typeinfo.h>
 
+#define MEASURE_RUNS 100000
 #ifdef BENCH_SERIALISATION
 typedef struct {
     l4_int64_t arg_srl_start;
@@ -30,7 +31,6 @@ typedef struct {
     l4_int64_t ret_desrl_start;
     l4_int64_t ret_desrl_end;
 } ClientCall;
-#define MEASURE_RUNS 100000
 ClientCall CLIENT_MEASUREMENTS[MEASURE_RUNS];
 l4_uint64_t CLIENT_MEASUREMENTS_IDX = 0;
 #include <l4/util/rdtsc.h>
