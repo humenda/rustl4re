@@ -24,13 +24,25 @@ class Bench_server : public L4::Epiface_t<Bench_server, Bencher>
         int op_strpingpong(Bencher::Rights, L4::Ipc::String<> s, String<char> &a) {
             auto base = (char *)malloc(s.length + 1);
             memcpy(base, s.data, s.length);
-            memcpy(a.data, base, s.length);
-            //a.copy_in(s.data);
+            a.copy_in(s.data);
             return 0;
         }
 
         int op_check_dataspace(Bencher::Rights, l4_uint64_t size, L4::Ipc::Snd_fpage const &fpage) {
-            printf("unimplemented!\n");
+            int r = 0;
+            L4Re::Dataspace::Stats stats;
+            if (!fpage.cap_received()) {
+                printf("no data space capability received, sorry\n");
+                return -L4_EINVAL;
+            }
+            L4::Cap<L4Re::Dataspace> ds = server_iface()->rcv_cap<L4Re::Dataspace>(0);
+            if (!ds.is_valid()) {
+                printf("invalid data space capability\n");
+                return -666;
+            }
+            if ((r = ds->info(&stats))) 
+                return r;
+            return (stats.size == size) == 0;
         }
 };
 
@@ -46,7 +58,8 @@ main()
         return 1;
     }
 
-    // Wait for client requests
+    printf("Server starting\n");
+    // wait for client requests
     server.loop();
 
     return 0;

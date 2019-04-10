@@ -168,3 +168,12 @@ module ned
 module bench2-string_cc.cfg
 module bench2-client_cc
 module bench1-server_cc
+
+entry bench3-cap_cc
+kernel fiasco -serial_esc
+roottask moe rom/bench3-cap_cc.cfg
+module l4re
+module ned
+module bench3-cap_cc.cfg
+module bench3-client_cc
+module bench1-server_cc
