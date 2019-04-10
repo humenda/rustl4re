@@ -259,7 +259,7 @@ pub fn gen_iface(iface: &Iface) -> TokenStream {
 
 /// Receive window demand for a receive endpoint
 pub struct Demand {
-    caps: u8, // more to come
+    pub caps: u8, // more to come
 }
 
 pub fn count_demand(methods: &Vec<IfaceMethod>) -> Demand {
