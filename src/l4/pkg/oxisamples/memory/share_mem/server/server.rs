@@ -22,7 +22,7 @@ include!("../interface.rs");
 struct ShmServer;
 
 impl Shm for ShmServer {
-    fn witter(&mut self, length: u32, ds: Cap<Dataspace>) -> Result<bool> {
+    fn witter(&mut self, length: u32, ds: Cap<Dataspace>) -> Result<()> {
         let mut ds = OwnedCap::from(ds)?;
         let _msg = read_message(&mut ds, length as usize)?;
         panic!("Not implemented!");
