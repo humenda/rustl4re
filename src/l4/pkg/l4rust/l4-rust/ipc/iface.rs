@@ -2,7 +2,6 @@
 macro_rules! write_msg {
     ($msg_mr:expr, $($arg:ident: $argty:ty),*) => {
         {
-            use $crate::ipc::Serialiser;
             unsafe {
                 $(
                     <$argty>::write($arg, $msg_mr)?;

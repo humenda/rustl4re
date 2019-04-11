@@ -150,7 +150,7 @@ unsafe impl<'a> Serialiser for &'a str {
 #[cfg(feature="std")]
 unsafe impl Serialiser for std::string::String {
     #[inline]
-    unsafe fn read(mr: &mut UtcbMr, x: &mut BufferAccess) -> Result<Self> {
+    unsafe fn read(mr: &mut UtcbMr, _x: &mut BufferAccess) -> Result<Self> {
         use std::borrow::ToOwned;
         Ok(mr.read_str()?.to_owned())
     }
