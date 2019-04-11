@@ -1,10 +1,10 @@
-#include <l4/sys/cxx/ipc_iface>
 #include <l4/re/dataspace>
-#include <l4/sys/cxx/ipc_string>
 #include <l4/sys/capability>
+#include <l4/sys/cxx/ipc_iface>
+#include <l4/sys/cxx/ipc_string>
 
-using L4::Ipc::String;
 using L4::Ipc::Cap;
+using L4::Ipc::String;
 using L4Re::Dataspace;
 
 struct Bencher: L4::Kobject_t<Bencher, L4::Kobject, 50159747054, L4::Type_info::Demand_t<1>> {

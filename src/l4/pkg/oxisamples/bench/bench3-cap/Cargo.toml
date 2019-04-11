@@ -1,0 +1,16 @@
+[package]
+name = "bench3-client"
+version = "0.1.0"
+authors = ["Sebastian Humenda <shumenda@gmx.de>"]
+edition = "2018"
+
+[[bin]]
+name = "bench3-client"
+path = "../bench1-primitive/bench1-client/main.rs"
+
+[dependencies]
+
+[features]
+default = ["test_cap"]
+test_string = []
+test_cap = []
