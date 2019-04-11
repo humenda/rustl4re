@@ -236,26 +236,57 @@ pub struct LoopBuilder<H, C> {
     hooks: H
 }
 
-impl LoopBuilder<DefaultHooks, Bufferless> {
+impl LoopBuilder<DefaultHooks, BufferManager> {
     pub unsafe fn new_at(thcap: CapIdx, u: *mut l4_utcb_t) -> Self {
         LoopBuilder {
             thread: thcap,
             utcb: u,
-            buf_mgr: Bufferless { },
+            buf_mgr: BufferManager::new(),
             hooks: DefaultHooks { },
         }
     }
 }
 
 impl<H: LoopHook, C: CapProvider> LoopBuilder<H, C> {
-    pub fn with_buffers(self) -> LoopBuilder<H, BufferManager> {
+    /// Register a different loop hooks
+    pub fn custom_hooks<I: LoopHook>(self, h: I) -> LoopBuilder<I, C> {
+        LoopBuilder {
+            thread: self.thread,
+            utcb: self.utcb,
+            buf_mgr: self.buf_mgr,
+            hooks: h,
+        }
+    }
+
+    /// A server loop unable to allocate capability slots. Useful for very simple IPC services with
+    /// performance constraints.
+    pub fn no_buffers(self) -> LoopBuilder<H, Bufferless> {
         LoopBuilder {
             thread: self.thread, 
             utcb: self.utcb,
-            buf_mgr: BufferManager::new(),
+            buf_mgr: Bufferless { },
             hooks: self.hooks,
         }
     }
+
+    /// Costruct a new server loop builder without buffer allocation
+    ///
+    /// This constructs a new server loop builder which does not offer buffer allocation, e.g. to
+    /// receive capabilities.
+    ///
+    /// # Safety
+    ///
+    /// As long as the UTCB pointer is valid, this function is safe.
+    pub unsafe fn new_at_bufferless(thread: CapIdx, u: *mut l4_utcb_t)
+            -> LoopBuilder<DefaultHooks, Bufferless> {
+        LoopBuilder {
+            thread: thread,
+            utcb: u,
+            buf_mgr: Bufferless { },
+            hooks: DefaultHooks { },
+        }
+    }
+
     pub fn build<'a>(self) -> Loop<'a, H, C> {
         Loop::new(self.thread, self.utcb, self.hooks, self.buf_mgr)
     }
