@@ -268,10 +268,17 @@ pub fn gen_cpp_interface(iface: &Iface, opts: &ExportOptions) -> Result<String> 
     cpp_iface.push_str("> Rpcs;\n};\n");
 
     let mut preamble = String::new();
+    let mut includes = includes.iter().collect::<Vec<&String>>();
+    includes.sort();
     includes.iter().for_each(|x| preamble.push_str(&format!("#include <{}>\n", x)));
-    preamble.push_str("\n");
-    namespace_usg.iter().for_each(|x| preamble.push_str(
-            &format!("using {};\n", x)));
+    let mut namespace_usg = namespace_usg.iter().collect::<Vec<&String>>();
+    namespace_usg.sort();
+    if namespace_usg.len() > 0 {
+        preamble.push_str("\n");
+    }
+
+    namespace_usg.iter().for_each(|x|
+        preamble.push_str(&format!("using {};\n", x)));
     match !preamble.chars().all(|c| c.is_whitespace()) {
         true => Ok(format!("{}\n{}", preamble, cpp_iface)),
         false => Ok(cpp_iface),
