@@ -21,10 +21,14 @@ pub fn main() {
         panic!("No IPC gate found.");
     }
 
-    let text = String::from("This is an example.");
-    // send blah blah using the generated client implementation
-    println!("Instruction the server to say something.");
+    let text = "This is an example.";
+    // send an &str (not requiring allocation)
+    println!("Instructing the server to say something.");
     server.say(text).unwrap();
+    // now do the same using an allocated string
+    println!("Instructing it again to say something.");
+    server.say_conveniently(text.to_string()).unwrap();
+
     println!("Summing a bunch of numbers in an array");
     let nums: Vec<i32> = (50..80i32).collect();
     println!("Sum of all numbers from the BufArray is {}",

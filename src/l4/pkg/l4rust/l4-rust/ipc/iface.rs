@@ -205,17 +205,16 @@ macro_rules! iface_back {
     }
 }
 
-/*
-//
 // for debugging purposes
 use crate::cap::{Cap, Untyped};
 iface_back! {
     trait EchoServer {
         const PROTOCOL_ID: i64 = 0xdeadbeef;
-        type OpType = i32;
+        const CAP_DEMAND: u8 = 0;
+        type OpType = u16;
         0 => fn do_something(&mut self, i: i32) -> u8;
         1 => fn do_something_else(&mut self, ds: Cap<Untyped>, u: bool) -> ();
         2 => fn signal(&mut self) -> ();
+        3 => fn str_without_alloc(&mut self, s: &str) -> ();
     }
 }
-*/
