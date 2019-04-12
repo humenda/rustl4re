@@ -345,6 +345,25 @@ impl<'a, T: Serialisable> core::convert::Into<Vec<T>> for BufArray<'a, T> {
 /// default array / slice type.
 pub type BufArray<'a, T> = Array<'a, u16, T>;
 
+/// Slice-backed string type
+///
+/// This is a slim `&[u8]` wrapper, initialised from an `&str`.  On
+/// initialisation, a `&str` is copied into its `&mut [u8]` slice. To make use
+/// of the string, the `as_str` method can be used to obtain a `&str` reference.
+///
+/// A use case is a `&str` reference received from the framework. Since the
+/// `&str` reference resides within the message registers, it could be
+/// overwritten with the next syscall. Copying it to a stack-allocated buffer
+/// would make a safe access possible and would get around the allocation of a
+/// string.
+///
+/// ```
+/// use l4::ipc::types::BufStr;
+/// let mut on_stack = [0u8; 200];
+/// let b = BufStr::new(&mut on_stack, "Optimise if appropriate.")
+///         .expect("String too long for buffer");
+/// ```
+/// println!("Got: {}", b.as_ref());
 pub struct BufStr<'a>(&'a mut [u8], usize);
 
 impl<'a> BufStr<'a> {
