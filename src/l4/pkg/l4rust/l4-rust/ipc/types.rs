@@ -344,3 +344,28 @@ impl<'a, T: Serialisable> core::convert::Into<Vec<T>> for BufArray<'a, T> {
 /// C++ framework given the length of the message registers. Use this as the
 /// default array / slice type.
 pub type BufArray<'a, T> = Array<'a, u16, T>;
+
+pub struct BufStr<'a>(&'a mut [u8], usize);
+
+impl<'a> BufStr<'a> {
+    /// Initialise a buffer with a string received by an IPC call.
+    ///
+    /// If the buffer is shorter than the given `&str`, `l4::error::Error::GenericErr::MsgTooLong`
+    /// is returned.
+    pub fn new(target: &'a mut [u8], input: &str) -> Result<BufStr<'a>> {
+        l4_err_if!(input.len() > target.len() => Generic, MsgTooLong);
+        unsafe {
+            input.as_bytes().as_ptr().copy_to(target.as_mut_ptr(), input.len());
+        }
+        Ok(BufStr(target, input.len()))
+    }
+}
+
+impl<'a> core::convert::AsRef<str> for BufStr<'a> {
+    fn as_ref(&self) -> &str {
+        unsafe { // this struct can only be initialised from a rust str
+            core::str::from_utf8_unchecked(
+                core::slice::from_raw_parts(self.0.as_ptr(), self.1))
+        }
+    }
+}

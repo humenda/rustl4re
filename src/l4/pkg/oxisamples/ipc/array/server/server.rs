@@ -1,13 +1,13 @@
-// use l4::l4_server;
-//
-// include IPC interface definition
 #![feature(associated_type_defaults)]
 extern crate l4;
 extern crate l4_derive;
 extern crate l4re;
 
 use l4_derive::l4_server;
-use l4::error::Result;
+use l4::{
+    error::Result,
+    ipc::types
+};
 
 include!("../interface.rs");
 
@@ -15,8 +15,19 @@ include!("../interface.rs");
 struct ArraySrv;
 
 impl ArrayHub for ArraySrv {
-    fn say(&mut self, msg: String) -> Result<()> {
-        println!("Client says. `{}`", msg);
+    fn say(&mut self, msg: &str) -> Result<()> {
+        // &str points to message registers, every syscall (including printing to the console) will
+        // destroy this data, copy to stack first; could use String with automated allocation too,
+        // this is a "performance" example:
+        let mut stackbuf = [0u8; 256];
+        let msg = types::BufStr::new(&mut stackbuf, msg)?;
+        println!("Client says: `{}`", msg.as_ref());
+        Ok(())
+    }
+
+    fn say_conveniently(&mut self, msg: String) -> Result<()> {
+        // in contrast to say(), we get an allocated string from the framework, so we're good to go
+        println!("Client says: `{}`", msg);
         Ok(())
     }
 
@@ -24,6 +35,7 @@ impl ArrayHub for ArraySrv {
         println!("Summing up numbers");
         Ok(nums.iter().fold(0i64, |sum, i| sum + *i as i64))
     }
+
 }
 
 fn main() {
