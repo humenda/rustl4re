@@ -22,8 +22,16 @@ impl Bencher for BenchServer {
         Ok(x)
     }
 
-    fn strpingpong(&mut self, a: String) -> Result<String> {
-        Ok(a)
+    fn str2leet(&mut self, a: &str) -> Result<String> {
+        Ok(a.chars().map(|c| match c as char {
+                't' => '7',
+                'a' => '4',
+                'e' => '3',
+                'o' => '0',
+                'l' => '1',
+                's' => '5',
+                k => k,
+            }).collect())
     }
 }
 

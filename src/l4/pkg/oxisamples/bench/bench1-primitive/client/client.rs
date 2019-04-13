@@ -23,7 +23,7 @@ fn format_min_median_max<F>(description: &str, f: F)
     let mut sorted = aggregated.collect::<Vec<i64>>();
     sorted.sort();
     let median = sorted[l4::MEASURE_RUNS / 2];
-    println!("{:<25}{:<10}{:<10}{:<10}",
+    println!("{:<30}{:<10}{:<10}{:<10}",
              description, sorted.iter().min().unwrap(),
              median, sorted.iter().max().unwrap());
 }
@@ -34,24 +34,23 @@ fn main() {
     #[cfg(not(test_string))]
     println!("Starting primitive subtraction test");
     #[cfg(test_string)]
-    println!("Starting string ping pong test");
+    println!("Starting leet speak test");
     let mut cycles = Vec::with_capacity(l4::MEASURE_RUNS);
+    #[cfg(test_string)]
+    let msg = "Premature optimization is the root of all evil. Yet we should not pass up our opportunities in that critical 3%.";
     for _ in 0..l4::MEASURE_RUNS {
-        // value is moved, hence reallocate it
-        #[cfg(test_string)]
-        let freshly_allocated = String::from("Premature optimization is the root of all evil. Yet we should not pass up our opportunities in that critical 3%.");
         let start_counter = unsafe { rdtsc() };
         #[cfg(not(test_string))]
         let _ = client.sub(9, 8).unwrap();
         #[cfg(test_string)]
-        let _ = client.strpingpong(freshly_allocated).unwrap();
+        let _ = client.str2leet(msg).unwrap();
         let end_counter = unsafe { rdtsc() };
         cycles.push(end_counter - start_counter);
     }
     cycles.sort();
     println!("srl → serialisation");
-    println!("{:<25}{:<10}{:<10}{:<10}", "Value", "Min", "Median", "Max");
-    println!("{:<25}{:<10}{:<10}{:<10}",
+    println!("{:<30}{:<10}{:<10}{:<10}", "Value", "Min", "Median", "Max");
+    println!("{:<30}{:<10}{:<10}{:<10}",
              "Global",
              cycles.iter().min().unwrap(),
              cycles[l4::MEASURE_RUNS / 2], cycles.iter().max().unwrap());

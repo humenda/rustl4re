@@ -7,7 +7,7 @@ build = "build.rs"
 
 [[bin]]
 name = "bench1-server"
-path = "main.rs"
+path = "server.rs"
 
 [build-dependencies]
 l4_derive = { path = "../../../../l4rust/l4_derive-rust" }

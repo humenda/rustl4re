@@ -2,6 +2,7 @@
 set -e
 # use micro benchmarking?
 if [ "$1" = "-b" ]; then
+    echo 'Enabled microbenchmarking'
     export RSFLAGS='--cfg bench_serialisation'
     export CPPFLAGS='-DBENCH_SERIALISATION'
 fi
@@ -18,11 +19,11 @@ cd ..
 
 # bench2
 cd bench2-string
-touch */* && make
+touch * ../bench1-primitive/client/client.rs && make
 cd ..
 
 # bench 3
-touch bench1-primitive/*client*/* bench3-cap/* && make -C bench3-cap
+touch bench1-primitive/client/* bench3-cap/* && make -C bench3-cap
 
 ################################################################################
 # C++

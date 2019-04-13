@@ -3,7 +3,7 @@ L4DIR	?= $(PKGDIR)/../../../..
 
 RSFLAGS += --cfg test_cap
 TARGET		= bench3-client
-SRC_RS		= ../bench1-primitive/bench1-client/main.rs
+SRC_RS		= ../bench1-primitive/client/client.rs
 
 REQUIRES_LIBS    = libdl libpthread libc_be_sig l4re_c-util libc_support_misc \
 				   libl4re-wrapper l4-sys-rust l4-rust l4re-rust l4_derive-rust

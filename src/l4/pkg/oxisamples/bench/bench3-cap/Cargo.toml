@@ -6,7 +6,7 @@ edition = "2018"
 
 [[bin]]
 name = "bench3-client"
-path = "../bench1-primitive/bench1-client/main.rs"
+path = "../bench1-primitive/client/client.rs"
 
 [dependencies]
 
