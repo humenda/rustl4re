@@ -95,7 +95,6 @@ impl MsgTag {
     /// flags.
     #[inline]
     pub fn new(label: i64, words: u32, items: u32, flags: u32) -> MsgTag {
-        use core::intrinsics::transmute;
         MsgTag {
             // the C type is a wrapper type and we reimplement its creation function in
             // l4_sys::ipc_basic anyway. We want to safe every cycle here.

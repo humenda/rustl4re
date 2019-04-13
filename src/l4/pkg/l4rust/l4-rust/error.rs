@@ -122,7 +122,6 @@ impl TcrErr {
     #[inline]
     pub fn from_tag_u(tag: l4_msgtag_t, utcb: &Utcb) -> Result<Self> {
         unsafe {
-            use num_traits::FromPrimitive;
              FromPrimitive::from_u64(l4_ipc_error(tag, utcb.raw))
                     .ok_or(Error::UnknownErr(l4_ipc_error(tag, utcb.raw) as i64))
         }

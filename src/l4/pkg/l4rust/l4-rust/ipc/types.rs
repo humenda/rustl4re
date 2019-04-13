@@ -378,6 +378,18 @@ impl<'a> BufStr<'a> {
         }
         Ok(BufStr(target, input.len()))
     }
+
+    pub fn get(&self, i: usize) -> Option<&u8> {
+        self.0.get(i)
+    }
+
+    /// Set a value at the given index
+    ///
+    /// The index references indices of the underlying `&[u8]`.
+    /// The value is None if the referenced index is out of bounds.
+    pub fn set(&mut self, i: usize, v: u8) -> Option<()> {
+        self.0.get_mut(i).map(|old| *old = v)
+    }
 }
 
 impl<'a> core::convert::AsRef<str> for BufStr<'a> {

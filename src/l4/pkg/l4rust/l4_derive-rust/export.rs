@@ -1,4 +1,3 @@
-extern crate lazy_static;
 use proc_macro::TokenStream;
 use quote::ToTokens;
 use std::{collections::{HashMap, HashSet},
@@ -31,7 +30,8 @@ lazy_static::lazy_static! {
         map.insert("bool", "bool");
 		map.insert("Option", "Opt");
 		map.insert("Cap", "Cap");
-		map.insert("String", "String<>"); // need <>, otherwise strange template errors
+		map.insert("String", "String<>"); // needs <>, otherwise strange template errors
+		map.insert("str", "String<>");
         map
     };
 
@@ -162,6 +162,8 @@ fn translate_type(ty: &syn::Type, namespace_usg: &mut HashSet<String>,
     let ty = match ty {
         syn::Type::Path(p) => p,
         syn::Type::Tuple(tp) if tp.elems.is_empty() => return Ok(String::new()),
+        syn::Type::Reference(r) => return translate_type(&*r.elem, namespace_usg,
+                includes, is_output),
         _ => {
             let mut ts = proc_macro2::TokenStream::new();
             ty.to_tokens(&mut ts);
@@ -169,7 +171,7 @@ fn translate_type(ty: &syn::Type, namespace_usg: &mut HashSet<String>,
             // unit type?
             match ty.chars().filter(|&c| !c.is_whitespace()).collect::<String>().as_str() {
                 "()" => return Ok(String::new()),
-                _ => err!(format!("Unrecognised type expression: {}", ty))
+                n => err!(format!("Unrecognised type expression: {}", n))
             };
         }
     };
@@ -185,6 +187,9 @@ fn translate_type(ty: &syn::Type, namespace_usg: &mut HashSet<String>,
     };
 
     let main = segment.ident.to_string();
+    if is_output && main == "str" {
+        err!("&str is not allowed as return type at the moment, use String instead");
+    }
     let mut translated = String::from(*RUST2CPP_TYPE.get(main.as_str()).unwrap_or(
             &main.as_str()));
     if is_output {
