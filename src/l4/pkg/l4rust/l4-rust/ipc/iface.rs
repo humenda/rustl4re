@@ -217,7 +217,7 @@ macro_rules! iface_back {
                 #[cfg(bench_serialisation)]
                 use core::arch::x86_64::_rdtsc as rdtsc;
                 #[cfg(bench_serialisation)]
-                let sd = unsafe { SERVER_MEASUREMENTS.last() };
+                let sd = unsafe { (*SERVER_MEASUREMENTS).last() };
                 #[cfg(bench_serialisation)]
                 { sd.srv_dispatch = unsafe { rdtsc() }; };
                 // uncover cheating clients

@@ -141,9 +141,9 @@ pub fn server_impl_callback<T>(ptr: *mut c_void, tag: MsgTag,
         hook_start: 0, hook_end: 0
     };
     #[cfg(bench_serialisation)]
-    unsafe { SERVER_MEASUREMENTS.push(sd); };
+    unsafe { (*SERVER_MEASUREMENTS).push(sd); };
     #[cfg(bench_serialisation)]
-    unsafe { SERVER_MEASUREMENTS.last().loop_dispatch = rdtsc() };
+    unsafe { (*SERVER_MEASUREMENTS).last().loop_dispatch = rdtsc() };
     unsafe {
         let ptr = ptr as *mut T;
         (*ptr).dispatch(tag, mr, bufs)
@@ -279,7 +279,7 @@ impl<'a, T: LoopHook, C: CapProvider> Loop<'a, T, C> {
         #[cfg(bench_serialisation)]
         unsafe {
             let hook_end = rdtsc();
-            let mut sd = SERVER_MEASUREMENTS.last();
+            let mut sd = (*SERVER_MEASUREMENTS).last();
             sd.hook_start = hook_start;
             sd.hook_end = hook_end;
         }

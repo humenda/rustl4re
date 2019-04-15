@@ -11,3 +11,6 @@ path = "server.rs"
 
 [build-dependencies]
 l4_derive = { path = "../../../../l4rust/l4_derive-rust" }
+
+[dependencies]
+libc = "0.2.51"

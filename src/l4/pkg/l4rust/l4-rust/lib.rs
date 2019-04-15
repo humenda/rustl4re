@@ -54,6 +54,7 @@ pub struct ClientCall {
     // end of the auto-generated call, i.e. after reading the return value
     pub call_end: i64
 }
+
 impl ClientCall { pub const fn new() -> Self { ClientCall {
     call_start: 0, arg_serialisation_start: 0, arg_serialisation_end: 0,
     ipc_call_start: 0, return_val_start: 0, call_end: 0
@@ -86,11 +87,17 @@ pub static mut CLIENT_MEASUREMENTS: Measurements<ClientCall> = Measurements {
     buf: [ClientCall::new(); MEASURE_RUNS],
     index: 0usize,
 };
+
+// pointer for server-side measurements; normally redirected to a shared memory region, but has a
+// backup for safety reasons
+//#[cfg(bench_serialisation)]
+//pub static mut SERVER_MEASUREMENTS_BACKUP: Measurements<ServerDispatch> = Measurements {
+//    buf: [ServerDispatch::new(); MEASURE_RUNS],
+//    index: 0usize,
+//};
 #[cfg(bench_serialisation)]
-pub static mut SERVER_MEASUREMENTS: Measurements<ServerDispatch> = Measurements {
-    buf: [ServerDispatch::new(); MEASURE_RUNS],
-    index: 0usize,
-};
+pub static mut SERVER_MEASUREMENTS: *mut Measurements<ServerDispatch> =
+        0 as *mut _;
 
 pub const MEASURE_RUNS: usize = 100000;
 
