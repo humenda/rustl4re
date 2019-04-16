@@ -71,7 +71,7 @@ unsafe fn free_ds(base: *mut c_void, ds: l4_cap_idx_t) -> Result<(), String> {
         0 => (),
         r => return Err(format!("Allocation failed with {}", r)),
     };
-    // free memory at C allocator
+    // free capability index (from capability allocator)
     l4re::sys::l4re_util_cap_free_um(ds);
     Ok(())
 }
