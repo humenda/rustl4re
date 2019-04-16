@@ -15,6 +15,13 @@ pub unsafe fn l4_ipc_call(dest: l4_cap_idx_t, utcb: *mut l4_utcb_t,
     l4_ipc_call_w(dest, utcb, tag, timeout)
 }
 
+#[must_use]
+#[inline(always)]
+pub unsafe fn l4_ipc_send(dest: l4_cap_idx_t, utcb: *mut l4_utcb_t,
+            tag: l4_msgtag_t, timeout: l4_timeout_t) -> l4_msgtag_t {
+    l4_ipc_send_w(dest, utcb, tag, timeout)
+}
+
 #[inline]
 pub unsafe fn l4_ipc_error(tag: l4_msgtag_t, utcb: *mut l4_utcb_t) -> l4_umword_t {
     l4_ipc_error_w(tag, utcb)

@@ -230,6 +230,12 @@ impl Error {
     }
 }
 
+#[cfg(feature="std")]
+impl core::convert::From<std::string::FromUtf8Error> for Error {
+    fn from(u: std::string::FromUtf8Error) -> Self {
+        Error::InvalidEncoding(Some(u.utf8_error()))
+    }
+}
 pub type Result<T> = ::_core::result::Result<T, Error>;
 
 /// Short-hand macro for several `l4::error::Error`  cases
