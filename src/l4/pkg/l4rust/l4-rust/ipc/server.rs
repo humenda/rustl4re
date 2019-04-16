@@ -134,7 +134,7 @@ pub fn server_impl_callback<T>(ptr: *mut c_void, tag: MsgTag,
     #[cfg(bench_serialisation)]
     let sd = ServerDispatch { 
         loop_dispatch: 0,
-        srv_dispatch: 0,
+        iface_dispatch: 0,
         opcode_dispatch: 0,
         retval_serialisation_start: 0,
         result_returned: 0,

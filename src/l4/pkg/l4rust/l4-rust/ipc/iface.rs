@@ -89,10 +89,9 @@ macro_rules! derive_ipc_calls {
                 use $crate::ipc::CapProvider;
                 use core::arch::x86_64::_rdtsc as rdtsc;
                 use $crate::{CLIENT_MEASUREMENTS, ClientCall};
-                let mut cc = ClientCall { call_start: 0,
-                        arg_serialisation_start: 0, arg_serialisation_end: 0,
-                        ipc_call_start: 0, return_val_start: 0, call_end: 0 };
-                { cc.call_start = unsafe { rdtsc() }; };
+                let mut cc = ClientCall { arg_serialisation_start: 0,
+                        arg_serialisation_end: 0, ipc_call_start: 0,
+                        return_val_start: 0 };
                 // ToDo: would re-allocate a capability each time; how to control number of
                 // required slots
                 let mut caps = $crate::ipc::types::Bufferless { };
@@ -102,12 +101,12 @@ macro_rules! derive_ipc_calls {
                     mr.write($opcode)?;
                 }
                 { cc.arg_serialisation_start = unsafe { rdtsc() }; };
-                $crate::write_msg!(&mut mr, $($argname: $type),*)?;
+                $crate::write_msg!(&mut mr, $($argname: $type),*);
                 // get the protocol for the msg tag label
                 unsafe { cc.arg_serialisation_end = rdtsc(); }; // MsgTag::new() is very efficient, not benchmarked
                 let tag = $crate::ipc::MsgTag::new($proto, mr.words(),
                         mr.items(), 0);
-                unsafe { cc.call_start = rdtsc(); }; // MsgTag::new() is very efficient, not benchmarked
+                unsafe { cc.ipc_call_start = rdtsc(); }; // MsgTag::new() is very efficient, not benchmarked
                 let _restag = $crate::ipc::MsgTag::from(unsafe {
                         $crate::sys::l4_ipc_call(self.raw(),
                                 $crate::sys::l4_utcb(), tag.raw(),
@@ -120,7 +119,6 @@ macro_rules! derive_ipc_calls {
                     let mut cap_buf = caps.access_buffers();
                     <$return>::read(&mut mr, &mut cap_buf)
                 };
-                unsafe { cc.call_end = rdtsc(); };
                 unsafe { CLIENT_MEASUREMENTS.push(cc); }
                 res
             }
@@ -219,7 +217,7 @@ macro_rules! iface_back {
                 #[cfg(bench_serialisation)]
                 let sd = unsafe { (*SERVER_MEASUREMENTS).last() };
                 #[cfg(bench_serialisation)]
-                { sd.srv_dispatch = unsafe { rdtsc() }; };
+                { sd.iface_dispatch = unsafe { rdtsc() }; };
                 // uncover cheating clients
                 if (tag.words() + tag.items() * $crate::utcb::WORDS_PER_ITEM)
                         > $crate::utcb::Consts::L4_UTCB_GENERIC_DATA_SIZE as usize {

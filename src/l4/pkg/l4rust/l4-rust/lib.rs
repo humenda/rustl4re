@@ -41,8 +41,6 @@ pub use sys::{round_page, trunc_page};
 
 #[derive(Clone, Copy)]
 pub struct ClientCall {
-    // begin of auto-derived IPC call
-    pub call_start: i64,
     // begin of serialisation of method parameters (after opcode)
     pub arg_serialisation_start: i64,
     // end of it
@@ -51,13 +49,11 @@ pub struct ClientCall {
     pub ipc_call_start: i64,
     // after IPC call, return value is going to be read; includes error checking
     pub return_val_start: i64, // doesn't have end, ended by call itself
-    // end of the auto-generated call, i.e. after reading the return value
-    pub call_end: i64
 }
 
 impl ClientCall { pub const fn new() -> Self { ClientCall {
-    call_start: 0, arg_serialisation_start: 0, arg_serialisation_end: 0,
-    ipc_call_start: 0, return_val_start: 0, call_end: 0
+    arg_serialisation_start: 0, arg_serialisation_end: 0, ipc_call_start: 0,
+    return_val_start: 0,
 }}}
 
 #[derive(Clone, Copy)]
@@ -65,7 +61,7 @@ pub struct ServerDispatch {
     /// label received from kernel, wild casting starts
     pub loop_dispatch: i64,
     /// op_dispatch auto-implemented by iface! macro starts
-    pub srv_dispatch: i64,
+    pub iface_dispatch: i64,
     // opcode is matched to dispatch to appropriate function and function is
     // executed
     pub opcode_dispatch: i64,
@@ -78,7 +74,7 @@ pub struct ServerDispatch {
     pub hook_end: i64,
 }
 impl ServerDispatch { pub const fn new() -> Self { ServerDispatch {
-    loop_dispatch: 0, srv_dispatch: 0, opcode_dispatch: 0,
+    loop_dispatch: 0, iface_dispatch: 0, opcode_dispatch: 0,
     retval_serialisation_start: 0, result_returned: 0, hook_start: 0, hook_end: 0,
 }}}
 

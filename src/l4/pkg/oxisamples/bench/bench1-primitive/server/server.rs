@@ -4,11 +4,11 @@ extern crate l4_sys;
 extern crate l4_derive;
 extern crate l4;
 extern crate l4re;
-extern crate libc;
 
 use l4::{error::Result, ipc};
 use l4_derive::{iface, l4_server};
 use l4_sys::{l4_utcb};
+#[cfg(bench_serialisation)]
 use l4re::{OwnedCap,
     mem::Dataspace};
 
@@ -39,6 +39,7 @@ impl Bencher for BenchServer {
 }
 
 // set up shared memory for collection measurements from the server
+#[cfg(bench_serialisation)]
 fn setup_shm() -> OwnedCap<Dataspace> {
     use l4::sys::*;
     let ds = OwnedCap::<Dataspace>::alloc();
@@ -55,7 +56,7 @@ fn setup_shm() -> OwnedCap<Dataspace> {
         let tag = l4::ipc::MsgTag::from(l4_ipc_wait(l4_utcb(), &mut label,
                 timeout_never())).result().unwrap();
         if tag.words() != 1 {
-            panic!("Err, received {} words", tag.words());
+            panic!("Err, received {} words and {} items", tag.words(), tag.items());
         }
         (*l4_utcb_mr()).mr[0]
     };

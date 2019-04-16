@@ -5,15 +5,12 @@ extern crate l4;
 extern crate l4_derive;
 
 // required for interface initialisation
-use l4::{error::Error,
-    cap::Cap,
-    ipc::MsgTag};
+use l4::cap::Cap;
+#[cfg(bench_serialisation)]
+use l4::{ipc::MsgTag, error::Error};
 use l4_derive::{iface, l4_client};
-use l4re::{
-    mem::Dataspace,
-    OwnedCap
-};
-
+#[cfg(bench_serialisation)]
+use l4re::{OwnedCap, mem::Dataspace};
 use core::{arch::x86_64::_rdtsc as rdtsc, iter::Iterator};
 
 include!("../../interface.rs");
@@ -42,6 +39,10 @@ impl Shm {
             let _ = MsgTag::from(l4::sys::l4_ipc_send(srv.raw(),
                     l4_utcb(), l4::ipc::MsgTag::new(9876, 1, 1, 0).raw(),
                     l4::sys::timeout_never())).result().unwrap();
+        }
+        // Allows client-side access to server measurements using a global
+        unsafe {
+            l4::SERVER_MEASUREMENTS = addr as *mut _;
         }
         Ok(Shm(addr, cap))
     }
@@ -96,13 +97,11 @@ impl core::ops::Drop for Shm {
     }
 }
 
-
-#[cfg(bench_serialisation)]
-fn format_min_median_max<F>(description: &str, f: F)
-        where F: FnMut(&'static l4::ClientCall) -> i64 {
-    let aggregated = unsafe { l4::CLIENT_MEASUREMENTS.as_slice() }
-            .iter().map(f);
-    let mut sorted = aggregated.collect::<Vec<i64>>();
+// iterate over M (ServerDispatch or ClientCall) with an iterator I, applying a function F
+fn format_min_median_max<'a, I, F, M: 'a>(iter: I, description: &str, f: F)
+        where F: FnMut(M) -> i64,
+              I: std::iter::Iterator<Item = M> {
+    let mut sorted = iter.map(f).collect::<Vec<i64>>();
     sorted.sort();
     let median = sorted[l4::MEASURE_RUNS / 2];
     println!("{:<30}{:<10}{:<10}{:<10}",
@@ -131,39 +130,50 @@ fn main() {
         #[cfg(test_string)]
         let _ = server.str2leet(msg).unwrap();
         let end_counter = unsafe { rdtsc() };
-        cycles.push(end_counter - start_counter);
+        cycles.push((start_counter, end_counter));
     }
-    cycles.sort();
-    println!("srl → serialisation");
     println!("{:<30}{:<10}{:<10}{:<10}", "Value", "Min", "Median", "Max");
-    println!("{:<30}{:<10}{:<10}{:<10}",
-             "Global",
-             cycles.iter().min().unwrap(),
-             cycles[l4::MEASURE_RUNS / 2], cycles.iter().max().unwrap());
+    format_min_median_max(cycles.iter(), "Global",
+            |(start, end)| end - start);
+
     #[cfg(bench_serialisation)]
-    { evaluate_microbenchmarks(); }
+    { evaluate_microbenchmarks(cycles); }
 }
 
 #[cfg(bench_serialisation)]
-fn evaluate_microbenchmarks() {
+fn evaluate_microbenchmarks(global: Vec<(i64, i64)>) {
+    let clnt_iter = || unsafe { l4::CLIENT_MEASUREMENTS.as_slice().iter() };
+    let srv_iter = || unsafe { (*l4::SERVER_MEASUREMENTS).as_slice().iter() };
+    let clnt_with_srv = || clnt_iter().zip(srv_iter());
     // time call start to serialisation
-    format_min_median_max("call start to arg srl", |x: &l4::ClientCall| {
-        x.arg_serialisation_start - x.call_start
-    });
+    format_min_median_max(clnt_iter().zip(global.iter()),
+            "Call start → writing args",
+            |(c, (s, _))| c.arg_serialisation_start - s);
     // time of argument serialisation
-    format_min_median_max("argument srl", |x: &l4::ClientCall| {
+    format_min_median_max(clnt_iter(), "Writing args to registers", |x: &l4::ClientCall| {
         x.arg_serialisation_end - x.arg_serialisation_start
     });
     // message tag creation
-    format_min_median_max("msg tag creation", |x: &l4::ClientCall| {
-        x.call_start - x.arg_serialisation_end
+    format_min_median_max(clnt_iter(), "Msg tag creation", |x: &l4::ClientCall| {
+        x.ipc_call_start - x.arg_serialisation_end
     });
-    // call length
-    format_min_median_max("IPC call", |x: &l4::ClientCall| {
-        x.return_val_start - x.call_start
-    });
+    format_min_median_max(clnt_with_srv(), "IPC send to server",
+        |(c, s)| s.loop_dispatch - c.ipc_call_start);
+    format_min_median_max(srv_iter(), "Srv loop → interface dispatch",
+        |s| s.iface_dispatch - s.loop_dispatch);
+    format_min_median_max(srv_iter(), "Iface disp. → opcode dispatch",
+        |s| s.opcode_dispatch - s.iface_dispatch);
+    format_min_median_max(srv_iter(), "Reading args + exc user impl",
+        |s| s.retval_serialisation_start - s.opcode_dispatch);
+    format_min_median_max(srv_iter(), "Write return value",
+        |s| s.result_returned - s.retval_serialisation_start);
+    format_min_median_max(srv_iter(), "Ret val written → hooks",
+        |s| s.hook_start - s.result_returned);
+    format_min_median_max(srv_iter(), "Calling server loop hooks",
+        |s| s.hook_end - s.hook_start);
+    format_min_median_max(clnt_with_srv(), "IPC reply to client",
+        |(c, s)| c.return_val_start - s.hook_end);
     // return deserialisation
-    format_min_median_max("Return value desrl", |x: &l4::ClientCall| {
-        x.call_end - x.return_val_start
-    });
+    format_min_median_max(clnt_iter().zip(global.iter()),
+        "Read return value", |(c, (_, e))| e - c.return_val_start);
 }
