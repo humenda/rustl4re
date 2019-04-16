@@ -1,5 +1,5 @@
 PKGDIR	= .
-L4DIR	?= $(PKGDIR)/../../../../..
+L4DIR	?= $(PKGDIR)/../../../..
 
 TARGET		= shm_rust-server
 SRC_RS		= server.rs
