@@ -121,6 +121,12 @@ pub enum MemAllocFlags {
     SuperPages  = 0x04,
 }
 
+// TODO: this interface is not functional
+// The Mem_alloc (C++) interface just mimics the ipc_iface framework, but is actually a plain C++
+// task. To expose this interface, the factory interface (also mimicking the framework interface to
+// some extend) needs to be ported and then this stub needs to be rewritten to expose Cap, Demand,
+// etc. manually.
+/*
 /// Memory allocation interface.
 ///
 /// The memory-allocator API is the basic API to allocate memory from the L4Re
@@ -162,3 +168,4 @@ iface! {
 
 #[l4_client(MemoryAllocator, demand = 1)]
 pub struct MemAlloc;
+*/
