@@ -17,6 +17,9 @@ EXTERN l4_msgtag_t l4_ipc_call_w(l4_cap_idx_t object,
         l4_utcb_t *utcb, l4_msgtag_t tag,
         l4_timeout_t timeout);
 
+EXTERN l4_msgtag_t l4_ipc_send_w(l4_cap_idx_t object,
+        l4_utcb_t *utcb, l4_msgtag_t tag, l4_timeout_t timeout);
+
 EXTERN l4_umword_t l4_ipc_error_w(l4_msgtag_t tag, l4_utcb_t *utcb);
 
 EXTERN l4_msgtag_t l4_ipc_wait_w(l4_utcb_t *utcb, l4_umword_t *label,

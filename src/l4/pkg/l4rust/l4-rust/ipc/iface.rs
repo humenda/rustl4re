@@ -7,8 +7,7 @@ macro_rules! write_msg {
                     <$argty>::write($arg, $msg_mr)?;
                  )*
             }
-            Ok(())
-        }
+        };
     }
 }
 
@@ -114,7 +113,7 @@ macro_rules! derive_ipc_calls {
                 unsafe {
                     mr.write($opcode)?;
                 }
-                $crate::write_msg!(&mut mr, $($argname: $type),*)?;
+                $crate::write_msg!(&mut mr, $($argname: $type),*);
                 // get the protocol for the msg tag label
                 let tag = $crate::ipc::MsgTag::new($proto, mr.words(),
                         mr.items(), 0);

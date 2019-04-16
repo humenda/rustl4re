@@ -23,7 +23,6 @@ pub use crate::platform::*;
 pub use crate::task::*;
 
 const L4_PAGEMASKU: l4_addr_t = L4_PAGEMASK as l4_addr_t;
-const L4_PAGEMASKUSIZE: usize = L4_PAGEMASK as usize;
 
 #[inline]
 pub fn trunc_page(address: l4_addr_t) -> l4_addr_t {
