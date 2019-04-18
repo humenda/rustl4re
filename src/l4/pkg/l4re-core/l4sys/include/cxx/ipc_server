@@ -22,6 +22,9 @@
 #include <l4/sys/cxx/ipc_iface>
 #include <l4/sys/__typeinfo.h>
 #include <stddef.h>
+#ifdef BENCH_SERIALISATION
+#include <l4/util/rdtsc.h>
+#endif
 
 namespace L4 {
 namespace Ipc {
@@ -185,6 +188,9 @@ handle_svr_obj_call(O *o, l4_utcb_t *utcb, l4_msgtag_t tag, ARGS ...args)
     Short_err = Do_reply ? -L4_EMSGTOOSHORT : -L4_ENOREPLY,
   };
 
+#ifdef BENCH_SERIALISATION
+  SERVER_MEASUREMENTS[SERVER_MEASUREMENTS_IDX].iface_dispatch = l4_rdtsc();
+#endif
   // XXX: send a reply or just do not reply in case of a cheating client
   if (L4_UNLIKELY(tag.words() + tag.items() * Item_words > Mr_words))
     return l4_msgtag(Short_err, 0, 0, 0);
@@ -197,6 +203,9 @@ handle_svr_obj_call(O *o, l4_utcb_t *utcb, l4_msgtag_t tag, ARGS ...args)
 
   unsigned const in_bytes = tag.words() * Word_bytes;
 
+#ifdef BENCH_SERIALISATION
+  SERVER_MEASUREMENTS[SERVER_MEASUREMENTS_IDX].opcode_dispatch = l4_rdtsc();
+#endif
   in_pos = pack.template get<Do_in_data>(&mrs->mr[0], in_pos, in_bytes);
 
   if (L4_UNLIKELY(in_pos < 0))
@@ -216,6 +225,9 @@ handle_svr_obj_call(O *o, l4_utcb_t *utcb, l4_msgtag_t tag, ARGS ...args)
 
   // call the server function
   long ret = pack.template obj_call<O, typename IPC_TYPE::rpc, ARGS...>(o, args...);
+#ifdef BENCH_SERIALISATION
+  SERVER_MEASUREMENTS[SERVER_MEASUREMENTS_IDX].retval_serialisation_start = l4_rdtsc();
+#endif
 
   if (!Do_reply)
     return l4_msgtag(-L4_ENOREPLY, 0, 0, 0);
@@ -339,8 +351,12 @@ template<typename RPCS, typename OBJ, typename ...ARGS>
 static l4_msgtag_t
 dispatch_call(OBJ *o, l4_utcb_t *utcb, l4_msgtag_t tag, unsigned rights, ARGS ...a)
 {
-  return Dispatch_call<typename RPCS::type, typename RPCS::opcode_type>::template
+  auto x = Dispatch_call<typename RPCS::type, typename RPCS::opcode_type>::template
     call<OBJ, ARGS...>(o, utcb, tag, rights, a...);
+#ifdef BENCH_SERIALISATION
+  SERVER_MEASUREMENTS[SERVER_MEASUREMENTS_IDX].result_returned = l4_rdtsc();
+#endif
+  return x;
 }
 
 } // namespace Msg

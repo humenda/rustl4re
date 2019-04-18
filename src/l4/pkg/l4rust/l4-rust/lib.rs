@@ -60,10 +60,11 @@ impl ClientCall { pub const fn new() -> Self { ClientCall {
 pub struct ServerDispatch {
     /// label received from kernel, wild casting starts
     pub loop_dispatch: i64,
-    /// op_dispatch auto-implemented by iface! macro starts
+    /// op_dispatch auto-implemented by iface! macro starts, about to check
+    /// message tag and read opcode
     pub iface_dispatch: i64,
-    // opcode is matched to dispatch to appropriate function and function is
-    // executed
+    // opcode is matched to dispatch to appropriate function, just before
+    // function is executed
     pub opcode_dispatch: i64,
     // after user-implemented function handler
     pub retval_serialisation_start: i64,

@@ -18,6 +18,9 @@
 #pragma once
 
 #include "ipc_epiface"
+#ifdef BENCH_SERIALISATION
+#include <l4/util/rdtsc.h>
+#endif
 
 namespace L4 {
 
@@ -373,7 +376,13 @@ Server<L>::internal_loop(DISPATCH dispatch)
           continue;
         }
 
+#ifdef BENCH_SERIALISATION
+      SERVER_MEASUREMENTS[SERVER_MEASUREMENTS_IDX].loop_dispatch = l4_rdtsc();
+#endif
       r = dispatch(res, p, _utcb);
+#ifdef BENCH_SERIALISATION
+      SERVER_MEASUREMENTS[SERVER_MEASUREMENTS_IDX++].ipc_srv_call_end = l4_rdtsc();
+#endif
     }
 }
 

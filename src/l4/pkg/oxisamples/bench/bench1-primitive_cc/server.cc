@@ -64,9 +64,7 @@ class Bench_server : public L4::Epiface_t<Bench_server, Bencher>
 };
 
 
-    int
-main()
-{
+int main() {
     static Bench_server bench;
 
     // Register Bench server

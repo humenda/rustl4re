@@ -4,6 +4,7 @@
 #include <l4/re/util/cap_alloc>
 #include <l4/util/rdtsc.h>
 #include <algorithm>
+#include <utility>
 #include <vector>
 
 #include <stdio.h>
@@ -15,15 +16,47 @@ using std::min_element;
 const char* MY_MESSAGE = "Premature optimization is the root of all evil. Yet we should not pass up our opportunities in that critical 3%.";
 
 #ifdef BENCH_SERIALISATION
-void format_min_median_max(const char* msg, l4_int64_t f(ClientCall));
-void format_min_median_max(const char* msg, l4_int64_t f(ClientCall)) {
+/*
+#include <iterator>
+#include <utility>
+class ZipIterator: public std::iterator<std::forward_iterator_tag,
+            std::pair<ClientCall, ServerDispatch>> {
+    l4_uint64_t idx_a;
+    l4_uint64_t idx_b;
+public:
+    ZipIterator() : idx_a(0), idx_b(0) { }
+    ~ZipIterator() { }
+    ZipIterator& operator=(const ZipIterator& o) {
+        idx_a = o.idx_a;
+        idx_b = o.idx_b;
+        return *this;
+    }
+    ZipIterator& operator++() {
+        idx_a++; idx_b++;
+        // no bound checks
+        return *this;
+    }
+    std::pair<ClientCall, ServerDispatch> operator*() const {
+        return std::make_pair(CLIENT_MEASUREMENTS[idx_a], SERVER_MEASUREMENTS[idx_b]);
+    }
+};
+*/
+
+template<typename T1, typename T2>
+static void format_min_median_max(T1* src1, T2* src2, const char* msg,
+        l4_int64_t f(T1, T2)) {
     auto v = std::vector<l4_int64_t>();
     for (l4_uint64_t i = 0; i < MEASURE_RUNS; i++) {
-        v.push_back(f(CLIENT_MEASUREMENTS[i]));
+        v.push_back(f(src1[i], src2[i]));
     }
-   std::sort(v.begin(), v.end());
-    printf("%-25s%-10lli%-10lli%-10lli\n", msg, v[0], v[MEASURE_RUNS/2],
+    std::sort(v.begin(), v.end());
+    printf("%-30s%-10lli%-10lli%-10lli\n", msg, v[0], v[MEASURE_RUNS/2],
             v.back());
+}
+
+static void format_min_median_max(const char* msg, l4_int64_t f(ClientCall, ServerDispatch)) {
+    return format_min_median_max<ClientCall, ServerDispatch>(
+            CLIENT_MEASUREMENTS, SERVER_MEASUREMENTS, msg, f);
 }
 #endif
 
@@ -95,7 +128,7 @@ int main() {
     size_t size = mk_ds(&shm, ds);
     printf("[cc] Starting capability benchmarking client\n");
 #endif
-    std::vector<unsigned long> cycles;
+    std::vector<std::pair<long long, long long>> cycles;
     cycles.reserve(100000);
 
 
@@ -115,7 +148,7 @@ int main() {
             return 1;
         }
         auto end = l4_rdtsc();
-        cycles.push_back(end - start);
+        cycles.push_back(std::make_pair(start, end));
 #ifdef TEST_STRING
         free(out.data);
 #endif
@@ -123,31 +156,45 @@ int main() {
 #ifdef TEST_CAP
     free_mem(&shm, ds);
 #endif
-    printf("srl := serialisation\n");
-    printf("%-25s%-10s%-10s%-10s\n", "Value", "Min", "Median", "Max");
-    std::sort(cycles.begin(), cycles.end());
+    printf("%-30s%-10s%-10s%-10s\n", "Value", "Min", "Median", "Max");
 
-    printf("%-25s%-10lu%-10lu%-10lu\n", "Global",
-            *min_element(std::begin(cycles), std::end(cycles)),
-            cycles[MEASURE_RUNS / 2],
-            *max_element(std::begin(cycles), std::end(cycles)));
+    // global: only cycles required, the other is a dummy arg
+    format_min_median_max<std::pair<long long, long long>, ClientCall>(
+        cycles.data(), CLIENT_MEASUREMENTS, "Global",
+        [](std::pair<long long, long long> p, ClientCall c) {
+            (void)c; return p.second - p.first; // start of call
+        });
 #ifdef BENCH_SERIALISATION
+    // client IPC method invocation to writing arguments to mr
+    format_min_median_max<std::pair<long long, long long>, ClientCall>(
+        cycles.data(), CLIENT_MEASUREMENTS, "IPC arg invocation to writing args",
+        [](std::pair<long long, long long> p, ClientCall c) {
+            return c.arg_srl_start - p.first;
+        });
+
     // client argument serialisation duration
-    format_min_median_max("client argument srl", [](ClientCall c) {
-        return c.arg_srl_end - c.arg_srl_start;
+    format_min_median_max("client argument srl", [](ClientCall c, ServerDispatch s) {
+        (void)s;return c.arg_srl_end - c.arg_srl_start;
     });
-    format_min_median_max("arg srl -> IPC call", [](ClientCall c) {
-        return c.call_start - c.arg_srl_end;
+    format_min_median_max("arg srl -> IPC call", [](ClientCall c, ServerDispatch s) {
+        (void)s;return c.call_start - c.arg_srl_end;
     });
-    format_min_median_max("arg srl -> IPC call", [](ClientCall c) {
-        return c.call_start - c.arg_srl_end;
+    format_min_median_max("arg srl -> IPC call", [](ClientCall c, ServerDispatch s) {
+        (void)s;return c.call_start - c.arg_srl_end;
     });
-    format_min_median_max("IPC call", [](ClientCall c) {
-        return c.ret_desrl_start - c.call_start;
+    format_min_median_max("IPC call", [](ClientCall c, ServerDispatch s) {
+        (void)s;return c.ret_desrl_start - c.call_start;
     });
-    format_min_median_max("return value desrl", [](ClientCall c) {
-        return c.ret_desrl_end - c.ret_desrl_start;
+    format_min_median_max("return value desrl", [](ClientCall c, ServerDispatch s) {
+        (void)s;return c.ret_desrl_end - c.ret_desrl_start;
     });
+
+    // client ret val read
+    format_min_median_max<ClientCall, std::pair<long long, long long>>(
+            CLIENT_MEASUREMENTS, cycles.data(), "Ret val read to call end",
+            [](ClientCall c, std::pair<long long, long long> p) {
+            return p.second - c.ret_desrl_end;
+        });
 #endif
     return 0;
 }

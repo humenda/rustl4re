@@ -148,7 +148,7 @@ fn evaluate_microbenchmarks(global: Vec<(i64, i64)>) {
     // time call start to serialisation
     format_min_median_max(clnt_iter().zip(global.iter()),
             "Call start → writing args",
-            |(c, (s, _))| c.arg_serialisation_start - s);
+            |(c, (start, _))| c.arg_serialisation_start - start);
     // time of argument serialisation
     format_min_median_max(clnt_iter(), "Writing args to registers", |x: &l4::ClientCall| {
         x.arg_serialisation_end - x.arg_serialisation_start
