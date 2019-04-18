@@ -1,3 +1,4 @@
+#include <l4/sys/consts.h>
 #include <l4/sys/err.h>
 #include <l4/sys/types.h>
 #include <l4/re/env>
@@ -16,31 +17,41 @@ using std::min_element;
 const char* MY_MESSAGE = "Premature optimization is the root of all evil. Yet we should not pass up our opportunities in that critical 3%.";
 
 #ifdef BENCH_SERIALISATION
-/*
-#include <iterator>
-#include <utility>
-class ZipIterator: public std::iterator<std::forward_iterator_tag,
-            std::pair<ClientCall, ServerDispatch>> {
-    l4_uint64_t idx_a;
-    l4_uint64_t idx_b;
-public:
-    ZipIterator() : idx_a(0), idx_b(0) { }
-    ~ZipIterator() { }
-    ZipIterator& operator=(const ZipIterator& o) {
-        idx_a = o.idx_a;
-        idx_b = o.idx_b;
-        return *this;
+#include <l4/sys/ipc.h>
+#include <l4/re/c/mem_alloc.h>
+#include <l4/re/c/rm.h>
+#include <l4/re/c/util/cap_alloc.h>
+
+/// Set up shared memory to access server measurements, send dataspace cap to
+/// server.
+static void setup_shm(L4::Cap<Bencher>& srv) {
+    auto size_in_bytes = l4_round_page(MEASURE_RUNS * sizeof(ServerDispatch)), r = 0UL;
+    auto ds = l4re_util_cap_alloc();
+    if ((r = l4re_ma_alloc(size_in_bytes, ds, 0)) != 0) {
+        printf("Error while requesting memory: %lu", r);
+        throw r;
     }
-    ZipIterator& operator++() {
-        idx_a++; idx_b++;
-        // no bound checks
-        return *this;
+
+    // attach to region map
+    void* virt_addr;
+    if ((r = l4re_rm_attach(&virt_addr, size_in_bytes, L4RE_RM_SEARCH_ADDR, ds, 0, L4_PAGESHIFT)) != 0) {
+        printf("Error while attaching memory to region map: %lu\n", r);
+        throw r;
     }
-    std::pair<ClientCall, ServerDispatch> operator*() const {
-        return std::make_pair(CLIENT_MEASUREMENTS[idx_a], SERVER_MEASUREMENTS[idx_b]);
+    // send cap to server without the interface usage to avoid benchmarking
+    auto mr = l4_utcb_mr();
+    (*mr).mr[0] = size_in_bytes;
+    (*mr).mr[1] = L4_ITEM_MAP;
+    (*mr).mr[2] = l4_obj_fpage(ds, 0, L4_FPAGE_RWX).raw;
+    if ((r = l4_ipc_error(l4_ipc_send(srv.cap(), l4_utcb(),
+                        l4_msgtag(9876, 1, 1, 0), L4_IPC_NEVER), l4_utcb())) != 0) {
+        printf("Unable to send shared memory dataspace capability to remote server: %lu", r);
+        throw r;
     }
-};
-*/
+    // Allows client-side access to server measurements using a global
+    SERVER_MEASUREMENTS = (ServerDispatch *)virt_addr;
+    // ^ we do not free our resources :)
+}
 
 template<typename T1, typename T2>
 static void format_min_median_max(T1* src1, T2* src2, const char* msg,
@@ -65,6 +76,8 @@ static void format_min_median_max(const char* msg, l4_int64_t f(ClientCall, Serv
 #include <l4/sys/capability>
 #include <l4/sys/task.h>
 
+// make a DS for the flexpage test, not to be confused with the Ds cap we create
+// for sharing memory with the server for measurement exchange
 size_t mk_ds(void **shm, L4::Cap<L4Re::Dataspace> &ds);
 size_t mk_ds(void **shm, L4::Cap<L4Re::Dataspace> &ds) {
     long size = 8192, r;
@@ -108,6 +121,9 @@ int free_mem(void *shm, L4::Cap<L4Re::Dataspace> &ds) {
 
 int main() {
     L4::Cap<Bencher> server = L4Re::Env::env()->get_cap<Bencher>("channel");
+#ifdef BENCH_SERIALISATION
+    setup_shm(server);
+#endif
     int r;
 
     if (!server.is_valid()) {
@@ -167,24 +183,37 @@ int main() {
 #ifdef BENCH_SERIALISATION
     // client IPC method invocation to writing arguments to mr
     format_min_median_max<std::pair<long long, long long>, ClientCall>(
-        cycles.data(), CLIENT_MEASUREMENTS, "IPC arg invocation to writing args",
+        cycles.data(), CLIENT_MEASUREMENTS, "Call start to writing args",
         [](std::pair<long long, long long> p, ClientCall c) {
             return c.arg_srl_start - p.first;
         });
 
     // client argument serialisation duration
-    format_min_median_max("client argument srl", [](ClientCall c, ServerDispatch s) {
+    format_min_median_max("Writing args to registers", [](ClientCall c, ServerDispatch s) {
         (void)s;return c.arg_srl_end - c.arg_srl_start;
     });
-    format_min_median_max("arg srl -> IPC call", [](ClientCall c, ServerDispatch s) {
+    format_min_median_max("arg srl to IPC call", [](ClientCall c, ServerDispatch s) {
         (void)s;return c.call_start - c.arg_srl_end;
     });
-    format_min_median_max("arg srl -> IPC call", [](ClientCall c, ServerDispatch s) {
-        (void)s;return c.call_start - c.arg_srl_end;
+    format_min_median_max("IPC send to server", [](ClientCall c, ServerDispatch s) {
+        return s.loop_dispatch - c.call_start;
     });
-    format_min_median_max("IPC call", [](ClientCall c, ServerDispatch s) {
-        (void)s;return c.ret_desrl_start - c.call_start;
+    format_min_median_max("Srv loop to iface dispatch", [](ClientCall c, ServerDispatch s) {
+        (void)c;return s.iface_dispatch - c.call_start;
     });
+    format_min_median_max("Reading opcode", [](ClientCall c, ServerDispatch s) {
+        (void)c;return s.opcode_dispatch - s.iface_dispatch;
+    });
+    format_min_median_max("Reading args + exec user impl", [](ClientCall c, ServerDispatch s) {
+        (void)c;return s.retval_serialisation_start - s.opcode_dispatch;
+    });
+    format_min_median_max("Write return value", [](ClientCall c, ServerDispatch s) {
+        (void)c;return s.result_returned - s.retval_serialisation_start;
+    });
+    format_min_median_max("IPC reply to client", [](ClientCall c, ServerDispatch s) {
+        return c.ret_desrl_start - s.result_returned;
+    });
+
     format_min_median_max("return value desrl", [](ClientCall c, ServerDispatch s) {
         (void)s;return c.ret_desrl_end - c.ret_desrl_start;
     });

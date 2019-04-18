@@ -154,16 +154,16 @@ fn evaluate_microbenchmarks(global: Vec<(i64, i64)>) {
         x.arg_serialisation_end - x.arg_serialisation_start
     });
     // message tag creation
-    format_min_median_max(clnt_iter(), "Msg tag creation", |x: &l4::ClientCall| {
+    format_min_median_max(clnt_iter(), "Arg srl to IPC call", |x: &l4::ClientCall| {
         x.ipc_call_start - x.arg_serialisation_end
     });
-    format_min_median_max(clnt_with_srv(), "IPC send to server",
+    format_min_median_max(clnt_with_srv(), "IPC send to server rcv",
         |(c, s)| s.loop_dispatch - c.ipc_call_start);
     format_min_median_max(srv_iter(), "Srv loop → interface dispatch",
         |s| s.iface_dispatch - s.loop_dispatch);
-    format_min_median_max(srv_iter(), "Iface disp. → opcode dispatch",
+    format_min_median_max(srv_iter(), "Reading opcode",
         |s| s.opcode_dispatch - s.iface_dispatch);
-    format_min_median_max(srv_iter(), "Reading args + exc user impl",
+    format_min_median_max(srv_iter(), "Reading args + exec user impl",
         |s| s.retval_serialisation_start - s.opcode_dispatch);
     format_min_median_max(srv_iter(), "Write return value",
         |s| s.result_returned - s.retval_serialisation_start);
