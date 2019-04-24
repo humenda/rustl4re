@@ -13,7 +13,7 @@ use super::{
 use super::super::{
     cap::Interface,
     error::{Error, Result},
-    utcb::{Utcb, UtcbMr},
+    utcb::UtcbMr,
 };
 use libc::c_void;
 
@@ -44,10 +44,10 @@ pub trait LoopHook {
     /// access to the complete thread and server loop state.
     /// The returned action directly influences the execution of the loop, see the documentation of
     /// [LoopAction](enum.LoopAction.html).
-    fn ipc_error<C>(&mut self, _: &mut Loop<Self, C>, tag: MsgTag)
+    fn ipc_error<C>(&mut self, _: &mut Loop<Self, C>, tag: &MsgTag)
                 -> LoopAction
             where Self: ::_core::marker::Sized, C: CapProvider {
-        match tag.result() {
+        match (*tag).clone().result() {
             Ok(_) => unreachable!(),
             Err(e) => LoopAction::ReplyAndWait(MsgTag::new(match e {
                     Error::Generic(e) => e as i64,
@@ -63,12 +63,12 @@ pub trait LoopHook {
     fn application_error<C>(&mut self, _: &mut Loop<Self, C>, e: Error)
                 -> LoopAction
             where Self: ::_core::marker::Sized, C: CapProvider {
-        LoopAction::ReplyAndWait(MsgTag::new(e.into_ipc_err(), 0, 0, 0)
-            ) // ^ by convention, error types are returned as negative integer
+        // ^ by convention, error types are returned as negative integer
+        LoopAction::ReplyAndWait(MsgTag::new(e.into_ipc_err(), 0, 0, 0))
     }
 
-
     /// set default timeout for replies
+    #[inline]
     fn reply_timeout() -> l4_timeout_t {
         l4_sys::consts::L4_IPC_SEND_TIMEOUT_0
     }
@@ -120,7 +120,7 @@ pub struct Loop<'a, Hooks: LoopHook, BrMgr> {
 // allow unwrapping the option from the struct above, using the value and
 // injecting it back
 macro_rules! borrow {
-    ($sel:ident.hooks.$func:ident(&mut self, $($arg:ident),*)) => {{ // new scope
+    ($sel:ident.hooks.$func:ident(&mut self, $($arg:expr),*)) => {{ // new scope
         let mut hooks = $sel.hooks.take().unwrap(); // option is never none
         let res = hooks.$func($sel, $($arg),*);
         $sel.hooks = Some(hooks);
@@ -157,17 +157,18 @@ impl<'a, T: LoopHook, C: CapProvider> Loop<'a, T, C> {
     /// Replying to the client and waiting for the next request is a joint operation on L4Re. The
     /// C++ version also supports the less performant split of a reply and a wait system call
     /// afterwards, which is omitted here.
-    fn reply_and_wait(&mut self, replytag: MsgTag) -> (u64, MsgTag) {
+    #[inline]
+    fn reply_and_wait(&mut self, replytag: MsgTag, label: &mut u64,
+            client_tag: &mut MsgTag) {
         self.buf_mgr.setup_wait(self.utcb);
         unsafe {
-            let mut label = 0;
-            let mut tag = MsgTag::from(l4_sys::l4_ipc_reply_and_wait(self.utcb,
-                     replytag.raw(), &mut label, l4_sys::timeout_never()));
-            if label == 0 && tag.has_error() {
-                tag = MsgTag::from(l4_sys::l4_ipc_wait(self.utcb,
-                        &mut label, l4_sys::timeout_never()));
+            *client_tag = MsgTag::from(l4_sys::l4_ipc_reply_and_wait(self.utcb,
+                     replytag.raw(), label as _, l4_sys::timeout_never()));
+            // avoid broken IPC to kill the loop
+            if *label == 0 && client_tag.has_error() {
+                *client_tag = MsgTag::from(l4_sys::l4_ipc_wait(self.utcb,
+                        label, l4_sys::timeout_never()));
             }
-            (label, tag)
         }
     }
 
@@ -187,27 +188,25 @@ impl<'a, T: LoopHook, C: CapProvider> Loop<'a, T, C> {
         loop {
             let replytag = match tag.has_error() {
                 // call user-registered error handler
-                true => match borrow!(self.hooks.ipc_error(&mut self, tag)) {
+                true => match borrow!(self.hooks.ipc_error(&mut self, &tag)) {
                     LoopAction::Break => break,
                     LoopAction::ReplyAndWait(t) => t,
                 },
 
                 // use label to dispatch to registered server implementation
-                false => match self.dispatch(tag, label) {
+                false => match self.dispatch(tag.clone(), label) {
                     LoopAction::Break => break,
                     LoopAction::ReplyAndWait(tag) => tag,
                 }
             };
-            let (tmp1, tmp2) = self.reply_and_wait(replytag);
-            label = tmp1; // prevent shadowing
-            tag = tmp2;
+            self.reply_and_wait(replytag, &mut label, &mut tag);
         }
     }
 
     fn dispatch(&mut self, tag: MsgTag, ipc_label: u64) -> LoopAction {
         // create argument reader / writer instance with access to the message registers and the
         // allocated (cap) buffers
-        let mut mr = Utcb::from_utcb(self.utcb).mr();
+        let mut mr = unsafe { UtcbMr::from_utcb(self.utcb) };
         // we rely on the user implementation to be auto-derived by the
         // framework and hence that it reported the correct demand so that this
         // pointer type accesses valid memory
