@@ -114,9 +114,10 @@ impl<T> Measurements<T> {
         &mut self.buf[self.index - 1]
     }
     #[inline]
-    pub fn push(&mut self, s: T) {
-        self.buf[self.index] = s;
+    pub fn next<'a>(&'a mut self) -> &'a mut T {
+        let val = &mut self.buf[self.index];
         self.index += 1;
+        val
     }
 
     pub fn as_slice(&self) -> &[T] {

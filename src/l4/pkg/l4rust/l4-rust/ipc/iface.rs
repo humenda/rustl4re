@@ -88,10 +88,7 @@ macro_rules! derive_ipc_calls {
                                 use $crate::ipc::Serialiser;
                 use $crate::ipc::CapProvider;
                 use core::arch::x86_64::_rdtsc as rdtsc;
-                use $crate::{CLIENT_MEASUREMENTS, ClientCall};
-                let mut cc = ClientCall { arg_serialisation_start: 0,
-                        arg_serialisation_end: 0, ipc_call_start: 0,
-                        return_val_start: 0 };
+                let mut cc = unsafe { $crate::CLIENT_MEASUREMENTS.next() };
                 // ToDo: would re-allocate a capability each time; how to control number of
                 // required slots
                 let mut caps = $crate::ipc::types::Bufferless { };
@@ -119,7 +116,6 @@ macro_rules! derive_ipc_calls {
                     let mut cap_buf = caps.access_buffers();
                     <$return>::read(&mut mr, &mut cap_buf)
                 };
-                unsafe { CLIENT_MEASUREMENTS.push(cc); }
                 res
             }
         )*

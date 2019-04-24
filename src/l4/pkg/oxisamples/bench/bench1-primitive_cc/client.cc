@@ -52,6 +52,7 @@ static void setup_shm(L4::Cap<Bencher>& srv) {
     SERVER_MEASUREMENTS = (ServerDispatch *)virt_addr;
     // ^ we do not free our resources :)
 }
+#endif
 
 template<typename T1, typename T2>
 static void format_min_median_max(T1* src1, T2* src2, const char* msg,
@@ -65,6 +66,7 @@ static void format_min_median_max(T1* src1, T2* src2, const char* msg,
             v.back());
 }
 
+#ifdef BENCH_SERIALISATION
 static void format_min_median_max(const char* msg, l4_int64_t f(ClientCall, ServerDispatch)) {
     return format_min_median_max<ClientCall, ServerDispatch>(
             CLIENT_MEASUREMENTS, SERVER_MEASUREMENTS, msg, f);
@@ -175,9 +177,9 @@ int main() {
     printf("%-30s%-10s%-10s%-10s\n", "Value", "Min", "Median", "Max");
 
     // global: only cycles required, the other is a dummy arg
-    format_min_median_max<std::pair<long long, long long>, ClientCall>(
-        cycles.data(), CLIENT_MEASUREMENTS, "Global",
-        [](std::pair<long long, long long> p, ClientCall c) {
+    format_min_median_max<std::pair<long long, long long>, void*>(
+        cycles.data(), (void **)0, "Global",
+        [](std::pair<long long, long long> p, void *c) {
             (void)c; return p.second - p.first; // start of call
         });
 #ifdef BENCH_SERIALISATION
@@ -199,7 +201,7 @@ int main() {
         return s.loop_dispatch - c.call_start;
     });
     format_min_median_max("Srv loop to iface dispatch", [](ClientCall c, ServerDispatch s) {
-        (void)c;return s.iface_dispatch - c.call_start;
+        (void)c;return s.iface_dispatch - s.loop_dispatch;
     });
     format_min_median_max("Reading opcode", [](ClientCall c, ServerDispatch s) {
         (void)c;return s.opcode_dispatch - s.iface_dispatch;

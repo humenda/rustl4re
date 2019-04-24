@@ -127,23 +127,6 @@ pub fn server_impl_callback<T>(ptr: *mut c_void, tag: MsgTag,
                                   bufs: &mut BufferAccess)
         -> Result<MsgTag>
         where T: Callable + Dispatch {
-    #[cfg(bench_serialisation)]
-    use crate::{SERVER_MEASUREMENTS, ServerDispatch};
-    #[cfg(bench_serialisation)]
-    use core::arch::x86_64::_rdtsc as rdtsc;
-    #[cfg(bench_serialisation)]
-    let sd = ServerDispatch { 
-        loop_dispatch: 0,
-        iface_dispatch: 0,
-        opcode_dispatch: 0,
-        retval_serialisation_start: 0,
-        result_returned: 0,
-        hook_start: 0, hook_end: 0
-    };
-    #[cfg(bench_serialisation)]
-    unsafe { (*SERVER_MEASUREMENTS).push(sd); };
-    #[cfg(bench_serialisation)]
-    unsafe { (*SERVER_MEASUREMENTS).last().loop_dispatch = rdtsc() };
     unsafe {
         let ptr = ptr as *mut T;
         (*ptr).dispatch(tag, mr, bufs)
@@ -253,6 +236,15 @@ impl<'a, T: LoopHook, C: CapProvider> Loop<'a, T, C> {
     }
 
     fn dispatch(&mut self, tag: MsgTag, ipc_label: u64) -> LoopAction {
+        #[cfg(bench_serialisation)]
+        use crate::{SERVER_MEASUREMENTS};
+        #[cfg(bench_serialisation)]
+        use core::arch::x86_64::_rdtsc as rdtsc;
+        #[cfg(bench_serialisation)]
+        let sd = unsafe { (*SERVER_MEASUREMENTS).next() };
+        #[cfg(bench_serialisation)]
+        unsafe { (*sd).loop_dispatch = rdtsc() };
+
         // create argument reader / writer instance with access to the message registers and the
         // allocated (cap) buffers
         let mut mr = unsafe { UtcbMr::from_utcb(self.utcb) };
@@ -265,10 +257,6 @@ impl<'a, T: LoopHook, C: CapProvider> Loop<'a, T, C> {
             let callable = *(ipc_label as *mut Callback);
             callable(handler, tag, &mut mr, &mut bufs)
         };
-        #[cfg(bench_serialisation)]
-        use crate::SERVER_MEASUREMENTS;
-        #[cfg(bench_serialisation)]
-        use core::arch::x86_64::_rdtsc as rdtsc;
         #[cfg(bench_serialisation)]
         let hook_start = unsafe { rdtsc() };
         // dispatch received result to user-registered handler
