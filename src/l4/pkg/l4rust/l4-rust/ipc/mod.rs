@@ -84,6 +84,7 @@ const L4_MSGTAG_ERROR_I: isize = L4_MSGTAG_ERROR as isize;
 /// // and hence do **not** count as a word, even though they take up the space of two words.
 /// let _ = msgtag(0, 1, 1, 0);
 /// ```
+#[derive(Clone)]
 pub struct MsgTag {
     raw: Mword,
 }
