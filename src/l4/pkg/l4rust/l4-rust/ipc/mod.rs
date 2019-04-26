@@ -15,11 +15,11 @@
 #[macro_use]
 mod iface;
 mod serialise;
-mod serverloop;
+pub mod server;
 pub mod types;
 
 pub use self::serialise::{Serialiser, Serialisable};
-pub use self::serverloop::{Callback, Loop, LoopBuilder, server_impl_callback};
+pub use self::server::{Callback, Loop, LoopBuilder, server_impl_callback};
 pub use self::types::*;
 
 use _core::{convert::From,
