@@ -17,37 +17,40 @@ use super::super::{
 };
 use libc::c_void;
 
-/// Cache for server objects
+/// Stack-based buffer for server objects
 ///
-/// This cache can be used to work with data on the stack without the need to
+/// This buffer can be used to work with data on the stack without the need to
 /// allocate on the heap. Intermediate buffers are often used in C/C++ server
-/// functions to copy data from the UTCB to the stack frame (a function-local
-/// array). This is impossible in Rust, since data is not copyied manually and
-/// the array is invalidated on function return.  Including the cache in the
-/// server object moves the same idea to a different location on the stack, but
-/// with the same effect, pros and cons.
-pub trait Cache {
-    /// Access the cache
-    /// Retireve a mutable slice of the cache
+/// functions to copy data from the virtual registers to the stack frame (a
+/// function-local array). This is impossible in Rust, since data is not copyied
+/// manually and the array is invalidated on function return.  Including the
+/// buffer in the server object moves the same idea to a different location on
+/// the stack, but with the same effect and with Rust's memory management
+/// working.
+pub trait StackBuf {
+    /// Retrieve a mutable slice of the buffer
     #[inline]
-    fn get_cache(&mut self) -> &mut [u8];
+    fn get_buffer(&mut self) -> &mut [u8];
 
     /// Return the length of the cache in bytes
     #[inline]
-    fn get_cache_size(&self) -> usize;
+    fn get_buffer_size(&self) -> usize;
 }
 
-/// Fill a cache with data
+/// Fill a buffer with data and get a typed reference to it
 ///
-/// To allow the usage of different data types within the same cache, this trait
-/// abstracts from the concrete type to work with and allows the user to insert
-/// arbitrary types and get a mutable reference to the copy within the cache.
-pub trait CacheFiller<T>
+/// To allow the usage of different data types within the same buffer, this
+/// trait abstracts from the concrete type and allows to copy the input data
+/// into the "byte-buffer" and returns a correctly typed reference to it.
+/// This is used for interface implementations returning objects with unknown
+/// compile-time size such as `&str` or `&[T]`. See the `buffer` parameter of
+/// the [`l4_server` macro](../../../l4_derive/macro.l4_server.html).
+pub trait TypedBuffer<T>
         where T: ?Sized + core::borrow::Borrow<T> + core::borrow::BorrowMut<T> {
     /// Fill the cache with a copy of the given input an return a mutable
     /// reference to it
     #[inline]
-    fn fill_with(&mut self, i: &T) -> Result<&mut T>;
+    fn copy_in(&mut self, i: &T) -> Result<&mut T>;
 }
 
 /// Action instructions from hooks to the server loop.
