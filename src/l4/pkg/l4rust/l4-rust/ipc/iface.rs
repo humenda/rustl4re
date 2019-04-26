@@ -185,8 +185,7 @@ macro_rules! iface_back {
                 $( // iterate over functions and op codes
                     $op_code => unsafe {
                         let user_ret = self.$name(
-                            $(<$argtype>::
-                                read(mr, bufs)?),*
+                            $(<$argtype>::read(mr, bufs)?),*
                         )?;
                         mr.reset(); // reset MRs, not the bufs (not used for sending)
                         <$ret>::write(user_ret, mr)?;

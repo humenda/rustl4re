@@ -6,15 +6,68 @@ use syn::{Attribute, Fields, Generics, Ident, Lit, Meta, NestedMeta,
 use syn::spanned::Spanned;
 use std::str::FromStr;
 
+pub struct ServerOpts {
+    pub trait_name: syn::Ident,
+    pub cache: usize, // in bytes
+}
+
 pub fn gen_server_struct(name: proc_macro2::Ident, attrs: Vec<Attribute>,
                     vis: Visibility, generics: Generics, fields: Fields,
-                    trait_name: &syn::Ident)
+                    opts: &ServerOpts)
                     -> proc_macro::TokenStream {
     // duplicate names and types of fields, because quote! moves them
     let initialiser_names: Vec<_> = fields.iter().map(|f| f.ident.clone()).collect();
     let arg_names: Vec<_> = fields.iter().map(|f| f.ident.clone()).collect();
     let arg_types: Vec<_> = fields.iter().map(|f| f.ty.clone()).collect();
     let field_iter = fields.iter();
+    let ServerOpts { trait_name, cache } = opts;
+    // Implement caching, if requested, needs a struct member, code in the new
+    // function and impl blocks
+    let (cmember, cnew, cimpl) = match cache {
+        0 => (quote! { }, quote! { }, quote! { }),
+        n => {
+            (quote! { __cache: [u8; #n], },
+             quote! { __cache: [0u8; #n], },
+             quote! {
+                 impl l4::ipc::server::Cache for #name {
+                     #[inline]
+                     fn get_cache(&mut self) -> &mut [u8] {
+                         &mut self.__cache
+                     }
+                     #[inline]
+                     fn get_cache_size(&self) -> usize { #n }
+                 }
+                 impl l4::ipc::server::CacheFiller<str> for #name {
+                     #[inline]
+                     fn fill_with(&mut self, i: &str) -> l4::error::Result<&mut str> {
+                         if i.len() > self.__cache.len() {
+                             return Err(l4::error::Error::Generic(
+                                 l4::error::GenericErr::MsgTooLong));
+                         }
+                         Ok(unsafe {
+                             core::ptr::copy_nonoverlapping(
+                                 i.as_ptr(), self.__cache.as_mut_ptr(), i.len());
+                             core::str::from_utf8_unchecked_mut(&mut self.__cache[0..i.len()])
+                         })
+                     }
+                 }
+                 impl l4::ipc::server::CacheFiller<[u8]> for #name {
+                     #[inline]
+                     fn fill_with(&mut self, i: &[u8]) -> l4::error::Result<&mut [u8]> {
+                         if i.len() > self.__cache.len() {
+                             return Err(l4::error::Error::Generic(
+                                 l4::error::GenericErr::MsgTooLong));
+                         }
+                         Ok(unsafe {
+                             core::ptr::copy_nonoverlapping(
+                                 i.as_ptr(), self.__cache.as_mut_ptr(), i.len());
+                             &mut self.__cache[0..i.len()]
+                         })
+                     }
+                 }
+             })
+        }
+    };
 
     let gen = quote! {
         #[repr(C)]
@@ -23,6 +76,7 @@ pub fn gen_server_struct(name: proc_macro2::Ident, attrs: Vec<Attribute>,
             __dispatch_ptr: ::l4::ipc::Callback,
             __cap: crate::l4::cap::CapIdx,
             #(#field_iter,)*
+            #cmember
             __pin: core::marker::PhantomPinned
         }
 
@@ -36,6 +90,7 @@ pub fn gen_server_struct(name: proc_macro2::Ident, attrs: Vec<Attribute>,
                     __dispatch_ptr: crate::l4::ipc::server_impl_callback::<#name>,
                     __cap: cap,
                     #(#initialiser_names,)*
+                    #cnew
                     __pin: core::marker::PhantomPinned
                 }
             }
@@ -65,6 +120,7 @@ pub fn gen_server_struct(name: proc_macro2::Ident, attrs: Vec<Attribute>,
                 panic!("Not implemented for servers");
             }
         }
+        #cimpl
     };
     gen.into()
 }

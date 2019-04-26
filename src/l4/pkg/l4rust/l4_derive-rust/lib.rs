@@ -71,15 +71,19 @@ pub fn l4_server(macro_attrs: TokenStream, item: TokenStream) -> TokenStream {
     // we can only insert a new member into a named struct or unit structs.
     // If we'd insert into a tuple struct, this would move the index of all
     // existing members, invalidating any user's code.
+    let opts = clntsrv::ServerOpts {
+        trait_name: trait_name,
+        cache: 256, // ToDo
+    };
     match structdef.fields {
         Fields::Named(_) => clntsrv::gen_server_struct(name, ast.attrs, ast.vis,
                                              ast.generics, structdef.fields,
-                                             &trait_name),
+                                             &opts),
         Fields::Unnamed(_) => proc_err!("Only named structs or unnamed structs \
                 can be turned into an IPC server."),
         Fields::Unit => clntsrv::gen_server_struct(name, ast.attrs, ast.vis,
                                              ast.generics, Fields::Unit,
-                                             &trait_name),
+                                             &opts),
     }
 }
 

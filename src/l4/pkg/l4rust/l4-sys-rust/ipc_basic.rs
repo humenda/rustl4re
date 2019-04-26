@@ -133,7 +133,7 @@ pub unsafe fn l4_sndfpage_add(snd_fpage: l4_fpage_t, snd_base: c_ulong,
 }
 
 
-#[inline]
+#[inline(always)]
 pub unsafe fn l4_utcb() -> *mut l4_utcb_t {
     l4_utcb_w()
 }

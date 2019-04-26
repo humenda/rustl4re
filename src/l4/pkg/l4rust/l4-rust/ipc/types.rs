@@ -51,16 +51,8 @@ pub trait Demand {
     const CAP_DEMAND: u8;
 }
 
-/// Define a function in a type and allow the derivation of the dual type
-///
-/// This allows the macro rules to define the type for a sender and derive the receiver part
-/// automatically.
-pub trait HasDual {
-    type Dual;
-}
-
-pub trait ReadReturn<T> {
-    fn read(mr: &mut UtcbMr) -> T;
+pub trait StackBuf<'a> {
+    fn consume<T>(&'a mut self, i: T) -> T;
 }
 
 // allow the auto-derived client implementation to expose its buffer manager. This trait is hidden

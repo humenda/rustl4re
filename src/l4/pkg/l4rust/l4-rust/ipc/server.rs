@@ -17,6 +17,39 @@ use super::super::{
 };
 use libc::c_void;
 
+/// Cache for server objects
+///
+/// This cache can be used to work with data on the stack without the need to
+/// allocate on the heap. Intermediate buffers are often used in C/C++ server
+/// functions to copy data from the UTCB to the stack frame (a function-local
+/// array). This is impossible in Rust, since data is not copyied manually and
+/// the array is invalidated on function return.  Including the cache in the
+/// server object moves the same idea to a different location on the stack, but
+/// with the same effect, pros and cons.
+pub trait Cache {
+    /// Access the cache
+    /// Retireve a mutable slice of the cache
+    #[inline]
+    fn get_cache(&mut self) -> &mut [u8];
+
+    /// Return the length of the cache in bytes
+    #[inline]
+    fn get_cache_size(&self) -> usize;
+}
+
+/// Fill a cache with data
+///
+/// To allow the usage of different data types within the same cache, this trait
+/// abstracts from the concrete type to work with and allows the user to insert
+/// arbitrary types and get a mutable reference to the copy within the cache.
+pub trait CacheFiller<T>
+        where T: ?Sized + core::borrow::Borrow<T> + core::borrow::BorrowMut<T> {
+    /// Fill the cache with a copy of the given input an return a mutable
+    /// reference to it
+    #[inline]
+    fn fill_with(&mut self, i: &T) -> Result<&mut T>;
+}
+
 /// Action instructions from hooks to the server loop.
 pub enum LoopAction {
     /// Reply to the client and change to open wait afterwards.
