@@ -6,62 +6,62 @@ use syn::{Attribute, Fields, Generics, Ident, Lit, Meta, NestedMeta,
 use syn::spanned::Spanned;
 use std::str::FromStr;
 
-pub struct ServerOpts {
+pub struct ServerAttrs {
     pub trait_name: syn::Ident,
-    pub cache: usize, // in bytes
+    pub buffer: usize, // in bytes
 }
 
 pub fn gen_server_struct(name: proc_macro2::Ident, attrs: Vec<Attribute>,
                     vis: Visibility, generics: Generics, fields: Fields,
-                    opts: &ServerOpts)
+                    opts: &ServerAttrs)
                     -> proc_macro::TokenStream {
     // duplicate names and types of fields, because quote! moves them
     let initialiser_names: Vec<_> = fields.iter().map(|f| f.ident.clone()).collect();
     let arg_names: Vec<_> = fields.iter().map(|f| f.ident.clone()).collect();
     let arg_types: Vec<_> = fields.iter().map(|f| f.ty.clone()).collect();
     let field_iter = fields.iter();
-    let ServerOpts { trait_name, cache } = opts;
+    let ServerAttrs { trait_name, buffer } = opts;
     // Implement caching, if requested, needs a struct member, code in the new
     // function and impl blocks
-    let (cmember, cnew, cimpl) = match cache {
+    let (cmember, cnew, cimpl) = match buffer {
         0 => (quote! { }, quote! { }, quote! { }),
         n => {
-            (quote! { __cache: [u8; #n], },
-             quote! { __cache: [0u8; #n], },
+            (quote! { __buffer: [u8; #n], },
+             quote! { __buffer: [0u8; #n], },
              quote! {
-                 impl l4::ipc::server::Cache for #name {
+                 impl l4::ipc::server::StackBuf for #name {
                      #[inline]
-                     fn get_cache(&mut self) -> &mut [u8] {
-                         &mut self.__cache
+                     fn get_buffer(&mut self) -> &mut [u8] {
+                         &mut self.__buffer
                      }
                      #[inline]
-                     fn get_cache_size(&self) -> usize { #n }
+                     fn get_buffer_size(&self) -> usize { #n }
                  }
-                 impl l4::ipc::server::CacheFiller<str> for #name {
+                 impl l4::ipc::server::TypedBuffer<str> for #name {
                      #[inline]
                      fn fill_with(&mut self, i: &str) -> l4::error::Result<&mut str> {
-                         if i.len() > self.__cache.len() {
+                         if i.len() > self.__buffer.len() {
                              return Err(l4::error::Error::Generic(
                                  l4::error::GenericErr::MsgTooLong));
                          }
                          Ok(unsafe {
                              core::ptr::copy_nonoverlapping(
-                                 i.as_ptr(), self.__cache.as_mut_ptr(), i.len());
-                             core::str::from_utf8_unchecked_mut(&mut self.__cache[0..i.len()])
+                                 i.as_ptr(), self.__buffer.as_mut_ptr(), i.len());
+                             core::str::from_utf8_unchecked_mut(&mut self.__buffer[0..i.len()])
                          })
                      }
                  }
-                 impl l4::ipc::server::CacheFiller<[u8]> for #name {
+                 impl l4::ipc::server::bufferFiller<[u8]> for #name {
                      #[inline]
                      fn fill_with(&mut self, i: &[u8]) -> l4::error::Result<&mut [u8]> {
-                         if i.len() > self.__cache.len() {
+                         if i.len() > self.__buffer.len() {
                              return Err(l4::error::Error::Generic(
                                  l4::error::GenericErr::MsgTooLong));
                          }
                          Ok(unsafe {
                              core::ptr::copy_nonoverlapping(
-                                 i.as_ptr(), self.__cache.as_mut_ptr(), i.len());
-                             &mut self.__cache[0..i.len()]
+                                 i.as_ptr(), self.__buffer.as_mut_ptr(), i.len());
+                             &mut self.__buffer[0..i.len()]
                          })
                      }
                  }
@@ -194,4 +194,35 @@ pub fn gen_client_struct(name: proc_macro2::Ident, attrs: Vec<Attribute>,
         }
     };
     gen.into()
+}
+
+pub fn parse_server_meta(meta: syn::AttributeArgs) -> Result<ServerAttrs> {
+    let mut trait_name = None;
+    let mut buffer = 0; // stack buffer to store intermediate data
+    for item in meta {
+        let item = match item {
+            NestedMeta::Meta(m) => m,
+            NestedMeta::Literal(l) => err!(l, "Literals not allowed"),
+        };
+        match item {
+            Meta::Word(tn) => trait_name = Some(tn),
+            Meta::NameValue(nv) => {
+                if nv.ident != "buffer" {
+                    err!(nv.ident, "Only `demand = NUM` allowed");
+                }
+                buffer = match nv.lit {
+                    Lit::Int(ref i) if i.value() > 500 => err!(nv.ident,
+                            "Cache size may not exceed 500 bytes"),
+                    Lit::Int(i) => i.value() as usize,
+                    _ => err!(nv.ident, "Buffer size must be a positive integer"),
+                };
+            },
+            Meta::List(ml) => err!(ml, "Invalid nesting of attributes"),
+        };
+    }
+    let trait_name = match trait_name {
+        None => err!("No IPC interface trait specified"),
+        Some(x) => x,
+    };
+    Ok(ServerAttrs { trait_name, buffer })
 }

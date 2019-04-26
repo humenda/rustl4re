@@ -59,8 +59,8 @@ pub fn l4_server(macro_attrs: TokenStream, item: TokenStream) -> TokenStream {
     if macro_attrs.is_empty() {
         proc_err!("IPC trait missing, use l4_server(TRAITNAME)");
     }
-    let trait_name = parse_macro_input!(macro_attrs
-                    as syn::Ident);
+    let opts = proc_err!(clntsrv::parse_server_meta(parse_macro_input!(
+            macro_attrs as syn::AttributeArgs)));
 
     let ast: syn::DeriveInput = syn::parse(item).expect("Unable to parse struct definition.");
     let structdef = match ast.data {
@@ -71,10 +71,6 @@ pub fn l4_server(macro_attrs: TokenStream, item: TokenStream) -> TokenStream {
     // we can only insert a new member into a named struct or unit structs.
     // If we'd insert into a tuple struct, this would move the index of all
     // existing members, invalidating any user's code.
-    let opts = clntsrv::ServerOpts {
-        trait_name: trait_name,
-        cache: 256, // ToDo
-    };
     match structdef.fields {
         Fields::Named(_) => clntsrv::gen_server_struct(name, ast.attrs, ast.vis,
                                              ast.generics, structdef.fields,
