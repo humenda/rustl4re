@@ -21,14 +21,13 @@ pub fn main() {
         panic!("No IPC gate found.");
     }
 
-    let text = "This is an example.";
     // send an &str (not requiring allocation)
-    println!("Instructing the server to say something.");
-    let answer = server.efficient_conversation(text).unwrap();
+    println!("Let's greet the server");
+    let answer = server.greeting("Good day").unwrap();
     println!("It replied: {}",  answer);
     // now do the same using an allocated string
-    println!("Instructing it again to say something.");
-    server.announce(text.to_string()).unwrap();
+    println!("An announcement:");
+    server.announce("Strings are convenient, yet expensive!".into()).unwrap();
 
     println!("Summing a bunch of numbers in an array");
     let nums: Vec<i32> = (50..80i32).collect();

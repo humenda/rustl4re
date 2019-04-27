@@ -39,7 +39,7 @@ pub fn gen_server_struct(name: proc_macro2::Ident, attrs: Vec<Attribute>,
                  }
                  impl l4::ipc::server::TypedBuffer<str> for #name {
                      #[inline]
-                     fn fill_with(&mut self, i: &str) -> l4::error::Result<&mut str> {
+                     fn copy_in(&mut self, i: &str) -> l4::error::Result<&mut str> {
                          if i.len() > self.__buffer.len() {
                              return Err(l4::error::Error::Generic(
                                  l4::error::GenericErr::MsgTooLong));
@@ -51,9 +51,9 @@ pub fn gen_server_struct(name: proc_macro2::Ident, attrs: Vec<Attribute>,
                          })
                      }
                  }
-                 impl l4::ipc::server::bufferFiller<[u8]> for #name {
+                 impl l4::ipc::server::TypedBuffer<[u8]> for #name {
                      #[inline]
-                     fn fill_with(&mut self, i: &[u8]) -> l4::error::Result<&mut [u8]> {
+                     fn copy_in(&mut self, i: &[u8]) -> l4::error::Result<&mut [u8]> {
                          if i.len() > self.__buffer.len() {
                              return Err(l4::error::Error::Generic(
                                  l4::error::GenericErr::MsgTooLong));
