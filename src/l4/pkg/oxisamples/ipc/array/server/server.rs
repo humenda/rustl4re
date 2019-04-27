@@ -5,22 +5,25 @@ extern crate l4re;
 
 use l4_derive::l4_server;
 use l4::{error::Result,
-    ipc::server::CacheFiller,
+    ipc::server::TypedBuffer,
 };
 
 include!("../interface.rs");
 
-#[l4_server(ArrayHub)]
+#[l4_server(ArrayHub, buffer=200)]
 struct ArraySrv;
 
 impl ArrayHub for ArraySrv {
-    fn efficient_conversation(&mut self, msg: &str) -> Result<&str> {
+    // client said hi, let's reply
+    fn greeting(&mut self, msg: &str) -> Result<&str> {
         // &str points to message registers, every syscall (including printing to the console) will
-        // destroy this data, copy to stack, into cache
-        let mine = self.fill_with(msg);
-        println!("Client says: `{}`", mine?);
+        // destroy this data, copy to stack, into cache. We could however skip
+        // this step, since we are printing it anyway, which is a syscall and we
+        // do not need the data afterwards.
+        let opening = self.copy_in(msg);
+        println!("Client says: `{}`", opening?);
         // answer back
-        Ok(self.fill_with("Thanks.")?)
+        Ok(self.copy_in("Enchantez, hello!")?)
     }
 
     // uses heap-allocated String: convenient, but expensive
