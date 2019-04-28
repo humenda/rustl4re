@@ -135,6 +135,14 @@ module shm_c.cfg
 module shm_c-client
 module shm_c-server
 
+entry bench0-ipc
+roottask moe rom/bench0-ipc.cfg
+module l4re
+module ned
+module bench0-ipc.cfg
+module bench0-client
+module bench0-server
+
 entry bench1-primitive
 roottask moe rom/bench1-primitive.cfg
 module l4re
