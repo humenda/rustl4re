@@ -236,6 +236,7 @@ impl core::convert::From<std::string::FromUtf8Error> for Error {
         Error::InvalidEncoding(Some(u.utf8_error()))
     }
 }
+
 pub type Result<T> = ::_core::result::Result<T, Error>;
 
 /// Short-hand macro for several `l4::error::Error`  cases
@@ -256,6 +257,11 @@ macro_rules! l4_err {
     }
 }
 
+/// Short-hand macro to allow conditional error returns
+///
+/// A repetitive task in low-level code is to check whether an assumption holds
+/// and to return an error if it is violated. This macro allows to supply the
+/// message, the error type (Generic / Tcr) and the error name.
 #[macro_export]
 macro_rules! l4_err_if {
     ($condition:expr => $($token:tt)*) => {

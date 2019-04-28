@@ -65,4 +65,3 @@ pub unsafe fn unsafe_main() {
                               &mut label, l4::l4_timeout_t { raw: 0 });
     }
 }
-
