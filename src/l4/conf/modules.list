@@ -143,6 +143,14 @@ module bench0-ipc.cfg
 module bench0-client
 module bench0-server
 
+entry bench0-ipc_cc
+roottask moe rom/bench0-ipc_cc.cfg
+module l4re
+module ned
+module bench0-ipc_cc.cfg
+module bench0-client_cc
+module bench0-server_cc
+
 entry bench1-primitive
 roottask moe rom/bench1-primitive.cfg
 module l4re

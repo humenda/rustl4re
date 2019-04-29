@@ -45,6 +45,7 @@ static void* setup_measurements(l4_cap_idx_t srv) {
 }
 
 int main() {
+    printf("[CC] Raw IPC performance benchmark\n");
     l4_cap_idx_t server = l4re_env_get_cap("channel");
 
     l4_int64_t* srv_stamps = (l4_int64_t*)setup_measurements(server);
@@ -64,7 +65,5 @@ int main() {
         delta[i] = srv_stamps[i] - client_measurements[i];
     std::sort(delta, &delta[MAX_RUNS]);
     printf("Min: %lli, median: %lli, max: %lli\n",
-            *std::min(&delta[0], &delta[MAX_RUNS]),
-            delta[MAX_RUNS/2],
-            *std::max(&delta[0], &delta[MAX_RUNS]));
+            delta[0], delta[MAX_RUNS/2], delta[MAX_RUNS-1]);
 }
