@@ -187,9 +187,6 @@ fn translate_type(ty: &syn::Type, namespace_usg: &mut HashSet<String>,
     };
 
     let main = segment.ident.to_string();
-    if is_output && main == "str" {
-        err!("&str is not allowed as return type at the moment, use String instead");
-    }
     let mut translated = String::from(*RUST2CPP_TYPE.get(main.as_str()).unwrap_or(
             &main.as_str()));
     if is_output {
