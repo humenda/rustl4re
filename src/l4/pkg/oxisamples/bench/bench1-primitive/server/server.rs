@@ -38,6 +38,7 @@ impl Bencher for BenchServer {
 // set up shared memory for collection measurements from the server
 #[cfg(bench_serialisation)]
 fn setup_shm() -> OwnedCap<Dataspace> {
+    use core::mem::size_of;
     use l4::sys::*;
     let ds = OwnedCap::<Dataspace>::alloc();
     unsafe {
@@ -68,12 +69,13 @@ fn setup_shm() -> OwnedCap<Dataspace> {
         if err != 0 {
             println!("error while attaching memory: {}", err);
         }
-        l4::SERVER_MEASUREMENTS = ds_start as *mut l4::Measurements<l4::ServerDispatch>;
         // initialise with 0 to avoid page faults
         let ds_start = ds_start as *mut i64;
-        for i in 0isize..(size as isize / core::mem::size_of::<i64> as isize) {
-            (*ds_start.offset(i)) = 0;
+        let i64s = l4::MEASURE_RUNS * size_of::<l4::ServerDispatch>() / size_of::<i64>();
+        for i in 0isize..i64s as isize {
+            *ds_start.offset(i) = 0;
         }
+        l4::SERVER_MEASUREMENTS = ds_start as *mut l4::Measurements<l4::ServerDispatch>;
     }
     ds
 }

@@ -11,7 +11,10 @@ use l4::{ipc::MsgTag, error::Error};
 use l4_derive::{iface, l4_client};
 #[cfg(bench_serialisation)]
 use l4re::{OwnedCap, mem::Dataspace};
-use core::{arch::x86_64::_rdtsc as rdtsc, iter::Iterator};
+use core::{arch::x86_64::_rdtsc as rdtsc,
+    iter::Iterator};
+#[cfg(bench_serialisation)]
+use core::mem::size_of;
 
 include!("../../interface.rs");
 
@@ -26,9 +29,9 @@ struct Shm(*mut u8, l4re::OwnedCap<Dataspace>);
 #[cfg(bench_serialisation)]
 impl Shm {
     pub fn new(srv: &Cap<Bench>) -> Result<Self, String> {
+        Self::initialise_client_memory();
         use l4::sys::*;
-        let size = round_page(l4::MEASURE_RUNS
-                * core::mem::size_of::<l4::ServerDispatch>());
+        let size = round_page(l4::MEASURE_RUNS * size_of::<l4::ServerDispatch>());
         // allocate memory via dataspace manager, attach it
         let (addr, cap) = Self::allocate_bench_mem(size)?;
         unsafe {
@@ -74,6 +77,16 @@ impl Shm {
                 return Err(format!("Allocation failed with exit code {}", r));
             }
             Ok((virt_addr as *mut u8, ds))
+        }
+    }
+
+    fn initialise_client_memory() {
+        let i64s = l4::MEASURE_RUNS * size_of::<l4::ClientCall>() / size_of::<i64>();
+        unsafe {
+            let ptr = &mut l4::CLIENT_MEASUREMENTS as *mut _ as *mut i64;
+            for i in 0..(i64s as isize) {
+                *ptr.offset(i) = 0;
+            }
         }
     }
 }
@@ -143,7 +156,7 @@ fn main() {
         cycles.push((start_counter, end_counter));
     }
     println!("{:<30}{:<10}{:<10}{:<10}", "Value", "Min", "Median", "Max");
-    format_min_median_max(cycles.iter(), "Global",
+    format_min_median_max((&cycles[INITIAL_SKIP..]).iter(), "Global",
             |(start, end)| end - start);
 
     #[cfg(bench_serialisation)]
@@ -187,20 +200,23 @@ fn evaluate_microbenchmarks(global: &[(i64, i64)]) {
     format_min_median_max(clnt_iter().zip(global.iter()),
         "Read return value", |(c, (_, e))| e - c.return_val_start);
 
+    // report unusual timing spikes, if any
     let mut median: Vec<i64> = global.iter().map(|(a,b)| b - a).collect();
     median.sort();
     let median = median[median.len() / 2];
-    // find spikes
-    println!("IPC spikes where the round-trip time is longer than twice the median");
-    println!("BS := byte offset within contiguous memory of measurement structure");
-    println!("{:<7}{:<10}{:<10}{}", "Index", "Client BS",  "Server BS", "CPU Cycles");
     let spikes: Vec<(usize, &(i64, i64))> = global.iter().enumerate()
             .filter(|(_, c)| c.1 - c.0 > median * 2).collect();
-    let end = if spikes.len() > 10 { 10 } else { spikes.len() };
-    for (idx, cycle) in &spikes[..end] {
-        println!("{:<7}{:<10x}{:<10x}{}", idx,
-                (idx + INITIAL_SKIP) * core::mem::size_of::<l4::ClientCall>(),
-                (idx + INITIAL_SKIP) * core::mem::size_of::<l4::ServerDispatch>(),
-                cycle.1 - cycle.0);
+    if spikes.len() > 0 {
+        println!("IPC spikes where the round-trip time is longer than twice the median");
+        println!("BS := byte offset within contiguous memory of measurement structure");
+        println!("{:<7}{:<10}{:<10}{}", "Index", "Client BS",  "Server BS", "CPU Cycles");
+
+        let end = if spikes.len() > 10 { 10 } else { spikes.len() };
+        for (idx, cycle) in &spikes[..end] {
+            println!("{:<7}{:<10x}{:<10x}{}", idx,
+                    (idx + INITIAL_SKIP) * core::mem::size_of::<l4::ClientCall>(),
+                    (idx + INITIAL_SKIP) * core::mem::size_of::<l4::ServerDispatch>(),
+                    cycle.1 - cycle.0);
+        }
     }
 }
