@@ -1,0 +1,15 @@
+[package]
+name = "bench2-client_str"
+version = "0.1.0"
+authors = ["Sebastian Humenda <shumenda@gmx.de>"]
+edition = "2018"
+
+[[bin]]
+name = "bench2-client_str"
+path = "../bench1-primitive/client/client.rs"
+
+[dependencies]
+
+[features]
+default = ["test_str"]
+test_str = []
