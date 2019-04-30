@@ -53,6 +53,7 @@ lazy_static::lazy_static! {
         let mut map = HashMap::new();
         // Rust type: Cpp output type (return type)
 		map.insert("String", "String<char>");
+		map.insert("str", "String<char>");
         map
     };
 }
