@@ -15,6 +15,8 @@ use core::{arch::x86_64::_rdtsc as rdtsc, iter::Iterator};
 
 include!("../../interface.rs");
 
+const INITIAL_SKIP: usize = 2; // how many measurements to skip (warm up)
+
 #[l4_client(Bencher)]
 struct Bench;
 
@@ -103,7 +105,7 @@ fn format_min_median_max<'a, I, F, M: 'a>(iter: I, description: &str, f: F)
               I: std::iter::Iterator<Item = M> {
     let mut sorted = iter.map(f).collect::<Vec<i64>>();
     sorted.sort();
-    let median = sorted[l4::MEASURE_RUNS / 2];
+    let median = sorted[(l4::MEASURE_RUNS - INITIAL_SKIP) / 2];
     println!("{:<30}{:<10}{:<10}{:<10}",
              description, sorted.iter().min().unwrap(),
              median, sorted.iter().max().unwrap());
@@ -116,19 +118,27 @@ fn main() {
     #[cfg(bench_serialisation)]
     let _shm = Shm::new(&server).unwrap();
 
-    #[cfg(not(test_string))]
+    #[cfg(all(not(test_string), not(test_str)))]
     println!("Starting primitive subtraction test");
     #[cfg(test_string)]
-    println!("Starting leet speak test");
+    println!("Starting string ping/pong test");
+    #[cfg(test_str)]
+    println!("Starting str test");
+
     let mut cycles = Vec::with_capacity(l4::MEASURE_RUNS);
-    #[cfg(test_string)]
+    #[cfg(any(test_str, test_string))]
     let msg = "Premature optimization is the root of all evil. Yet we should not pass up our opportunities in that critical 3%.";
+    #[cfg(test_string)]
+    let msg = String::from(msg);
     for _ in 0..l4::MEASURE_RUNS {
         let start_counter = unsafe { rdtsc() };
-        #[cfg(not(test_string))]
+        #[cfg(not(all(test_string, test_str)))]
         let _ = server.sub(9, 8).unwrap();
+        #[cfg(test_str)]
+        let _ = server.str_ping_pong(msg).unwrap();
         #[cfg(test_string)]
-        let _ = server.str2leet(msg).unwrap();
+        let _ = server.string_ping_pong(msg.clone()).unwrap();
+
         let end_counter = unsafe { rdtsc() };
         cycles.push((start_counter, end_counter));
     }
@@ -137,17 +147,17 @@ fn main() {
             |(start, end)| end - start);
 
     #[cfg(bench_serialisation)]
-    { evaluate_microbenchmarks(cycles); }
+    { evaluate_microbenchmarks(&cycles[INITIAL_SKIP..]); }
 }
 
 #[cfg(bench_serialisation)]
-fn evaluate_microbenchmarks(global: Vec<(i64, i64)>) {
-    let clnt_iter = || unsafe { l4::CLIENT_MEASUREMENTS.as_slice().iter() };
-    let srv_iter = || unsafe { (*l4::SERVER_MEASUREMENTS).as_slice().iter() };
+fn evaluate_microbenchmarks(global: &[(i64, i64)]) {
+    let clnt_iter = || unsafe { l4::CLIENT_MEASUREMENTS.as_slice()[INITIAL_SKIP..].iter() };
+    let srv_iter = || unsafe { (*l4::SERVER_MEASUREMENTS).as_slice()[INITIAL_SKIP..].iter() };
     let clnt_with_srv = || clnt_iter().zip(srv_iter());
     // time call start to serialisation
     format_min_median_max(clnt_iter().zip(global.iter()),
-            "Call start → writing args",
+            "Call start -> writing args",
             |(c, (start, _))| c.arg_serialisation_start - start);
     // time of argument serialisation
     format_min_median_max(clnt_iter(), "Writing args to registers", |x: &l4::ClientCall| {
@@ -159,7 +169,7 @@ fn evaluate_microbenchmarks(global: Vec<(i64, i64)>) {
     });
     format_min_median_max(clnt_with_srv(), "IPC send to server rcv",
         |(c, s)| s.loop_dispatch - c.ipc_call_start);
-    format_min_median_max(srv_iter(), "Srv loop → interface dispatch",
+    format_min_median_max(srv_iter(), "Srv loop -> interface dispatch",
         |s| s.iface_dispatch - s.loop_dispatch);
     format_min_median_max(srv_iter(), "Reading opcode",
         |s| s.opcode_dispatch - s.iface_dispatch);
@@ -167,7 +177,7 @@ fn evaluate_microbenchmarks(global: Vec<(i64, i64)>) {
         |s| s.retval_serialisation_start - s.opcode_dispatch);
     format_min_median_max(srv_iter(), "Write return value",
         |s| s.result_returned - s.retval_serialisation_start);
-    format_min_median_max(srv_iter(), "Ret val written → hooks",
+    format_min_median_max(srv_iter(), "Ret val written -> hooks",
         |s| s.hook_start - s.result_returned);
     format_min_median_max(srv_iter(), "Calling server loop hooks",
         |s| s.hook_end - s.hook_start);
@@ -176,4 +186,21 @@ fn evaluate_microbenchmarks(global: Vec<(i64, i64)>) {
     // return deserialisation
     format_min_median_max(clnt_iter().zip(global.iter()),
         "Read return value", |(c, (_, e))| e - c.return_val_start);
+
+    let mut median: Vec<i64> = global.iter().map(|(a,b)| b - a).collect();
+    median.sort();
+    let median = median[median.len() / 2];
+    // find spikes
+    println!("IPC spikes where the round-trip time is longer than twice the median");
+    println!("BS := byte offset within contiguous memory of measurement structure");
+    println!("{:<7}{:<10}{:<10}{}", "Index", "Client BS",  "Server BS", "CPU Cycles");
+    let spikes: Vec<(usize, &(i64, i64))> = global.iter().enumerate()
+            .filter(|(_, c)| c.1 - c.0 > median * 2).collect();
+    let end = if spikes.len() > 10 { 10 } else { spikes.len() };
+    for (idx, cycle) in &spikes[..end] {
+        println!("{:<7}{:<10x}{:<10x}{}", idx,
+                (idx + INITIAL_SKIP) * core::mem::size_of::<l4::ClientCall>(),
+                (idx + INITIAL_SKIP) * core::mem::size_of::<l4::ServerDispatch>(),
+                cycle.1 - cycle.0);
+    }
 }

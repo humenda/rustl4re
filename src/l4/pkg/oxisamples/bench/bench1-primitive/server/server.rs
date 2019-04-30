@@ -16,7 +16,7 @@ use l4re::{OwnedCap,
 // this file)
 include!("../../interface.rs");
 
-#[l4_server(Bencher)]
+#[l4_server(Bencher, buffer = 128)]
 struct BenchServer;
 
 impl Bencher for BenchServer {
@@ -25,16 +25,13 @@ impl Bencher for BenchServer {
         Ok(x)
     }
 
-    fn str2leet(&mut self, a: &str) -> Result<String> {
-        Ok(a.chars().map(|c| match c as char {
-                't' => '7',
-                'a' => '4',
-                'e' => '3',
-                'o' => '0',
-                'l' => '1',
-                's' => '5',
-                k => k,
-            }).collect())
+    #[cfg(bench_str)]
+    fn str_ping_pong(&mut self, a: &str) -> Result<&str> {
+        Ok(self.copy_in(a))
+    }
+
+    fn string_ping_pong(&mut self, a: String) -> Result<String> {
+        Ok(a)
     }
 }
 
@@ -71,7 +68,12 @@ fn setup_shm() -> OwnedCap<Dataspace> {
         if err != 0 {
             println!("error while attaching memory: {}", err);
         }
-       l4::SERVER_MEASUREMENTS = ds_start as *mut l4::Measurements<l4::ServerDispatch>;
+        l4::SERVER_MEASUREMENTS = ds_start as *mut l4::Measurements<l4::ServerDispatch>;
+        // initialise with 0 to avoid page faults
+        let ds_start = ds_start as *mut i64;
+        for i in 0isize..(size as isize / core::mem::size_of::<i64> as isize) {
+            (*ds_start.offset(i)) = 0;
+        }
     }
     ds
 }

@@ -87,16 +87,11 @@ pub static mut CLIENT_MEASUREMENTS: Measurements<ClientCall> = Measurements {
 
 // pointer for server-side measurements; normally redirected to a shared memory region, but has a
 // backup for safety reasons
-//#[cfg(bench_serialisation)]
-//pub static mut SERVER_MEASUREMENTS_BACKUP: Measurements<ServerDispatch> = Measurements {
-//    buf: [ServerDispatch::new(); MEASURE_RUNS],
-//    index: 0usize,
-//};
 #[cfg(bench_serialisation)]
 pub static mut SERVER_MEASUREMENTS: *mut Measurements<ServerDispatch> =
         0 as *mut _;
 
-pub const MEASURE_RUNS: usize = 100000;
+pub const MEASURE_RUNS: usize = 10000;
 
 #[cfg(bench_serialisation)]
 pub struct Measurements<T> {

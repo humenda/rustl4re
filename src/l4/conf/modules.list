@@ -168,6 +168,14 @@ module bench1-primitive_cc.cfg
 module bench1-client_cc
 module bench1-server_cc
 
+entry bench2-str
+roottask moe rom/bench2-str.cfg
+module l4re
+module ned
+module bench2-str.cfg
+module bench2-client_str
+module bench1-server
+
 entry bench2-string
 roottask moe rom/bench2-string.cfg
 module l4re

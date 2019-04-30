@@ -21,28 +21,23 @@ class Bench_server : public L4::Epiface_t<Bench_server, Bencher>
             return 0;
         }
 
-        int op_str2leet(Bencher::Rights, L4::Ipc::String<> s, String<char> &a) {
+        int op_str_ping_pong(Bencher::Rights, L4::Ipc::String<> s, String<char> &a) {
             char msg[256];
             if (s.length > 256)
                 return -L4_EMSGTOOLONG;
             memcpy(msg, s.data, s.length);
-            unsigned int i;
-            for (i = 0; i < s.length; i++) {
-                switch (msg[i]) {
-                    case 't': msg[i] = '7'; break;
-                    case 'a': msg[i] = '4'; break;
-                    case 'e': msg[i] = '3'; break;
-                    case 'o': msg[i] = '0'; break;
-                    case 'l': msg[i] = '1'; break;
-                    case 's': msg[i] = '5'; break;
-                    default: break;
-                }
-            }
-            if (msg[i] != 0) {
-                msg[i] = 0;
-            }
             a.copy_in((char *)&msg);
             return 0;
+        }
+
+        int op_string_ping_pong(Bencher::Rights, L4::Ipc::String<> s, String<char> &a) {
+            char msg[256];
+            if (s.length > 256)
+                return -L4_EMSGTOOLONG;
+            memcpy(msg, s.data, s.length);
+            a.copy_in((char *)&msg);
+            return 0;
+
         }
 
         int op_check_dataspace(Bencher::Rights, l4_uint64_t size, L4::Ipc::Snd_fpage const &fpage) {
