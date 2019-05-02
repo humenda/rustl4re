@@ -87,6 +87,7 @@ impl Shm {
             for i in 0..(i64s as isize) {
                 *ptr.offset(i) = 0;
             }
+            l4::CLIENT_MEASUREMENTS.index = 0;
         }
     }
 }
@@ -125,6 +126,8 @@ fn format_min_median_max<'a, I, F, M: 'a>(iter: I, description: &str, f: F)
 }
 
 fn main() {
+    #[cfg(all(test_str, test_string))]
+    compile_error!("Feature test_str and test_string cannot be enabled simultaneously.");
     let mut server: Cap<Bench> = l4re::env::get_cap("channel").expect(
             "Received invalid capability for benchmarking client.");
 
@@ -143,9 +146,9 @@ fn main() {
     let msg = "Premature optimization is the root of all evil. Yet we should not pass up our opportunities in that critical 3%.";
     #[cfg(test_string)]
     let msg = String::from(msg);
-    for _ in 0..l4::MEASURE_RUNS {
+    for i in 0..l4::MEASURE_RUNS {
         let start_counter = unsafe { rdtsc() };
-        #[cfg(not(all(test_string, test_str)))]
+        #[cfg(not(any(test_string, test_str)))]
         let _ = server.sub(9, 8).unwrap();
         #[cfg(test_str)]
         let _ = server.str_ping_pong(msg).unwrap();
@@ -182,7 +185,7 @@ fn evaluate_microbenchmarks(global: &[(i64, i64)]) {
     });
     format_min_median_max(clnt_with_srv(), "IPC send to server rcv",
         |(c, s)| s.loop_dispatch - c.ipc_call_start);
-    format_min_median_max(srv_iter(), "Srv loop -> interface dispatch",
+    format_min_median_max(srv_iter(), "Srv loop - interface dispatch",
         |s| s.iface_dispatch - s.loop_dispatch);
     format_min_median_max(srv_iter(), "Reading opcode",
         |s| s.opcode_dispatch - s.iface_dispatch);

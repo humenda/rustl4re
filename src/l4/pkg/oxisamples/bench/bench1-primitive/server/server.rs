@@ -25,9 +25,9 @@ impl Bencher for BenchServer {
         Ok(x)
     }
 
-    #[cfg(bench_str)]
     fn str_ping_pong(&mut self, a: &str) -> Result<&str> {
-        Ok(self.copy_in(a))
+        use crate::l4::ipc::server::TypedBuffer;
+        Ok(self.copy_in(a)?)
     }
 
     fn string_ping_pong(&mut self, a: String) -> Result<String> {

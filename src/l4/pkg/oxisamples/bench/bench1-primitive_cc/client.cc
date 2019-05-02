@@ -155,7 +155,7 @@ int main() {
 #ifdef TEST_STRING
         L4::Ipc::String<const char> knuth = L4::Ipc::String<>(MY_MESSAGE);
         auto out = L4::Ipc::String<char>((char *)malloc((knuth.length + 1) * sizeof(char)));
-        if ((r = server->str2leet(knuth, out)))
+        if ((r = server->string_ping_pong(knuth, out)))
 #elif defined(TEST_CAP)
         if ((r = server->check_dataspace(size, ds)))
 #else
