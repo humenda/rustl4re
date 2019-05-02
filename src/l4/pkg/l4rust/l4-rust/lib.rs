@@ -1,5 +1,4 @@
 // ToDo: things to be stabilised in Rust:
-#![feature(align_offset)]
 #![feature(associated_type_defaults)]
 
 #![no_std]

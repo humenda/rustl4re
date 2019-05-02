@@ -1,16 +1,3 @@
-#[macro_export]
-macro_rules! write_msg {
-    ($msg_mr:expr, $($arg:ident: $argty:ty),*) => {
-        {
-            unsafe {
-                $(
-                    <$argty>::write($arg, $msg_mr)?;
-                 )*
-            }
-        };
-    }
-}
-
 /// Read IPC arguments from the message registers and create a comma-separate argument list to be
 /// inserted into a function call:
 ///
@@ -103,7 +90,7 @@ macro_rules! derive_ipc_calls {
             fn $name(&mut self $(, $argname: $type)*)
                         -> $crate::error::Result<$return> 
                             where Self: $crate::cap::Interface {
-                                use $crate::ipc::Serialiser;
+                use $crate::ipc::Serialiser;
                 use $crate::ipc::CapProvider;
                 // ToDo: would re-allocate a capability each time; how to control number of
                 // required slots
@@ -112,8 +99,11 @@ macro_rules! derive_ipc_calls {
                 // write opcode
                 unsafe {
                     mr.write($opcode)?;
-                }
-                $crate::write_msg!(&mut mr, $($argname: $type),*);
+                    $(
+                        <$type>::write($argname, &mut mr)?;
+                    )*
+                };
+
                 // get the protocol for the msg tag label
                 let tag = $crate::ipc::MsgTag::new($proto, mr.words(),
                         mr.items(), 0);
