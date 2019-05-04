@@ -257,10 +257,10 @@ impl<'a, T: LoopHook, C: CapProvider> Loop<'a, T, C> {
             let callable = *(ipc_label as *mut Callback);
             callable(handler, tag, &mut mr, &mut bufs)
         };
-        #[cfg(bench_serialisation)]
-        let hook_start = unsafe { rdtsc() };
+        //#[cfg(bench_serialisation)]
+        //let hook_start = unsafe { rdtsc() };
         // dispatch received result to user-registered handler
-        let r = match result {
+        let tmp = match result {
             Err(e) => borrow!(self.hooks.application_error(&mut self, e)),
             Ok(tag) => LoopAction::ReplyAndWait(tag),
         };
@@ -268,10 +268,10 @@ impl<'a, T: LoopHook, C: CapProvider> Loop<'a, T, C> {
         unsafe {
             let hook_end = rdtsc();
             let mut sd = (*SERVER_MEASUREMENTS).last();
-            sd.hook_start = hook_start;
+            //sd.hook_start = hook_start;
             sd.hook_end = hook_end;
         }
-        r
+        tmp
     }
 }
 

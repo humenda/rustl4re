@@ -224,6 +224,7 @@ handle_svr_obj_call(O *o, l4_utcb_t *utcb, l4_msgtag_t tag, ARGS ...args)
   asm volatile ("" : "=m" (mrs->mr));
 
   // call the server function
+  SERVER_MEASUREMENTS[SERVER_MEASUREMENTS_IDX].exc_user_impl = l4_rdtsc();
   long ret = pack.template obj_call<O, typename IPC_TYPE::rpc, ARGS...>(o, args...);
 #ifdef BENCH_SERIALISATION
   SERVER_MEASUREMENTS[SERVER_MEASUREMENTS_IDX].retval_serialisation_start = l4_rdtsc();

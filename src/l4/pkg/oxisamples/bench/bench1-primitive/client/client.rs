@@ -81,10 +81,10 @@ impl Shm {
     }
 
     fn initialise_client_memory() {
-        let i64s = l4::MEASURE_RUNS * size_of::<l4::ClientCall>() / size_of::<i64>();
+        let u64s = l4::MEASURE_RUNS * size_of::<l4::ClientCall>() / size_of::<u64>();
         unsafe {
-            let ptr = &mut l4::CLIENT_MEASUREMENTS as *mut _ as *mut i64;
-            for i in 0..(i64s as isize) {
+            let ptr = &mut l4::CLIENT_MEASUREMENTS as *mut _ as *mut u64;
+            for i in 0..(u64s as isize) {
                 *ptr.offset(i) = 0;
             }
             l4::CLIENT_MEASUREMENTS.index = 0;
@@ -115,9 +115,9 @@ impl core::ops::Drop for Shm {
 
 // iterate over M (ServerDispatch or ClientCall) with an iterator I, applying a function F
 fn format_min_median_max<'a, I, F, M: 'a>(iter: I, description: &str, f: F)
-        where F: FnMut(M) -> i64,
+        where F: FnMut(M) -> u64,
               I: std::iter::Iterator<Item = M> {
-    let mut sorted = iter.map(f).collect::<Vec<i64>>();
+    let mut sorted = iter.map(f).collect::<Vec<u64>>();
     sorted.sort();
     let median = sorted[(l4::MEASURE_RUNS - INITIAL_SKIP) / 2];
     println!("{:<30}{:<10}{:<10}{:<10}",
@@ -167,7 +167,7 @@ fn main() {
 }
 
 #[cfg(bench_serialisation)]
-fn evaluate_microbenchmarks(global: &[(i64, i64)]) {
+fn evaluate_microbenchmarks(global: &[(u64, u64)]) {
     let clnt_iter = || unsafe { l4::CLIENT_MEASUREMENTS.as_slice()[INITIAL_SKIP..].iter() };
     let srv_iter = || unsafe { (*l4::SERVER_MEASUREMENTS).as_slice()[INITIAL_SKIP..].iter() };
     let clnt_with_srv = || clnt_iter().zip(srv_iter());
@@ -189,14 +189,15 @@ fn evaluate_microbenchmarks(global: &[(i64, i64)]) {
         |s| s.iface_dispatch - s.loop_dispatch);
     format_min_median_max(srv_iter(), "Reading opcode",
         |s| s.opcode_dispatch - s.iface_dispatch);
-    format_min_median_max(srv_iter(), "Reading args + exec user impl",
-        |s| s.retval_serialisation_start - s.opcode_dispatch);
+    format_min_median_max(srv_iter(), "Reading args",
+        |s| s.exc_user_impl - s.opcode_dispatch);
+    format_min_median_max(srv_iter(), "exec user impl",
+        |s| s.retval_serialisation_start - s.exc_user_impl);
+
     format_min_median_max(srv_iter(), "Write return value",
         |s| s.result_returned - s.retval_serialisation_start);
-    format_min_median_max(srv_iter(), "Ret val written -> hooks",
-        |s| s.hook_start - s.result_returned);
-    format_min_median_max(srv_iter(), "Calling server loop hooks",
-        |s| s.hook_end - s.hook_start);
+    format_min_median_max(srv_iter(), "Ret val written -> reply",
+        |s| s.hook_end - s.result_returned);
     format_min_median_max(clnt_with_srv(), "IPC reply to client",
         |(c, s)| c.return_val_start - s.hook_end);
     // return deserialisation
@@ -204,10 +205,10 @@ fn evaluate_microbenchmarks(global: &[(i64, i64)]) {
         "Read return value", |(c, (_, e))| e - c.return_val_start);
 
     // report unusual timing spikes, if any
-    let mut median: Vec<i64> = global.iter().map(|(a,b)| b - a).collect();
+    let mut median: Vec<u64> = global.iter().map(|(a,b)| b - a).collect();
     median.sort();
     let median = median[median.len() / 2];
-    let spikes: Vec<(usize, &(i64, i64))> = global.iter().enumerate()
+    let spikes: Vec<(usize, &(u64, u64))> = global.iter().enumerate()
             .filter(|(_, c)| c.1 - c.0 > median * 2).collect();
     if spikes.len() > 0 {
         println!("IPC spikes where the round-trip time is longer than twice the median");

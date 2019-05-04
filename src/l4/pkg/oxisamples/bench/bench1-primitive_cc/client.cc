@@ -206,9 +206,13 @@ int main() {
     format_min_median_max("Reading opcode", [](ClientCall c, ServerDispatch s) {
         (void)c;return s.opcode_dispatch - s.iface_dispatch;
     });
-    format_min_median_max("Reading args + exec user impl", [](ClientCall c, ServerDispatch s) {
-        (void)c;return s.retval_serialisation_start - s.opcode_dispatch;
+    format_min_median_max("Reading args", [](ClientCall c, ServerDispatch s) {
+        (void)c;return s.exc_user_impl - s.opcode_dispatch;
     });
+    format_min_median_max("Exec user impl", [](ClientCall c, ServerDispatch s) {
+        (void)c;return s.retval_serialisation_start - s.exc_user_impl;
+    });
+
     format_min_median_max("Write return value", [](ClientCall c, ServerDispatch s) {
         (void)c;return s.result_returned - s.retval_serialisation_start;
     });

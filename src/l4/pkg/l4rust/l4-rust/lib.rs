@@ -42,13 +42,13 @@ pub use sys::{round_page, trunc_page};
 #[derive(Clone, Copy)]
 pub struct ClientCall {
     // begin of serialisation of method parameters (after opcode)
-    pub arg_serialisation_start: i64,
+    pub arg_serialisation_start: u64,
     // end of it
-    pub arg_serialisation_end: i64,
+    pub arg_serialisation_end: u64,
     // begin of IPC call (message tag was created between arg srl end and call start)
-    pub ipc_call_start: i64,
+    pub ipc_call_start: u64,
     // after IPC call, return value is going to be read; includes error checking
-    pub return_val_start: i64, // doesn't have end, ended by call itself
+    pub return_val_start: u64, // doesn't have end, ended by call itself
 }
 
 impl ClientCall { pub const fn new() -> Self { ClientCall {
@@ -59,24 +59,27 @@ impl ClientCall { pub const fn new() -> Self { ClientCall {
 #[derive(Clone, Copy)]
 pub struct ServerDispatch {
     /// label received from kernel, wild casting starts
-    pub loop_dispatch: i64,
+    pub loop_dispatch: u64,
     /// op_dispatch auto-implemented by iface! macro starts, about to check
     /// message tag and read opcode
-    pub iface_dispatch: i64,
+    pub iface_dispatch: u64,
     // opcode is matched to dispatch to appropriate function, just before
     // function is executed
-    pub opcode_dispatch: i64,
+    pub opcode_dispatch: u64,
+    // start of user impl
+    pub exc_user_impl: u64,
     // after user-implemented function handler
-    pub retval_serialisation_start: i64,
-    pub result_returned: i64,
+    pub retval_serialisation_start: u64,
+    pub result_returned: u64,
     // start of handling service result in server loop handler
-    pub hook_start: i64,
-    /// end of hook invocation, dispatch result as integer
-    pub hook_end: i64,
+    //pub hook_start: u64,
+    /// end of hook invocation, end of IPC server part
+    pub hook_end: u64,
 }
 impl ServerDispatch { pub const fn new() -> Self { ServerDispatch {
-    loop_dispatch: 0, iface_dispatch: 0, opcode_dispatch: 0,
-    retval_serialisation_start: 0, result_returned: 0, hook_start: 0, hook_end: 0,
+    loop_dispatch: 0, iface_dispatch: 0, opcode_dispatch: 0, exc_user_impl: 0,
+    retval_serialisation_start: 0, result_returned: 0, //hook_start: 0,
+    hook_end: 0,
 }}}
 
 #[cfg(bench_serialisation)]

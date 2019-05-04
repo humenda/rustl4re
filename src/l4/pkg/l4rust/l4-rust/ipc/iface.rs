@@ -96,11 +96,12 @@ macro_rules! derive_ipc_calls {
                 // write opcode
                 unsafe {
                     mr.write($opcode)?;
+                    cc.arg_serialisation_start = rdtsc();
+                    $(
+                        <$type>::write($argname, &mut mr)?;
+                    )*
+                    cc.arg_serialisation_end = rdtsc(); // MsgTag::new() is very efficient, not benchmarked
                 }
-                { cc.arg_serialisation_start = unsafe { rdtsc() }; };
-                $crate::write_msg!(&mut mr, $($argname: $type),*);
-                // get the protocol for the msg tag label
-                unsafe { cc.arg_serialisation_end = rdtsc(); }; // MsgTag::new() is very efficient, not benchmarked
                 let tag = $crate::ipc::MsgTag::new($proto, mr.words(),
                         mr.items(), 0);
                 unsafe { cc.ipc_call_start = rdtsc(); }; // MsgTag::new() is very efficient, not benchmarked
