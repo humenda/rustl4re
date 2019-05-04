@@ -1,4 +1,3 @@
-#![feature(associated_type_defaults)]
 extern crate l4_derive;
 extern crate l4;
 extern crate l4re;
@@ -6,7 +5,7 @@ extern crate libc; // only for C type definitions
 
 use l4_derive::{iface, l4_client};
 use l4::sys::l4_cap_idx_t;
-use l4::cap::{Cap, Interface};
+use l4::cap::Cap;
 use l4re::{env,
     mem::DataspaceProvider,
     OwnedCap,

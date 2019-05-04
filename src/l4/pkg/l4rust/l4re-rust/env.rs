@@ -1,5 +1,5 @@
 use l4::cap::{Cap, IfaceInit};
-use crate::sys::{l4re_env_get_cap, l4re_env};
+use crate::sys::{l4re_env_get_cap};
 
 /// Retrieve a capability from the initial capability set of a L4Re task
 pub fn get_cap<T: IfaceInit>(name: &str) -> Option<Cap<T>> {

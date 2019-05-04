@@ -140,7 +140,6 @@ macro_rules! iface_back {
     ) => {
         pub trait $traitname: $crate::cap::Interface
                     + $crate::ipc::CapProviderAccess {
-            type OpType = $op_type;
             const PROTOCOL_ID: i64 = $proto;
             const CAP_DEMAND: u8 = $caps;
             $crate::derive_ipc_calls!($proto; $($op_code =>
@@ -194,6 +193,7 @@ macro_rules! iface_back {
 }
 
 // for debugging purposes
+/*
 use crate::cap::{Cap, Untyped};
 iface_back! {
     trait EchoServer {
@@ -206,3 +206,4 @@ iface_back! {
         3 => fn str_without_alloc(&mut self, s: &str) -> ();
     }
 }
+*/
