@@ -3,7 +3,7 @@
 use l4::{
     cap::Cap,
     utcb::SndFlexPage as FlexPage,
-    sys::{l4_addr_t, l4_size_t, PROTO_EMPTY},
+    sys::{l4_addr_t, l4_size_t},
 };
 use l4_derive::{iface, l4_client};
 use super::sys::L4ReProtocols::L4RE_PROTO_DATASPACE;

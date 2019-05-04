@@ -1,4 +1,3 @@
-#![feature(associated_type_defaults)]
 extern crate l4;
 extern crate l4_derive;
 extern crate l4re;
