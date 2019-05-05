@@ -51,10 +51,6 @@ pub trait Demand {
     const CAP_DEMAND: u8;
 }
 
-pub trait StackBuf<'a> {
-    fn consume<T>(&'a mut self, i: T) -> T;
-}
-
 // allow the auto-derived client implementation to expose its buffer manager. This trait is hidden
 // since it is unused by the server and shouldn't be touched by the end user.
 #[doc(hidden)]
