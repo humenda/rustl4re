@@ -4,8 +4,12 @@ use std::{collections::{HashMap, HashSet},
     string::ToString,
     str::FromStr};
 use std::fs;
-use syn::{FnArg, TraitItemMethod, Result, Token};
+use syn::{Expr, FnArg,
+    Lit, LitStr,
+    parse::ParseStream, punctuated::Punctuated,
+    TraitItemMethod, Result, Token};
 use syn::spanned::Spanned;
+use syn::parse::Parse;
 
 use super::iface::Iface;
 
@@ -58,59 +62,119 @@ lazy_static::lazy_static! {
     };
 }
  
+/// Mapping from Rust name to (C++ Namespace, C++ type name); namespace may be empty
+type TypeMappings = HashMap<String, (String, String)>;
+
+/// Options to adjust the exported C++ interface
 pub struct ExportOptions {
+    /// file containing the interface definition using `iface!`
     pub input_file: String,
-    pub output_file:  Option<String>,
+    /// Output file (optional), will use `input_file` with the `.h` extension
+    pub output_file: String,
+    /// Optional specification of an alternate C++ interface name to adhere to
+    /// other naming conventions
     pub name: Option<String>,
+    /// Overwrite protocol specification (e.g. if a constant instead of a number
+    /// was used)
     pub protocol: Option<u64>,
+    /// additional types: Rust type → (cpp name space, cpp type)
+    pub type_mappings: TypeMappings,
+    /// Additional mappings from C++ types to their include files
+    pub includes: HashSet<String>,
 }
 
 impl syn::parse::Parse for ExportOptions {
     fn parse(input: syn::parse::ParseStream) -> Result<Self> {
         let err = |msg| syn::Error::new(proc_macro2::Span::call_site(), msg);
         let err_sp = |sp: proc_macro2::Span, msg| syn::Error::new(sp, msg);
-        let mut opts = std::collections::HashMap::new();
+        let mut lit_opts = std::collections::HashMap::new();
+        let mut ty_map = HashMap::new();
+        let mut includes = HashSet::new();
         while !input.is_empty() {
             let key: syn::Ident = input.parse()?;
             let _: Token![:] = input.parse()?;
-            let val: syn::Lit = input.parse()?;
+            match &*key.to_string() {
+                // parse "foo"  => ("bar", "baz")
+                "add_types" => ty_map.extend(Self::parse_ty_mappings(input)?),
+                "add_includes" => includes.extend(Self::parse_includes(input)?),
+                _ => {
+                    let val: Lit = input.parse()?;
+                    lit_opts.insert(key.to_string(), val);
+                }
+            };
             if !input.is_empty() {
                 let _: Token![,] = input.parse()?;
             }
-            opts.insert(key.to_string(), val);
         }
+        let input_file = lit_opts.get("input_file")
+                .ok_or(err("No input file specified"))
+                .map(|l| match l {
+                    Lit::Str(x) => Ok(x.value()),
+                    _ => Err(err_sp(l.span(), "Invalid input_file"))
+                })??;
         Ok(ExportOptions {
-            input_file: {
-                let l = opts.get("input_file").ok_or(err("No input file specified"))?;
-                match l {
-                    syn::Lit::Str(x) => x.value(),
-                    _ => return Err(err_sp(l.span(), "Invalid input_file")),
-                }
-            },
-            // ToDo: make me optional
-            output_file: {
-                let l = opts.get("output_file").ok_or(err("No output file specified"))?;
-                match l {
-                    syn::Lit::Str(x) => Some(x.value()),
-                    _ => return Err(err_sp(l.span(), "Invalid input_file")),
-                }
-            },
-            name: match opts.get("name") {
-                None => None,
-                Some(l) => match l {
-                    syn::Lit::Str(x) => Some(x.value()),
-                    _ => return Err(err_sp(l.span(), "Invalid input_file")),
-                }
-            },
-            protocol: match opts.get("protocol") {
-                None => None,
-                Some(l) => match l {
-                    syn::Lit::Int(l) => Some(l.value()),
-                    _ => return Err(err_sp(l.span(), "Only (positive) integers \
-                                           allowed")),
-                },
-            },
+            input_file: input_file.clone(),
+            output_file: lit_opts.get("output_file")
+                .map(|l| match l {
+                    Lit::Str(x) => Ok(x.value()),
+                    _ => Err(err_sp(l.span(), "Only string literals allowed")),
+                }).transpose()?
+                .or(Some(input_file.replace(".rs", ".h"))).unwrap(),
+            name: lit_opts.get("name").map(|l| match l {
+                Lit::Str(x) => Ok(x.value()),
+                _ => return Err(err_sp(l.span(), "Invalid input_file")),
+            }).transpose()?,
+            protocol: lit_opts.get("protocol").map(|l| match l {
+                Lit::Int(l) => Ok(l.value()),
+                _ => Err(err_sp(l.span(), "Only (positive) integers allowed")),
+            }).transpose()?,
+            type_mappings: ty_map,
+            includes: includes,
         })
+    }
+}
+
+impl ExportOptions {
+    /// parse additional `"rust" => ("namespace", "C++ type"), …}` mappings
+    fn parse_ty_mappings(input: ParseStream) -> Result<TypeMappings> {
+        let content;
+        let _brace = syn::braced!(content in input);
+        let mut mappings: TypeMappings = HashMap::new();
+        // parse expressions as `"foo" => ("bar", "baz"), ...`
+        while !content.is_empty() {
+            let key: LitStr = content.parse()?;
+            let _arrow: Token![=>] = content.parse()?;
+            let tpl_content;
+            let _ = syn::parenthesized!(tpl_content in content);
+            let tuple_expr: Punctuated<Expr, Token![,]> = tpl_content.parse_terminated(Expr::parse)?;
+            // slightly complex expression to collect ("", "") into a Vec
+            let v: Vec<Result<String>> = tuple_expr.iter()
+                .map(|elem| {
+                    let l = ifletelse!(elem => syn::Expr::Lit; "Expected literal string");
+                    let l = ifletelse!(l.lit => Lit::Str; "Expected a literal string");
+                    Ok((*l.value()).to_owned())
+                }).collect();
+            match v.len() {
+                2 => mappings.insert(key.value(), (v[0].clone()?, v[1].clone()?)),
+                _ => err!(key, "Required tuple of two literal strings as value"),
+            };
+        }
+        Ok(mappings)
+    }
+
+    fn parse_includes(input: ParseStream) -> Result<HashSet<String>> {
+        let content;
+        let _bracket = syn::bracketed!(content in input);
+        let mut includes = HashSet::new();
+        // parse ["path1", "path2", …]
+        while !content.is_empty() {
+            let include: LitStr = content.parse()?;
+            if !content.is_empty() {
+                let _comma: Token![,] = content.parse()?;
+            }
+            includes.insert(include.value());
+        }
+        Ok(includes)
     }
 }
 
@@ -157,14 +221,15 @@ pub fn parse_external_iface(filename: &str) -> Result<Iface> {
 // Returned is the fully translated type name (including generics); required
 // namespace_usg and includes will be added to the given sets.; empty Strings are allowed for unit
 // structs which cannot be translated to C++ types, since they don't reserve any space
-fn translate_type(ty: &syn::Type, namespace_usg: &mut HashSet<String>,
+fn translate_type(additional: &TypeMappings, ty: &syn::Type,
+        namespace_usg: &mut HashSet<String>,
         includes: &mut HashSet<String>,
         is_output: bool) -> Result<String> {
     let ty = match ty {
         syn::Type::Path(p) => p,
         syn::Type::Tuple(tp) if tp.elems.is_empty() => return Ok(String::new()),
-        syn::Type::Reference(r) => return translate_type(&*r.elem, namespace_usg,
-                includes, is_output),
+        syn::Type::Reference(r) => return translate_type(additional,
+                &*r.elem, namespace_usg, includes, is_output),
         _ => {
             let mut ts = proc_macro2::TokenStream::new();
             ty.to_tokens(&mut ts);
@@ -188,14 +253,21 @@ fn translate_type(ty: &syn::Type, namespace_usg: &mut HashSet<String>,
     };
 
     let main = segment.ident.to_string();
-    let mut translated = String::from(*RUST2CPP_TYPE.get(main.as_str()).unwrap_or(
-            &main.as_str()));
+    let mut translated = additional.get(main.as_str()).map(|x| x.1.clone())
+            .or(RUST2CPP_TYPE.get(main.as_str()) .map(|e| e.to_string()))
+            .unwrap_or(main.clone());
     if is_output {
         // if output differs from input, use this, otherwise use normal C++ type
         translated = String::from(*RUST2CPP_OUTPUT.get(
             &main.as_str()).unwrap_or(&translated.as_str()));
     }
-    if let Some((usg, incl)) = CPPTYPE2NAMESPACE.get(main.as_str()) {
+    let decl = CPPTYPE2NAMESPACE.get(main.as_str())
+        .map(|e| *e)
+        .or(match additional.get(main.as_str()) {
+            Some((usg, _)) => Some((usg, None)),
+            None => None, // if additional type mapping used, omit include path
+        });
+    if let Some((usg, incl)) = decl {
         namespace_usg.insert(format!("{}", usg));
         if let Some(incl) = incl {
                 includes.insert(format!("{}", incl));
@@ -211,8 +283,9 @@ fn translate_type(ty: &syn::Type, namespace_usg: &mut HashSet<String>,
                 match &arg {
                     syn::GenericArgument::Lifetime(_) => (), // ignore those
                     syn::GenericArgument::Type(t) =>
-                        transformed_generics.push_str(&translate_type(&t,
-                                namespace_usg, includes, is_output)?),
+                        transformed_generics.push_str(&translate_type(
+                                additional, &t, namespace_usg, includes,
+                                  is_output)?),
                     _ => err!(args, "Invalid type parameter"),
                 }
                 transformed_generics.push_str(", ");
@@ -238,29 +311,35 @@ pub fn gen_cpp_interface(iface: &Iface, opts: &ExportOptions) -> Result<String> 
         None => {
             let lit_enum = ifletelse!(iface.protocol => syn::Expr::Lit;
                     "No protocol specified and no protocol literal in interface definition.");
-            let lit = ifletelse!(lit_enum.lit => syn::Lit::Int;
+            let lit = ifletelse!(lit_enum.lit => Lit::Int;
                     "Protocol literal is not an integer");
             lit.value()
         }
     };
+    // use custom interface name or default
     let name = opts.name.clone().unwrap_or(iface.name.to_string());
 
     let demand = match iface.demand.caps {
         0 => String::new(),
         n => format!(", L4::Type_info::Demand_t<{}>", n),
     };
-    let mut cpp_iface = format!("struct {0}: L4::Kobject_t<{0}, \
-            L4::Kobject, {1}{2}> {{\n", name, protocol, demand);
-    // variable name literally required by the C++ framework
-    let mut rpcs = Vec::new();
+
+    // construct list with namespaces, includes and type mappings
     let mut namespace_usg = HashSet::new(); // gathered below
     // default includes
     let mut includes = HashSet::new();
     includes.insert(String::from("l4/sys/capability"));
     includes.insert(String::from("l4/sys/cxx/ipc_iface"));
+    includes.extend(opts.includes.clone());
+
+    let mut cpp_iface = format!("struct {0}: L4::Kobject_t<{0}, \
+            L4::Kobject, {1}{2}> {{\n", name, protocol, demand);
+    // variable name literally required by the C++ framework
+    let mut rpcs = Vec::new();
     for method in (*iface.methods).iter() {
         rpcs.push(method.inner_ref().sig.ident.to_string());
         cpp_iface.push_str(&gen_cpp_rpc_method(method.inner_ref(),
+                &opts.type_mappings,
                 &mut namespace_usg,
                 &mut includes)?);
     }
@@ -288,18 +367,18 @@ pub fn gen_cpp_interface(iface: &Iface, opts: &ExportOptions) -> Result<String> 
     }
 }
 
-fn gen_cpp_rpc_method(method: &TraitItemMethod,
+fn gen_cpp_rpc_method(method: &TraitItemMethod, ty_mappings: &TypeMappings,
                       namespace_usg: &mut HashSet<String>,
                       includes: &mut HashSet<String>) -> Result<String> {
-    let mut cpp = String::new();
     let mut used_vars = Vec::new(); // for arguments having no name in Rust
-    cpp.push_str(&format!("  L4_INLINE_RPC(int, {}, (",
-            method.sig.ident.to_string()));
     fn new_var(used: &mut Vec<String>) -> String {
         let x = (97u8..).find(|n| !used.contains(&format!("{}", *n as char)));
         let x = (x.unwrap() as char).to_string();
         used.push(x.clone()); x
     }
+    let mut cpp = format!("  L4_INLINE_RPC(int, {}, (",
+            method.sig.ident.to_string());
+
     for (idx, fnarg) in method.sig.decl.inputs.iter().enumerate() {
         let (mut name, argtype) = match fnarg {
             FnArg::SelfRef(_) | FnArg::SelfValue(_) => continue,
@@ -318,7 +397,7 @@ fn gen_cpp_rpc_method(method: &TraitItemMethod,
             false => used_vars.push(name.clone()),
         };
         // serialise the argument type to a string
-        let argtype = translate_type(argtype, namespace_usg, includes, false)?;
+        let argtype = translate_type(&ty_mappings, argtype, namespace_usg, includes, false)?;
         if idx > 1 { // skip self and no comma before first argument
             cpp.push_str(", ");
         }
@@ -326,7 +405,7 @@ fn gen_cpp_rpc_method(method: &TraitItemMethod,
     }
     // return type
     if let syn::ReturnType::Type(_, ty) = &method.sig.decl.output {
-        let ty = translate_type(ty, namespace_usg, includes, true)?;
+        let ty = translate_type(&ty_mappings, ty, namespace_usg, includes, true)?;
         if !ty.is_empty() { // no return type
             cpp.push_str(&format!(", {}& {}", ty, new_var(&mut used_vars)));
         }

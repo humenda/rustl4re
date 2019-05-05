@@ -4,6 +4,10 @@ macro_rules! err {
         return Err(syn::Error::new($obj_with_span.span(), $msg));
     }};
 
+    ($obj_with_span:expr, $msg:expr) => {{ // same again
+        return Err(syn::Error::new($obj_with_span.span(), $msg));
+    }};
+
     ($obj_with_span:expr, $msg:ident) => {
         return Err(syn::Error::new($obj_with_span.span(), $msg));
     };
@@ -25,7 +29,7 @@ macro_rules! ifletelse {
     ($match:expr => $path:path; $msg:expr) => {
         match $match {
             $path(ref l) => l,
-            _ => err!($msg),
+            _ => err!($match, $msg),
         }
     }
 }
