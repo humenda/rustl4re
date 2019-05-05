@@ -181,18 +181,7 @@ pub fn iface_export(input: TokenStream) -> TokenStream {
     // read Iface struct
     let iface = proc_err!(export::parse_external_iface(&opts.input_file));
     let cpp = proc_err!(export::gen_cpp_interface(&iface, &opts));
-    let fname = match opts.output_file {
-        None => {
-            let mut s = opts.input_file.clone();
-            if s.ends_with(".rs") {
-                s.truncate(s.len() - 2);
-            }
-            s.push_str("h");
-            s
-        },
-        Some(x) => x,
-    };
-    let mut fs = proc_err!(File::create(fname).map_err(|e|
+    let mut fs = proc_err!(File::create(opts.output_file).map_err(|e|
             syn::Error::new(proc_macro2::Span::call_site(), e.to_string())));
     proc_err!(fs.write_all(cpp.as_bytes()).map_err(|e|
             syn::Error::new(proc_macro2::Span::call_site(), e.to_string())));
