@@ -38,22 +38,31 @@ macro_rules! proc_err {
 }
 
 
-/// Derive important IPC traits for an IPC interface
+/// Transform a struct into an L4 server
 ///
-/// IPC interfaces need to adhere to a few criteria before they can be
-/// registered with the server loop. If you are impatient, use `#[l4_server]`
-/// on your struct if you are  writing a server without any flex page exchange
-/// and `#[l4_server(demand = XYZ)]` for the maximum number of capability/flex
-/// page slots for an IPC call of your interface.
+/// IPC servers are required to fulfill certain memory constraints and implement 
+/// a few unsafe traits. This macro makes sure that these are met. More
+/// information can be found at the
+/// [l4::ipc::types::Callable trait](../l4/ipc/types/trait.Callable.html),
+/// [l4::ipc::types::Dispatch](../l4/ipc/types/trait.Dispatch.html), and
+/// [l4::ipc::types::Demand](../l4/ipc/types/trait.Demand.html) traits.
+/// 
+/// The macro takes two arguments in parenthesis: the trait to base the IPC
+/// server on and an optional buffer size to allocate an internal buffer on the
+/// stack. This is explained at
+/// [l4::ipc::server::TypedBuffer](../l4/ipc/server/trait.TypedBuffer.html).
+/// Specifying no buffer assumes a size of 0.
 ///
-/// For the patient: an interface needs to implement the `Dispatch` and
-/// `Callable`trait. `Callable` is a bit special, since it requires
-/// modifications to the struct itself and this macro makes sure that the user
-/// does not need to bother about this.  
-/// Each server interface may receive capabilities / flex pages, for which it
-/// needs to prepare receive slots, so that the kernel can map it into the own
-/// object space. The maximum over all IPC functions of an interface is called
-/// the `demand` and can be specified as `#[l4_server(demand = NUM)]`.
+/// # Examples
+///
+/// ```norun
+/// #[l4_server(MyGreatIpcIface)] // <- no buffer
+/// struct Simple;
+/// #[l4_server(MyGreatIpcIface, buffer=256)] // buffer of 256 bytes
+/// struct MoreComplex {
+///     just_an_example: u32,
+/// }
+/// ```
 #[proc_macro_attribute]
 pub fn l4_server(macro_attrs: TokenStream, item: TokenStream) -> TokenStream {
     if macro_attrs.is_empty() {
