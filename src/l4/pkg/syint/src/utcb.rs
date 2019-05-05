@@ -220,6 +220,14 @@ tests! {
         assert_eq!(greeting.len(), 13);
         assert_true!(greeting.starts_with("Hello"));
     }
+
+    fn too_long_messages_are_detected() {
+        use l4::error::*;
+        let mut mr = UtcbMrFake::new();
+        let msg = (0..200).fold(String::new(), |mut s, _| { s.push_str("abcdefghi "); s });
+        let r = unsafe { mr.msg().write_str(&msg) };
+        assert_eq!(r, Err::<(), Error>(Error::Generic(GenericErr::MsgTooLong)));
+    }
     /*
     fn strings_without_0_bytes_deserialised();
 
