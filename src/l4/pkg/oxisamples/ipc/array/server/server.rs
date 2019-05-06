@@ -9,6 +9,11 @@ use l4::{error::Result,
 
 include!("../interface.rs");
 
+/// The array server
+///
+/// It implements the ArrayHub trait and provides a 200 byte stack-based buffer in which the
+/// `&str`'s can be cached to allow for efficient send/receive. This avoids the allocation required
+/// for Strings.
 #[l4_server(ArrayHub, buffer=200)]
 struct ArraySrv;
 
