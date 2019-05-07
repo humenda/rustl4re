@@ -40,13 +40,11 @@ pub unsafe trait Serialiser where Self: Sized {
     /// though it is expected to hold a value when this type reads a value from it. In other words,
     /// before the framework passes the slice and the implementing type for this method is a
     /// `Cap<T>`, a capability needs to be within the slice.
-    #[inline]
     unsafe fn read(mr: &mut UtcbMr, _: &mut BufferAccess) -> Result<Self>;
 
     /// Write a value of this type to the message registers
     ///
     /// Offset and alignment are automatically calculated by the `ArgAccess`.
-    #[inline]
     unsafe fn write(self, mr: &mut UtcbMr) -> Result<()>;
 }
 
@@ -95,10 +93,7 @@ unsafe impl<T: Serialisable> Serialiser for Option<T> {
     #[inline]
     unsafe fn read(mr: &mut UtcbMr, _: &mut BufferAccess) -> Result<Option<T>> {
         let val = mr.read::<T>()?;
-        Ok(match mr.read::<bool>()? { // Option is valid?
-            true => Some(val),
-            false => Option::<T>::None
-        })
+        mr.read::<bool>().map(|_| Some(val))
     }
 
     #[inline]

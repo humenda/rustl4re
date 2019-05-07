@@ -17,7 +17,6 @@ pub type CapIdx = l4_cap_idx_t;
 ///
 /// This marker trait identifies an object to provide a service through a capability.
 pub trait Interface {
-    #[inline]
     unsafe fn raw(&self) -> CapIdx;
 }
 
@@ -166,7 +165,7 @@ impl<T: Interface> Cap<T> {
     /// map operations.
     fn send_base(&self, grant: u64, base_cap: Option<l4_cap_idx_t>) -> u64 {
         unsafe {
-            let base_cap = base_cap.unwrap_or(self.raw());
+            let base_cap = base_cap.unwrap_or_else(|| self.raw());
             l4_sys::l4_map_obj_control(base_cap, grant)
         }
     }
@@ -178,5 +177,5 @@ pub fn from(c: CapIdx) -> Cap<Untyped> {
 /// Construct an invalid cap
 #[inline]
 pub fn invalid_cap() -> Cap<Untyped> {
-    Cap { interface: Untyped { 0: 0 | L4_INVALID_CAP_BIT as u64 } }
+    Cap { interface: Untyped { 0: L4_INVALID_CAP_BIT as u64 } }
 }

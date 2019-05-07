@@ -30,7 +30,6 @@ use std::vec::Vec;
 /// definition, passing the actual arguments back to the user implementation,
 /// once read from the UTCB.
 pub trait Dispatch {
-    #[inline]
     fn dispatch(&mut self, tag: MsgTag, _: &mut UtcbMr,
                 _: &mut BufferAccess) -> Result<MsgTag>;
 }
@@ -89,7 +88,6 @@ pub trait CapProvider  {
     unsafe fn rcv_cap_unchecked<T>(&self, index: usize) -> Cap<T>
                 where T: Interface + IfaceInit;
     /// Return the amount of allocated buffer slots.
-    #[inline]
     fn caps_used(&self) -> u8;
 
     /// Allocate buffers according to given demand
@@ -111,7 +109,6 @@ pub trait CapProvider  {
     fn set_rcv_cap_flags(&mut self, flags: UMword) -> Result<()>;
 
     /// Return the maximum number of slots this manager could allocate
-    #[inline]
     fn max_slots(&self) -> u32;
 
     /// Set up the UTCB for receiving items
@@ -126,7 +123,6 @@ pub trait CapProvider  {
     /// make sure that there is a buffer in the buffer manager implementation
     /// and that it stores enough allocated items. It is undefined behaviour
     /// otherwise.
-    #[inline]
     unsafe fn access_buffers(&mut self) -> BufferAccess;
 }
 
@@ -143,9 +139,10 @@ impl CapProvider for Bufferless {
     }
 
     fn alloc_capslots(&mut self, cap_demand: u8) -> Result<()> {
-        match cap_demand == 0 {
-            true => Ok(()),
-            false => Err(Error::InvalidArg("buffer allocation not permitted", None)),
+        if cap_demand == 0 {
+            Ok(())
+        } else {
+            Err(Error::InvalidArg("buffer allocation not permitted", None))
         }
     }
 
@@ -218,10 +215,10 @@ impl CapProvider for BufferManager {
 
     fn rcv_cap<T>(&self, index: usize) -> Result<Cap<T>>
             where T: Interface + IfaceInit {
-        match index >= self.caps as usize {
-            true  => Err(Error::InvalidArg("Index not allocated", Some(index as isize))),
-            false => Ok(Cap::<T>::new(self.br[index] & L4_CAP_MASK as u64)),
+        if index < self.caps as usize {
+            return Ok(Cap::<T>::new(self.br[index] & L4_CAP_MASK as u64));
         }
+        Err(Error::InvalidArg("Index not allocated", Some(index as isize)))
     }
 
     unsafe fn rcv_cap_unchecked<T>(&self, index: usize) -> Cap<T>
@@ -249,13 +246,14 @@ impl CapProvider for BufferManager {
         self.caps
     }
 
+    #[allow(clippy::not_unsafe_ptr_arg_deref)]
     fn setup_wait(&mut self, u: *mut l4_utcb_t) {
         unsafe {
             let br: *mut l4_buf_regs_t = l4_utcb_br_u(u);
             (*br).bdr = 0;
-            for index in 0usize..(self.caps as usize - 1) {
-                (*br).br[index] = self.br[index];
-            }
+            // copy prepared buffer values into buffer registers
+            let caps = self.caps as usize;
+            (*br).br[..caps].copy_from_slice(&self.br[..caps]);
         }
     }
 

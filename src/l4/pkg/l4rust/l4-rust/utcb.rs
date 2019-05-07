@@ -1,5 +1,4 @@
-use _core::{intrinsics::transmute,
-    marker::PhantomData,
+use _core::{marker::PhantomData,
     mem::{align_of, size_of},
     ops::{Deref, DerefMut}
 };
@@ -180,7 +179,7 @@ impl SndFlexPage {
             description: L4_ITEM_MAP as u64
                     | (snd_base & (!0u64 << 10))
                     | mt.map(|v| v as u64).unwrap_or_default(),
-            fpage: fpage
+            fpage,
         }
     }
 
@@ -207,7 +206,7 @@ impl SndFlexPage {
 #[inline(always)]
 unsafe fn align<T>(ptr: *mut u8) -> *mut u8 {
     let new_offset = ptr.align_offset(align_of::<T>());
-    ptr.offset(new_offset as isize)
+    ptr.add(new_offset)
 }
 
 // make the dumb C types more smart: let them know their limits
@@ -244,9 +243,9 @@ impl<U: UtcbRegSize> Registers<U> {
     ///
     /// The pointer must be valid.
     pub unsafe fn from_raw(buf: *mut u64) -> Self {
-        let base = transmute::<*mut u64, *mut u8>(buf as *mut _);
+        let base = buf as *mut _ as *mut u8;
         Registers {
-            base: base,
+            base,
             buf: base,
             size: PhantomData,
         }
@@ -259,10 +258,10 @@ impl<U: UtcbRegSize> Registers<U> {
     pub unsafe fn write<T: Serialisable>(&mut self, val: T) 
             -> Result<()> {
         let ptr = align::<T>(self.buf);
-        let next = ptr.offset(size_of::<T>() as isize);
+        let next = ptr.add(size_of::<T>());
         l4_err_if!((next as usize - self.base as usize) > U::BUF_SIZE
                    => Generic, MsgTooLong);
-        *transmute::<*mut u8, *mut T>(ptr) = val;
+        *(ptr as *mut T) = val;
         self.buf = next;
         Ok(())
     }
@@ -279,10 +278,10 @@ impl<U: UtcbRegSize> Registers<U> {
     #[inline]
     pub unsafe fn read<T: Serialisable>(&mut self)  -> Result<T> {
         let ptr = align::<T>(self.buf);
-        let next = ptr.offset(size_of::<T>() as isize);
+        let next = ptr.add(size_of::<T>());
         l4_err_if!((next as usize - self.base as usize) > U::BUF_SIZE
                    => Generic, MsgTooLong);
-        let val: T = (*transmute::<*mut u8, *mut T>(ptr)).clone();
+        let val: T = (*(ptr as *mut T)).clone();
         self.buf = next;
         Ok(val)
     }
@@ -293,10 +292,10 @@ impl<U: UtcbRegSize> Registers<U> {
         self.write::<Len>(NumCast::from(val.len())
                 .ok_or(Error::Generic(GenericErr::InvalidArg))?)?;
         let ptr = align::<T>(self.buf);
-        let end = ptr.offset((size_of::<T>() * val.len()) as isize);
+        let end = ptr.add(size_of::<T>() * val.len());
         l4_err_if!(end as usize - self.base as usize > U::BUF_SIZE
                    => Generic, MsgTooLong);
-        val.as_ptr().copy_to_nonoverlapping(transmute::<*mut u8, *mut T>(ptr),
+        val.as_ptr().copy_to_nonoverlapping(ptr as *mut T,
                                        val.len());
         self.buf = end; // move pointer
         Ok(())
@@ -308,7 +307,7 @@ impl<U: UtcbRegSize> Registers<U> {
                 .ok_or(Error::Generic(GenericErr::InvalidArg))?)?;
 
         let ptr = align::<u8>(self.buf);
-        let end = ptr.offset((size_of::<u8>() * val.len()) as isize);
+        let end = ptr.add(size_of::<u8>() * val.len());
         l4_err_if!(end as usize - self.base as usize > U::BUF_SIZE
                    => Generic, MsgTooLong);
         val.as_ptr().copy_to_nonoverlapping(ptr, val.len());
@@ -321,7 +320,7 @@ impl<U: UtcbRegSize> Registers<U> {
         let len = ToPrimitive::to_usize(&self.read::<Len>()?)
                 .ok_or(Error::Generic(GenericErr::InvalidArg))?;
         let ptr = align::<T>(self.buf);
-        let end = ptr.offset((size_of::<T>() * len) as isize);
+        let end = ptr.add(size_of::<T>() * len);
         l4_err_if!(end as usize - self.base as usize > U::BUF_SIZE => Generic, OutOfBounds);
         self.buf = end; // advance offset behind last element
         Ok(core::slice::from_raw_parts(ptr as *const _, len))
@@ -334,7 +333,7 @@ impl<U: UtcbRegSize> Registers<U> {
     /// 0-bytes from C strings will be discarded
     pub unsafe fn read_str<'a>(&mut self) -> Result<&'a str> {
         let len = self.read::<usize>()?;
-        let end = self.buf.offset(len as isize);
+        let end = self.buf.add(len);
         l4_err_if!(end as usize - self.base as usize > U::BUF_SIZE => Generic, OutOfBounds);
         let str = core::str::from_utf8(
                 core::slice::from_raw_parts(self.buf,  // ↓ match 0-byte (C str?)
@@ -366,7 +365,7 @@ impl<U: UtcbRegSize> Registers<U> {
     /// Skip the amount of memory that the given type would occupy
     pub fn skip<T: Serialisable>(&mut self) -> Result<()> {
         let next = unsafe {
-            align::<T>(self.buf).offset(size_of::<T>() as isize)
+            align::<T>(self.buf).add(size_of::<T>())
         };
         l4_err_if!(next as usize - self.base as usize > U::BUF_SIZE
                    => Generic, MsgTooLong);
@@ -415,9 +414,9 @@ impl UtcbMr {
     /// The item (e.g. a flex page) is aligned and written into the message registers.
     pub unsafe fn write_item<T: Serialisable>(&mut self, val: T) 
             -> Result<()> {
-        let res = self.regs.write(val)?;
+        self.regs.write(val)?;
         self.items += 1;
-        Ok(res)
+        Ok(())
     }
 
     /// Number of typed items in the UTCB
