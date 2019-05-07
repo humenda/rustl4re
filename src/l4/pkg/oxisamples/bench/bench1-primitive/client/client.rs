@@ -1,4 +1,3 @@
-#![feature(associated_type_defaults)]
 extern crate core;
 extern crate l4re;
 extern crate l4;
@@ -146,7 +145,7 @@ fn main() {
     let msg = "Premature optimization is the root of all evil. Yet we should not pass up our opportunities in that critical 3%.";
     #[cfg(test_string)]
     let msg = String::from(msg);
-    for i in 0..l4::MEASURE_RUNS {
+    for _ in 0..l4::MEASURE_RUNS {
         let start_counter = unsafe { rdtsc() };
         #[cfg(not(any(test_string, test_str)))]
         let _ = server.sub(9, 8).unwrap();
@@ -201,8 +200,14 @@ fn evaluate_microbenchmarks(global: &[(u64, u64)]) {
     format_min_median_max(clnt_with_srv(), "IPC reply to client",
         |(c, s)| c.return_val_start - s.hook_end);
     // return deserialisation
-    format_min_median_max(clnt_iter().zip(global.iter()),
-        "Read return value", |(c, (_, e))| e - c.return_val_start);
+    format_min_median_max(clnt_iter(), "read return value",
+        |c| c.return_val_end - c.return_val_start);
+    format_min_median_max(clnt_iter().zip(global.iter()), "after return val read",
+        |(c, (_, end))| end - c.return_val_end);
+
+
+    //format_min_median_max(clnt_iter().zip(global.iter()),
+    //    "Read return value", |(c, (_, e))| e - c.return_val_start);
 
     // report unusual timing spikes, if any
     let mut median: Vec<u64> = global.iter().map(|(a,b)| b - a).collect();

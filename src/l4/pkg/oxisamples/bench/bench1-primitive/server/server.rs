@@ -1,13 +1,12 @@
-#![feature(associated_type_defaults)]
 extern crate core;
 extern crate l4_sys;
 extern crate l4_derive;
 extern crate l4;
 extern crate l4re;
 
-use l4::{error::Result, ipc};
+use l4::{error::{Result, Error},
+    ipc, sys::l4_utcb};
 use l4_derive::{iface, l4_server};
-use l4_sys::{l4_utcb};
 #[cfg(bench_serialisation)]
 use l4re::{OwnedCap,
     mem::Dataspace};
@@ -40,6 +39,17 @@ impl Bencher for BenchServer {
         #[cfg(bench_serialisation)]
         unsafe { (*l4::SERVER_MEASUREMENTS).last().exc_user_impl = rdtsc(); }
         Ok(a)
+    }
+
+    fn check_dataspace(&mut self, size: u64, ds: l4::cap::Cap<l4re::mem::Dataspace>) 
+            -> Result<()> {
+        use l4re::mem::DataspaceProvider;
+        let mut ds = ds;
+        if ds.info()?.size == size {
+            Ok(())
+        } else {
+            Err(Error::Unknown(1))
+        }
     }
 }
 

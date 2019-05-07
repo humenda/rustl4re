@@ -110,14 +110,15 @@ macro_rules! derive_ipc_calls {
                                 $crate::sys::l4_utcb(), tag.raw(),
                                 $crate::sys::timeout_never())
                     }).result()?;
-                unsafe { cc.return_val_start = rdtsc(); };
+                unsafe { cc.return_val_start = rdtsc(); }
                 mr.reset(); // read again from start of registers, `caps` still untouched
                 // return () if "empty" return value, val otherwise
-                let res = unsafe {
+                unsafe {
                     let mut cap_buf = caps.access_buffers();
-                    <$return>::read(&mut mr, &mut cap_buf)
-                };
-                res
+                    let r = <$return>::read(&mut mr, &mut cap_buf);
+                    cc.return_val_end = rdtsc();
+                    r
+                }
             }
         )*
     }

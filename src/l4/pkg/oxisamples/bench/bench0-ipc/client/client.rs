@@ -115,6 +115,7 @@ fn main() {
     let mut delta: Vec<i64> = client_measurements[..].iter().enumerate().map(
         |(i, timestamp)| srv_stamps[i] - timestamp).collect();
     delta.sort();
-    println!("Min: {}, median: {}, max: {}", delta.iter().min().unwrap(),
-            delta[delta.len()/2], delta.iter().max().unwrap());
+    println!("Min: {}, max: {}", delta[0], delta.last().unwrap());
+    println!("Lower quartil: {}, median: {}, upper quartil",
+            delta[delta.len()/4], delta[delta.len()/2], delta[delta.len()/4*3]);
 }

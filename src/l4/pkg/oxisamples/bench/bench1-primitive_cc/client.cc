@@ -57,12 +57,14 @@ static void setup_shm(L4::Cap<Bencher>& srv) {
 template<typename T1, typename T2>
 static void format_min_median_max(T1* src1, T2* src2, const char* msg,
         l4_int64_t f(T1, T2)) {
+    src1 = src1 + 2;
+    src2 = src2 + 2;
     auto v = std::vector<l4_int64_t>();
-    for (l4_uint64_t i = 0; i < MEASURE_RUNS; i++) {
+    for (l4_uint64_t i = 0; i < MEASURE_RUNS - 2; i++) {
         v.push_back(f(src1[i], src2[i]));
     }
     std::sort(v.begin(), v.end());
-    printf("%-30s%-10lli%-10lli%-10lli\n", msg, v[0], v[MEASURE_RUNS/2],
+    printf("%-30s%-10lli%-10lli%-10lli\n", msg, v[0], v[v.size()/2],
             v.back());
 }
 
@@ -140,7 +142,7 @@ int main() {
     l4_int32_t res = 0;
 #elif defined(TEST_STRING)
     printf("[cc] Starting string benchmarking client\n");
-#else // TEST_CAP
+#elif defined(TEST_CAP) // TEST_CAP
     L4::Cap<L4Re::Dataspace> ds;
     void *shm = 0;
     size_t size = mk_ds(&shm, ds);

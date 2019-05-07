@@ -49,11 +49,13 @@ pub struct ClientCall {
     pub ipc_call_start: u64,
     // after IPC call, return value is going to be read; includes error checking
     pub return_val_start: u64, // doesn't have end, ended by call itself
+    // ToDo TMP
+    pub return_val_end: u64,
 }
 
 impl ClientCall { pub const fn new() -> Self { ClientCall {
     arg_serialisation_start: 0, arg_serialisation_end: 0, ipc_call_start: 0,
-    return_val_start: 0,
+    return_val_start: 0, return_val_end: 0
 }}}
 
 #[derive(Clone, Copy)]
