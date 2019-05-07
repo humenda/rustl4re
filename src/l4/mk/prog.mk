@@ -206,6 +206,7 @@ export L4_INCLUDE_DIRS=$(filter -I%,$(CPPFLAGS))
 $(strip $(TARGET)): $(SRC_FILES) $(LIBDEPS)
 	@$(LINK_MESSAGE)
 	$(if $(VERBOSE),,@echo CARGO_BUILD_RUSTFLAGS=$(CARGO_BUILD_RUSTFLAGS))
+	$(if $(VERBOSE),,@echo L4_BENDER_ARGS=$(L4_BENDER_ARGS))
 	$(VERBOSE)$(call MAKEDEP,$(INT_LD_NAME),,,ld) \
 		cargo build $(if $(VERBOSE),,-v) \
 			$(if $(strip $(DEBUG)),--debug,--release) \
