@@ -29,11 +29,9 @@ use libc::c_void;
 /// working.
 pub trait StackBuf {
     /// Retrieve a mutable slice of the buffer
-    #[inline]
     fn get_buffer(&mut self) -> &mut [u8];
 
     /// Return the length of the cache in bytes
-    #[inline]
     fn get_buffer_size(&self) -> usize;
 }
 
@@ -49,7 +47,6 @@ pub trait TypedBuffer<T>
         where T: ?Sized + core::borrow::Borrow<T> + core::borrow::BorrowMut<T> {
     /// Fill the cache with a copy of the given input an return a mutable
     /// reference to it
-    #[inline]
     fn copy_in(&mut self, i: &T) -> Result<&mut T>;
 }
 
@@ -88,7 +85,7 @@ pub trait LoopHook {
             Err(e) => LoopAction::ReplyAndWait(MsgTag::new(match e {
                     Error::Generic(e) => e as i64,
                     Error::Tcr(e) => e as i64,
-                    Error::UnknownErr(e) => e as i64,
+                    Error::Unknown(e) => e as i64,
                     _ => panic!("{:?}", e),
                 } * -1, 0, 0, 0))
                 // ^ by convention, error codes are negative
@@ -166,10 +163,10 @@ macro_rules! borrow {
 
 impl<'a, T: LoopHook, C: CapProvider> Loop<'a, T, C> {
     /// Create new server loop at given thread with specified hooks
-    fn new(thread: CapIdx, u: *mut l4_utcb_t, h: T, b: C) -> Loop<'a, T, C> {
+    fn new(thread: CapIdx, utcb: *mut l4_utcb_t, h: T, b: C) -> Loop<'a, T, C> {
         Loop {
-            thread: thread,
-            utcb: u,
+            thread,
+            utcb,
             hooks: Some(h),
             buf_mgr: b,
             outlive_me: PhantomData,
@@ -222,15 +219,14 @@ impl<'a, T: LoopHook, C: CapProvider> Loop<'a, T, C> {
                 &mut label, l4_sys::timeout_never()))
         };
         loop {
-            let replytag = match tag.has_error() {
+            let replytag = if tag.has_error() {
                 // call user-registered error handler
-                true => match borrow!(self.hooks.ipc_error(&mut self, &tag)) {
+                match borrow!(self.hooks.ipc_error(&mut self, &tag)) {
                     LoopAction::Break => break,
                     LoopAction::ReplyAndWait(t) => t,
-                },
-
-                // use label to dispatch to registered server implementation
-                false => match self.dispatch(tag.clone(), label) {
+                }
+            } else { // use label to dispatch to registered server implementation
+                match self.dispatch(tag.clone(), label) {
                     LoopAction::Break => break,
                     LoopAction::ReplyAndWait(tag) => tag,
                 }
@@ -312,11 +308,11 @@ impl<H: LoopHook, C: CapProvider> LoopBuilder<H, C> {
     /// # Safety
     ///
     /// As long as the UTCB pointer is valid, this function is safe.
-    pub unsafe fn new_at_bufferless(thread: CapIdx, u: *mut l4_utcb_t)
+    pub unsafe fn new_at_bufferless(thread: CapIdx, utcb: *mut l4_utcb_t)
             -> LoopBuilder<DefaultHooks, Bufferless> {
         LoopBuilder {
-            thread: thread,
-            utcb: u,
+            thread,
+            utcb,
             buf_mgr: Bufferless { },
             hooks: DefaultHooks { },
         }

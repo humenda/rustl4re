@@ -123,7 +123,7 @@ impl TcrErr {
     pub fn from_tag_u(tag: l4_msgtag_t, utcb: &Utcb) -> Result<Self> {
         unsafe {
              FromPrimitive::from_u64(l4_ipc_error(tag, utcb.raw))
-                    .ok_or(Error::UnknownErr(l4_ipc_error(tag, utcb.raw) as i64))
+                    .ok_or(Error::Unknown(l4_ipc_error(tag, utcb.raw) as i64))
         }
     }
 }
@@ -141,7 +141,7 @@ pub enum Error {
     /// an illegal state was reached
     InvalidState(&'static str),
     /// Unknown error code
-    UnknownErr(i64),
+    Unknown(i64),
     /// Protocol error, custom defined protocol error labels passed with an answer using the MSG
     /// msgtag label
     Protocol(i64),
@@ -158,7 +158,7 @@ impl _core::fmt::Display for Error {
             Error::InvalidCap => write!(f, "Invalid capability"),
             Error::InvalidArg(r, _arg) => write!(f, "Invalid argument '{}'", r),
             Error::InvalidState(r) => write!(f, "Invalid state: {}", r),
-            Error::UnknownErr(u) => write!(f, "Unknown error code {}", u),
+            Error::Unknown(u) => write!(f, "Unknown error code {}", u),
             Error::Protocol(p) => write!(f, "Unknown protocol requested: {}", p),
             Error::InvalidEncoding(e) => {
                 match e {
@@ -208,7 +208,7 @@ impl Error {
         // applying the mask makes the integer positive, cast to u32 then
         match GenericErr::from_u64(code.abs() as u64) {
             Some(tc) => Error::Generic(tc),
-            None => Error::UnknownErr(code),
+            None => Error::Unknown(code),
         }
     }
 
@@ -224,7 +224,7 @@ impl Error {
             Error::InvalidArg(_, _) | Error::InvalidState(_)
                     => -1 * GenericErr::InvalidArg.to_i64().unwrap(),
             Error::InvalidEncoding(_) => -1 * Self::INVALID_ENCODING,
-            Error::UnknownErr(n) | Error::Protocol(n)
+            Error::Unknown(n) | Error::Protocol(n)
                 => n * -1
         }
     }
