@@ -75,7 +75,6 @@ macro_rules! derive_functors {
     }
 }
 
-#[cfg(bench_serialisation)]
 #[macro_export]
 macro_rules! derive_ipc_calls {
     ($proto:expr; $($opcode:expr =>
@@ -87,7 +86,9 @@ macro_rules! derive_ipc_calls {
                             where Self: $crate::cap::Interface {
                                 use $crate::ipc::Serialiser;
                 use $crate::ipc::CapProvider;
+                #[cfg(bench_serialisation)]
                 use core::arch::x86_64::_rdtsc as rdtsc;
+                #[cfg(bench_serialisation)]
                 let mut cc = unsafe { $crate::CLIENT_MEASUREMENTS.next() };
                 // ToDo: would re-allocate a capability each time; how to control number of
                 // required slots
@@ -96,77 +97,33 @@ macro_rules! derive_ipc_calls {
                 // write opcode
                 unsafe {
                     mr.write($opcode)?;
-                    cc.arg_serialisation_start = rdtsc();
+                    #[cfg(bench_serialisation)]
+                    unsafe { cc.arg_serialisation_start = rdtsc(); }
                     $(
                         <$type>::write($argname, &mut mr)?;
                     )*
-                    cc.arg_serialisation_end = rdtsc(); // MsgTag::new() is very efficient, not benchmarked
+                    #[cfg(bench_serialisation)]
+                    { cc.arg_serialisation_end = rdtscp(); } // MsgTag::new() is very efficient, not benchmarked
                 }
                 let tag = $crate::ipc::MsgTag::new($proto, mr.words(),
                         mr.items(), 0);
-                unsafe { cc.ipc_call_start = rdtsc(); }; // MsgTag::new() is very efficient, not benchmarked
+                #[cfg(bench_serialisation)]
+                unsafe { cc.ipc_call_start = rdtscp(); }; // MsgTag::new() is very efficient, not benchmarked
                 let _restag = $crate::ipc::MsgTag::from(unsafe {
                         $crate::sys::l4_ipc_call(self.raw(),
                                 $crate::sys::l4_utcb(), tag.raw(),
                                 $crate::sys::timeout_never())
                     }).result()?;
-                unsafe { cc.return_val_start = rdtsc(); }
+                #[cfg(bench_serialisation)]
+                unsafe { cc.return_val_start = rdtscp(); }
                 mr.reset(); // read again from start of registers, `caps` still untouched
                 // return () if "empty" return value, val otherwise
                 unsafe {
                     let mut cap_buf = caps.access_buffers();
                     let r = <$return>::read(&mut mr, &mut cap_buf);
-                    cc.return_val_end = rdtsc();
+                    #[cfg(bench_serialisation)]
+                    { cc.return_val_end = rdtscp(); }
                     r
-                }
-            }
-        )*
-    }
-}
-
-/// Extract the opcode from a list of function names
-///
-/// The basic assumption is that all functions share the same opcode type in an IPC interface.
-/// Within a macro, it is impossible to separate the first element from a type list, hence this
-/// helper macro gets the head and yields the opcode type.
-#[cfg(not(bench_serialisation))]
-#[macro_export]
-macro_rules! derive_ipc_calls {
-    ($proto:expr; $($opcode:expr =>
-       fn $name:ident($($argname:ident: $type:ty),*) -> $return:ty;)*
-    ) => {
-        $(
-            fn $name(&mut self $(, $argname: $type)*)
-                        -> $crate::error::Result<$return> 
-                            where Self: $crate::cap::Interface {
-                use $crate::ipc::Serialiser;
-                use $crate::ipc::CapProvider;
-                // ToDo: would re-allocate a capability each time; how to control number of
-                // required slots
-                let mut caps = $crate::ipc::types::Bufferless { };
-                let mut mr = $crate::utcb::Utcb::current().mr();
-                // write opcode
-                unsafe {
-                    mr.write($opcode)?;
-                    $(
-                        <$type>::write($argname, &mut mr)?;
-                    )*
-                };
-
-                // get the protocol for the msg tag label
-                let tag = $crate::ipc::MsgTag::new($proto, mr.words(),
-                        mr.items(), 0);
-                let _restag = $crate::ipc::MsgTag::from(unsafe {
-                        $crate::sys::l4_ipc_call(self.raw(),
-                                $crate::sys::l4_utcb(), tag.raw(),
-                                $crate::sys::timeout_never())
-                    }).result()?;
-                mr.reset(); // read again from start of registers, `caps` still untouched
-                // return () if "empty" return value, val otherwise
-                unsafe {
-                    let mut cap_buf = caps.access_buffers();
-                    <$return>::read(
-                            &mut mr, &mut cap_buf)
                 }
             }
         )*
@@ -211,11 +168,16 @@ macro_rules! iface_back {
                 #[cfg(bench_serialisation)]
                 use $crate::SERVER_MEASUREMENTS;
                 #[cfg(bench_serialisation)]
-                use core::arch::x86_64::_rdtsc as rdtsc;
+                #[inline]
+                unsafe fn rdtscp() -> u64 {
+                    use core::arch::x86_64::__rdtscp as rdtscp;
+                    let _a = core::mem::uninitialized();
+                    rdtscp(_a)
+                }
                 #[cfg(bench_serialisation)]
                 let sd = unsafe { (*SERVER_MEASUREMENTS).last() };
                 #[cfg(bench_serialisation)]
-                { sd.iface_dispatch = unsafe { rdtsc() }; };
+                { sd.iface_dispatch = unsafe { rdtscp() }; };
                 // uncover cheating clients
                 if (tag.words() + tag.items() * $crate::utcb::WORDS_PER_ITEM)
                         > $crate::utcb::Consts::L4_UTCB_GENERIC_DATA_SIZE as usize {

@@ -10,6 +10,7 @@ use l4_derive::{iface, l4_server};
 #[cfg(bench_serialisation)]
 use l4re::{OwnedCap,
     mem::Dataspace};
+#[cfg(bench_serialisation)]
 use core::arch::x86_64::_rdtsc as rdtsc;
 
 // include shared interface definition (located relative to the directory of

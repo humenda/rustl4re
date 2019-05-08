@@ -330,6 +330,7 @@ impl<U: UtcbRegSize> Registers<U> {
     /// This is not a copy, but operates on the bytes of the message registers.
     /// Copy this string ASAP and at least before the next IPC takes place.
     /// 0-bytes from C strings will be discarded
+    #[inline]
     pub unsafe fn read_str<'a>(&mut self) -> Result<&'a str> {
         let len = self.read::<usize>()?;
         let end = self.buf.add(len);
