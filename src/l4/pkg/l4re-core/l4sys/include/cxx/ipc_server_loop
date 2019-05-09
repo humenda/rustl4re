@@ -377,11 +377,11 @@ Server<L>::internal_loop(DISPATCH dispatch)
         }
 
 #ifdef BENCH_SERIALISATION
-      SERVER_MEASUREMENTS[SERVER_MEASUREMENTS_IDX].loop_dispatch = l4_rdtsc();
+      SERVER_MEASUREMENTS[SERVER_MEASUREMENTS_IDX].loop_dispatch = l4_rdtscp();
 #endif
       r = dispatch(res, p, _utcb);
 #ifdef BENCH_SERIALISATION
-      SERVER_MEASUREMENTS[SERVER_MEASUREMENTS_IDX++].ipc_srv_call_end = l4_rdtsc();
+      SERVER_MEASUREMENTS[SERVER_MEASUREMENTS_IDX++].ipc_srv_call_end = l4_rdtscp();
 #endif
     }
 }

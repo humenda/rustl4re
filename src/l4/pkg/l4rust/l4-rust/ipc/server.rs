@@ -239,11 +239,11 @@ impl<'a, T: LoopHook, C: CapProvider> Loop<'a, T, C> {
         #[cfg(bench_serialisation)]
         use crate::{SERVER_MEASUREMENTS};
         #[cfg(bench_serialisation)]
-        use core::arch::x86_64::_rdtsc as rdtsc;
+        use crate::sys::util::rdtscp;
         #[cfg(bench_serialisation)]
         let sd = unsafe { (*SERVER_MEASUREMENTS).next() };
         #[cfg(bench_serialisation)]
-        unsafe { (*sd).loop_dispatch = rdtsc() };
+        { (*sd).loop_dispatch = rdtscp() };
 
         // create argument reader / writer instance with access to the message registers and the
         // allocated (cap) buffers
@@ -266,7 +266,7 @@ impl<'a, T: LoopHook, C: CapProvider> Loop<'a, T, C> {
         };
         #[cfg(bench_serialisation)]
         unsafe {
-            let hook_end = rdtsc();
+            let hook_end = rdtscp();
             let mut sd = (*SERVER_MEASUREMENTS).last();
             //sd.hook_start = hook_start;
             sd.hook_end = hook_end;

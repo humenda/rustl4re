@@ -87,7 +87,7 @@ macro_rules! derive_ipc_calls {
                                 use $crate::ipc::Serialiser;
                 use $crate::ipc::CapProvider;
                 #[cfg(bench_serialisation)]
-                use core::arch::x86_64::_rdtsc as rdtsc;
+                use $crate::sys::util::rdtscp;
                 #[cfg(bench_serialisation)]
                 let mut cc = unsafe { $crate::CLIENT_MEASUREMENTS.next() };
                 // ToDo: would re-allocate a capability each time; how to control number of
@@ -98,7 +98,7 @@ macro_rules! derive_ipc_calls {
                 unsafe {
                     mr.write($opcode)?;
                     #[cfg(bench_serialisation)]
-                    unsafe { cc.arg_serialisation_start = rdtsc(); }
+                    { cc.arg_serialisation_start = rdtscp(); }
                     $(
                         <$type>::write($argname, &mut mr)?;
                     )*
@@ -108,14 +108,14 @@ macro_rules! derive_ipc_calls {
                 let tag = $crate::ipc::MsgTag::new($proto, mr.words(),
                         mr.items(), 0);
                 #[cfg(bench_serialisation)]
-                unsafe { cc.ipc_call_start = rdtscp(); }; // MsgTag::new() is very efficient, not benchmarked
+                { cc.ipc_call_start = rdtscp(); }; // MsgTag::new() is very efficient, not benchmarked
                 let _restag = $crate::ipc::MsgTag::from(unsafe {
                         $crate::sys::l4_ipc_call(self.raw(),
                                 $crate::sys::l4_utcb(), tag.raw(),
                                 $crate::sys::timeout_never())
                     }).result()?;
                 #[cfg(bench_serialisation)]
-                unsafe { cc.return_val_start = rdtscp(); }
+                { cc.return_val_start = rdtscp(); }
                 mr.reset(); // read again from start of registers, `caps` still untouched
                 // return () if "empty" return value, val otherwise
                 unsafe {
@@ -166,18 +166,11 @@ macro_rules! iface_back {
                     -> $crate::error::Result<$crate::ipc::MsgTag> {
                 use $crate::ipc::Serialiser;
                 #[cfg(bench_serialisation)]
-                use $crate::SERVER_MEASUREMENTS;
-                #[cfg(bench_serialisation)]
-                #[inline]
-                unsafe fn rdtscp() -> u64 {
-                    use core::arch::x86_64::__rdtscp as rdtscp;
-                    let _a = core::mem::uninitialized();
-                    rdtscp(_a)
-                }
+                use $crate::{SERVER_MEASUREMENTS, sys::util::rdtscp};
                 #[cfg(bench_serialisation)]
                 let sd = unsafe { (*SERVER_MEASUREMENTS).last() };
                 #[cfg(bench_serialisation)]
-                { sd.iface_dispatch = unsafe { rdtscp() }; };
+                { sd.iface_dispatch = rdtscp() };
                 // uncover cheating clients
                 if (tag.words() + tag.items() * $crate::utcb::WORDS_PER_ITEM)
                         > $crate::utcb::Consts::L4_UTCB_GENERIC_DATA_SIZE as usize {
@@ -190,7 +183,7 @@ macro_rules! iface_back {
                 }
                 let opcode = unsafe { mr.read::<$op_type>()? };
                 #[cfg(bench_serialisation)]
-                { sd.opcode_dispatch = unsafe { rdtsc() }; };
+                { sd.opcode_dispatch = rdtscp() };
                 match opcode {
                 $( // iterate over functions and op codes
                     $op_code => unsafe {
@@ -198,11 +191,11 @@ macro_rules! iface_back {
                             $(<$argtype>::read(mr, bufs)?),*
                         )?;
                         #[cfg(bench_serialisation)]
-                        { sd.retval_serialisation_start = rdtsc(); };
+                        { sd.retval_serialisation_start = rdtscp(); };
                         mr.reset(); // reset MRs, not the bufs (not used for sending)
                         <$ret>::write(user_ret, mr)?;
                         #[cfg(bench_serialisation)]
-                        { sd.result_returned = rdtsc(); };
+                        { sd.result_returned = rdtscp(); };
                         // on return, label/protocol is 0 for success and a custom error code
                         // otherwise; negative means some IPC failure
                         Ok($crate::ipc::MsgTag::new(0,
@@ -218,7 +211,6 @@ macro_rules! iface_back {
 }
 
 // for debugging purposes
-/*
 use crate::cap::{Cap, Untyped};
 iface_back! {
     trait EchoServer {
@@ -231,4 +223,3 @@ iface_back! {
         3 => fn str_without_alloc(&mut self, s: &str) -> ();
     }
 }
-*/

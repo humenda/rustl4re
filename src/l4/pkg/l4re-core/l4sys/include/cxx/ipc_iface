@@ -718,7 +718,7 @@ Rpc_inline_call<OP, CLASS, R (ARGS...), FLAGS>::
   typedef typename Rpcs::template Rpc<OP> Opt;
   typedef Detail::Part<ipc_type, typename Rpcs::opcode_type> Args;
 #ifdef BENCH_SERIALISATION
-  CLIENT_MEASUREMENTS[CLIENT_MEASUREMENTS_IDX].arg_srl_start  = l4_rdtsc();
+  CLIENT_MEASUREMENTS[CLIENT_MEASUREMENTS_IDX].arg_srl_start  = l4_rdtscp();
 #endif
 
   l4_msg_regs_t *mrs = l4_utcb_mr_u(utcb);
@@ -761,7 +761,7 @@ Rpc_inline_call<OP, CLASS, R (ARGS...), FLAGS>::
       brs->br[bytes / Word_bytes] = 0;
     }
 #ifdef BENCH_SERIALISATION
-  CLIENT_MEASUREMENTS[CLIENT_MEASUREMENTS_IDX].arg_srl_end = l4_rdtsc();
+  CLIENT_MEASUREMENTS[CLIENT_MEASUREMENTS_IDX].arg_srl_end = l4_rdtscp();
 #endif
 
 
@@ -769,7 +769,7 @@ Rpc_inline_call<OP, CLASS, R (ARGS...), FLAGS>::
   l4_msgtag_t t;
   t = l4_msgtag(CLASS::Protocol, send_words, send_items, 0);
 #ifdef BENCH_SERIALISATION
-  CLIENT_MEASUREMENTS[CLIENT_MEASUREMENTS_IDX].call_start = l4_rdtsc();
+  CLIENT_MEASUREMENTS[CLIENT_MEASUREMENTS_IDX].call_start = l4_rdtscp();
 #endif
   // do the call (Q: do we need support for timeouts?)
   if (flags_type::Is_call)
@@ -786,7 +786,7 @@ Rpc_inline_call<OP, CLASS, R (ARGS...), FLAGS>::
   // unmarshalling starts here ---------------------------------
 
 #ifdef BENCH_SERIALISATION
-  CLIENT_MEASUREMENTS[CLIENT_MEASUREMENTS_IDX].ret_desrl_start = l4_rdtsc();
+  CLIENT_MEASUREMENTS[CLIENT_MEASUREMENTS_IDX].ret_desrl_start = l4_rdtscp();
 #endif
 
   // bail out early in the case of an IPC error
@@ -817,7 +817,7 @@ Rpc_inline_call<OP, CLASS, R (ARGS...), FLAGS>::
   if (L4_UNLIKELY(err < 0))
     return return_err<R>(-L4_EMSGTOOSHORT);
 #ifdef BENCH_SERIALISATION
-  CLIENT_MEASUREMENTS[CLIENT_MEASUREMENTS_IDX].ret_desrl_end = l4_rdtsc();
+  CLIENT_MEASUREMENTS[CLIENT_MEASUREMENTS_IDX].ret_desrl_end = l4_rdtscp();
   CLIENT_MEASUREMENTS_IDX++;
 #endif
 

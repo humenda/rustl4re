@@ -8,10 +8,10 @@ use l4::cap::Cap;
 #[cfg(bench_serialisation)]
 use l4::{ipc::MsgTag, error::Error};
 use l4_derive::{iface, l4_client};
+use l4::sys::util::rdtscp;
 #[cfg(bench_serialisation)]
 use l4re::{OwnedCap, mem::Dataspace};
-use core::{arch::x86_64::_rdtsc as rdtsc,
-    iter::Iterator};
+use core::iter::Iterator;
 #[cfg(bench_serialisation)]
 use core::mem::size_of;
 
@@ -146,7 +146,7 @@ fn main() {
     #[cfg(test_string)]
     let msg = String::from(msg);
     for _ in 0..l4::MEASURE_RUNS {
-        let start_counter = unsafe { rdtsc() };
+        let start_counter = rdtscp();
         #[cfg(not(any(test_string, test_str)))]
         let _ = server.sub(9, 8).unwrap();
         #[cfg(test_str)]
@@ -154,7 +154,7 @@ fn main() {
         #[cfg(test_string)]
         let _ = server.string_ping_pong(msg.clone()).unwrap();
 
-        let end_counter = unsafe { rdtsc() };
+        let end_counter = rdtscp();
         cycles.push((start_counter, end_counter));
     }
     println!("{:<30}{:<10}{:<10}{:<10}", "Value", "Min", "Median", "Max");

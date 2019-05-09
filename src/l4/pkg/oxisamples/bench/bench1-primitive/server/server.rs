@@ -11,7 +11,7 @@ use l4_derive::{iface, l4_server};
 use l4re::{OwnedCap,
     mem::Dataspace};
 #[cfg(bench_serialisation)]
-use core::arch::x86_64::_rdtsc as rdtsc;
+use l4::sys::util::rdtscp;
 
 // include shared interface definition (located relative to the directory of
 // this file)
@@ -24,7 +24,7 @@ impl Bencher for BenchServer {
     fn sub(&mut self, a: u32, b: u32) -> Result<i32> {
         // impossible to be properly specified in l4::ipc::iface
         #[cfg(bench_serialisation)]
-        unsafe { (*l4::SERVER_MEASUREMENTS).last().exc_user_impl = rdtsc(); }
+        unsafe { (*l4::SERVER_MEASUREMENTS).last().exc_user_impl = rdtscp(); }
         let x = a as i32 - b as i32;
         Ok(x)
     }
@@ -32,13 +32,13 @@ impl Bencher for BenchServer {
     fn str_ping_pong(&mut self, a: &str) -> Result<&str> {
         use crate::l4::ipc::server::TypedBuffer;
         #[cfg(bench_serialisation)]
-        unsafe { (*l4::SERVER_MEASUREMENTS).last().exc_user_impl = rdtsc(); }
+        unsafe { (*l4::SERVER_MEASUREMENTS).last().exc_user_impl = rdtscp(); }
         Ok(self.copy_in(a)?)
     }
 
     fn string_ping_pong(&mut self, a: String) -> Result<String> {
         #[cfg(bench_serialisation)]
-        unsafe { (*l4::SERVER_MEASUREMENTS).last().exc_user_impl = rdtsc(); }
+        unsafe { (*l4::SERVER_MEASUREMENTS).last().exc_user_impl = rdtscp(); }
         Ok(a)
     }
 

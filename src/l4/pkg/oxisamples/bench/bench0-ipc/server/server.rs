@@ -6,12 +6,12 @@ use l4::{ipc::MsgTag,
     sys::l4_utcb, sys as l4_sys,
 };
 use l4re::{OwnedCap, mem::Dataspace};
-use core::arch::x86_64::_rdtsc as rdtsc;
+use l4::sys::util::rdtscp;
 
 const MAX_RUNS: usize = 1000;
 
 // set up shared memory for collection measurements from the server
-fn setup_shm<'a>() -> (OwnedCap<Dataspace>, &'a mut [i64]) 
+fn setup_shm<'a>() -> (OwnedCap<Dataspace>, &'a mut [u64]) 
         where OwnedCap<Dataspace>: 'a {
     use l4::sys::*;
     let ds = OwnedCap::<Dataspace>::alloc();
@@ -38,7 +38,7 @@ fn setup_shm<'a>() -> (OwnedCap<Dataspace>, &'a mut [i64])
         if err != 0 {
             panic!("error while attaching memory: {}", err);
         }
-        (ds, core::slice::from_raw_parts_mut(ds_start as *mut _ as *mut i64, size))
+        (ds, core::slice::from_raw_parts_mut(ds_start as *mut _ as *mut u64, size))
     }
 }
 
@@ -67,7 +67,7 @@ fn main() {
             _tag = MsgTag::from(l4_sys::l4_ipc_reply_and_wait(l4_utcb(),
                     MsgTag::new(0, 0, 0, 0).raw(),
                     &mut label as *mut _, l4_sys::timeout_never())).result().unwrap();
-            srv_measurements[i] = rdtsc();
+            srv_measurements[i] = rdtscp();
         }
         // final reply needs to be sent to client, didn't figure out how to send reply without wait
         _tag = MsgTag::from(l4_sys::l4_ipc_reply_and_wait(l4_utcb(),

@@ -189,7 +189,7 @@ handle_svr_obj_call(O *o, l4_utcb_t *utcb, l4_msgtag_t tag, ARGS ...args)
   };
 
 #ifdef BENCH_SERIALISATION
-  SERVER_MEASUREMENTS[SERVER_MEASUREMENTS_IDX].iface_dispatch = l4_rdtsc();
+  SERVER_MEASUREMENTS[SERVER_MEASUREMENTS_IDX].iface_dispatch = l4_rdtscp();
 #endif
   // XXX: send a reply or just do not reply in case of a cheating client
   if (L4_UNLIKELY(tag.words() + tag.items() * Item_words > Mr_words))
@@ -204,7 +204,7 @@ handle_svr_obj_call(O *o, l4_utcb_t *utcb, l4_msgtag_t tag, ARGS ...args)
   unsigned const in_bytes = tag.words() * Word_bytes;
 
 #ifdef BENCH_SERIALISATION
-  SERVER_MEASUREMENTS[SERVER_MEASUREMENTS_IDX].opcode_dispatch = l4_rdtsc();
+  SERVER_MEASUREMENTS[SERVER_MEASUREMENTS_IDX].opcode_dispatch = l4_rdtscp();
 #endif
   in_pos = pack.template get<Do_in_data>(&mrs->mr[0], in_pos, in_bytes);
 
@@ -224,10 +224,12 @@ handle_svr_obj_call(O *o, l4_utcb_t *utcb, l4_msgtag_t tag, ARGS ...args)
   asm volatile ("" : "=m" (mrs->mr));
 
   // call the server function
-  SERVER_MEASUREMENTS[SERVER_MEASUREMENTS_IDX].exc_user_impl = l4_rdtsc();
+#ifdef BENCH_SERIALISATION
+  SERVER_MEASUREMENTS[SERVER_MEASUREMENTS_IDX].exc_user_impl = l4_rdtscp();
+#endif
   long ret = pack.template obj_call<O, typename IPC_TYPE::rpc, ARGS...>(o, args...);
 #ifdef BENCH_SERIALISATION
-  SERVER_MEASUREMENTS[SERVER_MEASUREMENTS_IDX].retval_serialisation_start = l4_rdtsc();
+  SERVER_MEASUREMENTS[SERVER_MEASUREMENTS_IDX].retval_serialisation_start = l4_rdtscp();
 #endif
 
   if (!Do_reply)
@@ -355,7 +357,7 @@ dispatch_call(OBJ *o, l4_utcb_t *utcb, l4_msgtag_t tag, unsigned rights, ARGS ..
   auto x = Dispatch_call<typename RPCS::type, typename RPCS::opcode_type>::template
     call<OBJ, ARGS...>(o, utcb, tag, rights, a...);
 #ifdef BENCH_SERIALISATION
-  SERVER_MEASUREMENTS[SERVER_MEASUREMENTS_IDX].result_returned = l4_rdtsc();
+  SERVER_MEASUREMENTS[SERVER_MEASUREMENTS_IDX].result_returned = l4_rdtscp();
 #endif
   return x;
 }

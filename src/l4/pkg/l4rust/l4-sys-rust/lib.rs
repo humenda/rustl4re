@@ -37,3 +37,12 @@ pub fn trunc_page(address: l4_addr_t) -> l4_addr_t {
 pub fn round_page(address: usize) -> l4_addr_t {
     ((address + L4_PAGESIZE as usize - 1usize) & (L4_PAGEMASK as usize)) as l4_addr_t
 }
+
+pub mod util {
+    pub fn rdtscp() -> u64 {
+        unsafe {
+            let mut _val = core::mem::uninitialized();
+            core::arch::x86_64::__rdtscp(&mut _val)
+        }
+    }
+}

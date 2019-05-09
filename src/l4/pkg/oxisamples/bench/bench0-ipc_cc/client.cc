@@ -57,13 +57,15 @@ int main() {
     for (int i=0; i < MAX_RUNS; i++) {
         auto tag = l4_msgtag(1, 1, 0, 0);
         (*l4_utcb_mr()).mr[0] = i;
-        client_measurements[i] = l4_rdtsc();
+        client_measurements[i] = l4_rdtscp();
         l4_ipc_call(server, l4_utcb(), tag, L4_IPC_NEVER);
     }
     l4_int64_t delta[MAX_RUNS];
     for (int i=0; i<MAX_RUNS; i++)
         delta[i] = srv_stamps[i] - client_measurements[i];
     std::sort(delta, &delta[MAX_RUNS]);
-    printf("Min: %lli, median: %lli, max: %lli\n",
-            delta[0], delta[MAX_RUNS/2], delta[MAX_RUNS-1]);
+    printf("Min: %lli, max: %lli\n",
+            delta[0], delta[MAX_RUNS-1]);
+    printf("Lower quartil: %lli, median: %lli, upper quartil: %lli\n",
+            delta[MAX_RUNS/4], delta[MAX_RUNS/2], delta[MAX_RUNS/4*3]);
 }

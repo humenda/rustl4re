@@ -5,16 +5,15 @@ extern crate l4;
 use l4::{cap::{Cap, Untyped}, error::Error, ipc::MsgTag};
 use l4::sys as l4_sys;
 use l4re::{OwnedCap, mem::Dataspace};
-use core::{arch::x86_64::_rdtsc as rdtsc, iter::Iterator};
+use l4::sys::util::rdtscp;
 
 const MAX_RUNS: usize = 1000;
-static mut SERVER_MEASUREMENTS: *mut i64 = 0 as *mut _;
 struct Shm(*mut u8, l4re::OwnedCap<Dataspace>);
 
 impl Shm {
     pub fn new(srv: &Cap<Untyped>) -> Result<Self, String> {
         use l4::sys::*;
-        let size = round_page(MAX_RUNS * core::mem::size_of::<i64>());
+        let size = round_page(MAX_RUNS * core::mem::size_of::<u64>());
         // allocate memory via dataspace manager, attach it
         let (addr, cap) = Self::allocate_bench_mem(size)?;
         unsafe {
@@ -60,9 +59,9 @@ impl Shm {
         }
     }
 
-    fn as_slice<'a>(&'a self) -> &'a [i64] {
+    fn as_slice<'a>(&'a self) -> &'a [u64] {
         unsafe {
-            core::slice::from_raw_parts(self.0 as *mut i64, MAX_RUNS)
+            core::slice::from_raw_parts(self.0 as *const u64, MAX_RUNS)
         }
     }
 }
@@ -104,18 +103,18 @@ fn main() {
     // cold cache call (twice)
     let _ = MsgTag::from(call(&server, MsgTag::new(1, 1, 0, 0))).result().unwrap();
     let _ = MsgTag::from(call(&server, MsgTag::new(1, 1, 0, 0))).result().unwrap();
-    let mut client_measurements = [0i64; MAX_RUNS];
+    let mut client_measurements = [0u64; MAX_RUNS];
     for i in 0..MAX_RUNS {
         let tag = MsgTag::new(1, 1, 0, 0);
         unsafe { (*l4_sys::l4_utcb_mr()).mr[0] = i as u64; }
-        client_measurements[i] = unsafe { rdtsc() };
+        client_measurements[i] = rdtscp();
         let _ = MsgTag::from(call(&server, tag)).result().unwrap();
     }
     let srv_stamps = shm.as_slice();
-    let mut delta: Vec<i64> = client_measurements[..].iter().enumerate().map(
+    let mut delta: Vec<u64> = client_measurements[..].iter().enumerate().map(
         |(i, timestamp)| srv_stamps[i] - timestamp).collect();
     delta.sort();
     println!("Min: {}, max: {}", delta[0], delta.last().unwrap());
-    println!("Lower quartil: {}, median: {}, upper quartil",
+    println!("Lower quartil: {}, median: {}, upper quartil {}",
             delta[delta.len()/4], delta[delta.len()/2], delta[delta.len()/4*3]);
 }

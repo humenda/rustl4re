@@ -153,7 +153,7 @@ int main() {
 
 
     for (unsigned int i = 0; i < MEASURE_RUNS; i++) {
-        auto start = l4_rdtsc();
+        auto start = l4_rdtscp();
 #ifdef TEST_STRING
         L4::Ipc::String<const char> knuth = L4::Ipc::String<>(MY_MESSAGE);
         auto out = L4::Ipc::String<char>((char *)malloc((knuth.length + 1) * sizeof(char)));
@@ -167,7 +167,7 @@ int main() {
             printf("Error talking to server: %i\n", r);
             return 1;
         }
-        auto end = l4_rdtsc();
+        auto end = l4_rdtscp();
         cycles.push_back(std::make_pair(start, end));
 #ifdef TEST_STRING
         free(out.data);

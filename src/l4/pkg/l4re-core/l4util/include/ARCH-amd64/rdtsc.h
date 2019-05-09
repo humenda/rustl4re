@@ -201,6 +201,24 @@ l4_rdtsc (void)
     return v;
 }
 
+L4_INLINE l4_cpu_time_t l4_rdtscp();
+L4_INLINE l4_cpu_time_t l4_rdtscp() {
+    l4_cpu_time_t v;
+    __asm__ __volatile__ 
+	("rdtscp		                \n\t"
+	 "mov   $0xffffffff, %%rcx      \n\t" /* clears the upper 32 bits! */
+	 "and   %%rcx,%%rax		\n\t"
+	 "shlq  $32,%%rdx		\n\t"
+	 "orq	%%rdx,%%rax		\n\t"
+	:
+	"=a" (v)
+	: /* no inputs */
+	:"rdx", "rcx"
+	);
+    
+    return v;
+}
+
 L4_INLINE l4_cpu_time_t
 l4_rdpmc (int nr)
 {
