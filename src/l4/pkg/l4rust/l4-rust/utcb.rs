@@ -303,8 +303,7 @@ impl<U: UtcbRegSize> Registers<U> {
 
     // Serialise a &str as a C-compatible, 0-terminated UTF-8 string.
     pub unsafe fn write_str(&mut self, val: &str) -> Result<()> {
-        self.write::<usize>(NumCast::from(val.len() + 1)
-                .ok_or(Error::Generic(GenericErr::InvalidArg))?)?;
+        self.write::<usize>(val.len() + 1)?;
 
         let ptr = align::<u8>(self.buf);
         let end = ptr.add(size_of::<u8>() * val.len());
@@ -514,5 +513,3 @@ impl Deref for UtcbBr {
 impl DerefMut for UtcbBr {
     fn deref_mut(&mut self) -> &mut Self::Target { &mut self.0 }
 }
-
-
