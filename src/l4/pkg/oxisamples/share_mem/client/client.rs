@@ -105,6 +105,8 @@ unsafe fn unsafe_main() {
     server.witter(byteslice.len() as u32 + 1, ds.cap())
         .unwrap();
 
+
+    // ToDo: free is broken
     free_ds(base, ds.raw()).unwrap();
     println!("sending successful");
     thread::sleep(time::Duration::new(2, 0));
