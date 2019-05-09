@@ -23,8 +23,9 @@ struct ShmServer;
 impl Shm for ShmServer {
     fn witter(&mut self, length: u32, ds: Cap<Dataspace>) -> Result<()> {
         let mut ds = OwnedCap::from(ds)?;
-        let _msg = read_message(&mut ds, length as usize)?;
-        panic!("Not implemented!");
+        let msg = read_message(&mut ds, length as usize)?;
+        println!("{}...", msg.chars().take(20).collect::<String>());
+        Ok(())
     }
 }
 
@@ -46,7 +47,7 @@ fn read_message(ds: &mut Cap<Dataspace>, length: usize)
                 page_size as u64, l4re::sys::l4re_rm_flags_t::L4RE_RM_SEARCH_ADDR as u64,
                 ds.raw(), 0, l4::sys::L4_PAGESHIFT as u8) {
             0 => (),
-            err => return Err(Error::UnknownErr(err as i64)),
+            err => return Err(Error::Unknown(err as i64)),
         };
         println!("copying string, length: {:x}; base: {:p}", length, virt_addr);
         // copy bytes into a vector
