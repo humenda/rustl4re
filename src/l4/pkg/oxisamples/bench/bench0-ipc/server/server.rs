@@ -64,6 +64,9 @@ fn main() {
                 MsgTag::new(0, 0, 0, 0).raw(), &mut label, l4_sys::timeout_never())).result().unwrap();
 
         for i in 0..(MAX_RUNS) {
+            srv_measurements[i] = 0;
+        }
+        for i in 0..(MAX_RUNS) {
             _tag = MsgTag::from(l4_sys::l4_ipc_reply_and_wait(l4_utcb(),
                     MsgTag::new(0, 0, 0, 0).raw(),
                     &mut label as *mut _, l4_sys::timeout_never())).result().unwrap();

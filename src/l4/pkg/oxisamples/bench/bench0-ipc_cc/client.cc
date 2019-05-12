@@ -54,6 +54,7 @@ int main() {
     l4_ipc_call(server, l4_utcb(), l4_msgtag(1, 1, 0, 0), L4_IPC_NEVER);
     l4_ipc_call(server, l4_utcb(), l4_msgtag(1, 1, 0, 0), L4_IPC_NEVER);
     l4_int64_t client_measurements[MAX_RUNS];
+    for (int i=0;i<MAX_RUNS;client_measurements[i]=0,srv_stamps[i]=0,i++);
     for (int i=0; i < MAX_RUNS; i++) {
         auto tag = l4_msgtag(1, 1, 0, 0);
         (*l4_utcb_mr()).mr[0] = i;
@@ -68,4 +69,7 @@ int main() {
             delta[0], delta[MAX_RUNS-1]);
     printf("Lower quartil: %lli, median: %lli, upper quartil: %lli\n",
             delta[MAX_RUNS/4], delta[MAX_RUNS/2], delta[MAX_RUNS/4*3]);
+    printf("\nIndividual Measurements\n----------------------\n\n");
+    for (int i=0; i<MAX_RUNS; i++)
+        printf("%lli\n", srv_stamps[i] - client_measurements[i]);
 }

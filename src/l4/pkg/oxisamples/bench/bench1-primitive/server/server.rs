@@ -4,7 +4,7 @@ extern crate l4_derive;
 extern crate l4;
 extern crate l4re;
 
-use l4::{error::{Result, Error},
+use l4::{error::Result,
     ipc, sys::l4_utcb};
 use l4_derive::{iface, l4_server};
 #[cfg(bench_serialisation)]
@@ -21,12 +21,11 @@ include!("../../interface.rs");
 struct BenchServer;
 
 impl Bencher for BenchServer {
-    fn sub(&mut self, a: u32, b: u32) -> Result<i32> {
+    fn sub(&mut self, a: usize, b: usize) -> Result<i32> {
         // impossible to be properly specified in l4::ipc::iface
         #[cfg(bench_serialisation)]
         unsafe { (*l4::SERVER_MEASUREMENTS).last().exc_user_impl = rdtscp(); }
-        let x = a as i32 - b as i32;
-        Ok(x)
+        Ok(a as i32 - b as i32)
     }
 
     fn str_ping_pong(&mut self, a: &str) -> Result<&str> {
@@ -42,14 +41,14 @@ impl Bencher for BenchServer {
         Ok(a)
     }
 
-    fn check_dataspace(&mut self, size: u64, ds: l4::cap::Cap<l4re::mem::Dataspace>) 
+    fn map_cap(&mut self, ds: l4::cap::Cap<l4re::mem::Dataspace>) 
             -> Result<()> {
-        use l4re::mem::DataspaceProvider;
-        let mut ds = ds;
-        if ds.info()?.size == size {
+        #[cfg(bench_serialisation)]
+        unsafe { (*l4::SERVER_MEASUREMENTS).last().exc_user_impl = rdtscp(); }
+        if ds.is_valid() {
             Ok(())
         } else {
-            Err(Error::Unknown(1))
+            Err(l4::error::Error::Unknown(1337))
         }
     }
 }

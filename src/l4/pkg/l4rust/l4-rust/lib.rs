@@ -120,7 +120,13 @@ impl<T> Measurements<T> {
         val
     }
 
+    /// Return a slice of all initialised values
     pub fn as_slice(&self) -> &[T] {
         &self.buf[0..self.index]
+    }
+
+    /// Access to whole backing array, not just the written part
+    pub unsafe fn as_mut_slice(&mut self) -> &mut [T] {
+        &mut self.buf[..]
     }
 }

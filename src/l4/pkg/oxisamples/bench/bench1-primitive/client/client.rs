@@ -1,15 +1,13 @@
-extern crate core;
+#[allow(unused_imports)]extern crate core;
 extern crate l4re;
 extern crate l4;
 extern crate l4_derive;
 
 // required for interface initialisation
 use l4::cap::Cap;
-#[cfg(bench_serialisation)]
 use l4::{ipc::MsgTag, error::Error};
 use l4_derive::{iface, l4_client};
 use l4::sys::util::rdtscp;
-#[cfg(bench_serialisation)]
 use l4re::{OwnedCap, mem::Dataspace};
 use core::iter::Iterator;
 #[cfg(bench_serialisation)]
@@ -23,16 +21,24 @@ const INITIAL_SKIP: usize = 2; // how many measurements to skip (warm up)
 struct Bench;
 
 // automated drop for shared memory
-#[cfg(bench_serialisation)]
-struct Shm(*mut u8, l4re::OwnedCap<Dataspace>);
-#[cfg(bench_serialisation)]
+struct Shm {
+    v_addr: *mut u8,
+    size: usize,
+    cap: OwnedCap<Dataspace>
+}
+
 impl Shm {
     pub fn new(srv: &Cap<Bench>) -> Result<Self, String> {
+        #[cfg(bench_serialisation)]
         Self::initialise_client_memory();
         use l4::sys::*;
+        #[cfg(bench_serialisation)]
         let size = round_page(l4::MEASURE_RUNS * size_of::<l4::ServerDispatch>());
+        #[cfg(not(bench_serialisation))]
+        let size = 1024;
         // allocate memory via dataspace manager, attach it
-        let (addr, cap) = Self::allocate_bench_mem(size)?;
+        let (v_addr, cap) = Self::allocate_bench_mem(size)?;
+        #[cfg(bench_serialisation)]
         unsafe {
             // send cap to server without the interface usage to avoid benchmarking
             let mr = l4_utcb_mr();
@@ -43,12 +49,10 @@ impl Shm {
             let _ = MsgTag::from(l4::sys::l4_ipc_send(srv.raw(),
                     l4_utcb(), l4::ipc::MsgTag::new(9876, 1, 1, 0).raw(),
                     l4::sys::timeout_never())).result().unwrap();
+            // Allows client-side access to server measurements using a global
+            l4::SERVER_MEASUREMENTS = v_addr as *mut _;
         }
-        // Allows client-side access to server measurements using a global
-        unsafe {
-            l4::SERVER_MEASUREMENTS = addr as *mut _;
-        }
-        Ok(Shm(addr, cap))
+        Ok(Shm { v_addr, size, cap })
     }
 
     fn allocate_bench_mem(size_in_bytes: usize) -> Result<(*mut u8, OwnedCap<Dataspace>), String> {
@@ -79,15 +83,18 @@ impl Shm {
         }
     }
 
+    #[cfg(bench_serialisation)]
     fn initialise_client_memory() {
-        let u64s = l4::MEASURE_RUNS * size_of::<l4::ClientCall>() / size_of::<u64>();
         unsafe {
-            let ptr = &mut l4::CLIENT_MEASUREMENTS as *mut _ as *mut u64;
-            for i in 0..(u64s as isize) {
-                *ptr.offset(i) = 0;
+            for i in 0..l4::MEASURE_RUNS {
+                l4::CLIENT_MEASUREMENTS.as_mut_slice()[i] = l4::ClientCall::new();
             }
             l4::CLIENT_MEASUREMENTS.index = 0;
         }
+    }
+
+    pub fn cap(&self) -> Cap<Dataspace> {
+        self.cap.cap()
     }
 }
 
@@ -95,7 +102,7 @@ impl Shm {
 impl core::ops::Drop for Shm {
     fn drop(&mut self) {
         unsafe {
-            match l4re::sys::l4re_rm_detach(self.0 as _) {
+            match l4re::sys::l4re_rm_detach(self.v_addr as _) {
                 0 => (),
                 r => println!("Allocation failed with {}", r),
             };
@@ -103,7 +110,7 @@ impl core::ops::Drop for Shm {
 
         // unmap dataspace from this task
         unsafe {
-            let fpage = l4::sys::l4_obj_fpage(self.1.raw(), 0,
+            let fpage = l4::sys::l4_obj_fpage(self.cap.raw(), 0,
                     l4::sys::L4_cap_fpage_rights::L4_CAP_FPAGE_RWSD as u8);
             let _ = MsgTag::from(l4::sys::l4_task_unmap(
                     l4::sys::L4RE_THIS_TASK_CAP as u64, fpage,
@@ -130,15 +137,16 @@ fn main() {
     let mut server: Cap<Bench> = l4re::env::get_cap("channel").expect(
             "Received invalid capability for benchmarking client.");
 
-    #[cfg(bench_serialisation)]
-    let _shm = Shm::new(&server).unwrap();
+    let shm = Shm::new(&server).unwrap();
 
-    #[cfg(all(not(test_string), not(test_str)))]
+    #[cfg(not(any(test_string, test_str, test_cap)))]
     println!("Starting primitive subtraction test");
     #[cfg(test_string)]
     println!("Starting string ping/pong test");
     #[cfg(test_str)]
     println!("Starting str test");
+    #[cfg(test_cap)]
+    println!("Starting capability mapping benchmark");
 
     let mut cycles = Vec::with_capacity(l4::MEASURE_RUNS);
     #[cfg(any(test_str, test_string))]
@@ -147,13 +155,16 @@ fn main() {
     let msg = String::from(msg);
     for _ in 0..l4::MEASURE_RUNS {
         let start_counter = rdtscp();
-        #[cfg(not(any(test_string, test_str)))]
+        #[cfg(not(any(test_string, test_str, test_cap)))]
         let _ = server.sub(9, 8).unwrap();
         #[cfg(test_str)]
-        let _ = server.str_ping_pong(msg).unwrap();
+        let x = server.str_ping_pong(msg).unwrap();
+        #[cfg(test_str)]
+        assert_eq!(x, msg);
         #[cfg(test_string)]
         let _ = server.string_ping_pong(msg.clone()).unwrap();
-
+        #[cfg(test_cap)]
+        let _ = server.map_cap(shm.cap()).unwrap();
         let end_counter = rdtscp();
         cycles.push((start_counter, end_counter));
     }

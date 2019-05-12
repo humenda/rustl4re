@@ -11,7 +11,6 @@ use super::sys::L4ReProtocols::L4RE_PROTO_DATASPACE;
 const PROTO_DATASPACE: i64 = L4RE_PROTO_DATASPACE as i64;
 
 /// Information about the dataspace
-#[repr(C)]
 #[derive(Clone)]
 pub struct DsStats {
     /// size of dataspace
@@ -21,15 +20,18 @@ pub struct DsStats {
 }
 
 // the struct is #[repr(C)] and hence the default implementation can be used
-unsafe impl l4::ipc::Serialisable for DsStats { }
 unsafe impl l4::ipc::Serialiser for DsStats {
     #[inline]
     unsafe fn read(mr: &mut l4::utcb::UtcbMr, _: &mut l4::ipc::BufferAccess) -> l4::error::Result<Self> {
-        mr.read::<Self>() // most types are read from here
+        Ok(DsStats {
+            size: mr.read()?,
+            flags: mr.read()?,
+        })
     }
     #[inline]
     unsafe fn write(self, mr: &mut l4::utcb::UtcbMr) -> l4::error::Result<()> {
-        mr.write::<Self>(self)
+        mr.write(self.size)?;
+        mr.write(self.flags)
     }
 }
 

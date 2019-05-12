@@ -117,4 +117,8 @@ fn main() {
     println!("Min: {}, max: {}", delta[0], delta.last().unwrap());
     println!("Lower quartil: {}, median: {}, upper quartil {}",
             delta[delta.len()/4], delta[delta.len()/2], delta[delta.len()/4*3]);
+    println!("-------------------------");
+    for (i,timestamp) in client_measurements[..].iter().enumerate() {
+        println!("{}", srv_stamps[i] - timestamp);
+    }
 }

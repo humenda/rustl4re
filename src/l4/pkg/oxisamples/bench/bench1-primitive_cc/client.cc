@@ -159,7 +159,7 @@ int main() {
         auto out = L4::Ipc::String<char>((char *)malloc((knuth.length + 1) * sizeof(char)));
         if ((r = server->string_ping_pong(knuth, out)))
 #elif defined(TEST_CAP)
-        if ((r = server->check_dataspace(size, ds)))
+        if ((r = server->map_cap(ds)))
 #else
         if ((r = server->sub(val1, val2, res)))
 #endif
