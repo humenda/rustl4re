@@ -65,6 +65,9 @@ static void setup_shm() {
     if (err != 0)
         printf("error while attaching memory: %i", err);
     SERVER_MEASUREMENTS = (ServerDispatch* )ds_start;
+    // touch pages to avoid page faults
+    for (int i = 0; i < MEASURE_RUNS; i++)
+        SERVER_MEASUREMENTS[i] = ServerDispatch();
 }
 #endif
 

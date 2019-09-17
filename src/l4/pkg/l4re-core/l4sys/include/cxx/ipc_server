@@ -242,6 +242,9 @@ handle_svr_obj_call(O *o, l4_utcb_t *utcb, l4_msgtag_t tag, ARGS ...args)
 
   // reply with the reply data from the server function
   int bytes = pack.template set<Do_out_data>(mrs->mr, 0, Mr_bytes, ret);
+#ifdef BENCH_SERIALISATION
+  SERVER_MEASUREMENTS[SERVER_MEASUREMENTS_IDX].retval_serialisation_end = l4_rdtscp();
+#endif
   if (L4_UNLIKELY(bytes < 0))
     return l4_msgtag(-L4_EMSGTOOLONG, 0, 0, 0);
 
@@ -357,7 +360,7 @@ dispatch_call(OBJ *o, l4_utcb_t *utcb, l4_msgtag_t tag, unsigned rights, ARGS ..
   auto x = Dispatch_call<typename RPCS::type, typename RPCS::opcode_type>::template
     call<OBJ, ARGS...>(o, utcb, tag, rights, a...);
 #ifdef BENCH_SERIALISATION
-  SERVER_MEASUREMENTS[SERVER_MEASUREMENTS_IDX].result_returned = l4_rdtscp();
+  SERVER_MEASUREMENTS[SERVER_MEASUREMENTS_IDX].reply_result = l4_rdtscp();
 #endif
   return x;
 }

@@ -130,6 +130,21 @@ fn format_min_median_max<'a, I, F, M: 'a>(iter: I, description: &str, f: F)
              description, sorted.iter().min().unwrap(),
              median, sorted.iter().max().unwrap());
 }
+fn mean(data: &[u64]) -> f64 {
+    data.iter().sum::<u64>() as f64
+            / data.len() as f64
+}
+
+fn std_deviation(data: &[(u64, u64)]) -> f64 {
+    let data = data.iter().map(|(a, b)| b - a).collect::<Vec<u64>>();
+    let data_mean = mean(&data);
+    let variance = data.iter().map(|value| {
+        let diff = data_mean - (*value as f64);
+        diff * diff
+    }).sum::<f64>() / data.len() as f64;
+    variance.sqrt()
+}
+
 
 fn main() {
     #[cfg(all(test_str, test_string))]
@@ -168,6 +183,7 @@ fn main() {
         let end_counter = rdtscp();
         cycles.push((start_counter, end_counter));
     }
+    println!("Standard deviation: {}\n", std_deviation(&cycles[INITIAL_SKIP..]));
     println!("{:<30}{:<10}{:<10}{:<10}", "Value", "Min", "Median", "Max");
     format_min_median_max((&cycles[INITIAL_SKIP..]).iter(), "Global",
             |(start, end)| end - start);

@@ -255,7 +255,7 @@ impl<U: UtcbRegSize> Registers<U> {
     ///
     /// The value is aligned and written into the message registers.
     #[inline]
-    pub unsafe fn write<T: Serialisable>(&mut self, val: T) 
+    pub fn write<T: Serialisable>(&mut self, val: T) 
             -> Result<()> {
         let ptr = align::<T>(self.buf);
         let next = ptr.add(size_of::<T>());
@@ -271,12 +271,8 @@ impl<U: UtcbRegSize> Registers<U> {
     /// This function reads from the given pointer + the internal offset a value
     /// from the specified type. If a read beyond the message registers is
     /// attempted, an error is returned.
-    /// This is unsafe due to a missing guarantee that
-    /// the pointer to the UTCB, with which the object was constructed is valid
-    /// and that the memory region behind  has the length of
-    /// `UTCB_DATA_SIZE_IN_BYTES`.
     #[inline]
-    pub unsafe fn read<T: Serialisable>(&mut self)  -> Result<T> {
+    pub fn read<T: Serialisable>(&mut self)  -> Result<T> {
         let ptr = align::<T>(self.buf);
         let next = ptr.add(size_of::<T>());
         l4_err_if!((next as usize - self.base as usize) > U::BUF_SIZE
@@ -287,7 +283,7 @@ impl<U: UtcbRegSize> Registers<U> {
     }
 
     /// Write a slice
-    pub unsafe fn write_slice<Len, T>(&mut self, val: &[T]) -> Result<()>
+    pub fn write_slice<Len, T>(&mut self, val: &[T]) -> Result<()>
             where Len: Serialisable + NumCast, T: Serialisable {
         self.write::<Len>(NumCast::from(val.len())
                 .ok_or(Error::Generic(GenericErr::InvalidArg))?)?;
@@ -302,7 +298,7 @@ impl<U: UtcbRegSize> Registers<U> {
     }
 
     // Serialise a &str as a C-compatible, 0-terminated UTF-8 string.
-    pub unsafe fn write_str(&mut self, val: &str) -> Result<()> {
+    pub fn write_str(&mut self, val: &str) -> Result<()> {
         self.write::<usize>(val.len() + 1)?;
 
         let ptr = align::<u8>(self.buf);
@@ -314,6 +310,12 @@ impl<U: UtcbRegSize> Registers<U> {
         self.write::<u8>(0u8)
     }
 
+    /// Read a slice from the registers
+    ///
+    /// This function reads a slice from the registers, compatible to the C++
+    /// Array types. The slice is a direct view into the registers and hence
+    /// highly unsafe. A system call may directly overwrite the data that this
+    /// slice points to.
     pub unsafe fn read_slice<Len, T>(&mut self) -> Result<&[T]>
             where Len: Serialisable + ToPrimitive, T: Serialisable {
         let len = ToPrimitive::to_usize(&self.read::<Len>()?)
@@ -329,7 +331,8 @@ impl<U: UtcbRegSize> Registers<U> {
     ///
     /// This is not a copy, but operates on the bytes of the message registers.
     /// Copy this string ASAP and at least before the next IPC takes place.
-    /// 0-bytes from C strings will be discarded
+    /// 0-bytes from C strings will be discarded. It is safe for the same
+    /// reasons documented for the `read_slice` method.
     #[inline]
     pub unsafe fn read_str<'a>(&mut self) -> Result<&'a str> {
         let len = self.read::<usize>()?;

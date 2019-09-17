@@ -1,3 +1,4 @@
+#include <math.h>
 #include <l4/sys/consts.h>
 #include <l4/sys/err.h>
 #include <l4/sys/types.h>
@@ -123,6 +124,20 @@ int free_mem(void *shm, L4::Cap<L4Re::Dataspace> &ds) {
 #error "May only build for TEST_STRING or TEST_CAP, not both"
 #endif
 
+static double std_deviation(std::pair<long long, long long> *cycles, long length) {
+    double avg = 0;
+    for (long i = 0; i < length; i++)
+        avg += (double)(cycles[i].second - cycles[i].first);
+    avg /= (double) length;
+    double variance = 0;
+    for (long i = 0; i < length; i++) {
+        auto tmp = (double)(cycles[i].second - cycles[i].first) - avg;
+        variance += (tmp * tmp);
+    }
+    variance /= length;
+    return sqrt(variance);
+}
+
 int main() {
     L4::Cap<Bencher> server = L4Re::Env::env()->get_cap<Bencher>("channel");
 #ifdef BENCH_SERIALISATION
@@ -135,6 +150,9 @@ int main() {
         return 1;
     }
 
+    // null CLIENT_MEASUREMENTS
+    for (int i = 0; i < MEASURE_RUNS; i++)
+        CLIENT_MEASUREMENTS[i] = ClientCall();
 #if !defined(TEST_STRING) && !defined(TEST_CAP)
     printf("[cc] Starting primitive type benchmarking client\n");
     l4_uint32_t val1 = 8;
@@ -149,7 +167,8 @@ int main() {
     printf("[cc] Starting capability benchmarking client\n");
 #endif
     std::vector<std::pair<long long, long long>> cycles;
-    cycles.reserve(100000);
+    for (int i = 0; i < MEASURE_RUNS; i++) // touch pages explicitly
+        cycles.push_back(std::make_pair(0, 0));
 
 
     for (unsigned int i = 0; i < MEASURE_RUNS; i++) {
@@ -168,7 +187,7 @@ int main() {
             return 1;
         }
         auto end = l4_rdtscp();
-        cycles.push_back(std::make_pair(start, end));
+        cycles[i] = std::make_pair(start, end);
 #ifdef TEST_STRING
         free(out.data);
 #endif
@@ -176,6 +195,7 @@ int main() {
 #ifdef TEST_CAP
     free_mem(&shm, ds);
 #endif
+    printf("Standard deviation: %.3f\n\n", std_deviation(&cycles[2], MEASURE_RUNS - 2));
     printf("%-30s%-10s%-10s%-10s\n", "Value", "Min", "Median", "Max");
 
     // global: only cycles required, the other is a dummy arg
@@ -216,10 +236,14 @@ int main() {
     });
 
     format_min_median_max("Write return value", [](ClientCall c, ServerDispatch s) {
-        (void)c;return s.result_returned - s.retval_serialisation_start;
+        (void)c;return s.retval_serialisation_end - s.retval_serialisation_start;
     });
+    format_min_median_max("IPC call setup", [](ClientCall c, ServerDispatch s) {
+        (void)c;return s.reply_result - s.retval_serialisation_end;
+    });
+
     format_min_median_max("IPC reply to client", [](ClientCall c, ServerDispatch s) {
-        return c.ret_desrl_start - s.result_returned;
+        return c.ret_desrl_start - s.reply_result;
     });
 
     format_min_median_max("return value desrl", [](ClientCall c, ServerDispatch s) {

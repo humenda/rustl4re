@@ -24,23 +24,30 @@
 
 #define MEASURE_RUNS 100000
 #ifdef BENCH_SERIALISATION
-typedef struct {
+class ClientCall {
+public:
     l4_int64_t arg_srl_start;
     l4_int64_t arg_srl_end;
     l4_int64_t call_start;
     l4_int64_t ret_desrl_start;
     l4_int64_t ret_desrl_end;
-} ClientCall;
+    ClientCall(): arg_srl_start(0), arg_srl_end(0), call_start(0), ret_desrl_start(0), ret_desrl_end(0) { }
+};
 // see Rust counterpart for docs
-typedef struct {
+class ServerDispatch {
+    public:
     l4_int64_t loop_dispatch;
     l4_int64_t iface_dispatch;
     l4_int64_t opcode_dispatch;
     l4_int64_t exc_user_impl;
     l4_int64_t retval_serialisation_start;
-    l4_int64_t result_returned;
+    l4_int64_t retval_serialisation_end;
+    l4_int64_t reply_result;
     l4_int64_t ipc_srv_call_end;
-} ServerDispatch;
+    ServerDispatch() : loop_dispatch(0), iface_dispatch(0), opcode_dispatch(0),
+            exc_user_impl(0), retval_serialisation_start(0),
+            retval_serialisation_end(0), reply_result(0), ipc_srv_call_end(0) { }
+};
 ClientCall CLIENT_MEASUREMENTS[MEASURE_RUNS];
 l4_uint64_t CLIENT_MEASUREMENTS_IDX = 0;
 ServerDispatch* SERVER_MEASUREMENTS; // needs to be set up by main function
