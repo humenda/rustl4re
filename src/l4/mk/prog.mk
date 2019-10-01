@@ -177,16 +177,25 @@ endif
 # Additional Rustc flags can be passed using the CARGO_BUILD_RUSTFLAGS variable,
 # read by cargo.
 
-# strip first word (l4-bender path) and last word (-- delimiter)
+# Strip first word (l4-bender path) and last word (-- delimiter)
 L4_BENDER_ARGS_HEADLESS=$(strip $(LINK_PROGRAM:$(firstword $(LINK_PROGRAM))%=%))
+
+# This is a temporary workaround to pass l4-bender arguments with spaces to the
+# Rust compiler. Rustc arguments are usually passed using CARGO_BUILD_RUSTFLAGS;
+# however, this is a environment variable where the arguments are taken
+# literally and spaces delimit arguments. Therefore, arguments contain a space
+# are NOT supported. The variable below is read the the l4-bender linker variant
+# in Rustc and interpreted accordingly. This is a temporary solution until Cargo
+# provides a proper way to pass linker arguments with spaces. Note that this
+# variable currently needs a patch to be applied to Rustc.
 export L4_BENDER_ARGS=$(strip $(L4_BENDER_ARGS_HEADLESS:%$(lastword $(LINK_PROGRAM))=%))
 
-# replace all -D defines through --cfg flags for rust
+# Replace all -D defines through --cfg flags for rust
 CARGO_BUILD_RUSTFLAGS=$(strip $(patsubst -D%,--cfg=%,$(filter -D%,$(CPPFLAGS)))
 
-# add l4 library paths and the (l4) Rust dependency paths
+# Add l4 library paths and the (l4) Rust dependency paths
 # Rust dependencies can have dependencies in the cross-compile target directory
-# and in the directory containing the dependencies of dependencies
+# and in the directory containing the dependencies of dependencies.
 CARGO_BUILD_RUSTFLAGS += $(strip \
 		$(addprefix -L , $(PRIVATE_LIBDIR) $(PRIVATE_LIBDIR_$(OSYSTEM)) $(PRIVATE_LIBDIR_$@) $(PRIVATE_LIBDIR_$@_$(OSYSTEM))) \
 		$(addprefix -L ,$(addsuffix /$(RUST_TARGET),$(_RUST_DEP_PATHS))) \
@@ -198,11 +207,12 @@ CARGO_BUILD_RUSTFLAGS += $(strip $(PROC_MACRO_LIBDIRS) \
                          $(addprefix -C link-arg=,$(strip $(filter-out -PC%rust,$(BID_LDFLAGS_FOR_LINKING)))))
 export CARGO_BUILD_RUSTFLAGS
 
+# A variable which can be used by a Cargo build script to learn about the used C
+# include directories of the application's C dependencies.
 export L4_INCLUDE_DIRS=$(filter -I%,$(CPPFLAGS))
 
-
-# manifest path: location of the Cargo.toml, which should reside in the PKGDIR
-# $PATH has to be extended to include l4-bender
+# Manifest path: location of the Cargo.toml, which should reside in the PKGDIR
+# $PATH has to be extended to include l4-bender.
 $(strip $(TARGET)): $(SRC_FILES) $(LIBDEPS)
 	@$(LINK_MESSAGE)
 	$(if $(VERBOSE),,@echo CARGO_BUILD_RUSTFLAGS=$(CARGO_BUILD_RUSTFLAGS))
