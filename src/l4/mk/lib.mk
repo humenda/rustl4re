@@ -186,12 +186,13 @@ RSFLAGS += -g
 endif
 endif
 
-# The CARG* variables are exported to instruct Cargo where to find and how to
-# use libraries. They are exported to be passed to the subprocess.
+# Helper variable to keep CARGO_BUILD_RUSTFLAGS readable.
 L4_LIBDIRECTORIES=$(filter -L%,$(LDFLAGS))
 
-# add BID defines, replace -D through --cfg and strip =1 (Rust features are on
-# or off)
+# The CARGO* variables are exported to instruct Cargo where to find and how to
+# use libraries. They are exported to be passed to the subprocess.
+# First, add BID defines, replace -D through --cfg and strip =1 (Rust features
+# are on or off).
 CARGO_BUILD_RUSTFLAGS=$(strip $(patsubst %=1,%,\
 		$(patsubst -D%,--cfg=%,$(filter -D%,$(CPPFLAGS)))))
 # Add libraries; treat proc macros (run on the host) and normal rust libraries
@@ -202,15 +203,19 @@ CARGO_BUILD_RUSTFLAGS += $(strip $(PROC_MACRO_LIBDIRS) $(L4_LIBDIRECTORIES) \
 		$(addprefix -L dependency=,$(addsuffix /host-deps,$(_RUST_DEP_PATHS))) \
 		$(RSFLAGS))
 
-
 # This can be used from the build script to get access to all l4-related
 # include files
 export L4_INCLUDE_DIRS=$(filter -I%,$(CPPFLAGS))
 
+# Create a link in $(OBJ_BASE)/lib/rustlib
 # $(1) SRC $(2) DST in $OBJ_BASE/lib/rustlib/PKGNAME
 mklink_rustlib=$(VERBOSE)rm -f $(OBJ_BASE)/lib/rustlib/$(PKGNAME)/$(2) \
 			   && ln -s $(1) $(OBJ_BASE)/lib/rustlib/$(PKGNAME)/$(2)
 
+# Add extra information to each PC file of a procmacro crate.
+ifneq ($(call is_pkg_procmacro),)
+PC_EXTRA += Rust-Cratetype: proc-macro
+endif
 
 $(strip $(TARGET)): $(SRC_FILES)
 	@echo 'Building rlib...'
@@ -222,8 +227,12 @@ $(strip $(TARGET)): $(SRC_FILES)
 	@$(BUILT_MESSAGE)
 	$(VERBOSE)[ -d $(OBJ_BASE)/lib/rustlib/$(PKGNAME) ] || \
 		mkdir -p $(RLIB_BASE)/$(PKGNAME)
-	@if [ -z $(call is_procmacro,$(PKGNAME)) ]; then \
-		mv $(CARGO_BUILD_TARGET_DIR)/$(RUST_TARGET)/release/$(patsubst %-rust.rlib,%.rlib,$@) $(CARGO_BUILD_TARGET_DIR)/$(RUST_TARGET)/release/$@; fi
+	$(VERBOSE)if [ -z $(call is_pkg_procmacro) ]; then \
+		if [ -e $(RUST_RESULT_DIR)/$@ ]; then \
+			rm $(RUST_RESULT_DIR)/$@; \
+		fi; \
+		mv $(RUST_RESULT_DIR)/$(patsubst %-rust.rlib,%.rlib,$@) \
+				$(RUST_RESULT_DIR)/$@; fi
 	$(call mklink_rustlib,$(CARGO_BUILD_TARGET_DIR)/release/deps,host-deps)
 	$(call mklink_rustlib,$(CARGO_BUILD_TARGET_DIR)/$(RUST_TARGET)/release,$(RUST_TARGET))
 endif # SRC_RS is defined
