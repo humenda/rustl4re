@@ -1,9 +1,7 @@
 # Rust On L4Re
 
 This repository contains the L4Re snapshot from July 2018 and is organised
-into two branches. The master branch contains all the modifications to L4Re's
-build system BID to make Rust work in the first place. Another branch, called `pkg` contains all the applications and
-libraries built so far.
+into two branches.
 
 Suggestions, criticism and everything else is welcome, contact me on IRC as
 Moomoc in the Mozilla, Freenode or OFTC network.
@@ -12,7 +10,9 @@ L4Re Setup
 ----------
 
 This is better explained in [RL4Re's README](EADME.l4re), but in short you need
-(GNU) make, gcc, libgcc, bison and flex.
+(GNU) make, gcc, libgcc, bison and flex. Execute `make setup` and `make -j4`
+afterwards. If compilation aborts with "failed to build l4linux", you
+successfully build everything except l4linux which isn't required.
 
 This L4Re snapshot needs to reside in a path without any spaces, thanks to Makes
 inability to treat those appropriately. Enter the L4Re source tree root and type
@@ -59,4 +59,15 @@ need a slightly patched Rust compiler yourself. Grab the source from
 
 
 Then you can proceed to building the L4Re source tree, see the linked
-instructions above.
+instructions above or with hacking, see below.
+
+Branch setup
+------------
+
+The branch `upstream` contains the original L4Re snapshot. The patches to the
+build system BID are in `bid_changes` which is rebased on upstream if a new
+version comes out. `master` is based on bid_changes and contains all the library
+implementation of `l4rust` and a few sample applications, see `pkg/l4rust` and `pkg/oxisamples`. 
+
+The branch `bench` contains some hackish benchmarking applications. These are
+are not guaranteed to run in all environments, patches welcome.
