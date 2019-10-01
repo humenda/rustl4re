@@ -1,7 +1,11 @@
 # Rust On L4Re
 
-This repository contains the L4Re snapshot from July 2018 and is organised
-into two branches.
+This repository contains a patched version of the L4Re microkernel operating
+system that includes support for Rust client and server applications. At its
+heart, the [L4Rust libraries](src/l4/pkg/l4rust) enable a Rust developer to
+efficiently develop Rust clients and servers running on top of a highly
+configurable, secure and performant OS. Rust services and clients can
+communicate without adaptation with C++ server and clients from L4Re.
 
 Suggestions, criticism and everything else is welcome, contact me on IRC as
 Moomoc in the Mozilla, Freenode or OFTC network.
