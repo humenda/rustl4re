@@ -3,6 +3,7 @@
 #![allow(non_snake_case)]
 
 use _core::ptr::NonNull;
+use _core::convert::TryInto;
 use l4_sys::helpers::eq_str_cstr;
 use libc::{c_int, c_long, c_ulong, c_void};
 
@@ -54,7 +55,7 @@ unsafe fn l4re_env_get_cap_l(name: &str,
 #[inline]
 pub unsafe fn l4re_rm_attach(start: *mut *mut c_void, size: l4_addr_t, flags: u64,
         mem: l4re_ds_t, offs: l4_addr_t, align: u8) -> i32 {
-    l4re_rm_attach_srv((*l4re_global_env).rm, start, size as u64, flags, mem, offs,
+    l4re_rm_attach_srv((*l4re_global_env).rm, start, size as u64, flags.try_into().unwrap(), mem, offs,
             align)
 }
 

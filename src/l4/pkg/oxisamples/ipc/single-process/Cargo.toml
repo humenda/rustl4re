@@ -8,4 +8,4 @@ name = "basic_ipc"
 path = "main.rs"
 
 [dependencies]
-libc = "0.2.50"
+libc = { git = "https://github.com/rust-lang/libc" }
