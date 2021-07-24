@@ -1,0 +1,55 @@
+#!/bin/sh
+# Generate platform includes for the Kconfig files.
+# Expects the following arguments:
+#   $1     - The complete path of the base Kconfig.generated file
+#   ${@:2} - All platform definition files for which entries are generated
+# Outputs the files:
+#   $1.platforms $1.platform_types
+
+extract_var() {
+  # Don't pass make flags of the L4Re build system to the following make
+  # invocation (e.g. --trace), as additional output would be an interference.
+  unset -v MAKEFLAGS MFLAGS
+  {
+    cat "$1"
+    printf "printit:\n\t@echo \$($2)\n"
+  } | ${MAKE:-make} --no-print-directory -f - printit
+}
+
+PROLOGUE="# vi:set ft=kconfig:
+# This file is auto-generated."
+PT=""
+OUTFILE=$1; shift
+
+echo "$PROLOGUE" >"$OUTFILE".platforms
+rm -f "$OUTFILE".platforms.list
+for p in "$@"; do
+  pn=${p##*/}
+  pn=${pn%.conf}
+  echo "config PLATFORM_TYPE_$pn"
+  plat="$(extract_var $p PLATFORM_NAME)"
+  echo "	bool \"$plat\""
+
+  DEP=""
+  for a in $(extract_var $p PLATFORM_ARCH); do
+    if [ -z "$DEP" ]; then
+      DEP="	depends on BUILD_ARCH_$a"
+    else
+      DEP="$DEP || BUILD_ARCH_$a"
+    fi
+    # Write list
+    unset priv
+    [ ${p%/conf/platforms/$pn.conf} != $p ] && priv=" [priv]"
+    printf "[%s] %20s -- %s\n" $a $pn "$plat$priv" >>"$OUTFILE".platforms.list
+  done
+  printf "$DEP\n\n"
+
+  PT="$PT  default \"$pn\" if PLATFORM_TYPE_${pn}\n"
+done >>"$OUTFILE".platforms
+
+{
+  echo    "$PROLOGUE"
+  echo    "config PLATFORM_TYPE"
+  echo    "  string"
+  printf  "$PT"
+} >"$OUTFILE".platform_types

@@ -1,0 +1,1081 @@
+#! /usr/bin/env perl
+#
+# Copyright 2019, Adam Lackorzynski <adam@l4re.org>
+#
+use strict;
+use warnings;
+use File::Basename;
+use File::Temp qw/tempdir/;
+use Cwd qw/cwd/;
+use Digest::MD5;
+use POSIX;
+
+my $libdir;
+
+BEGIN { $libdir = dirname(-l $0 ? readlink($0) : $0).'/../lib'; unshift @INC, $libdir; };
+
+use L4::Image;
+use L4::ModList;
+
+sub error
+{
+  print STDERR "Error: ", shift, "\n";
+  exit 1;
+}
+
+sub verbose
+{
+  print @_;
+}
+
+my $imagefile;
+my $outimagefile;
+my $verbose = 0;
+my $workdir;
+my $arch;
+
+sub op_list
+{
+  my $d = shift;
+  my $args = shift;
+
+  # TODO add $args->{"--format"} option for
+  # - json: all info in machine readable format
+  # - text: normal
+  # - text table?
+  #
+  # add --verbose / -v for more info in human format (size, type, ...)
+
+  print "T Num     Size Filename\n" if defined $args->{"-v"};
+  print "B     ${$d}{mbi_cmdline}\n" unless defined $args->{"-v"};
+  print "B              ${$d}{mbi_cmdline}\n" if defined $args->{"-v"};
+  for (my $i = 0; $i < ${$d}{num_mods}; ++$i)
+    {
+      my $type = ${$d}{mods}[$i]{flags} & 7;
+      my $typename = 'M'; # module
+      $typename = 'K' if $type == 1; # kernel
+      $typename = 'S' if $type == 2; # sigma0
+      $typename = 'R' if $type == 3; # roottask
+
+      if (defined $args->{"-v"})
+        {
+          printf "$typename %3d %8d ${$d}{mods}[$i]{name} ${$d}{mods}[$i]{cmdline}\n",
+                 $i, ${$d}{mods}[$i]{size};
+        }
+      else
+        {
+          printf "$typename %3d ${$d}{mods}[$i]{name}\n", $i;
+        }
+    }
+}
+
+sub op_foreachmod
+{
+  my $d = shift;
+  my $args = shift;
+
+  error("Need to give --cmd") unless defined $args->{"--cmd"};
+
+  for (my $i = 0; $i < ${$d}{num_mods}; ++$i)
+    {
+      local $ENV{L4IMAGE_MODULE_NUM}     = $i;
+      local $ENV{L4IMAGE_MODULE_FILE}    = ${$d}{mods}[$i]{filepath};
+      local $ENV{L4IMAGE_MODULE_CMDLINE} = ${$d}{mods}[$i]{cmdline};
+      local $ENV{L4IMAGE_MODULE_NAME}    = ${$d}{mods}[$i]{name};
+      local $ENV{L4IMAGE_NUM_MODULES}    = ${$d}{num_mods};
+      system($args->{"--cmd"});
+    }
+}
+
+sub op_info
+{
+  my $d = shift;
+
+  my $image_flags = ${$d}{image_flags};
+  my $bit64 = $image_flags & 1; # TODO: use some constants here
+
+  print "Image type: ", (L4::Image::FILE_TYPES)[${$d}{file_type}], "\n";
+  print "Bootstrap variant: ${$d}{structure_version}\n";
+  #print "Image CRC32: ${$d}{crc32}\n";
+  print "Image flags: $image_flags\n";
+  print "Image address width: ", $bit64 ? "64" : "32", "bit\n";
+  print "Target architecture: ${$d}{arch}\n";
+  print "Target platform: ", ${$d}{attrs}{"l4i:PT"} || "Info not available", "\n";
+  print "Number of modules: ${$d}{num_mods}\n";
+  print "Module Flags: ${$d}{flags}\n";
+
+  # Also display output start address here
+}
+
+sub op_verify
+{
+  my $d = shift;
+
+  print "TODO: verify image crc32\n";
+  print "TODO: check sigma0, kernel and more are there\n";
+  print "TODO: verify flags are ok, only one has 1, only one has 2 etc.\n";
+  print "TODO: also do this before writing an image\n";
+}
+
+sub do_add_module
+{
+  my $d = shift;
+  my $args = shift;
+  my $pos = shift;
+
+  error("Need to give a file via --file option")
+    unless defined $args->{"--file"};
+
+  splice(@{${$d}{mods}}, $pos, 0, {
+    L4::Image::fill_module($args->{"--file"},
+                           $args->{"--name"},
+                           L4::Image::map_type_name_to_flag($args->{"--type"}),
+                           $args->{"--cmdline"})
+  });
+  error(${$d}{mods}[$pos]{error}) if ${$d}{mods}[$pos]{error};
+  ${$d}{num_mods}++;
+}
+
+sub op_add
+{
+  my $d = shift;
+  my $args = shift;
+  do_add_module($d, $args, ${$d}{num_mods});
+}
+
+sub find_modules
+{
+  my $d = shift;
+  my $args = shift;
+  my $multiple = shift;
+
+  my $x = 0;
+  ++$x if defined $args->{"--num"};
+  ++$x if defined $args->{"--with-name"};
+  ++$x if defined $args->{"--regex"};
+  error("One of --num, --with-name and --regex need to be given")
+    if $x == 0;
+  error("Only one of --num, --with-name and --regex can be given")
+    if $x != 1;
+
+  my %found;
+  if (defined $args->{"--num"})
+    {
+      my $pos = $args->{"--num"};
+      error("'$pos' is not a number") unless $pos =~ /^\d+$/;
+      error("No such module $pos, only ${$d}{num_mods} modules available")
+        if $pos >= ${$d}{num_mods};
+      $found{$pos} = 1;
+    }
+  elsif (defined $args->{"--with-name"})
+    {
+      for (my $i = 0; $i < ${$d}{num_mods}; ++$i)
+        {
+          $found{$i} = 1 if ${$d}{mods}[$i]{name} eq $args->{"--with-name"};
+        }
+    }
+  elsif (defined $args->{"--regex"})
+    {
+      for (my $i = 0; $i < ${$d}{num_mods}; ++$i)
+        {
+          $found{$i} = 1 if ${$d}{mods}[$i]{name} =~ /$args->{"--regex"}/;
+        }
+    }
+
+  error("Search for module did not yield a result") if keys %found == 0;
+  error("Found multiple matching modules (".join(", ", keys %found).
+        ") but need exactly one")
+    if $multiple == 0 && keys %found > 1;
+  print "Processing module(s) ", join(", ", keys %found), "\n";
+
+  return %found;
+}
+
+sub do_remove
+{
+  my $d = shift;
+  my %found = @_;
+  my $deleted = 0;
+  for (my $i = 0; $i < ${$d}{num_mods}; ++$i)
+    {
+      if ($found{$i})
+        {
+          splice @{${$d}{mods}}, $i - $deleted, 1;
+          ++$deleted;
+        }
+    }
+  ${$d}{num_mods} -= $deleted;
+}
+
+sub op_remove
+{
+  my $d = shift;
+  my $args = shift;
+  my %found = find_modules($d, $args, 1);
+  do_remove($d, %found);
+}
+
+sub op_insert_before
+{
+  my $d = shift;
+  my $args = shift;
+  my %found = find_modules($d, $args, 0);
+  my @k = keys %found;
+  do_add_module($d, $args, $k[0]);
+}
+
+sub op_insert_after
+{
+  my $d = shift;
+  my $args = shift;
+  my %found = find_modules($d, $args, 0);
+  my @k = keys %found;
+  do_add_module($d, $args, $k[0] + 1);
+}
+
+sub op_replace
+{
+  my $d = shift;
+  my $args = shift;
+
+  my %found = find_modules($d, $args, 0);
+  my $pos = (keys %found)[0];
+
+  error("Need to give a file via --file option")
+    unless defined $args->{"--file"};
+
+  L4::Image::update_module($d->{mods}[$pos],
+                           $args->{"--file"},
+                           $args->{"--name"},
+                           $args->{"--type"},
+                           $args->{"--cmdline"});
+  error(${$d}{mods}[$pos]{error}) if ${$d}{mods}[$pos]{error};
+}
+
+sub default_editor
+{
+  return $^O eq 'MSWin32' ? "notepad" : "vi";
+}
+
+sub op_edit
+{
+  my $d = shift;
+  my $args = shift;
+  my %found = find_modules($d, $args, 0);
+  my $pos = (keys %found)[0];
+  my $editor = $ENV{EDITOR} || default_editor();
+  system("$editor ${$d}{mods}[$pos]{filepath}");
+  L4::Image::update_module($d->{mods}[$pos], ${$d}{mods}[$pos]{filepath});
+  error(${$d}{mods}[$pos]{error}) if ${$d}{mods}[$pos]{error};
+}
+
+sub create_image
+{
+  my $d = shift;
+  my $modules_list_file = shift;
+  my $entry_name = shift;
+  my $search_path = shift;
+
+  error("No architecture information found in image")
+    unless $d->{arch};
+  error("No platform-type information found in image")
+    unless $d->{attrs}{"l4i:PT"};
+
+  $ENV{PLATFORM_TYPE} = $d->{attrs}{"l4i:PT"};
+  $ENV{ARCH}          = $d->{arch};
+
+  my %entry = L4::ModList::get_module_entry($modules_list_file,
+                                            $entry_name);
+
+  undef ${$d}{mods};
+  for (my $i = 0; $i < @{$entry{mods}}; ++$i)
+    {
+      my $flags = 0;
+      $flags = 1 if $i == 0; # kernel
+      $flags = 2 if $i == 1; # sigma0
+      $flags = 3 if $i == 2; # roottask
+
+      L4::ModList::fetch_remote_file($entry{mods}[$i]{file});
+
+      my $f = L4::ModList::search_file_or_die($entry{mods}[$i]{file},
+                                              $search_path);
+
+      ${$d}{mods}[$i]
+       = { L4::Image::fill_module($f,
+                                  $entry{mods}[$i]{command}, $flags,
+                                  $entry{mods}[$i]{cmdline_quoted}) };
+
+      error(${$d}{mods}[$i]{error}) if ${$d}{mods}[$i]{error};
+    }
+
+  ${$d}{num_mods} = scalar @{${$d}{mods}};
+}
+
+sub op_create
+{
+  my $d = shift;
+  my $args = shift;
+
+  error("Need to give entry name via --entry option")
+    unless $args->{"--entry"};
+  error("Need to give search paths via --search-path option")
+    unless $args->{"--search-path"};
+  error("Need to give modules.list file via --modules-list-file option")
+    unless $args->{"--modules-list-file"};
+
+  create_image($d, $args->{"--modules-list-file"}, $args->{"--entry"},
+               $args->{"--search-path"});
+}
+
+sub op_pack
+{
+  my $d = shift;
+  my $args = shift;
+
+  error("Need to specify existing directory via --workdir")
+    unless defined $workdir and -d $workdir;
+
+  my $modules_list_file = "$workdir/modules.list";
+
+  error("Given directory does not contain a modules.list file")
+    unless -e $modules_list_file;
+
+  create_image($d, $modules_list_file, "image", $workdir);
+}
+
+sub op_cmdline
+{
+  my $d = shift;
+  my $args = shift;
+
+  error("Give at least --set or --edit")
+    if not defined $args->{"--set"} and not defined $args->{"--edit"};
+
+  ${$d}{mbi_cmdline} = $args->{"--set"} if $args->{"--set"};
+
+  if ($args->{"--edit"})
+    {
+      my $editor = $ENV{EDITOR} || default_editor();
+      my $tmpdir = tempdir('XXXXXXXX', CLEANUP => 1, TMPDIR => 1);
+      my $f = "$tmpdir/cmdline.txt";
+      open(my $x, ">$f") || die "Cannot write to '$f': $!";
+      print $x ${$d}{mbi_cmdline};
+      close $x;
+      system("$editor $f");
+      open($x, $f) || die "Cannot read from '$f': $!";
+      ${$d}{mbi_cmdline} = <$x>;
+      chomp ${$d}{mbi_cmdline};
+      close $x;
+    }
+}
+
+sub do_attr_single_arg_check
+{
+  my $args = shift;
+  my $x = 0;
+  ++$x if defined $args->{"--set"};
+  ++$x if defined $args->{"--set-file"};
+  ++$x if defined $args->{"--set-zero"};
+  ++$x if defined $args->{"--unset"};
+  ++$x if defined $args->{"--get"};
+  ++$x if defined $args->{"--list"};
+  my $s = "--set, --set-zero, --set-file, --unset, --get, and --list";
+  error("One of $s needs to be given")
+    if $x == 0;
+  error("Only one of $s may be given")
+    if $x != 1;
+}
+
+sub do_attr
+{
+  my $args = shift;
+  my $attrs = shift;
+
+  if (defined $args->{"--set"})
+    {
+      my @v = @{$args->{"--set"}};
+      $attrs->{$v[0]} = $v[1];
+    }
+  elsif (defined $args->{"--set-file"})
+    {
+      my @v = @{$args->{"--set-file"}};
+
+      delete $attrs->{$v[0]};
+
+      open(my $f, $v[1]) || error("Cannot open '$v[1]': $!");
+      my $r;
+      my $sz = 0;
+      do
+        {
+          my $buf;
+          $r = sysread($f, $buf, 1 << 20, $sz);
+          error("Error reading from file '$v[1]': $!") unless defined $r;
+          $attrs->{$v[0]} .= $buf;
+          $sz += $r;
+        }
+      while ($r > 0);
+      close $f;
+    }
+  elsif (defined $args->{"--set-zero"})
+    {
+      my @v = @{$args->{"--set-zero"}};
+      $attrs->{$v[0]} = pack("C", 0) x $v[1];
+    }
+  elsif (defined $args->{"--unset"})
+    {
+      delete $attrs->{$args->{"--unset"}};
+    }
+  elsif (defined $args->{"--get"})
+    {
+      error("No entry '".$args->{"--get"}."' found.")
+        unless defined $attrs->{$args->{"--get"}};
+
+      print $attrs->{$args->{"--get"}}, "\n";
+    }
+  elsif (defined $args->{"--list"})
+    {
+      # TODO: Add more dump modes like hex for binary data
+      print "'$_' = '$attrs->{$_}'"
+            .($verbose ? " [".length($_).":".length($attrs->{$_})."]" : "")
+            ."\n"
+        foreach sort keys %{$attrs};
+    }
+
+  # TODO: add --get-file to save to file
+}
+
+sub do_attr_img_gen
+{
+  my $args = shift;
+  return not ($args->{"--list"} or $args->{"--get"});
+}
+
+sub op_attr
+{
+  my $d = shift;
+  my $args = shift;
+
+  do_attr_single_arg_check($args);
+  ${$d}{attrs} = {} unless exists ${$d}{attrs};
+  do_attr($args, ${$d}{attrs});
+}
+
+sub op_modattr
+{
+  my $d = shift;
+  my $args = shift;
+
+  do_attr_single_arg_check($args);
+
+  my %found = find_modules($d, $args, 1);
+
+  foreach my $k (keys %found)
+    {
+      ${$d}{mods}[$k]{attrs} = {} unless exists ${$d}{mods}[$k]{attrs};
+      do_attr($args, ${$d}{mods}[$k]{attrs});
+    }
+}
+
+sub op_launch
+{
+  my $d = shift;
+  my $args = shift;
+
+  my $cmd = ${$d}{attrs}{"l4i:QEMUcmd"};
+
+  $cmd = ${$d}{attrs}{$args->{"--cmd-key"}} if $args->{"--cmd-key"};
+  $cmd = $args->{"--cmd"} if $args->{"--cmd"};
+
+  error("No command line specification specified or found in image")
+    unless defined $cmd;
+
+  if ($args->{"--show-cmd"})
+    {
+      print "$cmd\n";
+      return;
+    }
+
+  $ENV{L4IMAGE_FILE} = $imagefile;
+
+  system("echo Launching: $cmd\n") if $verbose;
+
+  if (   $args->{"--output-processing-perl-line"}
+      or $args->{"--output-processing-perl"}
+      or $args->{"--output-processing"})
+    {
+      my $EXEC_PID = open(my $fd, "$cmd |") || die "Could not run: $!";
+
+      if ($args->{"--output-processing-perl-line"})
+        {
+          eval $args->{"--output-processing-perl-line"} while $_ = <$fd>;
+        }
+      elsif ($args->{"--output-processing-perl"})
+        {
+          eval $args->{"--output-processing-perl"};
+        }
+      else
+        {
+          $ENV{EXEC_PID} = $EXEC_PID;
+          # TODO: We could export a lot more info to the filter program ...
+          $SIG{PIPE} = sub { kill 15, $EXEC_PID; };
+
+          my $filter_pid = open(my $filter_fd,
+                                "| ".$args->{"--output-processing"})
+            || die "Could not run output filter: $!";
+
+          my $r;
+          do
+            {
+              my $buf;
+              $r = sysread($fd, $buf, 10000);
+              if ($r)
+                {
+                  my $rr = $r;
+
+                  do
+                    {
+                      my $rrr = syswrite($filter_fd, $buf, $rr);
+                      $rr -= $rrr if $rrr;
+                      $r = $rr = 0 unless defined $rrr;
+                    }
+                  while ($rr);
+                }
+            }
+          while ($r);
+
+          close $filter_fd;
+        }
+      close $fd;
+    }
+  else
+    {
+      exec($cmd);
+    }
+
+  # TODO: Add input too?
+}
+
+my $help_module_add =
+  "  --file                File to add as a module\n".
+  "  --name                Name of the module\n".
+  "  --type                Type of the module, use for: kernel sigma0 roottask\n".
+  "  --cmdline             Command line of the module\n";
+
+my $help_module_find_one =
+  "  --num                 Number of the module\n".
+  "  --with-name           Name of the module\n".
+  "  --regex               Regular expression to select one module\n";
+
+my $help_module_find_many =
+  "  --num                 Number of the module\n".
+  "  --with-name           Name of the module\n".
+  "  --regex               Regular expression to select module(s)\n";
+
+my $help_attrs =
+  "  --set key value       Set a key to value.\n".
+  "  --set-file key file   Set a key to contents of file.\n".
+  "  --set-zero key size   Make space of 'size' byte for key.\n".
+  "  --unset key           Delete key.\n".
+  "  --get key             Get value of key.\n".
+  "  --list                List all attributes.\n";
+
+
+my %args = (
+  list => {
+    func => \&op_list,
+    help => "List modules in image.\n".
+            "  -v    Show details.",
+    args => {
+      "-v" => 0,
+    },
+  },
+  add => {
+    args => {
+      "--file" => 1,
+      "--name" => 1,
+      "--cmdline" => 1,
+      "--type" => 1,
+    },
+    mods_to_disk => 1,
+    gen_new_image => 1,
+    func => \&op_add,
+    help => "Add a module to the end of the image.\n".
+            $help_module_add.
+            "",
+  },
+  "insert-before" => {
+    args => {
+      "--num" => 1,
+      "--with-name" => 1,
+      "--regex" => 1,
+      "--file" => 1,
+      "--name" => 1,
+      "--cmdline" => 1,
+      "--type" => 1,
+    },
+    mods_to_disk => 1,
+    gen_new_image => 1,
+    func => \&op_insert_before,
+    help => "Insert a module before the specified module.\n".
+            $help_module_add.
+            $help_module_find_one.
+            "",
+  },
+  "insert-after" => {
+    args => {
+      "--num" => 1,
+      "--with-name" => 1,
+      "--regex" => 1,
+      "--file" => 1,
+      "--name" => 1,
+      "--cmdline" => 1,
+      "--type" => 1,
+    },
+    mods_to_disk => 1,
+    gen_new_image => 1,
+    func => \&op_insert_after,
+    help => "Insert a module after the specified module.\n".
+            $help_module_add.
+            $help_module_find_one.
+            "",
+  },
+  replace => {
+    args => {
+      "--num" => 1,
+      "--with-name" => 1,
+      "--regex" => 1,
+      "--file" => 1,
+      "--name" => 1,
+      "--cmdline" => 1,
+      "--type" => 1,
+    },
+    mods_to_disk => 1,
+    gen_new_image => 1,
+    func => \&op_replace,
+    help => "Replace a module.\n".
+            $help_module_add.
+            $help_module_find_one.
+            "",
+  },
+  edit => {
+    args => {
+      "--num" => 1,
+      "--with-name" => 1,
+      "--regex" => 1,
+    },
+    mods_to_disk => 1,
+    gen_new_image => 1,
+    func => \&op_edit,
+    help => "Edit a module.\n".
+            $help_module_find_one.
+            "\n".
+            "Uses EDITOR from environment variables, or vi or notepad.".
+            "",
+  },
+  remove => {
+    args => {
+      "--num" => 1,
+      "--with-name" => 1,
+      "--regex" => 1,
+    },
+    mods_to_disk => 1,
+    gen_new_image => 1,
+    func => \&op_remove,
+    help => "Remove a module(s).\n".
+            $help_module_find_many,
+  },
+  extract => {
+    mods_to_disk => 1,
+    func => sub { error("--outputdir (global option) not given") unless defined $workdir; },
+    help => "Unpack each file from the image.\n".
+            "Use global --outputdir argument (before --op) to specify output directory\n",
+  },
+  pack => {
+    gen_new_image => 1,
+    func => \&op_pack,
+    help => "Generate (pack) a new image from a previously\n".
+            "extracted one (see extract operation).",
+  },
+  info => {
+    func => \&op_info,
+    help => "Print image information.",
+  },
+  cmdline => {
+    args => {
+      "--set" => 1,
+      "--edit" => 0,
+    },
+    mods_to_disk => 1,
+    gen_new_image => 1,
+    func => \&op_cmdline,
+    help => "Modify the image's command line.\n".
+            "  --set                Command line.\n".
+            "  --edit               Edit command line.\n".
+            "",
+  },
+  attr => {
+    args => {
+      "--set"      => 2,
+      "--set-file" => 2,
+      "--set-zero" => 2,
+      "--unset"    => 1,
+      "--get"      => 1,
+      "--list"     => 0,
+    },
+    # this is still heavy, actually we would only need to rewrite if our
+    # storage goes beyond the next page
+    mods_to_disk => \&do_attr_img_gen,
+    gen_new_image => \&do_attr_img_gen,
+    func => \&op_attr,
+    help => "Show and modify the image's global attributes.\n".
+            $help_attrs,
+  },
+  modattr => {
+    args => {
+      "--num"       => 1,
+      "--with-name" => 1,
+      "--regex"     => 1,
+      "--set"       => 2,
+      "--set-file"  => 2,
+      "--set-zero"  => 2,
+      "--unset"     => 1,
+      "--get"       => 1,
+      "--list"      => 0,
+    },
+    # this is still heavy, actually we would only need to rewrite if our
+    # storage goes beyond the next page
+    mods_to_disk => \&do_attr_img_gen,
+    gen_new_image => \&do_attr_img_gen,
+    func => \&op_modattr,
+    help => "Show and modify attributes of a module.\n".
+            $help_module_find_many.
+            $help_attrs,
+  },
+  foreachmod => {
+    args => {
+      "--cmd" => 1,
+    },
+    mods_to_disk => 1,
+    gen_new_image => 1,
+    func => \&op_foreachmod,
+    help => "Call a command for each module.\n".
+            "  --cmd                Command to run for each module.\n".
+            "\n".
+            "The following environment variables are set:\n".
+            "  L4IMAGE_MODULE_FILE    File path to the module file\n".
+            "  L4IMAGE_MODULE_NUM     Number of the module\n".
+            "  L4IMAGE_MODULE_NAME    Name of the module\n".
+            "  L4IMAGE_MODULE_CMDLINE Command line for the module\n".
+            "  L4IMAGE_NUM_MODULES    Number of modules in the image file\n".
+            "",
+  },
+  create => {
+    args => {
+      "--entry" => 1,
+      "--modules-list-file" => 1,
+      "--search-path" => 1,
+    },
+    gen_new_image => 1,
+    func => \&op_create,
+    help => "Add modules according to a modules.list-entry.\n".
+            "Any other existing module is being removed.\n".
+            "  --entry              Entry to use\n".
+            "  --modules-list-file  modules.list file to use\n".
+            "  --search-path        Search path, colon or space separated\n".
+            "\n".
+            "",
+  },
+  launch => {
+    args => {
+      "--cmd" => 1,
+      "--cmd-key" => 1,
+      "--show-cmd" => 0,
+      "--output-processing-perl-line" => 1,
+      "--output-processing-perl" => 1,
+      "--output-processing" => 1,
+    },
+    func => \&op_launch,
+    help => "Launch a command to run the image, e.g. using QEMU.\n".
+            "  --cmd                         Specify command to execute\n".
+            "  --cmd-key                     Specify the attribute's key to get the\n".
+            "                                command to execute from\n".
+            "  --show-cmd                    Only show the command that would be executed\n".
+            "  --output-processing           Command to process output of launched\n".
+            "                                command with\n".
+            "  --output-processing-perl      Perl code to process output of\n".
+            "                                launched command with\n".
+            "  --output-processing-perl-line Perl code to process output of\n".
+            "                                each line of launched command\n".
+            "\n".
+            "In the command, \$L4IMAGE_FILE is the variable that is replaced\n".
+            "with the image file.\n".
+            "For output processing, the environment variable EXEC_PID holds\n".
+            "the PID of the launched process.\n".
+            "For --output-processing-perl, \$fd is the file descriptor\n".
+            "for the output of the launched process.\n".
+            "".
+            "",
+  },
+);
+
+sub argument_processor
+{
+  my $op_call = shift;
+  my $d = shift;
+
+  my %op_args;
+
+  my $current_op;
+
+  for (my $i = 0; $i < @_; ++$i)
+    {
+      my $arg = $_[$i];
+
+      if ($arg eq '--op')
+        {
+          $op_call->($current_op, $d, \%op_args) if $current_op;
+
+          $arg = $_[++$i];
+
+          error("Need to give an operation after --op") unless defined $arg;
+          error("Unknown operation '$arg'") unless defined $args{$arg};
+
+          %op_args = ();
+          $current_op = $arg;
+        }
+      else
+        {
+          error("Need to give --op") unless defined $current_op;
+          error("Unknown option '$arg' for operation '$current_op'")
+            unless defined $args{$current_op}{args}{$arg};
+
+
+          my $n = $args{$current_op}{args}{$arg};
+          if ($n == 1)
+            {
+              ++$i;
+              error("Not enough arguments for '$arg'")
+                unless defined $_[$i];
+              $op_args{$arg} = $_[$i];
+            }
+          elsif ($n == 0)
+            {
+              $op_args{$arg} = 1;
+            }
+          else
+            {
+              error("Not enough arguments for '$arg'")
+                unless defined $_[$i + $n];
+              push @{$op_args{$arg}}, $_[++$i] foreach 1..$n;
+            }
+        }
+    }
+
+  $op_call->($current_op, $d, \%op_args) if $current_op;
+}
+
+sub help_and_exit
+{
+  print<<EOH;
+Usage: $0
+
+Common/global options:
+  --image, -i file           Image file to use. Required.
+  --outimage, -o file        Output image file. Optional.
+  --verbose, -v              Verboseness.
+  --workdir, --outputdir dir Directory to store temporary or output files.
+  --help                     Helping information.
+
+  --op operation             Operation to perform. Multiple --op arguments
+                             can be given.
+  --op-specific arguments    See below
+
+Short variant:
+   $0 [common/global options] operation --op-arguments
+
+Simple examples:
+
+   $0 -i bootstrap.raw list
+   $0 -i bootstrap.uimage add --file /path/to/program
+   $0 -i bootstrap.elf launch
+
+Operations:
+EOH
+
+  foreach my $op (sort keys %args)
+    {
+      print "  $op\n";
+      foreach (split(/\n/, $args{$op}{help}))
+        {
+          print "    $_\n";
+        }
+      print "\n";
+    }
+
+  exit 0;
+}
+
+# ---------------------------------------------------------
+
+for (my $i = 0; $i < @ARGV; ++$i)
+  {
+    my $arg = $ARGV[$i];
+
+    if ($arg eq '--image' or $arg eq '-i')
+      {
+        $imagefile = $ARGV[$i + 1];
+        splice(@ARGV, $i, 2);
+        $i--;
+      }
+    elsif ($arg eq '--outimage' or $arg eq '-o')
+      {
+        $outimagefile = $ARGV[$i + 1];
+        splice(@ARGV, $i, 2);
+        $i--;
+      }
+    elsif ($arg eq '--verbose' or $arg eq '-v')
+      {
+        ++$verbose;
+        splice(@ARGV, $i, 1);
+        $i--;
+      }
+    elsif ($arg eq '--workdir' or $arg eq '--outputdir')
+      {
+        $workdir = $ARGV[$i + 1];
+        splice(@ARGV, $i, 2);
+        $i--;
+      }
+    elsif ($arg eq '--create-l4image-script')
+      {
+        # this is an internal function, do not advertise
+        my $outfile = $ARGV[$i + 1];
+        die "Need to give output file" unless defined $outfile;
+        # Requires to have libpar-perl installed
+        system("pp -n -P -o $outfile -I $libdir"
+               ." -M L4::Image:: -M L4::ModList -M L4::Digest::CRC $0");
+        my $o = `$outfile -h 2>&1`;
+        if ($?)
+          {
+            print "Creation failed:\n$o";
+            exit 1;
+          }
+        exit 0;
+      }
+    elsif ($arg eq '--create-l4image-binary')
+      {
+        # this is an internal function, do not advertise
+        my $outfile = $ARGV[$i + 1];
+        die "Need to give output file" unless defined $outfile;
+        exec("pp -o $outfile -I $libdir $0");
+      }
+    elsif ($arg eq '--create-l4image-package')
+      {
+        # this is an internal function, do not advertise
+        my $outfile = $ARGV[$i + 1];
+        die "Need to give output file" unless defined $outfile;
+        $outfile = cwd().'/'.$outfile if $outfile !~ m,^/,;
+        print "Output file: $outfile.(tar.gz|zip)\n";
+        my $tmpdir = tempdir('XXXXXXXX', CLEANUP => 1, TMPDIR => 1);
+        mkdir "$tmpdir/l4image";
+        mkdir "$tmpdir/l4image/bin";
+        mkdir "$tmpdir/l4image/lib";
+        mkdir "$tmpdir/l4image/lib/L4";
+        mkdir "$tmpdir/l4image/lib/Digest";
+        system("cp $0 $tmpdir/l4image/bin");
+        system("cp -a $libdir/L4/{Digest,Image,{Grub,Image,ModList}.pm} $tmpdir/l4image/lib/L4");
+        system("cd $tmpdir && tar czvf $outfile.tar.gz l4image");
+        system("cd $tmpdir && zip -r9v $outfile.zip l4image");
+        exit 0;
+      }
+    elsif ($arg eq '--create-l4image-binary-remote')
+      {
+        # this is an internal function, do not advertise
+        my $outdir = $ARGV[$i + 1];
+        die "Need to give output directory" unless defined $outdir;
+        my $remote_loc = $ARGV[$i + 2];
+        die "Need to give remote location (e.g. host:/tmp)"
+          unless defined $remote_loc;
+        system("$0 --create-l4image-package $outdir/l4image");
+        system("scp $outdir/l4image.tar.gz $remote_loc");
+        $remote_loc =~ /^(\S+):(\S+)/;
+        my ($host, $remotedir) = ($1, $2);
+        system("ssh $host \"cd $remotedir"
+                          ." && tar xf l4image.tar.gz"
+                          ." && cd l4image/bin"
+                          ." && ./l4image --create-l4image-binary "
+                          ."              l4image-\$(uname -s)-\$(uname -m)\"");
+        system("scp $remote_loc/l4image/bin/l4image-* $outdir");
+        system("ssh $host rm -r $remotedir/l4image $remotedir/l4image.tar.gz");
+        exit 0;
+      }
+    elsif ($arg eq '--help' or $arg eq '-h')
+      {
+        help_and_exit();
+      }
+    elsif ($arg eq '--op')
+      {
+        last;
+      }
+    elsif ($arg !~ /^-/)
+      {
+        splice(@ARGV, $i, 0, "--op");
+        last;
+      }
+    else
+      {
+        die "Unknown global argument: '$arg'";
+      }
+  }
+
+unless (defined $imagefile)
+  {
+    print "Missing input file. Use -h for commands and options.\n";
+    exit 1;
+  }
+if (@ARGV == 0)
+  {
+    print "Missing command. Use -h for commands and options.\n";
+    exit 1;
+  }
+
+
+my %process_opts;
+$process_opts{workdir} = $workdir;
+$process_opts{outimagefile} = $outimagefile;
+
+# figure out whether we need to write files to storage and whether we need
+# to generate a new image
+sub phase1_arg_handling
+{
+  my ($op, $d, $args) = @_;
+
+  foreach my $v (qw/mods_to_disk gen_new_image/)
+    {
+      if ($args{$op} and $args{$op}{$v})
+        {
+          if (ref($args{$op}{$v}) eq 'CODE')
+            {
+              $process_opts{$v} = 1 if $args{$op}{$v}->($args);
+            }
+          else
+            {
+              $process_opts{$v} = 1;
+            }
+        }
+    }
+}
+
+argument_processor(\&phase1_arg_handling, undef, @ARGV);
+
+
+sub process_image_cb
+{
+  argument_processor(sub { my $op = shift; $args{$op}{func}(@_); }, shift, @_);
+}
+
+my $ret = L4::Image::process_image($imagefile, \%process_opts,
+                                   \&process_image_cb, @ARGV);
+
+error($ret) if $ret;
+
+exit 0;
