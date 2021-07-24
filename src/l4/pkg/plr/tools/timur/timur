@@ -20,7 +20,7 @@ import argparse         # cmd line arguments
 # XXX: config file
 globalDirs = [ "/home/doebel/src/tudos/src/build/bin/x86_586/l4f",
                "/home/doebel/src/tudos/src/build/bin/x86_586/",
-               "/home/doebel/src/tudos/src/kernel/fiasco/build",
+               "/home/doebel/src/tudos/src/fiasco/build",
                "/home/doebel/src/tudos/src/l4/conf",
              ]
 globalQemu      = "qemu-system-i386"

@@ -792,8 +792,8 @@ report:
 	@echo "OBJ_DIR:   $(OBJ_DIR)"
 	@echo
 	@for i in pkg \
-	          ../kernel/fiasco/src/kern/ia32 \
-	          ../kernel/fiasco/tool/preprocess/src/preprocess; do \
+	          ..fiasco/src/kern/ia32 \
+	          ..fiasco/tool/preprocess/src/preprocess; do \
 	  if [ -e $$i ]; then \
 	    echo Path $$i found ; \
 	  else                \

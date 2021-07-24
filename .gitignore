@@ -5,7 +5,7 @@ Makeconf.local
 *.o
 obj
 __pycache__
-src/kernel/fiasco/build/
+src/fiasco/build/
 */.svn
 *.swo
 *.swp

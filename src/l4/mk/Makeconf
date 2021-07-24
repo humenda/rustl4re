@@ -143,7 +143,7 @@ TR		= tr
 GEN_DOPECODE	= $(L4DIR)/tool/gen_dopecode/gen_dopecode
 ABS2REL		= $(L4DIR)/tool/bin/abs2rel.sh
 # it is optional to be able to set it as environment variable
-FIASCOUX	?= $(L4DIR)/../kernel/fiasco/build-ux/fiasco
+FIASCOUX	?= $(L4DIR)/../fiasco/build-ux/fiasco
 PAGER		?= less
 DISASM_CMD      ?= $(OBJDUMP) -lCSd $(1) | $(PAGER)
 IMAGES_DIR      ?= $(OBJ_BASE)/images

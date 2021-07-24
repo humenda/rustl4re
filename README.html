@@ -120,7 +120,7 @@ Generated object code will be placed under the obj directory.</p>
  L4Linux build directories.</p></li>
 <li><p><code>src/</code>
 Contains the source code:
-<code>kernel/fiasco</code>: Fiasco source
+<code>fiasco</code>: Fiasco source
 <code>l4</code>:            L4Re source
 <code>l4linux</code>:       L4Linux</p></li>
 <li><p>files/
@@ -180,18 +180,18 @@ MIPS32r2 variant respectively.</p>
 <h2>Configure the L4Re microkernel aka Fiasco </h2>
 
 <p>Within the snapshot layout build directories for Fiasco are created under
-<code>obj/fiasco</code>. To create a build directory, go to <code>src/kernel/fiasco</code> and do:</p>
+<code>obj/fiasco</code>. To create a build directory, go to <code>src/fiasco</code> and do:</p>
 
-<pre><code>$ cd src/kernel/fiasco
-$ make B=../../../obj/fiasco/builddir
-Creating build directory "../../../obj/fiasco/builddir"...
+<pre><code>$ cd src/fiasco
+$ make B=../../obj/fiasco/builddir
+Creating build directory "../../obj/fiasco/builddir"...
 done.
 </code></pre>
 
 <p>This will have created a build directory, go there and configure it
 according to your requirements:</p>
 
-<pre><code>$ cd ../../../obj/fiasco/builddir
+<pre><code>$ cd ../../obj/fiasco/builddir
 $ make config
 </code></pre>
 

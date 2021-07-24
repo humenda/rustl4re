@@ -132,7 +132,7 @@ Directory layout
 
 * `src/`
    Contains the source code:
-   `kernel/fiasco`: Fiasco source
+   `fiasco`: Fiasco source
    `l4`:            L4Re source
    `l4linux`:       L4Linux
 
@@ -192,17 +192,17 @@ Configure the L4Re microkernel aka Fiasco
 -----------------------------------------
 
 Within the snapshot layout build directories for Fiasco are created under
-`obj/fiasco`. To create a build directory, go to `src/kernel/fiasco` and do:
+`obj/fiasco`. To create a build directory, go to `src/fiasco` and do:
 
-    $ cd src/kernel/fiasco
-    $ make B=../../../obj/fiasco/builddir
-    Creating build directory "../../../obj/fiasco/builddir"...
+    $ cd src/fiasco
+    $ make B=../../obj/fiasco/builddir
+    Creating build directory "../../obj/fiasco/builddir"...
     done.
 
 This will have created a build directory, go there and configure it
 according to your requirements:
 
-    $ cd ../../../obj/fiasco/builddir
+    $ cd ../../obj/fiasco/builddir
     $ make config
 
 `make config` will open up a configuration menu. Configure Fiasco as
