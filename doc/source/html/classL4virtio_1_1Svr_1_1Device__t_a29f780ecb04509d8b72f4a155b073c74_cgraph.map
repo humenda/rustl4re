@@ -1,0 +1,10 @@
+<map id="L4virtio::Svr::Device_t::device_error" name="L4virtio::Svr::Device_t::device_error">
+<area shape="rect" id="node1" title="Transition device into DEVICE_NEEDS_RESET state." alt="" coords="5,144,159,185"/>
+<area shape="rect" id="node2" href="$structL4virtio_1_1Svr_1_1Dev__status.html#a5b56e89190f111e843f56c8f55c29fd8" title="Get the driver_ok bits ( 2 to 2 ) of raw." alt="" coords="237,5,376,47"/>
+<area shape="rect" id="node3" href="$classL4virtio_1_1Svr_1_1Device__t.html#a4350f6e35f43df84584ec30740f5a7aa" title="reset callback, called for doing a device reset" alt="" coords="230,71,383,112"/>
+<area shape="rect" id="node4" href="$classL4virtio_1_1Svr_1_1Dev__config.html#afc2b3a6d213dc5fbaf7e500f784b5076" title="Set DEVICE_NEEDS_RESET bit in device status register." alt="" coords="233,137,380,193"/>
+<area shape="rect" id="node7" href="$classL4virtio_1_1Svr_1_1Dev__config.html#a96ad6d40f04894e7a0ef8ce33a4f8416" title="Get current device status (trusted)." alt="" coords="239,217,374,259"/>
+<area shape="rect" id="node8" href="$classL4virtio_1_1Svr_1_1Device__t.html#a52d70a46453eb678e8656dbf790835e8" title="callback for triggering configuration change notification IRQ" alt="" coords="207,283,407,324"/>
+<area shape="rect" id="node5" href="$structL4virtio_1_1Svr_1_1Dev__status.html#a00de1af41a5731259d899bb58cf56212" title="Get the device_needs_reset bits ( 6 to 6 ) of raw." alt="" coords="455,112,661,153"/>
+<area shape="rect" id="node6" href="$classL4virtio_1_1Svr_1_1Dev__config.html#a28c17f0bffa127dd6767dba771ee29f4" title="Get a read&#45;only pointer to the config header." alt="" coords="491,177,625,219"/>
+</map>

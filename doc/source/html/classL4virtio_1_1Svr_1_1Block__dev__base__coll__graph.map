@@ -1,0 +1,5 @@
+<map id="L4virtio::Svr::Block_dev_base&lt; Ds_data &gt;" name="L4virtio::Svr::Block_dev_base&lt; Ds_data &gt;">
+<area shape="rect" id="node1" title="Base class for virtio block devices." alt="" coords="27,653,206,1053"/>
+<area shape="rect" id="node2" href="$classL4virtio_1_1Svr_1_1Device__t.html" title=" " alt="" coords="5,336,228,604"/>
+<area shape="rect" id="node3" href="$classL4virtio_1_1Svr_1_1Device__t.html" title="Server&#45;side L4&#45;VIRTIO device stub." alt="" coords="5,5,228,273"/>
+</map>

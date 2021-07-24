@@ -11,7 +11,6 @@
 #include "app_model.h"
 #include "debug.h"
 
-#include <l4/cxx/auto_ptr>
 #include <l4/cxx/ref_ptr>
 #include <l4/libloader/elf>
 #include <l4/util/bitops.h>
@@ -497,20 +496,6 @@ static int exec(lua_State *l)
 
   return 0;
 }
-#if 0
-void do_some_exc_tests()
-{
-  char _ta[333];
-  char const *const cont = "Das ist ein lustiger test";
-
-  for (unsigned i = 0; i < strlen(cont); ++i)
-    _ta[i] = cont[i];
-
-  volatile int *x = (int*)0x500;
-//printf("Test Exc\n");
-  int y = *x;
-}
-#endif
 
 
 static const luaL_Reg _task_meta_ops[] = {
@@ -545,7 +530,8 @@ public:
     lua_pop(l, 2);
 
     observer = new Observer();
-    Ned::server->registry()->register_obj(observer);
+    L4Re::chkcap(Ned::server->registry()->register_obj(observer),
+                 "Register observer endpoint.");
   }
 };
 

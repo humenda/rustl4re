@@ -1,2 +1,5 @@
 <map id="L4::Server_object_t&lt; IFACE, BASE &gt;" name="L4::Server_object_t&lt; IFACE, BASE &gt;">
+<area shape="rect" id="node1" title="Base class (template) for server implementing server objects." alt="" coords="5,417,204,539"/>
+<area shape="rect" id="node2" href="$classL4_1_1Server__object.html" title="Abstract server object to be used with L4::Server and L4::Basic_registry." alt="" coords="37,263,172,369"/>
+<area shape="rect" id="node3" href="$structL4_1_1Epiface.html" title="Base class for interface implementations." alt="" coords="18,5,191,215"/>
 </map>

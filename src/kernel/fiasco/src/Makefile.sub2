@@ -87,10 +87,13 @@ ToDoItems:
 
 doc: docs/stamp-doc.ready
 
-docs/stamp-doc.ready: $(srcdir)/doxygen.conf $(foreach m, $(GENERATED_MODULES), auto/stamp-$(m).ready)
-	@mkdir -p docs
+docs/stamp-doc.ready: $(srcdir)/doxygen.conf \
+		$(foreach m, $(GENERATED_MODULES), auto/stamp-$(m).ready) | docs
 	@touch $@
 	$(VERBOSE)doxygen $(srcdir)/doxygen.conf
+
+docs:
+	@mkdir -p docs
 
 ###
 
@@ -175,7 +178,7 @@ DEPS.dot: $(KERNEL_MODULES_CPP)
 # being created/updated before all $(DEPS) are).  Therefore, depend on
 # the fiasco.debug and on main (not with Fiasco-UX). Once this is made,
 # we know all $(DEPS) have been updated.
-Circular: $(KERNEL) $(BOOT) $(RUN_TESTS) $(CHECKSUM)
+Circular: $(KERNEL) $(BOOT) $(RUN_TESTS) $(UTEST_BINARIES) $(CHECKSUM)
 	@echo "Creating $@"
 	@( \
 	  echo 'Do "make DEPS" for full fine-grained dependency information.';\

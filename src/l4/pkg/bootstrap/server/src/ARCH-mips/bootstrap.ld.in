@@ -27,17 +27,6 @@ PHDRS {
 #endif
 }
 
-/* Some explanation for SINGLE_SECTION thing: For bootstrap we want to have
- * a single program header only because some boot-loaders require that.
- * Unfortunately it does not seem to be possible to have the following
- * order:
- *         text - data - bss - modules
- * because bss is smaller in the binary than unpacked and things get screwed
- * up. So what we do it the following:
- *         text - data_including_bss - modules
- * This way things seem to work and we only have one program header.
- */
-
 SECTIONS
 {
   /* Read-only sections, merged into text segment. The start address of
@@ -58,6 +47,8 @@ SECTIONS
   _etext = .;
   PROVIDE (etext = .);
 
+  .note.gnu.build-id : { *(.note.gnu.build-id) }
+
   /* ensure that data starts at a new L4 page */
   . = ALIGN(4096);
   .data :
@@ -67,11 +58,6 @@ SECTIONS
 
     CTORS
     PLATFORMS
-
-    . = ALIGN(4);
-    _module_info_start = .;
-    KEEP(*(.module_info))
-    _module_info_end   = .;
 
   _gp = ALIGN(16) + 0x7ff0;
   *(.got)

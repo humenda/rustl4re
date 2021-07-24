@@ -8,13 +8,16 @@
  */
 #pragma once
 
-#include "generic_cpu_dev.h"
-
 #include <cstdio>
+
+#include "generic_cpu_dev.h"
+#include "monitor/cpu_dev_cmd_handler.h"
 
 namespace Vmm {
 
-class Cpu_dev : public Generic_cpu_dev
+class Cpu_dev
+: public Generic_cpu_dev,
+  public Monitor::Cpu_dev_cmd_handler<Monitor::Enabled, Cpu_dev>
 {
 public:
   // Maximum number of CPUs that are addressable.
@@ -83,7 +86,8 @@ public:
   static unsigned dtid_to_cpuid(l4_int32_t prop_val)
   { return prop_val; }
 
-  void show_state_registers(FILE *f);
+  static bool has_fixed_dt_mapping() { return true; }
+
   unsigned core_other() const
   { return _core_other; }
 

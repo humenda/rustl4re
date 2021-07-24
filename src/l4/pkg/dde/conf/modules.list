@@ -85,7 +85,7 @@ module ned
 module l4lx.cfg
 module io
 module arm-rv.io
-module vmlinuz.arm
+module[uncompress] vmlinuz.arm
 module ramdisk-arm.rd
 
 entry L4Linux-mag-x86
@@ -98,7 +98,7 @@ module fb-drv
 module mag
 module x86-legacy.devs
 module l4lx-x86.io
-module vmlinuz
+module[uncompress] vmlinuz
 module ramdisk-x86.rd
 
 entry L4Linux-mag-x86-no-ramdisk

@@ -14,7 +14,7 @@ PUBLIC static
 void
 Platform_control::boot_ap_cpus(Address phys_tramp_mp_addr)
 {
-  Register_block<32> src(Kmem::mmio_remap(Mem_layout::Src_phys_base));
+  Register_block<32> src(Kmem::mmio_remap(Mem_layout::Src_phys_base, 0x100));
   enum
   {
     SRC_SCR  = 0,
@@ -59,8 +59,8 @@ Platform_control::boot_ap_cpus(Address phys_tramp_mp_addr)
     SRC_A7RCR_A7_CORE1_ENABLE          = 1 << 1,
   };
 
-  Register_block<32> gpc(Kmem::mmio_remap(Mem_layout::Gpc_phys_base));
-  Register_block<32> src(Kmem::mmio_remap(Mem_layout::Src_phys_base));
+  Register_block<32> gpc(Kmem::mmio_remap(Mem_layout::Gpc_phys_base, 0x1000));
+  Register_block<32> src(Kmem::mmio_remap(Mem_layout::Src_phys_base, 0x100));
 
   src[SRC_GPR3] = phys_tramp_mp_addr;
 
@@ -77,6 +77,8 @@ Platform_control::boot_ap_cpus(Address phys_tramp_mp_addr)
 // ------------------------------------------------------------------------
 IMPLEMENTATION [arm && mp && pf_imx_7 && arm_psci]:
 
+#include <cstdio>
+
 PUBLIC static
 void
 Platform_control::boot_ap_cpus(Address phys_tramp_mp_addr)
@@ -84,3 +86,39 @@ Platform_control::boot_ap_cpus(Address phys_tramp_mp_addr)
   if (cpu_on(0x1, phys_tramp_mp_addr))
     printf("KERNEL: PSCI CPU_ON failed\n");
 }
+
+// ------------------------------------------------------------------------
+IMPLEMENTATION [arm && mp && arm_v8 && arm_psci]:
+
+#include "cpu.h"
+#include "psci.h"
+#include "minmax.h"
+
+PUBLIC static
+void
+Platform_control::boot_ap_cpus(Address phys_tramp_mp_addr)
+{
+  int seq = 1;
+  enum { Num_cores = 6 };
+  unsigned coreid[Num_cores] = { 0x000, 0x001, 0x002, 0x003,
+                                 0x100, 0x101 };
+
+  for (int i = 0; i < min<int>(Num_cores, Config::Max_num_cpus); ++i)
+    {
+      int r = Psci::cpu_on(coreid[i], phys_tramp_mp_addr);
+      if (r)
+        {
+          if (r != Psci::Psci_already_on)
+            printf("KERNEL: CPU%d boot-up error: %d\n", i, r);
+          continue;
+        }
+
+      while (!Cpu::online(Cpu_number(seq)))
+        {
+          Mem::barrier();
+          Proc::pause();
+        }
+      ++seq;
+    }
+}
+

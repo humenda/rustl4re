@@ -20,6 +20,7 @@ IMPLEMENTATION [mp]:
 #include "helping_lock.h"
 #include "kernel_task.h"
 #include "processor.h"
+#include "rcupdate.h"
 #include "scheduler.h"
 #include "task.h"
 #include "thread.h"
@@ -48,7 +49,7 @@ App_cpu_thread::may_be_create(Cpu_number cpu, bool cpu_never_seen_before)
 
   t->set_home_cpu(cpu);
   t->set_current_cpu(cpu);
-  check(t->bind(Kernel_task::kernel_task(), User<Utcb>::Ptr(0)));
+  t->kbind(Kernel_task::kernel_task());
   return t;
 }
 
@@ -107,6 +108,15 @@ App_cpu_thread::bootstrap(Mword resume)
         printf("CPU[%u]: goes to idle loop\n", cxx::int_value<Cpu_number>(ccpu));
     }
 
+  if (init_unittest_app_core)
+    init_unittest_app_core();
+
   for (;;)
     idle_op();
 }
+
+/**
+ * unit test interface for app cores.
+ */
+void
+init_unittest_app_core() __attribute__((weak));

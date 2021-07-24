@@ -1,4 +1,5 @@
 <map id="l4_irq_mux_chain" name="l4_irq_mux_chain">
-<area shape="rect" id="node2" href="$group__l4__irq__api.html#ga0bfe3132479962ae237087568fc2c94f" title="Attach an IRQ to this multiplexer. " alt="" coords="185,5,332,32"/>
-<area shape="rect" id="node3" href="$group__l4__utcb__api.html#gadc099b4a59e1d99638c72c11a8c8b644" title="Get the UTCB address. " alt="" coords="225,56,292,83"/>
+<area shape="rect" id="node1" title="Chain an IRQ to another master IRQ source." alt="" coords="5,31,141,57"/>
+<area shape="rect" id="node2" href="$group__l4__irq__api.html#ga0bfe3132479962ae237087568fc2c94f" title="Attach an IRQ to this multiplexer." alt="" coords="189,5,340,32"/>
+<area shape="rect" id="node3" href="$group__l4__utcb__api.html#gadc099b4a59e1d99638c72c11a8c8b644" title="Get the UTCB address." alt="" coords="230,56,299,83"/>
 </map>

@@ -4,6 +4,7 @@ IMPLEMENTATION:
 
 #include "config.h"
 #include "jdb.h"
+#include "jdb_disasm.h"
 #include "jdb_kobject.h"
 #include "jdb_module.h"
 #include "jdb_screen.h"
@@ -25,7 +26,8 @@ public:
 private:
   Address task;
   static char first_char;
-  bool show_kobject(Kobject_common *, int) { return false; }
+  bool show_kobject(Kobject_common *, int) override
+  { return false; }
 };
 
 class Jdb_ptab : public Jdb_table
@@ -63,7 +65,7 @@ Jdb_ptab::Jdb_ptab(void *pt_base = 0, Space *task = 0,
 
 PUBLIC
 unsigned
-Jdb_ptab::col_width(unsigned column) const
+Jdb_ptab::col_width(unsigned column) const override
 {
   if (column == 0)
     return Jdb_screen::Col_head_size;
@@ -73,20 +75,20 @@ Jdb_ptab::col_width(unsigned column) const
 
 PUBLIC
 unsigned long
-Jdb_ptab::cols() const
+Jdb_ptab::cols() const override
 {
   return Jdb_screen::cols(sizeof(Mword) * 2, sizeof(Pdir::Pte_ptr::Entry) * 2);
 }
 
 
 // available from the jdb_dump module
-int jdb_dump_addr_task(Address addr, Space *task, int level)
+int jdb_dump_addr_task(Jdb_address addr, int level)
   __attribute__((weak));
 
 
 PUBLIC
 void
-Jdb_ptab::draw_entry(unsigned long row, unsigned long col)
+Jdb_ptab::draw_entry(unsigned long row, unsigned long col) override
 {
   int idx;
   if (col == 0)
@@ -100,7 +102,7 @@ Jdb_ptab::draw_entry(unsigned long row, unsigned long col)
   else if ((idx = index(row, col)) >= 0)
     print_entry(Pdir::Pte_ptr(pte(idx), cur_pt_level));
   else
-    putstr("   ###  ");
+    print_invalid();
 }
 
 IMPLEMENT
@@ -168,7 +170,7 @@ Jdb_ptab::print_head(void *entry)
 
 PUBLIC
 bool
-Jdb_ptab_m::handle_key(Kobject_common *o, int code)
+Jdb_ptab_m::handle_key(Kobject_common *o, int code) override
 {
   if (code != 'p')
     return false;
@@ -190,8 +192,19 @@ Jdb_ptab_m::handle_key(Kobject_common *o, int code)
 }
 
 PUBLIC
+char const *
+Jdb_ptab_m::help_text(Kobject_common *o) const override
+{
+  Thread *t;
+  if (cxx::dyn_cast<Task*>(o) || ((t = cxx::dyn_cast<Thread*>(o)) && t->space()))
+    return "p=ptab";
+
+  return 0;
+}
+
+PUBLIC
 unsigned 
-Jdb_ptab::key_pressed(int c, unsigned long &row, unsigned long &col)
+Jdb_ptab::key_pressed(int c, unsigned long &row, unsigned long &col) override
 {
   switch (c)
     {
@@ -206,6 +219,42 @@ Jdb_ptab::key_pressed(int c, unsigned long &row, unsigned long &col)
     case ' ':
       dump_raw ^= 1;
       return Redraw;
+
+    case 'u': // disassemble using address the cursor points to
+      if (Jdb_disasm::avail() && _level<=7)
+        {
+          int idx = index(row, col);
+          if (idx < 0)
+            break;
+
+          Pdir::Pte_ptr pt_entry(pte(idx), cur_pt_level);
+          if (!pt_entry.is_valid())
+            break;
+
+          unsigned next_level, entries;
+
+          if (cur_pt_level >= Pdir::Depth ||
+              !entry_is_pt_ptr(pt_entry, &entries, &next_level))
+            {
+              Jdb_address virt(disp_virt(idx), _task);
+              char s[16];
+              Jdb::printf_statline("p", "<CR>=disassemble here",
+                                   "u[address=" L4_PTR_FMT " %s] ", virt.addr(),
+                                   Jdb::addr_space_to_str(virt, s, sizeof(s)));
+              int c1 = Jdb_core::getchar();
+              if (c1 != KEY_RETURN && c1 != ' ' && c != KEY_RETURN_2)
+                {
+                  Jdb::printf_statline("p", 0, "u");
+                  Jdb::execute_command("u", c1);
+                  return Exit;
+                }
+
+              return Jdb_disasm::show(virt, _level + 1)
+                ? Redraw
+                : Exit;
+            }
+        }
+      return Handled;
 
     case KEY_RETURN:	// goto ptab/address under cursor
     case KEY_RETURN_2:
@@ -234,7 +283,7 @@ Jdb_ptab::key_pressed(int c, unsigned long &row, unsigned long &col)
 	    }
 	  else if (jdb_dump_addr_task != 0)
 	    {
-	      if (!jdb_dump_addr_task(disp_virt(idx), _task, _level+1))
+	      if (!jdb_dump_addr_task(Jdb_address(disp_virt(idx), _task), _level + 1))
 		return Exit;
 	      return Redraw;
 	    }
@@ -250,12 +299,12 @@ Address
 Jdb_ptab::disp_virt(int idx)
 {
   Pdir::Va e((Mword)idx << Pdir::lsb_for_level(cur_pt_level));
-  return Virt_addr::val(e) + virt_base;
+  return cxx::int_value<Virt_addr>(e) + virt_base;
 }
 
 PUBLIC
 unsigned long
-Jdb_ptab::rows() const
+Jdb_ptab::rows() const override
 {
   if (cols() > 1)
     return (entries + cols() - 2) / (cols()-1);
@@ -264,7 +313,7 @@ Jdb_ptab::rows() const
 
 PUBLIC
 void
-Jdb_ptab::print_statline(unsigned long row, unsigned long col)
+Jdb_ptab::print_statline(unsigned long row, unsigned long col) override
 {
   unsigned long sid = Kobject_dbg::pointer_to_id(_task);
 
@@ -281,7 +330,8 @@ Jdb_ptab::print_statline(unsigned long row, unsigned long col)
 
 PUBLIC
 Jdb_module::Action_code
-Jdb_ptab_m::action(int cmd, void *&args, char const *&fmt, int &next_char)
+Jdb_ptab_m::action(int cmd, void *&args, char const *&fmt,
+                   int &next_char) override
 {
   if (cmd == 0)
     {
@@ -338,7 +388,7 @@ Jdb_ptab_m::action(int cmd, void *&args, char const *&fmt, int &next_char)
 
 PUBLIC
 Jdb_module::Cmd const *
-Jdb_ptab_m::cmds() const
+Jdb_ptab_m::cmds() const override
 {
   static Cmd cs[] =
     {
@@ -351,7 +401,7 @@ Jdb_ptab_m::cmds() const
 
 PUBLIC
 int
-Jdb_ptab_m::num_cmds() const
+Jdb_ptab_m::num_cmds() const override
 {
   return 1;
 }
@@ -364,3 +414,21 @@ Jdb_ptab_m::Jdb_ptab_m()
 }
 
 static Jdb_ptab_m jdb_ptab_m INIT_PRIORITY(JDB_MODULE_INIT_PRIO);
+
+IMPLEMENTATION[32bit]:
+
+PRIVATE
+void
+Jdb_ptab::print_invalid()
+{
+    putstr("   ###  ");
+}
+
+IMPLEMENTATION[64bit]:
+
+PRIVATE
+void
+Jdb_ptab::print_invalid()
+{
+    putstr("       ###      ");
+}

@@ -1,11 +1,12 @@
 <map id="L4::Irq" name="L4::Irq">
-<area shape="rect" id="node2" href="$classL4_1_1Kobject__2t.html" title="{L4::Kobject_2t\&lt; Irq,\l Triggerable, Rcv_endpoint,\l L4_PROTO_IRQ_SENDER \&gt;\n||+ operator Kobject const &amp;()\l+ dec_refcnt()\l# cap()\l# c()\l# __check_protocols__()\l}" alt="" coords="211,647,422,812"/>
-<area shape="rect" id="node3" href="$structL4_1_1Triggerable.html" title="Interface that allows an object to be triggered by some source. " alt="" coords="71,433,187,511"/>
-<area shape="rect" id="node4" href="$classL4_1_1Kobject__t.html" title="{L4::Kobject_t\&lt; Triggerable,\l Irq_eoi, L4_PROTO_IRQ \&gt;\n||# c()\l# __check_protocols__()\l}" alt="" coords="5,219,201,325"/>
-<area shape="rect" id="node5" href="$classL4_1_1Irq__eoi.html" title="Interface for sending an acknowledge message to an object. " alt="" coords="35,20,129,97"/>
-<area shape="rect" id="node6" href="$classL4_1_1Kobject__t.html" title="Helper class to create an L4Re interface class that is derived from a single base class..." alt="" coords="179,5,390,112"/>
-<area shape="rect" id="node8" href="$classL4_1_1Kobject__t.html" title="{L4::Kobject_t\&lt; Rcv\l_endpoint, Kobject,\l L4_PROTO_KOBJECT, Type\l_info::Demand_t\&lt; 1 \&gt; \&gt;\n||# c()\l# __check_protocols__()\l}" alt="" coords="226,204,437,340"/>
-<area shape="rect" id="node7" href="$classL4_1_1Rcv__endpoint.html" title="Interface for kernel objects that allow to receive IPC from them. " alt="" coords="251,433,382,511"/>
-<area shape="rect" id="node9" href="$classL4_1_1Kobject.html" title="Base class for all kinds of kernel objects and remote objects, referenced by capabilities. " alt="" coords="463,13,575,105"/>
-<area shape="rect" id="node10" href="$classL4_1_1Kobject__2t.html" title="Helper class to create an L4Re interface class that is derived from two base classes (see L4::Kobject..." alt="" coords="407,389,608,555"/>
+<area shape="rect" id="node1" title="C++ Irq interface." alt="" coords="265,861,363,983"/>
+<area shape="rect" id="node2" href="$classL4_1_1Kobject__2t.html" title=" " alt="" coords="211,647,417,812"/>
+<area shape="rect" id="node3" href="$structL4_1_1Triggerable.html" title="Interface that allows an object to be triggered by some source." alt="" coords="97,433,214,511"/>
+<area shape="rect" id="node4" href="$classL4_1_1Kobject__t.html" title=" " alt="" coords="5,219,201,325"/>
+<area shape="rect" id="node5" href="$classL4_1_1Irq__eoi.html" title="Interface for sending an acknowledge message to an object." alt="" coords="31,20,130,97"/>
+<area shape="rect" id="node6" href="$classL4_1_1Kobject__t.html" title="Helper class to create an L4Re interface class that is derived from a single base class." alt="" coords="177,5,385,112"/>
+<area shape="rect" id="node8" href="$classL4_1_1Kobject__t.html" title=" " alt="" coords="226,204,421,340"/>
+<area shape="rect" id="node7" href="$classL4_1_1Rcv__endpoint.html" title="Interface for kernel objects that allow to receive IPC from them." alt="" coords="247,433,381,511"/>
+<area shape="rect" id="node9" href="$classL4_1_1Kobject.html" title="Base class for all kinds of kernel objects and remote objects, referenced by capabilities." alt="" coords="439,13,554,105"/>
+<area shape="rect" id="node10" href="$classL4_1_1Kobject__2t.html" title="Helper class to create an L4Re interface class that is derived from two base classes (see L4::Kobject..." alt="" coords="405,389,612,555"/>
 </map>

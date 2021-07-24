@@ -1,0 +1,4 @@
+<map id="L4Re::Util::Counting_cap_alloc::release" name="L4Re::Util::Counting_cap_alloc::release">
+<area shape="rect" id="node1" title="Decrease the reference counter for a capability." alt="" coords="228,5,379,47"/>
+<area shape="rect" id="node2" href="$classL4Re_1_1Util_1_1Smart__count__cap.html#ab983007403f2b6e4dc3963bcaa70e80a" title="Free operation for L4::Smart_cap (decrement ref count and delete if 0)." alt="" coords="5,5,180,47"/>
+</map>

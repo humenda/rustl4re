@@ -86,7 +86,7 @@ void *dope_vscr_get_fb(const char *s)
     return 0;
 
   void *addr = 0;
-  if (L4Re::Env::env()->rm()->attach(&addr, sz, L4Re::Rm::Search_addr, ds))
+  if (L4Re::Env::env()->rm()->attach(&addr, sz, L4Re::Rm::F::Search_addr | L4Re::Rm::F::RW, ds))
     return 0;
 
   return addr;

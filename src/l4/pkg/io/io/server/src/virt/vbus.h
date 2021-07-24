@@ -10,6 +10,7 @@
 
 #include <set>
 #include <l4/sys/cxx/ipc_epiface>
+#include <l4/sys/cxx/consts>
 #include <l4/cxx/hlist>
 
 #include <l4/vbus/vbus_types.h>
@@ -19,6 +20,7 @@
 #include <l4/re/util/event_buffer>
 
 #include <pthread.h>
+#include <limits.h>
 
 #include "vdevice.h"
 #include "device.h"
@@ -86,7 +88,7 @@ public:
   template< unsigned TYPE, typename RS >
   struct Root_resource_factory_t : Root_resource_factory
   {
-    Root_resource *create(System_bus *bus) const
+    Root_resource *create(System_bus *bus) const override
     {
       return new Root_resource(TYPE, new RS(bus));
     }
@@ -116,37 +118,47 @@ public:
   Resource_set const *resource_set() const { return &_resources; }
   Sw_icu *sw_icu() const { return _sw_icu; }
   void sw_icu(Sw_icu *icu) { _sw_icu = icu; }
+  void finalize();
 
   char const *inhibitor_name() const override
   { return Device::name(); }
 
   // L4::Server_object interface
-  int op_clear(L4Re::Dataspace::Rights, l4_addr_t, unsigned long)
-  { return -L4_ENOSYS; }
+  int op_clear(L4Re::Dataspace::Rights,
+               L4Re::Dataspace::Offset,
+               L4Re::Dataspace::Size)
+  {
+    return -L4_ENOSYS;
+  }
 
   using Vbus_event_source::op_info;
-  int op_info(L4Re::Dataspace::Rights, L4Re::Dataspace::Stats &)
-  { return -L4_ENOSYS; }
+  int op_info(L4Re::Dataspace::Rights, L4Re::Dataspace::Stats &stats)
+  {
+    stats.size = L4::trunc_page(ULONG_MAX);
+    stats.flags = L4Re::Dataspace::F::RW;
+    return 0;
+  }
 
-  int op_take(L4Re::Dataspace::Rights)
-  { return 0; }
+  int op_allocate(L4Re::Dataspace::Rights,
+                  L4Re::Dataspace::Offset,
+                  L4Re::Dataspace::Size)
+  {
+    return 0;
+  }
 
-  int op_release(L4Re::Dataspace::Rights)
-  { return 0; }
+  int op_copy_in(L4Re::Dataspace::Rights,
+                 L4Re::Dataspace::Offset,
+                 L4::Ipc::Snd_fpage,
+                 L4Re::Dataspace::Offset,
+                 L4Re::Dataspace::Size)
+  {
+    return -L4_ENOSYS;
+  }
 
-  int op_allocate(L4Re::Dataspace::Rights, l4_addr_t, l4_size_t)
-  { return 0; }
-
-  int op_copy_in(L4Re::Dataspace::Rights, l4_addr_t, L4::Ipc::Snd_fpage, l4_addr_t,
-                 unsigned long)
-  { return -L4_ENOSYS; }
-
-  int op_phys(L4Re::Dataspace::Rights, l4_addr_t,
-              l4_addr_t &, l4_size_t &)
-  { return -L4_ENOSYS; }
-
-  int op_map(L4Re::Dataspace::Rights r, long unsigned offset,
-             l4_addr_t spot, unsigned long flags,
+  int op_map(L4Re::Dataspace::Rights r,
+             L4Re::Dataspace::Offset offset,
+             L4Re::Dataspace::Map_addr spot,
+             L4Re::Dataspace::Flags flags,
              L4::Ipc::Snd_fpage &fp);
 
 
@@ -192,6 +204,8 @@ public:
   // Pm_client interface
   void pm_notify(unsigned, unsigned) {}
 
+  Io_irq_pin::Msi_src *find_msi_src(Msi_src_info si) override;
+
   bool dev_notify(Device const *dev, unsigned type,
                   unsigned event, unsigned value, bool syn) override;
 
@@ -199,17 +213,25 @@ public:
 
 private:
   int request_resource(L4::Ipc::Iostream &ios);
-  int request_iomem(L4::Ipc::Iostream &ios);
   int assign_dma_domain(L4::Ipc::Iostream &ios);
 
   int get_stream_info_for_id(l4_umword_t, L4Re::Event_stream_info *) override;
   int get_stream_state_for_id(l4_umword_t, L4Re::Event_stream_state *) override;
+
+  Device *dev_from_id(l4vbus_device_handle_t dev, int err) const;
+  iterator rpc_get_dev_next_iterator(Device *dev, L4::Ipc::Iostream &ios, int err) const;
+  int rpc_get_next_dev(Device *dev, L4::Ipc::Iostream &ios, int err) const;
+  int rpc_get_dev_by_hid(Device *dev, L4::Ipc::Iostream &ios) const;
+  int rpc_device_get(Device *dev, L4::Ipc::Iostream &ios) const;
+
+  int dispatch_generic(L4vbus::Vbus::Rights obj, Device *dev, l4_uint32_t func, L4::Ipc::Iostream &ios);
 
   Resource_set _resources;
   Device *_host;
   Sw_icu *_sw_icu;
   Int_property _num_msis;
   Dma_domain_group _dma_domain_group;
+  std::vector<Device *> _devices_by_id;
 };
 
 }

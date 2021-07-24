@@ -10,7 +10,7 @@ PRIVATE static
 Mword
 Timer::interval()
 {
-  Mct_timer mct(Kmem::mmio_remap(Mem_layout::Mct_phys_base));
+  Mct_timer mct(Kmem::mmio_remap(Mem_layout::Mct_phys_base, 0x100));
   // probably need to select proper clock source for MCT
   Mword timer_start = 0UL;
   unsigned factor = 5;
@@ -72,11 +72,13 @@ Timer::init(Cpu_number cpu)
 {
   if (cpu == Cpu_number::boot_cpu())
     {
-      mct.construct(Kmem::mmio_remap(Mem_layout::Mct_phys_base));
+      mct.construct(Kmem::mmio_remap(Mem_layout::Mct_phys_base, 0x100));
       mct->write<Mword>(0, Mct_timer::Reg::Cfg);
     }
-  timers.cpu(cpu).construct(Kmem::mmio_remap(Mem_layout::Mct_phys_base + 0x300
-                            + cxx::int_value<Cpu_phys_id>(Cpu::cpus.cpu(cpu).phys_id()) * 0x100));
+
+  Address timer_addr = Mem_layout::Mct_phys_base + 0x300
+                     + cxx::int_value<Cpu_phys_id>(Cpu::cpus.cpu(cpu).phys_id()) * 0x100;
+  timers.cpu(cpu).construct(Kmem::mmio_remap(timer_addr, 0x100));
   timers.cpu(cpu)->Mct_core_timer::configure();
 }
 
@@ -94,9 +96,9 @@ PUBLIC static
 void
 Timer::periodic_next_event(Cpu_number cpu, Unsigned64 next_wakeup)
 {
-  assert(next_wakeup >= Kip::k()->clock);
+  assert(next_wakeup >= Kip::k()->clock());
 
-  Unsigned64 d = next_wakeup - Kip::k()->clock;
+  Unsigned64 d = next_wakeup - Kip::k()->clock();
 
   d = (d / Config::Scheduler_granularity) * Config::Scheduler_granularity;
 
@@ -114,7 +116,7 @@ IMPLEMENT inline
 void
 Timer::update_one_shot(Unsigned64 wakeup)
 {
-  Unsigned64 now = Kip::k()->clock;
+  Unsigned64 now = Kip::k()->clock();
   Mword interval_mct;
   if (EXPECT_FALSE(wakeup <= now))
     interval_mct = 1;
@@ -131,5 +133,5 @@ Timer::system_clock()
   if (Config::Scheduler_one_shot)
     return 0;
   else
-    return Kip::k()->clock;
+    return Kip::k()->clock();
 }

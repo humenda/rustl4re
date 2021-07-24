@@ -1,5 +1,5 @@
 /*
- * (c) 2010-2014 Adam Lackorzynski <adam@os.inf.tu-dresden.de>,
+ * (c) 2010-2020 Adam Lackorzynski <adam@os.inf.tu-dresden.de>,
  *               Alexander Warg <alexander.warg@kernkonzept.com>
  *               Steffen Liebergeld <steffen.liebergeld@kernkonzept.com>
  *
@@ -9,7 +9,7 @@
  */
 #include "cfg.h"
 #include "debug.h"
-#include "pci.h"
+#include <pci-driver.h>
 
 namespace {
 
@@ -28,7 +28,7 @@ struct Pci_ide_drv : Driver
                         | Resource::F_hierarchical;
 
     // IDE legacy IO interface
-    if (!(d->cls_rev & 0x100))
+    if (!(d->cfg.cls_rev & 0x100))
       {
         d->host()->add_resource_rq(new Resource(io_flags, 0x1f0, 0x1f7));
         d->host()->add_resource_rq(new Resource(io_flags, 0x3f6, 0x3f6));
@@ -36,7 +36,7 @@ struct Pci_ide_drv : Driver
           new Resource(Resource::Irq_res | Resource::Irq_type_raising_edge, 14, 14)
         );
       }
-    if (!(d->cls_rev & 0x400))
+    if (!(d->cfg.cls_rev & 0x400))
       {
         d->host()->add_resource_rq(new Resource(io_flags, 0x170, 0x177));
         d->host()->add_resource_rq(new Resource(io_flags, 0x376, 0x376));

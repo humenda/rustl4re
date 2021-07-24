@@ -105,7 +105,8 @@ Vesa_fb::setup_drv(Prog_args *pa, L4Re::Util::Object_registry *r)
   _vidmem_start = 0;
   int error;
   error = L4Re::Env::env()->rm()->attach(&_vidmem_start, _vidmem_size,
-                                         L4Re::Rm::Search_addr | L4Re::Rm::Eager_map,
+                                         L4Re::Rm::F::Search_addr | L4Re::Rm::F::Eager_map
+                                         | L4Re::Rm::F::RW,
                                          _vbus, vbi.phys_base, 20);
 
   if (error)

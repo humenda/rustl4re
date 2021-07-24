@@ -30,8 +30,6 @@ public:
     _cnt = 1;
     return true;
   }
-
-  Smword cap_ref_cnt() const { return _cnt; }
 };
 
 
@@ -45,6 +43,38 @@ INTERFACE:
 #include "rcupdate.h"
 #include "space.h"
 
+/**
+ * Basic kernel object.
+ *
+ * This is the base class for all kernel objects that are exposed through
+ * capabilities.
+ *
+ * Kernel objects have a specific life-cycle management that is based
+ * on (a) kernel external visibility through capabilities and (b) kernel
+ * internal references among kernel objects.
+ *
+ * If there are no more capabilities to a kernel object, due to an unmap
+ * (either of the last capability, or with delete flag and delete rights),
+ * the kernel runs the 2-phase destruction protocol for kernel objects
+ * (implemented in Kobject::Reap_list::del()):
+ * - Call Kobject::destroy(). Mark this object as invalid. When this function
+ *   returns, the object cannot be longer referenced. One object reference is
+ *   still maintained to prevent the final removal before all other objects
+ *   realized that the object vanished.
+ * - Block for an RCU grace period.
+ * - Call Kobject::put(). Release the final reference to the object preparing
+ *   the object deletion.
+ *
+ * If Kobject::put() returns true, the kernel object is to be deleted.
+ * If there are any other non-capability references to a kernel object,
+ * Kobject::put() *must* return `false` and an object-specific MP-safe
+ * mechanism for object deletions has to take over.
+ *
+ * Kobject::destroy() and Kobject::put() are called exactly once as a direct
+ * consequence of unmapping. Usually, during the lifetime of a `Kobject`,
+ * there are no additional calls to those functions; however, object-specific
+ * reference handling may allow or require additional calls.
+ */
 class Kobject :
   public cxx::Dyn_castable<Kobject, Kobject_iface>,
   private Kobject_mappable,
@@ -76,6 +106,10 @@ public:
     bool empty() const { return _h == nullptr; }
     void del_1();
     void del_2();
+
+    /**
+     * Delete kernel objects without capability references.
+     */
     void del()
     {
       if (EXPECT_TRUE(empty()))
@@ -91,7 +125,7 @@ public:
 
   Lock existence_lock;
 
-public:
+private:
   Kobject *_next_to_reap;
 
 public:
@@ -109,10 +143,10 @@ IMPLEMENTATION:
 #include "lock_guard.h"
 
 
-PUBLIC bool  Kobject::is_local(Space *) const { return false; }
-PUBLIC Mword Kobject::obj_id() const { return ~0UL; }
+PUBLIC bool  Kobject::is_local(Space *) const override { return false; }
+PUBLIC Mword Kobject::obj_id() const override { return ~0UL; }
 PUBLIC virtual bool  Kobject::put() { return true; }
-PUBLIC inline Kobject_mappable *Kobject::map_root() { return this; }
+PUBLIC inline Kobject_mappable *Kobject::map_root() override { return this; }
 
 PUBLIC inline NEEDS["lock_guard.h"]
 Smword
@@ -125,7 +159,7 @@ Kobject_mappable::dec_cap_refcnt(Smword diff)
 
 PUBLIC
 void
-Kobject::initiate_deletion(Kobject ***reap_list)
+Kobject::initiate_deletion(Kobject ***reap_list) override
 {
   existence_lock.invalidate();
 
@@ -253,7 +287,7 @@ Kobject::from_dbg(Kobject_dbg::Iterator const &d)
 
 PUBLIC
 Kobject_dbg *
-Kobject::dbg_info() const
+Kobject::dbg_info() const override
 { return const_cast<Kobject*>(this); }
 
 IMPLEMENT

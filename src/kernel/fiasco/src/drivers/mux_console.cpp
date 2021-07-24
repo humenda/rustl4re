@@ -18,9 +18,9 @@ public:
     SIZE = 8  ///< The maximum number of consoles to be multiplexed.
   };
 
-  int  write(char const *str, size_t len);
-  int  getchar(bool blocking = true);
-  int  char_avail() const;
+  int  write(char const *str, size_t len) override;
+  int  getchar(bool blocking = true) override;
+  int  char_avail() const override;
 
 private:
   int     _next_getchar;
@@ -39,7 +39,7 @@ IMPLEMENTATION:
 
 PUBLIC
 Mux_console::Mux_console()
-: Console(ENABLED), _next_getchar(-1), _items(0)
+: Console(ENABLED), _next_getchar(-1), _items(0), _ignore_input_until(0)
 {}
 
 IMPLEMENT
@@ -64,7 +64,7 @@ PUBLIC
 void
 Mux_console::set_ignore_input(Unsigned64 delta)
 {
-  _ignore_input_until = Kip::k()->clock + delta;
+  _ignore_input_until = Kip::k()->clock() + delta;
 }
 
 PRIVATE
@@ -73,7 +73,7 @@ Mux_console::check_input_ignore()
 {
   if (_ignore_input_until)
     {
-      if (Kip::k()->clock > _ignore_input_until)
+      if (Kip::k()->clock() > _ignore_input_until)
         _ignore_input_until = 0;
       else
         {
@@ -153,7 +153,7 @@ Mux_console::getchar(bool blocking)
  */
 PUBLIC
 Mword
-Mux_console::get_attributes() const
+Mux_console::get_attributes() const override
 {
   Mword attr = 0;
 

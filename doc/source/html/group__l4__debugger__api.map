@@ -1,3 +1,4 @@
 <map id="Kernel Debugger" name="Kernel Debugger">
-<area shape="rect" id="node1" href="$group__api__calls__fiasco.html" title="Kernel debugger extensions of the Fiasco L4 implementation. " alt="" coords="5,5,140,32"/>
+<area shape="rect" id="node1" href="$group__api__calls__fiasco.html" title="Kernel debugger extensions of the Fiasco L4 implementation." alt="" coords="5,5,144,31"/>
+<area shape="rect" id="node2" title="Kernel debugger related functionality." alt="" coords="192,5,323,31"/>
 </map>

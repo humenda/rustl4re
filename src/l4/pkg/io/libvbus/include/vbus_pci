@@ -12,10 +12,17 @@
 #include <l4/vbus/vbus>
 #include <l4/vbus/vbus_pci.h>
 
+/**
+ * \addtogroup api_l4re_vbus
+ *
+ * \includefile{l4/vbus/vbus_pci}
+ */
+
 namespace L4vbus {
 
 /**
  * \brief A Pci host bridge
+ * \ingroup api_l4re_vbus
  */
 class Pci_host_bridge : public Device
 {
@@ -83,6 +90,7 @@ public:
 
 /**
  * \brief A PCI device
+ * \ingroup api_l4re_vbus
  */
 class Pci_dev : public Device
 {

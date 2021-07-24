@@ -81,6 +81,66 @@ The L4Re specific parts will be described herein.
 </ul>
 
 
+<h4>
+  Constraints on pthread_t, user-land capability slot, and kernel thread-object
+</h4>
+
+<ul>
+  <li>
+    `pthread_l4_cap()` is guaranteed to return the valid capability slot
+    of the pthread (A) until `pthread_join()` or `pthread_detach()` is invoked
+    on (A)'s `pthread_t`.
+  </li>
+
+  <li>
+    `pthread_l4_cap()` exposes internal state of the pthread management, take
+    the necessary precautions as you would for any shared data in concurrent
+    environments.
+    If you use `pthread_l4_cap()` guarding against concurrency issues is your
+    duty.
+  </li>
+
+  <li>
+    There is no guarantee that a valid capability slot points to a
+    present capability.
+  </li>
+
+  <li>
+    <b>Example</b>
+
+    It is possible to obtain a valid thread capability slot and for
+    `l4_task_cap_valid()` to return the capability as not present.
+    The following example showcases a possible sequence of events.
+  \code
+    // Assume: void some_func(void *)
+    pthread_t pthread = nullptr;
+    pthread_create(pthread, nullptr, some_func, nullptr);
+
+    // pthread running some_func()
+    l4_cap_idx_t cap_idx = pthread_l4_cap(pthread);
+    l4_is_valid_cap(cap_idx); // ---> true
+
+    long valid = l4_task_cap_valid(L4RE_THIS_TASK_CAP, cap_idx).label());
+    // valid == 1 --> capability object is present (refers to a kernel object).
+
+
+    // some_func() exits
+
+    cap_idx = pthread_l4_cap(pthread);
+    l4_is_valid_cap(cap_idx); // ---> true
+
+    valid = l4_task_cap_valid(L4RE_THIS_TASK_CAP, cap_idx).label());
+    // valid == 0 --> capability object is not present (refers to no kernel object).
+
+
+    pthread_join(pthread, nullptr); // invalidates the cap slot and frees
+                                    // the pthread's data structures
+
+    // using cap_idx here is undefined behavior.
+
+  \endcode
+  </li>
+</ul>
 
 
 */

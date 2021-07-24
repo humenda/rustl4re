@@ -25,6 +25,8 @@
 
 using namespace Scout_gfx;
 
+Document *create_document(Factory *f);
+
 Document *create_document(Factory *f)
 {
 	Document *doc = new Document();

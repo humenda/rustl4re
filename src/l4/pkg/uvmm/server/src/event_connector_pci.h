@@ -8,7 +8,8 @@
 #pragma once
 
 #include "pci_device.h"
-#include "msi_distributor.h"
+#include "msi_controller.h"
+#include "msi.h"
 #include "virtio_event_connector.h"
 #include "ds_mmio_mapper.h"
 #include "guest.h"
@@ -23,12 +24,10 @@ namespace Virtio {
 class Event_connector_msix
 {
 public:
-  Event_connector_msix(cxx::Ref_ptr<Gic::Msi_distributor> const &distr,
-                       unsigned max_msix_entries)
+  Event_connector_msix(cxx::Ref_ptr<Gic::Msix_controller> const &distr)
   : _distr(distr),
-    _msix_mem(
-      make_ram_ds_handler(Vdev::Msix_mem_need, L4Re::Mem_alloc::Continuous)),
-    _msix_tbl(_msix_mem->local_start(), max_msix_entries)
+    _msix_mem(make_ram_ds_handler(Vdev::Pci::Msix_mem_need,
+                                  L4Re::Mem_alloc::Continuous))
   {}
 
   void send_events(Virtio::Event_set &&ev)
@@ -38,11 +37,11 @@ public:
         send_event(i);
   }
 
-  void send_event(l4_uint16_t const idx)
+  void send_event(l4_uint16_t idx) const
   {
-    auto entry = _msix_tbl.entry(idx);
-    if (!entry.disabled())
-      _distr->send(entry.msg);
+    auto const *entry = msix_entry(idx);
+    if (!entry->masked())
+      _distr->send(entry->addr, entry->data);
   }
 
   void clear_events(unsigned) {}
@@ -56,28 +55,35 @@ public:
 
     // Registered region must have the address from the DT as this is the value
     // presented by the PCI device to the guest.
-    devs->vmm()->add_mmio_device(Region::ss((l4_addr_t)dt_msi_base,
-                                            Vdev::Msix_mem_need),
-                                 _msix_mem);
+    devs->vmm()->add_mmio_device(Vmm::Region::ss(Vmm::Guest_addr(dt_msi_base),
+                                                 Vdev::Pci::Msix_mem_need,
+                                                 Vmm::Region_type::Virtual),
+                                 Vdev::make_device<Ds_handler>(_msix_mem));
     return 0;
   }
 
 private:
-  cxx::Ref_ptr<Gic::Msi_distributor> _distr;
-  cxx::Ref_ptr<Ds_handler> _msix_mem;
-  Vdev::Msix_table _msix_tbl;
+  cxx::Ref_ptr<Gic::Msix_controller> _distr;
+  cxx::Ref_ptr<Vmm::Ds_manager> _msix_mem;
 
-  cxx::Ref_ptr<Ds_handler> make_ram_ds_handler(l4_size_t size,
-                                               unsigned long flags)
+  Vdev::Msix::Table_entry *msix_entry(l4_uint16_t idx) const
   {
-    // XXX leaking capability, known issue with Ds_handler.
-    auto ds = L4Re::chkcap(L4Re::Util::cap_alloc.alloc<L4Re::Dataspace>(),
-                           "Allocate DS cap for DS-handler memory.");
+    return &_msix_mem->local_addr<Vdev::Msix::Table_entry *>()[idx];
+  }
 
-    L4Re::chksys(L4Re::Env::env()->mem_alloc()->alloc(size, ds, flags),
+  // I can use RW MMIO memory, as I am the endpoint for the guest configuration
+  // of the MSIs and evaluate the entries every time, an event should be sent.
+  cxx::Ref_ptr<Vmm::Ds_manager> make_ram_ds_handler(l4_size_t size,
+                                                    unsigned long flags)
+  {
+    L4Re::Util::Ref_cap<L4Re::Dataspace>::Cap ds
+      = L4Re::chkcap(L4Re::Util::cap_alloc.alloc<L4Re::Dataspace>(),
+                     "Allocate DS cap for DS-handler memory.");
+
+    L4Re::chksys(L4Re::Env::env()->mem_alloc()->alloc(size, ds.get(), flags),
                  "Allocate memory in dataspace.");
 
-    return Vdev::make_device<Ds_handler>(ds, 0, size);
+    return cxx::make_ref_obj<Vmm::Ds_manager>(ds, 0, size);
   }
 
 }; // class Event_connector_msix

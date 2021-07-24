@@ -373,7 +373,7 @@ Jdb_bp::test_debug(Cpu_number cpu, String_buffer *buf, char *type,
           String_buf<12> datacontent;
           Mword val = 0;
 
-          if (Jdb::peek_task(ef->pf_address, Jdb::get_thread(cpu)->space(),
+          if (Jdb::peek_task(Jdb_address(ef->pf_address, Jdb::get_thread(cpu)->space()),
                              &val, 4) == 0)
             datacontent.printf(" [%lx]", val);
 
@@ -449,7 +449,7 @@ Jdb_bp::set_bw(int idx, char type, Address addr,
     }
 }
 
-/** @return 1 if breakpoint occured */
+/** @return 1 if breakpoint occurred */
 IMPLEMENT
 int
 Jdb_bp::test_break(Cpu_number cpu, String_buffer *buf)
@@ -616,7 +616,7 @@ Jdb_bp::get_free_bp()
 
 PUBLIC
 Jdb_module::Action_code
-Jdb_bp::action(int cmd, void *&args, char const *&fmt, int &next_char)
+Jdb_bp::action(int cmd, void *&args, char const *&fmt, int &next_char) override
 {
   enum State
   {
@@ -721,7 +721,7 @@ Jdb_bp::action(int cmd, void *&args, char const *&fmt, int &next_char)
   if (state == Do_mod)
     {
       if (breakpoint_cmd == '-')
-        Jdb::on_each_cpu_pl([this](Cpu_number)
+        Jdb::on_each_cpu_pl([](Cpu_number)
           {
             set_bw(breakpoint_number, breakpoint_type,
                    Jdb_input_task_addr::addr(), ~1UL, 0);
@@ -754,7 +754,7 @@ Jdb_bp::action(int cmd, void *&args, char const *&fmt, int &next_char)
           };
 
 
-          Jdb::on_each_cpu_pl([this](Cpu_number)
+          Jdb::on_each_cpu_pl([](Cpu_number)
             {
               set_bw(breakpoint_number, 'b',
                      Jdb_input_task_addr::addr(), 0, Val);
@@ -784,7 +784,7 @@ Jdb_bp::action(int cmd, void *&args, char const *&fmt, int &next_char)
                       | (3 <<  1)  // PAC all
                       | (1 <<  0); // enable
 
-          Jdb::on_each_cpu_pl([val, this](Cpu_number)
+          Jdb::on_each_cpu_pl([val](Cpu_number)
             {
               set_bw(breakpoint_number, 'w', Jdb_input_task_addr::addr(),
                      0, val);
@@ -799,7 +799,7 @@ Jdb_bp::action(int cmd, void *&args, char const *&fmt, int &next_char)
 
 PUBLIC
 Jdb_module::Cmd const *
-Jdb_bp::cmds() const
+Jdb_bp::cmds() const override
 {
   static Cmd cs[] =
     {
@@ -819,7 +819,7 @@ Jdb_bp::cmds() const
 
 PUBLIC
 int
-Jdb_bp::num_cmds() const
+Jdb_bp::num_cmds() const override
 {
   return 1;
 }

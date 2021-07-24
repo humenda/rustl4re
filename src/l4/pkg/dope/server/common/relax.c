@@ -30,7 +30,7 @@ static void set_duration(RELAX *r, float time) {
 	r->accel = 4*delta/(time*time);
 
 	/* assure an acceleration of at least 1.0 */
-	if (r->accel < 1.0) r->accel = 1.0;
+	if (r->accel < 1.0f) r->accel = 1.0;
 }
 
 

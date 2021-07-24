@@ -52,7 +52,7 @@ enum l4_syscall_flags_t
    * \hideinitializer
    *
    * Setting this flag in a capability selector induces a send phase,
-   * this means a message is send to the object denoted by the capability.
+   * this means a message is sent to the object denoted by the capability.
    * For receive phase see #L4_SYSF_RECV.
    */
   L4_SYSF_SEND      = 0x01,
@@ -232,7 +232,7 @@ enum l4_buffer_desc_consts_t
  * for the two initial tasks, the Root-Pager (Sigma0) and the Root-Task
  * (Moe).
  *
- * \attention This constants do not have any particular meaning for
+ * \attention These constants do not have any particular meaning for
  *            applications started by Moe, see \ref api_l4re_env for
  *            this kind of information.
  * \see \ref api_l4re_env for information useful for normal user applications.
@@ -245,19 +245,47 @@ enum l4_default_caps_t
   L4_BASE_FACTORY_CAP   = 2UL << L4_CAP_SHIFT,
   /// Capability selector for the first thread. \hideinitializer
   L4_BASE_THREAD_CAP    = 3UL << L4_CAP_SHIFT,
-  /// Capability selector for the pager gate.   \hideinitializer
+  /**
+   * Capability selector for the pager gate.
+   *
+   * \hideinitializer
+   * For Sigma0, the pager is not present since it never raises page faults.
+   * For Moe, the pager is set to Sigma0.
+   */
   L4_BASE_PAGER_CAP     = 4UL << L4_CAP_SHIFT,
-  /// Capability selector for the log object.   \hideinitializer
+  /**
+   * Capability selector for the log object.
+   *
+   * \hideinitializer
+   * Present if the corresponding feature is turned on in the microkernel
+   * configuration.
+   */
   L4_BASE_LOG_CAP       = 5UL << L4_CAP_SHIFT,
   /// Capability selector for the base icu object.   \hideinitializer
   L4_BASE_ICU_CAP       = 6UL << L4_CAP_SHIFT,
   /// Capability selector for the scheduler cap.   \hideinitializer
   L4_BASE_SCHEDULER_CAP = 7UL << L4_CAP_SHIFT,
-  /// Capability selector for the IO-MMU cap.   \hideinitializer
+  /**
+   * Capability selector for the IO-MMU cap.
+   *
+   * \hideinitializer
+   * Present if the microkernel detected an IO-MMU.
+   */
   L4_BASE_IOMMU_CAP     = 8UL << L4_CAP_SHIFT,
-  /// Capability selector for the debugger cap. \hideinitializer
+  /**
+   * Capability selector for the debugger cap.
+   *
+   * \hideinitializer
+   * Present if the corresponding feature is turned on in the microkernel
+   * configuration.
+   */
   L4_BASE_DEBUGGER_CAP  = 10UL << L4_CAP_SHIFT,
-  /// Capability selector for the ARM SMCCC cap. \hideinitializer
+  /** Capability selector for the ARM SMCCC cap.
+   *
+   * \hideinitializer
+   * Present if the microkernel detected an ARM SMC capable trusted execution
+   * environment.
+   */
   L4_BASE_ARM_SMCCC_CAP = 11UL << L4_CAP_SHIFT,
 
   /// \internal helper must be last before L4_BASE_CAPS_LAST
@@ -326,7 +354,7 @@ enum l4_default_caps_t
  * Round an address down to the next lower page boundary.
  * \ingroup l4_memory_api
  *
- * The address is rounded down to the next lower mininmal page boundary. On
+ * The address is rounded down to the next lower minimal page boundary. On
  * most architectures this is a 4k page. Check #L4_PAGESIZE for the minimal
  * page size.
  *
@@ -368,9 +396,21 @@ L4_INLINE l4_addr_t l4_round_page(l4_addr_t address) L4_NOTHROW
  * \param value   The value to round up to the next size-alignment.
  * \param bits    The size of the alignment (log2).
  */
-L4_INLINE l4_addr_t l4_round_size(l4_umword_t value, unsigned char bits) L4_NOTHROW;
-L4_INLINE l4_addr_t l4_round_size(l4_umword_t value, unsigned char bits) L4_NOTHROW
+L4_INLINE l4_addr_t l4_round_size(l4_addr_t value, unsigned char bits) L4_NOTHROW;
+L4_INLINE l4_addr_t l4_round_size(l4_addr_t value, unsigned char bits) L4_NOTHROW
 { return (value + (1UL << bits) - 1) & (~0UL << bits); }
+
+/**
+ * Determine how many machine words (l4_umword_t) are required to store a
+ * buffer of 'size' bytes.
+ *
+ * \ingroup l4_memory_api
+ *
+ * \param bytes   The number of bytes to be translated into machine words.
+ */
+L4_INLINE unsigned l4_bytes_to_mwords(unsigned size) L4_NOTHROW;
+L4_INLINE unsigned l4_bytes_to_mwords(unsigned size) L4_NOTHROW
+{ return (size + sizeof(l4_umword_t) - 1) / sizeof(l4_umword_t); }
 
 /**
  * Address related constants.

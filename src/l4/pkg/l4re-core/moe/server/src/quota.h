@@ -34,14 +34,8 @@ public:
   explicit Quota(size_t limit) : _limit(limit), _used(0) {}
   bool alloc(size_t s)
   {
-    if (_limit && (s > _limit))
+    if (_limit && (s > _limit || _used > _limit - s))
       return false;
-
-    if (_limit && (_used > _limit - s))
-      {
-        if (_used > _limit - s)
-          return false;
-      }
 
     _used += s;
     //printf("Q: alloc(%zx) -> %zx\n", s, _used);
@@ -137,11 +131,11 @@ public:
     quota()->free(size);
   }
 
-  void reparent(Malloc_container *new_container);
+  void reparent(Malloc_container *new_container) override;
 
 protected:
-  void *get_mem();
-  void free_mem(void *page);
+  void *get_mem() override;
+  void free_mem(void *page) override;
 
   Quota _quota;
 };
@@ -183,6 +177,7 @@ public:
 
   Quota_allocator() throw() {}
   Quota_allocator(Quota_allocator const &) throw() {}
+  Quota &operator = (Quota const &) = delete;
 
   ~Quota_allocator() throw() {}
 

@@ -24,5 +24,8 @@ var l4re_concepts =
       [ "RPC Return Types", "l4_cxx_ipc_iface.html#l4_cxx_ipc_iface_return_types", null ],
       [ "RPC Method Declaration", "l4_cxx_ipc_iface.html#l4_cxx_ipc_iface_members", null ]
     ] ],
-    [ "L4Re Build System", "l4re_build_system.html", "l4re_build_system" ]
+    [ "L4Re Build System", "l4re_build_system.html", "l4re_build_system" ],
+    [ "Kernel Factory", "l4re_concepts_kernel_factory.html", [
+      [ "Passing parameters for the create stream", "l4re_concepts_kernel_factory.html#kernel_factory_create", null ]
+    ] ]
 ];

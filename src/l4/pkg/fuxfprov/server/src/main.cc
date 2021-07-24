@@ -200,7 +200,7 @@ Ds::Ds(const char *fname)
 
   mem_addr = 0;
   if ((ret = L4Re::Env::env()->rm()->attach(&mem_addr, mem_pages * L4_PAGESIZE,
-                                            L4Re::Rm::Search_addr,
+                                            L4Re::Rm::F::Search_addr | L4Re::Rm::F::RWX,
                                             mem_ds, 0)))
     {
       printf("Attach failed with error %d\n", ret);
@@ -426,7 +426,7 @@ Fprov_server::get_file1(char const *fname, L4::Ipc::Iostream &ios)
 
   addr = 0;
   if ((ret = L4Re::Env::env()->rm()->attach(&addr, fsize,
-                                            L4Re::Rm::Search_addr,
+                                            L4Re::Rm::F::Search_addr | L4Re::Rm::F::RWX,
                                             ds_cap, 0)))
     {
       printf("Attach failed with error %ld\n", ret);

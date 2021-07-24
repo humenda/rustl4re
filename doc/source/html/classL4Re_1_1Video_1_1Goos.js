@@ -8,11 +8,11 @@ var classL4Re_1_1Video_1_1Goos =
       [ "F_dynamic_buffers", "classL4Re_1_1Video_1_1Goos.html#a29434ee9d84482ea22f9a2ec06472596ad1ee80a8040808dfade92ecbff43933e", null ]
     ] ],
     [ "create_buffer", "classL4Re_1_1Video_1_1Goos.html#a2354fbda983143ba3cd81b1744fde319", null ],
-    [ "create_view", "classL4Re_1_1Video_1_1Goos.html#ac88fa4df3cd4daaa161a2821dcec663f", null ],
+    [ "create_view", "classL4Re_1_1Video_1_1Goos.html#ab2961aaf280f2d0c16245d112b0ef100", null ],
     [ "delete_buffer", "classL4Re_1_1Video_1_1Goos.html#ac969b4796bb628ba25ea805e06cb2aea", null ],
-    [ "delete_view", "classL4Re_1_1Video_1_1Goos.html#aa468830b688f516a163bab6ceb854ee2", null ],
+    [ "delete_view", "classL4Re_1_1Video_1_1Goos.html#ad47a99a2ffed269f8511ac715c0d9c3c", null ],
     [ "get_static_buffer", "classL4Re_1_1Video_1_1Goos.html#ae3bee8fa4d9c0dee1ed88a259ab67912", null ],
     [ "info", "classL4Re_1_1Video_1_1Goos.html#a58641978ff4b4439e0389a6bf7c7cb4e", null ],
     [ "refresh", "classL4Re_1_1Video_1_1Goos.html#aa9bebb9eb5cec9dd4988c5bd030eeabd", null ],
-    [ "view", "classL4Re_1_1Video_1_1Goos.html#aab50cbc9abe09a6034d827737969102b", null ]
+    [ "view", "classL4Re_1_1Video_1_1Goos.html#ac4a86bbb99e7b8f02621ca9d3e37f421", null ]
 ];

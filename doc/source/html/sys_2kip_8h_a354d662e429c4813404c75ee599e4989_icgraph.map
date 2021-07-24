@@ -1,0 +1,4 @@
+<map id="l4_kernel_info_version_offset" name="l4_kernel_info_version_offset">
+<area shape="rect" id="node1" title="Return offset in bytes of version_strings relative to the KIP base." alt="" coords="213,5,381,47"/>
+<area shape="rect" id="node2" href="$sys_2kip_8h.html#aa5021c42dc87b62969df704769fb24f9" title="Get the kernel version string." alt="" coords="5,13,165,39"/>
+</map>

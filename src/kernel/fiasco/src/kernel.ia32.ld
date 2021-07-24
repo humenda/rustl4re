@@ -49,7 +49,7 @@ SECTIONS {
     *(.bootstrap.anno)
 
   } : btext
-  
+
   . = ALIGN(0x10);
   .bss_boot : {
       *(.bootstrap.bss .bootstrap.gnu.linkonce.b.*)
@@ -84,11 +84,17 @@ SECTIONS {
     crt0.o(.text)
     *(.init)
     *(.text SORT(.text.*) .gnu.linkonce.t.*)
+    *(.fixup .fixup.*)
     *(.fini)
 
     PROVIDE (_ecode = .);
 
     *(.rodata .rodata.* .gnu.linkonce.r.*)
+
+    . = ALIGN(4);
+    PROVIDE(__exc_table_start = .);
+    KEEP(*(__exc_table __exc_table.*))
+    PROVIDE(__exc_table_end = .);
 
     . = ALIGN(4);
     JDB_TABLE(log);
@@ -178,7 +184,7 @@ SECTIONS {
     KEEP (*(SORT (.ctors.*)))
     __CTOR_LIST__ = .;
 
-    __DTOR_END__ = .;    
+    __DTOR_END__ = .;
     KEEP (*(SORT (.dtors.*)))
     KEEP (*(.dtors))
     __DTOR_LIST__ = .;
@@ -219,6 +225,9 @@ SECTIONS {
     . = ALIGN(4096);
     PROVIDE (_initcall_end = .);
   } : kidata
+
+  ASSERT(_initcall_end - _kernel_image < FIASCO_IMAGE_VIRT_SIZE,
+         "Increase FIASCO_IMAGE_VIRT_SIZE!")
 
   /DISCARD/ : {
     *(.note)

@@ -21,14 +21,37 @@ class Sender;
  */
 class Receiver : public Context,  public Ref_cnt_obj
 {
+  friend class Jdb_tcb;
+  friend class Jdb_thread;
+
   MEMBER_OFFSET();
 
 public:
-  enum Rcv_state
+  struct Rcv_state
   {
-    Rs_not_receiving = false,
-    Rs_ipc_receive   = true,
-    Rs_irq_receive   = true + 1
+    enum S
+    {
+      Not_receiving = 0x00,
+      Open_wait_flag = 0x01,
+      Ipc_receive   = 0x02, // with closed wait
+      Ipc_open_wait = 0x03, // IPC with open wait
+      Irq_receive   = 0x05, // IRQ (alawys open wait)
+    };
+
+    S s;
+
+    constexpr Rcv_state(S s) noexcept : s(s) {}
+    Rcv_state() = default;
+    Rcv_state(Rcv_state const &) = default;
+    Rcv_state(Rcv_state &&) = default;
+    Rcv_state &operator = (Rcv_state const &) = default;
+    Rcv_state &operator = (Rcv_state &&) = default;
+    ~Rcv_state() = default;
+
+    constexpr explicit operator bool () const { return s; }
+    constexpr bool is_open_wait() const { return s & Open_wait_flag; }
+    constexpr bool is_irq() const { return s & 0x4; }
+    constexpr bool is_ipc() const { return s & 0x2; }
   };
 
   enum Abort_state
@@ -44,7 +67,7 @@ public:
 
 private:
   // DATA
-  Sender const *_partner;         // IPC partner I'm waiting for/involved with
+  void const *_partner;     // IPC partner I'm waiting for/involved with
   Syscall_frame *_rcv_regs; // registers used for receive
   Mword _caller;
   Iteratable_prio_list _sender_list;
@@ -54,6 +77,7 @@ typedef Context_ptr_base<Receiver> Receiver_ptr;
 
 IMPLEMENTATION:
 
+#include "atomic.h"
 #include "l4_types.h"
 #include <cassert>
 
@@ -62,7 +86,6 @@ IMPLEMENTATION:
 #include "lock_guard.h"
 #include "logdefs.h"
 #include "sender.h"
-#include "thread_lock.h"
 #include "entry_frame.h"
 #include "std_macros.h"
 #include "thread_state.h"
@@ -71,7 +94,6 @@ IMPLEMENTATION:
 
 IMPLEMENT inline Receiver::~Receiver() {}
 /** Constructor.
-    @param thread_lock the lock used for synchronizing access to this receiver
     @param space_context the space context 
  */
 PROTECTED inline
@@ -97,16 +119,41 @@ Receiver::set_caller(Receiver *caller, L4_fpage::Rights rights)
   Mword nv = Mword(caller) | (cxx::int_value<L4_fpage::Rights>(rights) & 0x3);
   reinterpret_cast<Mword volatile &>(_caller) = nv;
 }
-/** IPC partner (sender).
-    @return sender of ongoing or previous IPC operation
+
+/**
+ * Reset the caller field to 0 iff the current value is `old_caller`.
  */
-PROTECTED inline
-Sender const *
-Receiver::partner() const
+PUBLIC inline NEEDS["atomic.h"]
+void
+Receiver::reset_caller(Receiver const *old_caller)
 {
-  return _partner;
+  Mword ov = Mword(old_caller) | (_caller & 0x3);
+  // avoid exclusive access (do test, test-and-set)
+  if (_caller != ov)
+    return;
+
+  mp_cas(&_caller, ov, 0UL);
 }
 
+PUBLIC inline
+void
+Receiver::reset_caller()
+{
+  if (_caller)
+    _caller = 0;
+}
+
+PROTECTED inline
+bool Receiver::is_partner(Sender *s) const
+{
+  return _partner == s;
+}
+
+PROTECTED inline
+bool Receiver::has_partner() const
+{
+  return _partner != nullptr;
+}
 
 // Interface for senders
 
@@ -160,14 +207,6 @@ Receiver::set_timeout(Timeout *t, Unsigned64 tval)
 
 PUBLIC inline
 void
-Receiver::dequeue_timeout()
-{
-  if (_timeout)
-    _timeout->dequeue(_timeout->has_hit());
-}
-
-PUBLIC inline
-void
 Receiver::enqueue_timeout_again()
 {
   if (_timeout && Cpu::online(home_cpu()))
@@ -210,7 +249,7 @@ PUBLIC inline
 bool
 Receiver::in_ipc(Sender *sender)
 {
-  return (state() & Thread_receive_in_progress) && (partner() == sender);
+  return (state() & Thread_receive_in_progress) && (_partner == sender);
 }
 
 
@@ -221,7 +260,7 @@ Receiver::in_ipc(Sender *sender)
                  right now (open wait, or closed wait and waiting for sender).
  */
 IMPLEMENT inline NEEDS["std_macros.h", "thread_state.h", "sender.h",
-                       Receiver::partner, Receiver::vcpu_async_ipc]
+                       Receiver::vcpu_async_ipc]
 Receiver::Rcv_state
 Receiver::sender_ok(const Sender *sender) const
 {
@@ -232,32 +271,32 @@ Receiver::sender_ok(const Sender *sender) const
     return vcpu_async_ipc(sender);
 
   // Check open wait; test if this sender is really the first in queue
-  if (EXPECT_TRUE(!partner()
+  if (EXPECT_TRUE(!_partner
                   && (_sender_list.empty()
 		    || sender->is_head_of(&_sender_list))))
-    return Rs_ipc_receive;
+    return Rcv_state::Ipc_open_wait;
 
   // Check closed wait; test if this sender is really who we specified
-  if (EXPECT_TRUE(sender == partner()))
-    return Rs_ipc_receive;
+  if (EXPECT_TRUE(sender == _partner))
+    return Rcv_state::Ipc_receive;
 
-  return Rs_not_receiving;
+  return Rcv_state::Not_receiving;
 }
 
 //-----------------------------------------------------------------------------
 // VCPU code:
 
-PRIVATE inline
+PRIVATE inline NEEDS["logdefs.h"]
 Receiver::Rcv_state
 Receiver::vcpu_async_ipc(Sender const *sender) const
 {
   if (EXPECT_FALSE(state() & Thread_ipc_mask))
-    return Rs_not_receiving;
+    return Rcv_state::Not_receiving;
 
   Vcpu_state *vcpu = vcpu_state().access();
 
   if (EXPECT_FALSE(!vcpu_irqs_enabled(vcpu)))
-    return Rs_not_receiving;
+    return Rcv_state::Not_receiving;
 
   Receiver *self = const_cast<Receiver*>(this);
 
@@ -280,15 +319,7 @@ Receiver::vcpu_async_ipc(Sender const *sender) const
   self->set_partner(const_cast<Sender*>(sender));
   self->state_add_dirty(Thread_receive_wait);
   self->vcpu_save_state_and_upcall();
-  return Rs_irq_receive;
-}
-
-PUBLIC inline
-void
-Receiver::reset_caller()
-{
-  if (_caller)
-    _caller = 0;
+  return Rcv_state::Irq_receive;
 }
 
 PUBLIC inline

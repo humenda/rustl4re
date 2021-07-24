@@ -1,0 +1,7 @@
+<map id="L4::Poll_timeout_kipclock::Poll_timeout_kipclock" name="L4::Poll_timeout_kipclock::Poll_timeout_kipclock">
+<area shape="rect" id="node1" title="Initialise relative timeout in microseconds." alt="" coords="5,23,193,65"/>
+<area shape="rect" id="node2" href="$classL4_1_1Poll__timeout__kipclock.html#a5a981174ea6408e39c3a80b8cdb92831" title="(Re&#45;)Set relative timeout in microseconds" alt="" coords="241,31,457,57"/>
+<area shape="rect" id="node3" href="$sys_2kip_8h.html#a833b0dd3ac6cf62453707f89d695a96f" title="Return clock value from the KIP." alt="" coords="505,5,608,32"/>
+<area shape="rect" id="node5" href="$group__api__l4re__env.html#gae222fd7f694a90a34b8bde0edd265f4b" title="Get Kernel Info Page." alt="" coords="519,56,594,83"/>
+<area shape="rect" id="node4" href="$compiler_8h.html#a5d5bbbe36a0d144d1f465dbca715718e" title="Memory barrier." alt="" coords="656,5,719,32"/>
+</map>

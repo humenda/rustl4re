@@ -55,10 +55,10 @@ Io_m::Input_buffer Io_m::buf;
 
 PUBLIC
 Jdb_module::Action_code
-Io_m::action( int cmd, void *&args, char const *&fmt, int &)
+Io_m::action( int cmd, void *&args, char const *&fmt, int &) override
 {
-  static char const *const port_in_fmt    = " addr=%8p";
-  static char const *const port_out_fmt   = " addr=%8p, val=%8x";
+  static char const *const port_in_fmt    = " addr=%8x";
+  static char const *const port_out_fmt   = " addr=%8x, val=%8x";
   static char const *const pci_in_fmt     = 
     "\b\b\b\b\b\bPCI conf: bus=%2x, dev=%2x, subdev=%2x, reg=%2x";
   static char const *const pci_out_fmt    = 
@@ -208,13 +208,13 @@ Io_m::action( int cmd, void *&args, char const *&fmt, int &)
 }
 
 PUBLIC
-int Io_m::num_cmds() const
+int Io_m::num_cmds() const override
 { 
   return 2;
 }
 
 PUBLIC
-Jdb_module::Cmd const * Io_m::cmds() const
+Jdb_module::Cmd const * Io_m::cmds() const override
 {
   static Cmd cs[] =
     { 

@@ -72,6 +72,7 @@ SECTIONS {
 
     *(.rodata .rodata.* .gnu.linkonce.r.*)
 
+    . = ALIGN(WORD_ALIGN);
     PROVIDE(MIPS_cpu_types = .);
     KEEP(*(.mips.cpu_type))
     LONG(0); LONG(0); LONG(0); LONG(0);
@@ -161,7 +162,7 @@ SECTIONS {
     KEEP (*(SORT (.ctors.*)))
     __CTOR_LIST__ = .;
 
-    __DTOR_END__ = .;    
+    __DTOR_END__ = .;
     KEEP (*(SORT (.dtors.*)))
     KEEP (*(.dtors))
     __DTOR_LIST__ = .;

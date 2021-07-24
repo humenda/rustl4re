@@ -8,7 +8,7 @@
  *
  * 1. Copyright Notice
  *
- * Some or all of this work - Copyright (c) 1999 - 2017, Intel Corp.
+ * Some or all of this work - Copyright (c) 1999 - 2019, Intel Corp.
  * All rights reserved.
  *
  * 2. License
@@ -111,6 +111,42 @@
  * other governmental approval, or letter of assurance, without first obtaining
  * such license, approval or letter.
  *
+ *****************************************************************************
+ *
+ * Alternatively, you may choose to be licensed under the terms of the
+ * following license:
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions, and the following disclaimer,
+ *    without modification.
+ * 2. Redistributions in binary form must reproduce at minimum a disclaimer
+ *    substantially similar to the "NO WARRANTY" disclaimer below
+ *    ("Disclaimer") and any redistribution must be conditioned upon
+ *    including a substantially similar Disclaimer requirement for further
+ *    binary redistribution.
+ * 3. Neither the names of the above-listed copyright holders nor the names
+ *    of any contributors may be used to endorse or promote products derived
+ *    from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+ * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * Alternatively, you may choose to be licensed under the terms of the
+ * GNU General Public License ("GPL") version 2 as published by the Free
+ * Software Foundation.
+ *
  *****************************************************************************/
 
 #define _DECLARE_GLOBALS
@@ -171,6 +207,8 @@ main (
     int                     ReturnStatus = 0;
 
 
+    signal (SIGINT, AslSignalHandler);
+
     /*
      * Big-endian machines are not currently supported. ACPI tables must
      * be little-endian, and support for big-endian machines needs to
@@ -188,7 +226,6 @@ main (
 
     /* Initialize preprocessor and compiler before command line processing */
 
-    signal (SIGINT, AslSignalHandler);
     AcpiGbl_ExternalFileList = NULL;
     AcpiDbgLevel = 0;
     PrInitializePreprocessor ();
@@ -199,12 +236,12 @@ main (
 
     /* Allocate the line buffer(s), must be after command line */
 
-    Gbl_LineBufferSize /= 2;
+    AslGbl_LineBufferSize /= 2;
     UtExpandLineBuffers ();
 
     /* Perform global actions first/only */
 
-    if (Gbl_DisassembleAll)
+    if (AslGbl_DisassembleAll)
     {
         while (argv[Index1])
         {
@@ -218,6 +255,15 @@ main (
         }
     }
 
+    /* ACPICA subsystem initialization */
+
+    Status = AdInitialize ();
+    if (ACPI_FAILURE (Status))
+    {
+        return (Status);
+    }
+
+
     /* Process each pathname/filename in the list, with possible wildcards */
 
     while (argv[Index2])
@@ -226,20 +272,69 @@ main (
          * If -p not specified, we will use the input filename as the
          * output filename prefix
          */
-        if (Gbl_UseDefaultAmlFilename)
+        if (AslGbl_UseDefaultAmlFilename)
         {
-            Gbl_OutputFilenamePrefix = argv[Index2];
-            UtConvertBackslashes (Gbl_OutputFilenamePrefix);
+            AslGbl_OutputFilenamePrefix = argv[Index2];
+            UtConvertBackslashes (AslGbl_OutputFilenamePrefix);
         }
 
         Status = AslDoOneFile (argv[Index2]);
         if (ACPI_FAILURE (Status))
         {
             ReturnStatus = -1;
-            goto CleanupAndExit;
         }
 
         Index2++;
+    }
+
+    /*
+     * At this point, compilation of a data table or disassembly is complete.
+     * However, if there is a parse tree, perform compiler analysis and
+     * generate AML.
+     */
+    if (AslGbl_PreprocessOnly || AcpiGbl_DisasmFlag || !AslGbl_ParseTreeRoot)
+    {
+        goto CleanupAndExit;
+    }
+
+    CmDoAslMiddleAndBackEnd ();
+
+    /*
+     * At this point, all semantic analysis has been completed. Check
+     * expected error messages before cleanup or conversion.
+     */
+    AslCheckExpectedExceptions ();
+
+    /* ASL-to-ASL+ conversion - Perform immediate disassembly */
+
+    if (AslGbl_DoAslConversion)
+    {
+        /* re-initialize ACPICA subsystem for disassembler */
+
+        Status = AdInitialize ();
+        if (ACPI_FAILURE (Status))
+        {
+            return (Status);
+        }
+
+        /*
+         * New input file is the output AML file from above.
+         * New output is from the input ASL file from above.
+         */
+        AslGbl_OutputFilenamePrefix = AslGbl_Files[ASL_FILE_INPUT].Filename;
+        AslGbl_Files[ASL_FILE_INPUT].Filename =
+            AslGbl_Files[ASL_FILE_AML_OUTPUT].Filename;
+
+        CvDbgPrint ("Output filename: %s\n", AslGbl_OutputFilenamePrefix);
+        fprintf (stderr, "\n");
+
+        AcpiGbl_DisasmFlag = TRUE;
+        AslDoDisassembly ();
+        AcpiGbl_DisasmFlag = FALSE;
+
+        /* delete the AML file. This AML file should never be utilized by AML interpreters. */
+
+        FlDeleteFile (ASL_FILE_AML_OUTPUT);
     }
 
 
@@ -247,11 +342,16 @@ CleanupAndExit:
 
     UtFreeLineBuffers ();
     AslParserCleanup ();
+    AcpiDmClearExternalFileList();
+    (void) AcpiTerminate ();
 
-    if (AcpiGbl_ExternalFileList)
+    /* CmCleanupAndExit is intended for the compiler only */
+
+    if (!AcpiGbl_DisasmFlag)
     {
-        AcpiDmClearExternalFileList();
+        ReturnStatus = CmCleanupAndExit ();
     }
+
 
     return (ReturnStatus);
 }
@@ -265,8 +365,9 @@ CleanupAndExit:
  *
  * RETURN:      None
  *
- * DESCRIPTION: Control-C handler. Delete any intermediate files and any
- *              output files that may be left in an indeterminate state.
+ * DESCRIPTION: Signal interrupt handler. Delete any intermediate files and
+ *              any output files that may be left in an indeterminate state.
+ *              Currently handles SIGINT (control-c).
  *
  *****************************************************************************/
 
@@ -278,24 +379,44 @@ AslSignalHandler (
 
 
     signal (Sig, SIG_IGN);
-    printf ("Aborting\n\n");
+    fflush (stdout);
+    fflush (stderr);
 
-    /* Close all open files */
-
-    Gbl_Files[ASL_FILE_PREPROCESSOR].Handle = NULL; /* the .pre file is same as source file */
-
-    for (i = ASL_FILE_INPUT; i < ASL_MAX_FILE_TYPE; i++)
+    switch (Sig)
     {
-        FlCloseFile (i);
+    case SIGINT:
+
+        printf ("\n" ASL_PREFIX "<Control-C>\n");
+        break;
+
+    default:
+
+        printf (ASL_PREFIX "Unknown interrupt signal (%d)\n", Sig);
+        break;
     }
 
-    /* Delete any output files */
-
-    for (i = ASL_FILE_AML_OUTPUT; i < ASL_MAX_FILE_TYPE; i++)
+    /*
+     * Close all open files
+     * Note: the .pre file is the same as the input source file
+     */
+    if (AslGbl_Files)
     {
-        FlDeleteFile (i);
+        AslGbl_Files[ASL_FILE_PREPROCESSOR].Handle = NULL;
+
+        for (i = ASL_FILE_INPUT; i < ASL_MAX_FILE_TYPE; i++)
+        {
+            FlCloseFile (i);
+        }
+
+        /* Delete any output files */
+
+        for (i = ASL_FILE_AML_OUTPUT; i < ASL_MAX_FILE_TYPE; i++)
+        {
+            FlDeleteFile (i);
+        }
     }
 
+    printf (ASL_PREFIX "Terminating\n");
     exit (0);
 }
 
@@ -316,26 +437,11 @@ static void
 AslInitialize (
     void)
 {
-    UINT32                  i;
-
-
     AcpiGbl_DmOpt_Verbose = FALSE;
 
-    /* Default integer width is 64 bits */
+    /* Default integer width is 32 bits */
 
-    AcpiGbl_IntegerBitWidth = 64;
-    AcpiGbl_IntegerNybbleWidth = 16;
-    AcpiGbl_IntegerByteWidth = 8;
-
-    for (i = 0; i < ASL_NUM_FILES; i++)
-    {
-        Gbl_Files[i].Handle = NULL;
-        Gbl_Files[i].Filename = NULL;
-    }
-
-    Gbl_Files[ASL_FILE_STDOUT].Handle   = stdout;
-    Gbl_Files[ASL_FILE_STDOUT].Filename = "STDOUT";
-
-    Gbl_Files[ASL_FILE_STDERR].Handle   = stderr;
-    Gbl_Files[ASL_FILE_STDERR].Filename = "STDERR";
+    AcpiGbl_IntegerBitWidth = 32;
+    AcpiGbl_IntegerNybbleWidth = 8;
+    AcpiGbl_IntegerByteWidth = 4;
 }

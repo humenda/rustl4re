@@ -12,7 +12,7 @@
 #include <stdio.h>
 
 void
-L4::Driver::Hpet::print_state() const
+L4drivers::Hpet::print_state() const
 {
   printf("HPET Information:\n");
   printf("Rev-id:               0x%x\n", rev_id());
@@ -40,7 +40,7 @@ L4::Driver::Hpet::print_state() const
 }
 
 void
-L4::Driver::Hpet::Timer::print_state() const
+L4drivers::Hpet::Timer::print_state() const
 {
   printf(" Int type:             %s\n", is_int_type_level() ? "Level" : "Edge");
   printf(" IRQ enabled:          %s\n", is_int_enabled() ? "Yes" : "No");

@@ -1,5 +1,5 @@
 var structL4_1_1Semaphore =
 [
-    [ "down", "structL4_1_1Semaphore.html#a9dde3ffc2c6bd56f4760c195da505db1", null ],
-    [ "up", "structL4_1_1Semaphore.html#aa13181d7e43470c833a76f430b0c547c", null ]
+    [ "down", "structL4_1_1Semaphore.html#a5db9d69c03c135a9ae92d8a523cd9a4c", null ],
+    [ "up", "structL4_1_1Semaphore.html#a3de7e4e35ff4dadab9a26f3b87fb76bc", null ]
 ];

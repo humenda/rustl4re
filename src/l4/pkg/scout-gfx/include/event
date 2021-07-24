@@ -48,11 +48,11 @@ public:
     WHEEL     = 7,   /* mouse wheel         */
   };
 
-  Ev_type  type;
-  Point    m;          /* mouse position */
-  int      wx, wy;     /* wheel          */
-  int      code;       /* key code       */
-  int      key_cnt;
+  Ev_type  type = UNDEFINED;
+  Point    m;               /* mouse position */
+  int      wx = 0, wy = 0;  /* wheel          */
+  int      code = 0;        /* key code       */
+  int      key_cnt = 0;
 
   /**
    * Assign new event information to event structure

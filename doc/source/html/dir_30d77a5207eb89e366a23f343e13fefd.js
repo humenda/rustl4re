@@ -4,12 +4,13 @@ var dir_30d77a5207eb89e366a23f343e13fefd =
     [ "impl", "dir_36777f7a7a96e008b339783d073d7ed0.html", "dir_36777f7a7a96e008b339783d073d7ed0" ],
     [ "util", "dir_57b23affb30111293db30b1adc1928ce.html", "dir_57b23affb30111293db30b1adc1928ce" ],
     [ "video", "dir_64a0a8d27b6a136ec43eee79cca0e5fc.html", "dir_64a0a8d27b6a136ec43eee79cca0e5fc" ],
-    [ "cap_alloc", "cap__alloc.html", null ],
+    [ "cap_alloc", "cap__alloc.html", "cap__alloc" ],
     [ "console", "console_source.html", null ],
-    [ "consts", "consts.html", null ],
+    [ "consts", "re_2consts.html", null ],
     [ "consts.h", "l4_2re_2consts_8h.html", null ],
     [ "dataspace", "dataspace.html", [
       [ "Dataspace", "classL4Re_1_1Dataspace.html", "classL4Re_1_1Dataspace" ],
+      [ "F", "structL4Re_1_1Dataspace_1_1F.html", "structL4Re_1_1Dataspace_1_1F" ],
       [ "Stats", "structL4Re_1_1Dataspace_1_1Stats.html", "structL4Re_1_1Dataspace_1_1Stats" ]
     ] ],
     [ "dataspace-sys.h", "dataspace-sys_8h.html", "dataspace-sys_8h" ],
@@ -42,7 +43,11 @@ var dir_30d77a5207eb89e366a23f343e13fefd =
     [ "parent", "parent.html", null ],
     [ "parent-sys.h", "parent-sys_8h.html", "parent-sys_8h" ],
     [ "protocols.h", "protocols_8h.html", "protocols_8h" ],
-    [ "rm", "rm.html", null ],
+    [ "random", "random_source.html", null ],
+    [ "rm", "rm.html", [
+      [ "F", "structL4Re_1_1Rm_1_1F.html", "structL4Re_1_1Rm_1_1F" ],
+      [ "Range", "structL4Re_1_1Rm_1_1Range.html", "structL4Re_1_1Rm_1_1Range" ]
+    ] ],
     [ "rm-sys.h", "rm-sys_8h.html", "rm-sys_8h" ],
     [ "shared_cap", "shared__cap.html", "shared__cap" ],
     [ "unique_cap", "unique__cap.html", "unique__cap" ]

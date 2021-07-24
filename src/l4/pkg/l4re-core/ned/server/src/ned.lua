@@ -29,7 +29,6 @@ Proto = {
   Vm         = -16,
   Dma_space  = -17,
   Irq_sender = -18,
-  Irq_muxer  = -19,
   Semaphore  = -20,
   Iommu      = -22,
   Ipc_gate  = 0,
@@ -40,6 +39,9 @@ Rights = {
   s   = 2,
   w   = 1,
   r   = 4,
+  d   = 8,
+  n   = 16,
+  c   = 32,
   ro  = 4,
   rw  = 5,
   rws = 7,
@@ -77,8 +79,7 @@ Dbg = {
 --  * A memory allocator
 --  * A factory used for name-space creation (ns_fab)
 --  * A factory used for region-map creation (rm_fab)
---  * A Factory used for log creation (log_fab)
---  * A Scheduler factory (sched_fab)
+--  * A factory used for log creation (log_fab)
 
 Loader = {};
 Loader.__index = Loader;
@@ -99,7 +100,6 @@ function Loader.new(proto)
     f.log_fab = f.log_fab or lfab;
     f.ns_fab = f.ns_fab or lfab;
     f.rm_fab = f.rm_fab or lfab;
-    f.sched_fab = f.sched_fab or lfab;
     f.factory = f.factory or Env.factory;
   end
 
@@ -138,6 +138,23 @@ end
 local ns_class = get_cap_class("L4Re::Namespace");
 if ns_class then
   ns_class.register = function (self, key, value, fab)
+    if type(value) == "string" then
+      local res = Env
+      for i in string.gmatch(value, "([^/]+)") do
+        if type(res) == "table" then
+          res = res[i]
+        elseif res then
+          res = res:query(i)()
+        else
+          break
+        end
+      end
+      if res == nil then
+        error("Could not resolve: '" .. value .. "'", 5)
+      end
+      value = res
+    end
+
     if type(value) == "function" then
       value = value(self, key);
     end
@@ -157,7 +174,7 @@ end
 
 ns_class = nil;
 
-function Loader.fill_namespace(ns, tmpl, fab)
+function Loader:fill_namespace(ns, tmpl, fab)
   local function cns(value)
     return self:create_namespace(value, fab);
   end
@@ -177,7 +194,7 @@ function Loader:create_namespace(n, fab)
 
   local ns_fab = fab or self.ns_fab;
   local ns = ns_fab:create(Proto.Namespace);
-  self.fill_namespace(ns, n, ns_fab);
+  self:fill_namespace(ns, n, ns_fab);
   return ns;
 end
 
@@ -265,7 +282,11 @@ function Loader:startv(env, ...)
       end
     end
 
-    caps.rom = caps.rom or Env.rom:m("r");
+    local defcaps = self.default_caps or { rom = Env.rom:m("r") }
+
+    for k, v in pairs(defcaps) do
+      caps[k] = caps[k] or v
+    end
   end
 
   env.loader = self;

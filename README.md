@@ -43,11 +43,11 @@ For ARM:
 Two popular prebuilt cross compilers exist. You can also check
 http://elinux.org/ARMCompilers for more info:
 
-* Linaro cross-compilers:
+* Arm cross-compilers:
 
-     [https://linaro.org/downloads](https://linaro.org/downloads)
+     [https://developer.arm.com/tools-and-software/open-source-software/developer-tools/gnu-toolchain/gnu-a](https://developer.arm.com/tools-and-software/open-source-software/developer-tools/gnu-toolchain/gnu-a)
 
-  Note that the Linaro cross compilers build for hard floating point, so
+  Note that the Arm cross compilers build for hard floating point, so
   builds with those compilers will only work on appropriate targets.
   This compiler will not work for ARMv5/ARM9 targets.
 
@@ -142,6 +142,7 @@ Directory layout
     * `ramdisk-x86.rd`:    Ramdisks for (L4)Linux.
     * `ramdisk-arm.rd`:    Ramdisks for (L4)Linux.
     * `ramdisk-amd64.rd`:  Ramdisks for (L4)Linux.
+    * `ramdisk-armv8-64.rd`:  Ramdisks for (L4)Linux.
 
 All object directories are built by default.
 

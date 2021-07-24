@@ -1,0 +1,7 @@
+<map id="L4virtio::Driver::Virtqueue::find_next_used" name="L4virtio::Driver::Virtqueue::find_next_used">
+<area shape="rect" id="node1" title="Return the next finished block." alt="" coords="723,39,913,80"/>
+<area shape="rect" id="node2" href="$classL4virtio_1_1Driver_1_1Block__device.html#a9f1a7a08e90ca6c1441bd48abc8b574a" title="Process and free all items in the used queue." alt="" coords="460,5,675,47"/>
+<area shape="rect" id="node3" href="$classL4virtio_1_1Driver_1_1Device.html#a156576a5d43ef2fe11b39f4d8ffc4c9e" title="Wait for the next item to arrive in the used queue and return it." alt="" coords="481,71,653,112"/>
+<area shape="rect" id="node4" href="$classL4virtio_1_1Driver_1_1Device.html#af4aa9ac34ce928b9d437f1bb6a2ec216" title="Send a request to the device and wait for it to be processed." alt="" coords="240,71,412,112"/>
+<area shape="rect" id="node5" href="$classL4virtio_1_1Driver_1_1Block__device.html#a63f21e71556accc8c669ef80161ecd8e" title="Process request synchronously." alt="" coords="5,71,192,112"/>
+</map>

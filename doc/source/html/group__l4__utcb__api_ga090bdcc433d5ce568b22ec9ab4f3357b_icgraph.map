@@ -1,3 +1,4 @@
 <map id="l4_utcb_mr" name="l4_utcb_mr">
-<area shape="rect" id="node2" href="$x86_2l4f_2l4_2util_2port__io_8h.html#a38a37fdbed4dd2dca75ce192d506a2d4" title="Map a range of I/O ports. " alt="" coords="144,5,273,32"/>
+<area shape="rect" id="node1" title="Get the message&#45;register block of a UTCB." alt="" coords="189,5,284,32"/>
+<area shape="rect" id="node2" href="$x86_2l4f_2l4_2util_2port__io_8h.html#a38a37fdbed4dd2dca75ce192d506a2d4" title="Map a range of I/O ports." alt="" coords="5,5,141,32"/>
 </map>

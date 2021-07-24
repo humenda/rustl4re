@@ -1,4 +1,5 @@
 <map id="l4_irq_wait" name="l4_irq_wait">
-<area shape="rect" id="node2" href="$group__l4__irq__api.html#ga1690f577bd2896ec9b1e5a24d00af874" title="Unmask IRQ and (open) wait for any message. " alt="" coords="144,5,249,32"/>
-<area shape="rect" id="node3" href="$group__l4__utcb__api.html#gadc099b4a59e1d99638c72c11a8c8b644" title="Get the UTCB address. " alt="" coords="163,56,230,83"/>
+<area shape="rect" id="node1" title="Unmask IRQ and wait for any message." alt="" coords="5,31,99,57"/>
+<area shape="rect" id="node2" href="$group__l4__irq__api.html#ga1690f577bd2896ec9b1e5a24d00af874" title="Unmask IRQ and (open) wait for any message." alt="" coords="147,5,255,32"/>
+<area shape="rect" id="node3" href="$group__l4__utcb__api.html#gadc099b4a59e1d99638c72c11a8c8b644" title="Get the UTCB address." alt="" coords="166,56,235,83"/>
 </map>

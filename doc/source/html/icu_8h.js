@@ -1,8 +1,8 @@
 var icu_8h =
 [
     [ "l4_icu_msi_info_t", "structl4__icu__msi__info__t.html", "structl4__icu__msi__info__t" ],
-    [ "l4_icu_info_t", "group__l4__icu__api.html#gacfdf3e00e12fe195b2403f437cc09f17", null ],
-    [ "l4_icu_msi_info_t", "icu_8h.html#ada3f6d1509daa4aaef0faf71cd8c1524", null ],
+    [ "l4_icu_info_t", "group__l4__icu__api.html#ga054d1d824af9ba14cb7bda808ad5a4eb", null ],
+    [ "l4_icu_msi_info_t", "icu_8h.html#aa7b6f98d2cd8ec2ac3bff18335cdfeba", null ],
     [ "L4_icu_flags", "group__l4__icu__api.html#gae0eed2f822f96b14e27506b723adbe03", [
       [ "L4_ICU_FLAG_MSI", "group__l4__icu__api.html#ggae0eed2f822f96b14e27506b723adbe03a1fd33de4bedf743cc5f94aaf718ed109", null ]
     ] ],

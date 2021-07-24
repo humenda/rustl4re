@@ -132,7 +132,7 @@ static int _ferret_create_sensor(l4_cap_idx_t dir_cap,
 		 * Fill sensor header
 		 */
 		err =  L4Re::Env::env()->rm()->attach(addr, ds->size(),
-		                                      L4Re::Rm::Search_addr | L4Re::Rm::Eager_map,
+		                                      L4Re::Rm::F::Search_addr | L4Re::Rm::F::Eager_map | L4Re::Rm::F::RW,
 		                                      ds);
 		if (err < 0)
 		{

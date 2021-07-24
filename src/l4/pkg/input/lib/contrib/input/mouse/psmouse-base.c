@@ -733,7 +733,7 @@ static void psmouse_connect(struct serio *serio, struct serio_driver *drv)
 
 	sprintf(psmouse->devname, "%s %s %s",
 		psmouse_protocols[psmouse->type], psmouse->vendor, psmouse->name);
-	sprintf(psmouse->phys, "%s/input0",
+	snprintf(psmouse->phys, sizeof(psmouse->phys), "%s/input0",
 		serio->phys);
 
 	psmouse->dev.name = psmouse->devname;

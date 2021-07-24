@@ -1,0 +1,13 @@
+<map id="L4::Epiface_t0&lt; RPC_IFACE, BASE &gt;" name="L4::Epiface_t0&lt; RPC_IFACE, BASE &gt;">
+<area shape="rect" id="node1" title="Epiface mixin for generic Kobject&#45;based interfaces." alt="" coords="423,264,597,371"/>
+<area shape="rect" id="node3" href="$structL4_1_1Epiface__t.html" title=" " alt="" coords="5,773,199,880"/>
+<area shape="rect" id="node4" href="$structL4_1_1Epiface__t.html" title=" " alt="" coords="233,781,405,873"/>
+<area shape="rect" id="node5" href="$structL4_1_1Epiface__t0.html" title=" " alt="" coords="486,433,659,540"/>
+<area shape="rect" id="node6" href="$structL4_1_1Epiface__t0.html" title=" " alt="" coords="683,433,857,540"/>
+<area shape="rect" id="node9" href="$structL4_1_1Epiface__t0.html" title=" " alt="" coords="881,433,1054,540"/>
+<area shape="rect" id="node10" href="$structL4_1_1Epiface__t0.html" title=" " alt="" coords="193,433,366,540"/>
+<area shape="rect" id="node2" href="$structL4_1_1Epiface.html" title="Base class for interface implementations." alt="" coords="423,5,597,215"/>
+<area shape="rect" id="node7" href="$structL4_1_1Irqep__t.html" title=" " alt="" coords="699,781,883,873"/>
+<area shape="rect" id="node8" href="$structL4_1_1Irqep__t.html" title="Epiface implementation for interrupt handlers." alt="" coords="770,589,930,696"/>
+<area shape="rect" id="node11" href="$structL4_1_1Epiface__t.html" title="Epiface implementation for Kobject&#45;based interface implementations." alt="" coords="192,597,367,689"/>
+</map>

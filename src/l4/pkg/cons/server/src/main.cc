@@ -20,6 +20,7 @@
 #include "debug.h"
 #include "vcon_client.h"
 #include "vcon_fe.h"
+#include "virtio_client.h"
 #include "async_vcon_fe.h"
 #include "registry.h"
 #include "server.h"
@@ -50,6 +51,7 @@ struct Config_opts
 {
   bool default_show_all;
   bool default_keep;
+  bool default_timestamp;
   std::string auto_connect_console;
 };
 
@@ -85,7 +87,8 @@ public:
 
   bool collected() { return false; }
 
-  int create(cxx::String const &name, int color, Vcon_client **,
+  template< typename CLI >
+  int create(cxx::String const &name, int color, CLI **,
              size_t bufsz, Client::Key key);
   int op_create(L4::Factory::Rights, L4::Ipc::Cap<void> &obj,
                 l4_mword_t proto, L4::Ipc::Varg_list_ref args);
@@ -108,8 +111,7 @@ private:
 Cons_svr::Cons_svr(const char* name)
 : _info(Dbg::Info, name), _err(Dbg::Err, name)
 {
-  _err.set_level(~0U);
-  _info.set_level(~0U);
+  Dbg::set_level(~0U);
 }
 
 int
@@ -126,9 +128,10 @@ Cons_svr::sys_msg(char const *fmt, ...)
   return r;
 }
 
+template< typename CLI >
 int
 Cons_svr::create(cxx::String const &name, int color,
-                 Vcon_client **vout, size_t bufsz, Client::Key key)
+                 CLI **vout, size_t bufsz, Client::Key key)
 {
   typedef Controller::Client_iter Client_iter;
   Client_iter c = std::find_if(_ctl.clients.begin(),
@@ -145,8 +148,8 @@ Cons_svr::create(cxx::String const &name, int color,
                    Client::Equal_tag(_name));
 
 
-  Vcon_client *v = new Vcon_client(std::string(_name.start(), _name.len()),
-                                   color, bufsz, key, &registry);
+  CLI *v = new CLI(std::string(_name.start(), _name.len()),
+                   color, bufsz, key, &registry);
   if (!v)
     return -L4_ENOMEM;
 
@@ -180,15 +183,16 @@ Cons_svr::op_create(L4::Factory::Rights, L4::Ipc::Cap<void> &obj,
   switch (proto)
     {
     case (l4_mword_t)L4_PROTO_LOG:
+    case 1:
         {
           // copied from moe/server/src/alloc.cc
 
-          L4::Ipc::Varg tag = args.next();
+          L4::Ipc::Varg tag = args.pop_front();
 
           if (!tag.is_of<char const *>())
             return -L4_EINVAL;
 
-          L4::Ipc::Varg col = args.next();
+          L4::Ipc::Varg col = args.pop_front();
 
           int color;
           if (col.is_of<char const *>())
@@ -227,10 +231,11 @@ Cons_svr::op_create(L4::Factory::Rights, L4::Ipc::Cap<void> &obj,
 
           bool show = config.default_show_all;
           bool keep = config.default_keep;
+          bool timestamp = config.default_timestamp;
           Client::Key key;
           size_t bufsz = 0;
 
-          for (L4::Ipc::Varg opts = args.next(); !opts.is_nil(); opts = args.next())
+          for (L4::Ipc::Varg opts: args)
             {
               if (opts.is_of<char const *>())
                 {
@@ -243,6 +248,12 @@ Cons_svr::op_create(L4::Factory::Rights, L4::Ipc::Cap<void> &obj,
                     show = true;
                   else if (cs == "keep")
                     keep = true;
+                  else if (cs == "no-keep")
+                    keep = false;
+                  else if (cs == "timestamp")
+                    timestamp = true;
+                  else if (cs == "no-timestamp")
+                    timestamp = false;
                   else if (cxx::String::Index k = cs.starts_with("key="))
                     key = *k;
                   else if (cxx::String::Index v = cs.starts_with("bufsz="))
@@ -250,15 +261,32 @@ Cons_svr::op_create(L4::Factory::Rights, L4::Ipc::Cap<void> &obj,
                 }
             }
 
-          Vcon_client *v;
-          if (int r = create(n, color, &v, bufsz, key))
-            return r;
+          Client *v;
+          L4::Cap<void> v_cap;
+          if (proto == 1)
+            {
+              Virtio_cons *_v;
+              if (int r = create(n, color, &_v, bufsz, key))
+                return r;
+              v = _v;
+              v_cap = _v->obj_cap();
+            }
+          else
+            {
+              Vcon_client *_v;
+              if (int r = create(n, color, &_v, bufsz, key))
+                return r;
+              v = _v;
+              v_cap = _v->obj_cap();
+            }
 
           if (show && _muxe.front())
             _muxe.front()->show(v);
 
           if (keep)
             v->keep(v);
+
+          v->timestamp(timestamp);
 
           for (Mux_iter i = _muxe.begin(); i != _muxe.end(); ++i)
             {
@@ -269,7 +297,7 @@ Cons_svr::op_create(L4::Factory::Rights, L4::Ipc::Cap<void> &obj,
                 }
             }
 
-          obj = L4::Ipc::make_cap(v->obj_cap(), L4_CAP_FPAGE_RWSD);
+          obj = L4::Ipc::make_cap(v_cap, L4_CAP_FPAGE_RWSD);
           return L4_EOK;
         }
       break;
@@ -283,11 +311,13 @@ static int work(int argc, char const *argv[])
 {
   printf("Console Server\n");
 
-  enum {
+  enum
+  {
     OPT_SHOW_ALL = 'a',
     OPT_MUX = 'm',
     OPT_FE = 'f',
     OPT_KEEP = 'k',
+    OPT_TIMESTAMP = 't',
     OPT_AUTOCONNECT = 'c',
     OPT_DEFAULT_NAME = 'n',
     OPT_DEFAULT_BUFSIZE = 'B',
@@ -295,14 +325,15 @@ static int work(int argc, char const *argv[])
 
   static option opts[] =
   {
-      { "show-all", 0, 0, OPT_SHOW_ALL },
-      { "mux", 1, 0, OPT_MUX },
-      { "frontend", 1, 0, OPT_FE },
-      { "keep", 0, 0, OPT_KEEP },
-      { "autoconnect", 1, 0, OPT_AUTOCONNECT },
-      { "defaultname", 1, 0, OPT_DEFAULT_NAME },
-      { "defaultbufsize", 1, 0, OPT_DEFAULT_BUFSIZE },
-      { 0, 0, 0, 0 },
+    { "show-all",       no_argument,       0, OPT_SHOW_ALL },
+    { "mux",            required_argument, 0, OPT_MUX },
+    { "frontend",       required_argument, 0, OPT_FE },
+    { "keep",           no_argument,       0, OPT_KEEP },
+    { "timestamp",      no_argument,       0, OPT_TIMESTAMP },
+    { "autoconnect",    required_argument, 0, OPT_AUTOCONNECT },
+    { "defaultname",    required_argument, 0, OPT_DEFAULT_NAME },
+    { "defaultbufsize", required_argument, 0, OPT_DEFAULT_BUFSIZE },
+    { 0, 0, 0, 0 },
   };
 
   Cons_svr *cons = new Cons_svr("cons");
@@ -323,7 +354,7 @@ static int work(int argc, char const *argv[])
     {
       int optidx = 0;
       int c = getopt_long(argc, const_cast<char *const*>(argv),
-                          "am:f:kc:n:B:", opts, &optidx);
+                          "am:f:kc:n:B:t", opts, &optidx);
       if (c == -1)
         break;
 
@@ -362,6 +393,9 @@ static int work(int argc, char const *argv[])
           break;
         case OPT_KEEP:
           config.default_keep = true;
+          break;
+        case OPT_TIMESTAMP:
+          config.default_timestamp = true;
           break;
         case OPT_AUTOCONNECT:
           if (current_mux)

@@ -1,0 +1,4 @@
+<map id="L4::trunc_order" name="L4::trunc_order">
+<area shape="rect" id="node1" title="Round a value down so the given number of lsb is zero." alt="" coords="221,13,340,39"/>
+<area shape="rect" id="node2" href="$classL4Re_1_1Dataspace.html#a7caf317574ca8fa0f43bcd333f7bb860" title="Map a part of a dataspace into a local memory area." alt="" coords="5,5,173,47"/>
+</map>

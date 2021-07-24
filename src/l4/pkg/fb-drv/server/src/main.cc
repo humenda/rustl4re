@@ -12,6 +12,7 @@
 #include <l4/sys/capability>
 #include <l4/sys/typeinfo_svr>
 #include <l4/re/util/br_manager>
+#include <l4/re/dataspace>
 
 #include <cstdio>
 #include <getopt.h>
@@ -28,7 +29,7 @@ Phys_fb::setup_ds(char const *name)
   _fb_ds = L4::Cap<L4Re::Dataspace>(obj_cap().cap());
   _ds_start = _vidmem_start;
   _ds_size = _vidmem_size;
-  _rw_flags = Writable;
+  _rw_flags = L4Re::Dataspace::F::RW;
   _cache_flags = L4::Ipc::Gen_fpage<L4::Ipc::Snd_item>::Buffered;
 }
 
@@ -44,8 +45,8 @@ Phys_fb::map_hook(l4_addr_t offs, unsigned long flags,
   int err;
   L4::Cap<L4Re::Dataspace> ds;
   unsigned long sz = 1;
-  l4_addr_t off;
-  unsigned fl;
+  L4Re::Rm::Offset off;
+  L4Re::Rm::Flags fl;
   l4_addr_t a = _vidmem_start;
 
   if ((err = L4Re::Env::env()->rm()->find(&a, &sz, &off, &fl, &ds)) < 0)
@@ -54,7 +55,7 @@ Phys_fb::map_hook(l4_addr_t offs, unsigned long flags,
       return err;
     }
 
-  if ((err = ds->map_region(off, L4Re::Dataspace::Map_rw,
+  if ((err = ds->map_region(off, L4Re::Dataspace::F::RW,
                             _vidmem_start, _vidmem_end)) < 0)
     {
       printf("Failed to map video memory: %d\n", err);

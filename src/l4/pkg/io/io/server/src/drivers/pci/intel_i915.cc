@@ -1,5 +1,5 @@
 /*
- * (c) 2014 Steffen Liebergeld <steffen.liebergeld@kernkonzept.com>
+ * (c) 2014-2020 Steffen Liebergeld <steffen.liebergeld@kernkonzept.com>
  *
  * This file is part of TUD:OS and distributed under the terms of the
  * GNU General Public License 2.
@@ -7,7 +7,7 @@
  */
 #include "cfg.h"
 #include "debug.h"
-#include "pci.h"
+#include <pci-driver.h>
 
 namespace {
 
@@ -23,6 +23,12 @@ struct Pci_intel_i915_drv : Driver
 
     // PCI_ASLS
     d->cfg_read(0xfc, &v, Cfg_long);
+
+    // According to the Intel IGD OpRegion specification the default value is
+    // 0h which means the BIOS has not placed a memory offset into this
+    // register
+    if (v == 0 || v == ~0U)
+      return 0;
 
     printf("Found Intel i915 GPU opregion at %x\n", v);
 

@@ -1,9 +1,9 @@
 <map id="l4/cxx/bits/bst.h" name="l4/cxx/bits/bst.h">
-<area shape="rect" id="node2" href="$avl__tree.html" title="AVL tree. " alt="" coords="124,80,237,107"/>
-<area shape="rect" id="node3" href="$name__space__svr_source.html" title="l4/re/util/name_space_svr" alt="" coords="5,155,188,181"/>
-<area shape="rect" id="node4" href="$avl__set.html" title="AVL set. " alt="" coords="213,155,319,181"/>
-<area shape="rect" id="node5" href="$avl__map.html" title="AVL map. " alt="" coords="209,229,323,256"/>
-<area shape="rect" id="node6" href="$region__mapping.html" title="Region handling. " alt="" coords="177,304,355,331"/>
-<area shape="rect" id="node7" href="$region__mapping__svr_source.html" title="l4/re/util/region_mapping_svr" alt="" coords="57,386,261,413"/>
-<area shape="rect" id="node8" href="$region__mapping__svr__2_source.html" title="l4/re/util/region_mapping\l_svr_2" alt="" coords="285,379,463,420"/>
+<area shape="rect" id="node1" title="AVL tree." alt="" coords="124,5,249,32"/>
+<area shape="rect" id="node2" href="$avl__tree.html" title="AVL tree." alt="" coords="127,80,246,107"/>
+<area shape="rect" id="node3" href="$name__space__svr_source.html" title=" " alt="" coords="5,155,195,181"/>
+<area shape="rect" id="node4" href="$avl__set.html" title="AVL set." alt="" coords="219,155,331,181"/>
+<area shape="rect" id="node5" href="$avl__map.html" title="AVL map." alt="" coords="214,229,335,256"/>
+<area shape="rect" id="node6" href="$region__mapping.html" title="Region handling." alt="" coords="182,304,367,331"/>
+<area shape="rect" id="node7" href="$region__mapping__svr__2_source.html" title=" " alt="" coords="182,379,367,420"/>
 </map>

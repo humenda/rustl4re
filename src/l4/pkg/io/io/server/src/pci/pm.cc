@@ -1,5 +1,5 @@
 /*
- * (c) 2013 Alexander Warg <warg@os.inf.tu-dresden.de>
+ * (c) 2013-2020 Alexander Warg <warg@os.inf.tu-dresden.de>
  *     economic rights: Technische Universität Dresden (Germany)
  *
  * This file is part of TUD:OS and distributed under the terms of the
@@ -7,16 +7,17 @@
  * Please see the COPYING-GPL-2 file for details.
  */
 
-#include "pci.h"
+#include <pci-dev.h>
+#include <pci-caps.h>
 
 bool
 Hw::Pci::Dev::check_pme_status()
 {
-  if (!_pm_cap)
+  if (!cfg.pm_cap)
     return false;
 
-  Pm_cap::Pmcsr pmcsr;
-  cfg_read(Pm_cap::pmcsr_reg(_pm_cap), &pmcsr);
+  auto pm = config(cfg.pm_cap);
+  Pm_cap::Pmcsr pmcsr = pm.read<Pm_cap::Pmcsr>();
 
   if (!pmcsr.pme_status())
     return false;
@@ -30,7 +31,7 @@ Hw::Pci::Dev::check_pme_status()
       res = true;
     }
 
-  cfg_write(Pm_cap::pmcsr_reg(_pm_cap), pmcsr);
+  pm.write(pmcsr);
   return res;
 }
 

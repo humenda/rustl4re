@@ -27,9 +27,6 @@ public:
 
 private:
   Vmcb const *_last_user_vmcb;
-  Unsigned32 _next_asid;
-  Unsigned32 _global_asid_generation;
-  bool _flush_all_asids;
 
   /* read mostly below */
   Unsigned32 _max_asid;
@@ -75,14 +72,14 @@ DEFINE_PER_CPU_LATE Per_cpu<Svm> Svm::cpus(Per_cpu_data::Cpu_num);
 
 PUBLIC
 void
-Svm::pm_on_suspend(Cpu_number)
+Svm::pm_on_suspend(Cpu_number) override
 {
   // FIXME: Handle VMCB caching stuff if enabled
 }
 
 PUBLIC
 void
-Svm::pm_on_resume(Cpu_number)
+Svm::pm_on_resume(Cpu_number) override
 {
   Unsigned64 efer = Cpu::rdmsr(MSR_EFER);
   efer |= 1 << 12;
@@ -114,10 +111,7 @@ Svm::Svm(Cpu_number cpu)
   Cpu &c = Cpu::cpus.cpu(cpu);
   _last_user_vmcb = 0;
   _svm_enabled = false;
-  _next_asid = 1;
-  _global_asid_generation = 0;
   _max_asid = 0;
-  _flush_all_asids = true;
   _has_npt = false;
 
   if (!cpu_svm_available(cpu))
@@ -137,11 +131,11 @@ Svm::Svm(Cpu_number cpu)
       printf("SVM: nested paging supported\n");
       _has_npt = true;
     }
-  printf("SVM: NASID: %u\n", ebx);
+  printf("SVM: NASID: %u.\n", ebx);
   _max_asid = ebx - 1;
 
   // FIXME: MUST NOT PANIC ON CPU HOTPLUG
-  assert(_max_asid > 0);
+  //assert(_max_asid > 0);
 
   enum
   {
@@ -153,7 +147,7 @@ Svm::Svm(Cpu_number cpu)
 
   /* 16kB IO permission map and Vmcb (16kB are good for the buddy allocator)*/
   // FIXME: MUST NOT PANIC ON CPU HOTPLUG
-  check(_iopm = Kmem_alloc::allocator()->unaligned_alloc(Io_pm_size + Vmcb_size));
+  check(_iopm = Kmem_alloc::allocator()->alloc(Bytes(Io_pm_size + Vmcb_size)));
   _iopm_base_pa = Kmem::virt_to_phys(_iopm);
   _kernel_vmcb = (Vmcb*)((char*)_iopm + Io_pm_size);
   _kernel_vmcb_pa = Kmem::virt_to_phys(_kernel_vmcb);
@@ -167,7 +161,7 @@ Svm::Svm(Cpu_number cpu)
 
   /* 8kB MSR permission map */
   // FIXME: MUST NOT PANIC ON CPU HOTPLUG
-  check(_msrpm = Kmem_alloc::allocator()->unaligned_alloc(Msr_pm_size));
+  check(_msrpm = Kmem_alloc::allocator()->alloc(Bytes(Msr_pm_size)));
   _msrpm_base_pa = Kmem::virt_to_phys(_msrpm);
   memset(_msrpm, ~0, Msr_pm_size);
 
@@ -184,7 +178,7 @@ Svm::Svm(Cpu_number cpu)
 
   /* 4kB Host state-safe area */
   // FIXME: MUST NOT PANIC ON CPU HOTPLUG
-  check(_vm_hsave_area = Kmem_alloc::allocator()->unaligned_alloc(State_save_area_size));
+  check(_vm_hsave_area = Kmem_alloc::allocator()->alloc(Bytes(State_save_area_size)));
   Unsigned64 vm_hsave_pa = Kmem::virt_to_phys(_vm_hsave_area);
 
   c.wrmsr(vm_hsave_pa, MSR_VM_HSAVE_PA);
@@ -260,44 +254,3 @@ PUBLIC
 bool
 Svm::has_npt()
 { return _has_npt; }
-
-PUBLIC
-bool
-Svm::asid_valid(Unsigned32 asid, Unsigned32 generation)
-{
-  return ((asid > 0) &&
-          (asid <= _max_asid) &&
-          (generation <= _global_asid_generation));
-}
-
-PUBLIC inline
-void
-Svm::flush_asids_if_needed()
-{
-  if (EXPECT_TRUE(!_flush_all_asids))
-    return;
-
-  _flush_all_asids = false;
-  _kernel_vmcb->control_area.tlb_ctl |= 1;
-}
-
-PUBLIC inline
-Unsigned32
-Svm::global_asid_generation() const
-{ return _global_asid_generation; }
-
-PUBLIC
-Unsigned32
-Svm::next_asid()
-{
-  assert (cpu_lock.test());
-  if (_next_asid > _max_asid)
-    {
-      _global_asid_generation++;
-      _next_asid = 1;
-      // FIXME: must not crash on an overrun
-      assert (_global_asid_generation < ~0U);
-      _flush_all_asids = true;
-    }
-  return _next_asid++;
-}

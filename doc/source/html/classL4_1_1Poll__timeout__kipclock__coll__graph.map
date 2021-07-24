@@ -1,2 +1,3 @@
 <map id="L4::Poll_timeout_kipclock" name="L4::Poll_timeout_kipclock">
+<area shape="rect" id="node1" title="A polling timeout based on the L4Re clock." alt="" coords="5,5,196,127"/>
 </map>

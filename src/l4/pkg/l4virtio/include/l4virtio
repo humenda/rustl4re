@@ -1,22 +1,11 @@
 // vi:ft=cpp
+/* SPDX-License-Identifier: GPL-2.0-only or License-Ref-kk-custom */
 /*
- * (c) 2013-2014 Alexander Warg <warg@os.inf.tu-dresden.de>
- *               Matthias Lange <matthias.lange@kernkonzept.com>
+ * Copyright (C) 2013-2020 Kernkonzept GmbH.
+ * Author(s): Alexander Warg <alexander.warg@kernkonzept.com>
+ *            Matthias Lange <matthias.lange@kernkonzept.com>
  *
- * This file is part of TUD:OS and distributed under the terms of the
- * GNU General Public License 2.
- * Please see the COPYING-GPL-2 file for details.
- *
- * As a special exception, you may use this file as part of a free software
- * library without restriction.  Specifically, if other files instantiate
- * templates or use macros or inline functions from this file, or you compile
- * this file and link it with other files to produce an executable, this
- * file does not by itself cause the resulting executable to be covered by
- * the GNU General Public License.  This exception does not however
- * invalidate any other reasons why the executable file might be covered by
- * the GNU General Public License.
  */
-
 #pragma once
 
 #include "virtio.h"
@@ -27,8 +16,28 @@
 #include <l4/cxx/utils>
 
 namespace L4virtio {
+/**
+ * IPC interface for virtio over L4 IPC.
+ *
+ * The L4virtio protocol is an adaption of the mmio virtio transport 1.0(4).
+ * This interface allows to exchange the necessary resources: device
+ * configuration page, notification interrupts and dataspaces for payload.
+ *
+ * Notification interrupts can be configured independently for changes to
+ * the configuration space and each queue through special L4virtio-specific
+ * notify_index fields in the config page and queue configuration. The
+ * interface distinguishes between device-to-driver and driver-to-device
+ * notification interrupts.
+ *
+ * Device-to-driver interrupts are configured via the ICU interface. The
+ * device announces the maximum number of supported interrupts via Icu::info().
+ * The driver can then bind interrupts using Icu::bind().
+ *
+ * Driver-to-device interrupts must be requested from the device through
+ * device_notification_irq().
+ */
 class Device :
-  public L4::Kobject_t<Device, L4::Kobject, L4VIRTIO_PROTOCOL,
+  public L4::Kobject_t<Device, L4::Icu, L4VIRTIO_PROTOCOL,
                        L4::Type_info::Demand_t<1> >
 {
 public:
@@ -50,6 +59,21 @@ public:
     {
       return send_cmd(L4VIRTIO_CMD_CFG_QUEUE | num,
                       out_notify, in_notify, to);
+    }
+
+    /**
+     * Check the VIRTIO status register device and driver failure bits.
+     *
+     * \return true if either FAILED or DEVICE_NEEDS_RESET is set.
+     *
+     * Called by driver-side code to read the shared memory status word and
+     * check the fail state of both the device and driver.
+     */
+    bool fail_state() const
+    {
+      auto cfg_status = cxx::access_once(&status);
+      return cfg_status
+             & (L4VIRTIO_STATUS_FAILED | L4VIRTIO_STATUS_DEVICE_NEEDS_RESET);
     }
 
     int set_status(unsigned new_status, L4::Cap<L4::Triggerable> out_notify,
@@ -85,17 +109,108 @@ public:
     }
   };
 
+  /**
+   * Write the VIRTIO status register.
+   *
+   * \param status  Status word to write to the VIRTIO status.
+   *
+   * \retval 0 on success.
+   *
+   * \note All other registers are accessed via shared memory.
+   */
   L4_INLINE_RPC(long, set_status, (unsigned status));
+
+  /**
+   * Trigger queue configuration of the given queue.
+   *
+   * Usually all queues are configured when the status is written to running.
+   * However, in some cases queues shall be disabled or enabled dynamically, in
+   * this case this function triggers a reconfiguration from the shared memory
+   * register of the queue config.
+   *
+   * \param queue  Queue index for the queue to be configured.
+   *
+   * \retval 0 on success.
+   * \retval -L4_EIO    The queue's status is invalid.
+   * \retval -L4_ERANGE The queue index exceeds the number of queues.
+   * \retval -L4_EINVAL Otherwise.
+   */
   L4_INLINE_RPC(long, config_queue, (unsigned queue));
+
+  /**
+   * Register a shared data space with VIRTIO host
+   *
+   * \param ds_cap  Data-space capability to register. The lower 8 bits determine
+   *                the rights mask with which the guest's rights are masked during
+   *                the registration of the dataspace at the VIRTIO host.
+   * \param base    VIRTIO guest physical start address of shared memory region
+   * \param offset  Offset within the data space that is attached to the
+   *                given `base` in the guest physical memory.
+   * \param size    Size of the memory region in the guest
+   *
+   * \return 0 on success, < 0 on error
+   */
   L4_INLINE_RPC(long, register_ds, (L4::Ipc::Cap<L4Re::Dataspace> ds_cap,
                                     l4_uint64_t base, l4_umword_t offset,
                                     l4_umword_t size));
 
+  /**
+   * Register client to the L4-VIRTIO device.
+   *
+   * \param guest_irq  IRQ capability for valid IRQ object for device-to-driver
+   *                   notifications.
+   * \param host_irq   Capability selector for receiving the driver-to-device
+   *                   notifications IRQ capability.
+   * \param config_ds  Capability for receiving the dataspace capability for
+   *                   the shared L4-VIRTIO config data space.
+   *
+   * \retval  L4_EOK     Success.
+   * \retval -L4_ENOSYS  This interface is no longer supported by the server.
+   *                     Use get_device_config() etc. instead.
+   *
+   * \deprecated Use device_config(), device_notification_irq() and
+   *             Icu::bind() instead.
+   */
   L4_INLINE_RPC(long, register_iface, (L4::Ipc::Cap<L4::Triggerable> guest_irq,
                                        L4::Ipc::Out<L4::Cap<L4::Triggerable> > host_irq,
                                        L4::Ipc::Out<L4::Cap<L4Re::Dataspace> > config_ds));
 
-  typedef L4::Typeid::Rpcs<set_status_t, config_queue_t, register_iface_t, register_ds_t> Rpcs;
+  /**
+   * Get the dataspace with the L4virtio configuration page.
+   *
+   * \param config_ds  Capability for receiving the dataspace capability for
+   *                   the shared L4-VIRTIO config data space.
+   * \param ds_offset  Offset into the dataspace where the device configuration
+   *                   structure starts.
+   */
+  L4_INLINE_RPC(long, device_config, (L4::Ipc::Out<L4::Cap<L4Re::Dataspace> > config_ds,
+                                      l4_addr_t *ds_offset));
+
+  /**
+   * Get the notification interrupt corresponding to the given index.
+   *
+   * \param      index  Index of the interrupt.
+   * \param[out] irq    Triggerable for the given index.
+   *
+   * \retval L4_EOK     Success.
+   * \retval L4_ENOSYS  IRQ notification not supported by device.
+   * \retval <0         Other error.
+   *
+   * An index is only guaranteed to return an IRQ object when the index is
+   * set in one of the device notify index fields. The device must return
+   * the same interrupt for a given index as long as the index is in use.
+   * If an index disappears as a result of a configuration change and then is
+   * reused later, the interrupt is not guaranteed to be the same.
+   *
+   * Interrupts must always be rerequested after a device reset.
+   */
+  L4_INLINE_RPC(long, device_notification_irq,
+                (unsigned index, L4::Ipc::Out<L4::Cap<L4::Triggerable> > irq));
+
+
+  typedef L4::Typeid::Rpcs<set_status_t, config_queue_t, register_iface_t,
+                           register_ds_t, device_config_t,
+                           device_notification_irq_t> Rpcs;
 };
 
 }

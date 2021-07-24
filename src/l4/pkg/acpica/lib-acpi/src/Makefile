@@ -11,7 +11,6 @@ ACPICA_SRC_C_DISASM = \
 	disassembler/dmcstyle.c \
 	disassembler/dmdeferred.c \
 	disassembler/dmnames.c \
-	disassembler/dmobject.c \
 	disassembler/dmopcode.c \
 	disassembler/dmresrc.c \
 	disassembler/dmresrcl.c \
@@ -30,6 +29,7 @@ ACPICA_SRC_C		= \
 	dispatcher/dsmthdat.c \
 	dispatcher/dsobject.c \
 	dispatcher/dsopcode.c \
+	dispatcher/dspkginit.c \
 	dispatcher/dsutils.c \
 	dispatcher/dswexec.c \
 	dispatcher/dswload.c \
@@ -71,6 +71,7 @@ ACPICA_SRC_C		= \
 	executer/exresnte.c \
 	executer/exresolv.c \
 	executer/exresop.c \
+	executer/exserial.c \
 	executer/exstore.c \
 	executer/exstoren.c \
 	executer/exstorob.c \
@@ -81,6 +82,7 @@ ACPICA_SRC_C		= \
 	hardware/hwgpe.c \
 	hardware/hwpci.c \
 	hardware/hwregs.c \
+	hardware/hwtimer.c \
 	hardware/hwsleep.c \
 	hardware/hwesleep.c \
 	hardware/hwvalid.c \
@@ -91,6 +93,7 @@ ACPICA_SRC_C		= \
 	namespace/nsarguments.c \
 	namespace/nsconvert.c \
 	namespace/nsdump.c \
+	namespace/nsdumpdv.c \
 	namespace/nseval.c \
 	namespace/nsinit.c \
 	namespace/nsload.c \
@@ -167,14 +170,18 @@ ACPICA_SRC_C		= \
 	utilities/utosi.c \
 	utilities/utownerid.c \
 	utilities/utpredef.c \
+	utilities/utresdecode.c \
 	utilities/utresrc.c \
 	utilities/utstate.c \
 	utilities/utstring.c \
+	utilities/utstrsuppt.c \
 	utilities/utstrtoul64.c \
+	utilities/uttrack.c \
 	utilities/utuuid.c \
 	utilities/utxface.c \
 	utilities/utxferror.c \
 	utilities/utxfinit.c \
+	utilities/utxfmutex.c \
 
 SRC_C := $(addprefix acpica/components/,$(ACPICA_SRC_C))
 SRC_C += osl-stdio.c debug.c

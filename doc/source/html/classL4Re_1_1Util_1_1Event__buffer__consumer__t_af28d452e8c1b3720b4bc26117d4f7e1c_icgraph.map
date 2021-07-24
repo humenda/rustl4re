@@ -1,0 +1,4 @@
+<map id="L4Re::Util::Event_buffer_consumer_t::foreach_available_event" name="L4Re::Util::Event_buffer_consumer_t::foreach_available_event">
+<area shape="rect" id="node1" title="Call function on every available event." alt="" coords="228,5,501,47"/>
+<area shape="rect" id="node2" href="$classL4Re_1_1Util_1_1Event__buffer__consumer__t.html#a4ed22b41ce4c7e6b93efae878b1415ef" title="Continuously wait for events and process them." alt="" coords="5,5,180,47"/>
+</map>

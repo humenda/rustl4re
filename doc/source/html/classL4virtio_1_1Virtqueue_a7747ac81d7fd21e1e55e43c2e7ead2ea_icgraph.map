@@ -1,3 +1,5 @@
 <map id="L4virtio::Virtqueue::used_size" name="L4virtio::Virtqueue::used_size">
-<area shape="rect" id="node2" href="$classL4virtio_1_1Svr_1_1Device__t.html#ab906b4cc61026fd815a8056f07bef10e" title="Enable/disable the specified queue. " alt="" coords="187,5,384,47"/>
+<area shape="rect" id="node1" title="Calculate the size of the used ring for num entries." alt="" coords="207,39,349,80"/>
+<area shape="rect" id="node2" href="$classL4virtio_1_1Svr_1_1Device__t.html#ab906b4cc61026fd815a8056f07bef10e" title="Enable/disable the specified queue." alt="" coords="5,5,159,47"/>
+<area shape="rect" id="node3" href="$classL4virtio_1_1Virtqueue.html#a96dfd139f3a022e9e2328e28716acdc9" title="Calculate the total size of this virtqueue." alt="" coords="11,71,153,112"/>
 </map>

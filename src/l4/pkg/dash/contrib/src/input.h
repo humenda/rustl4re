@@ -41,26 +41,62 @@ enum {
 	INPUT_NOFILE_OK = 2,
 };
 
+struct alias;
+
+struct strpush {
+	struct strpush *prev;	/* preceding string on stack */
+	char *prevstring;
+	int prevnleft;
+	struct alias *ap;	/* if push was associated with an alias */
+	char *string;		/* remember the string since it may change */
+
+	/* Remember last two characters for pungetc. */
+	int lastc[2];
+
+	/* Number of outstanding calls to pungetc. */
+	int unget;
+};
+
+/*
+ * The parsefile structure pointed to by the global variable parsefile
+ * contains information about the current file being read.
+ */
+
+struct parsefile {
+	struct parsefile *prev;	/* preceding file on stack */
+	int linno;		/* current line */
+	int fd;			/* file descriptor (or -1 if string) */
+	int nleft;		/* number of chars left in this line */
+	int lleft;		/* number of chars left in this buffer */
+	char *nextc;		/* next char in buffer */
+	char *buf;		/* input buffer */
+	struct strpush *strpush; /* for pushing strings at this level */
+	struct strpush basestrpush; /* so pushing one is fast */
+
+	/* Remember last two characters for pungetc. */
+	int lastc[2];
+
+	/* Number of outstanding calls to pungetc. */
+	int unget;
+};
+
+extern struct parsefile *parsefile;
+
 /*
  * The input line number.  Input.c just defines this variable, and saves
  * and restores it when files are pushed and popped.  The user of this
  * package must set its value.
  */
-extern int plinno;
-extern int parsenleft;		/* number of characters left in input buffer */
-extern char *parsenextc;	/* next character in input buffer */
+#define plinno (parsefile->linno)
 
 int pgetc(void);
 int pgetc2(void);
-int preadbuffer(void);
 void pungetc(void);
 void pushstring(char *, void *);
 void popstring(void);
 int setinputfile(const char *, int);
 void setinputstring(char *);
 void popfile(void);
+void unwindfiles(struct parsefile *);
 void popallfiles(void);
 void closescript(void);
-
-#define pgetc_macro() \
-	(--parsenleft >= 0 ? (signed char)*parsenextc++ : preadbuffer())

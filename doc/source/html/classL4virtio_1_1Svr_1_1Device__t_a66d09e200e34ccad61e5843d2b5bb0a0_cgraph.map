@@ -1,0 +1,6 @@
+<map id="L4virtio::Svr::Device_t::register_driver_irq" name="L4virtio::Svr::Device_t::register_driver_irq">
+<area shape="rect" id="node1" title="Callback for registering an notification IRQ (multi IRQ)." alt="" coords="5,5,167,47"/>
+<area shape="rect" id="node2" href="$namespaceL4Re.html#a3f17984019f06676a7e3eecb41bbb0bb" title="Generate C++ exception on error." alt="" coords="469,13,576,39"/>
+<area shape="rect" id="node4" href="$classL4virtio_1_1Svr_1_1Device__t.html#a8047b37ac63d6b5f84bcb1886a06f1b2" title="callback for registering a single guest IRQ for all queues (old&#45;style)" alt="" coords="215,35,421,76"/>
+<area shape="rect" id="node3" href="$namespaceL4Re.html#ae27ac6f274f4ad1267d0d1c0c033c00b" title="Generate C++ exception." alt="" coords="624,13,761,39"/>
+</map>

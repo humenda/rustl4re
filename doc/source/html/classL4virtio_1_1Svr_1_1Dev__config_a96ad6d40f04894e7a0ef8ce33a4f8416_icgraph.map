@@ -1,5 +1,5 @@
 <map id="L4virtio::Svr::Dev_config::status" name="L4virtio::Svr::Dev_config::status">
-<area shape="rect" id="node2" href="$classL4virtio_1_1Svr_1_1Device__t.html#a460f5dc2b32e33a616eb822ffd2f88f0" title="Check for a value in the cmd register and handle a write. " alt="" coords="407,23,567,79"/>
-<area shape="rect" id="node3" href="$classL4virtio_1_1Svr_1_1Device__t.html#a3fa20bf911056f0d03c8274982b1e167" title="Get the memory region list used for this device. " alt="" coords="180,27,359,68"/>
-<area shape="rect" id="node4" href="$classL4virtio_1_1Svr_1_1Dev__config.html#a01556f856334cea1ab98ef40559a5ead" title="Set device status register. " alt="" coords="200,92,339,133"/>
+<area shape="rect" id="node1" title="Get current device status (trusted)." alt="" coords="207,39,341,80"/>
+<area shape="rect" id="node2" href="$classL4virtio_1_1Svr_1_1Device__t.html#a29f780ecb04509d8b72f4a155b073c74" title="Transition device into DEVICE_NEEDS_RESET state." alt="" coords="5,5,159,47"/>
+<area shape="rect" id="node3" href="$classL4virtio_1_1Svr_1_1Dev__config.html#a01556f856334cea1ab98ef40559a5ead" title="Set device status register." alt="" coords="11,71,153,112"/>
 </map>

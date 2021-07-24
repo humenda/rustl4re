@@ -12,7 +12,7 @@
 
 #include "vbus_interfaces.h"
 
-enum
+enum L4vbus_vdevice_op
 {
   L4vbus_vdevice_hid = L4VBUS_INTERFACE_GENERIC << L4VBUS_IFACE_SHIFT,
   L4vbus_vdevice_adr,

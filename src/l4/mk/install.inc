@@ -36,7 +36,7 @@ install:: $(addprefix $(INSTALLDIR)/,$(INSTALL_TARGET))
 ifeq ($(ROLE),prog.mk)
 $(foreach f,$(INSTALL_TARGET),$(INSTALLDIR_LOCAL)/$(f)):$(INSTALLDIR_LOCAL)/%:%
 	@$(INSTALL_LOCAL_MESSAGE)
-	$(if $(INSTALLFILE_LOCAL),$(call create_dir,$(dir $@)))
+	$(VERBOSE)$(if $(INSTALLFILE_LOCAL),$(call create_dir,$(dir $@)))
 	$(VERBOSE)$(call INSTALLFILE_LOCAL,$<,$@)
 else
 # with others, we symlink
@@ -56,7 +56,7 @@ endif
 
 $(foreach f,$(INSTALL_TARGET),$(INSTALLDIR)/$(f)):$(INSTALLDIR)/%:%
 	@$(INSTALL_MESSAGE)
-	$(if $(INSTALLFILE),$(call create_dir,$(dir $@)))
+	$(VERBOSE)$(if $(INSTALLFILE),$(call create_dir,$(dir $@)))
 	$(VERBOSE)$(call INSTALLFILE,$<,$@)
 
 # unconditionally install on "make install"

@@ -10,10 +10,11 @@
 #include <typeinfo>
 
 #include <l4/cxx/ref_ptr>
+#include <l4/cxx/unique_ptr>
 #include <l4/re/util/cap_alloc>
 #include <l4/re/util/unique_cap>
 #include <l4/re/env>
-#include <l4/sys/task>
+#include <l4/sys/vm>
 #include <l4/sys/l4int.h>
 #include <l4/sys/types.h>
 #include <l4/util/util.h>
@@ -21,7 +22,9 @@
 #include "device.h"
 #include "vcpu_ptr.h"
 #include "mem_access.h"
+#include "mem_types.h"
 #include "consts.h"
+#include "ds_manager.h"
 
 namespace Vmm {
 
@@ -34,7 +37,7 @@ struct Mmio_device : public virtual Vdev::Dev_ref
   virtual ~Mmio_device() = 0;
 
   bool mergable(cxx::Ref_ptr<Mmio_device> other,
-                l4_addr_t start_other, l4_addr_t start_this)
+                Guest_addr start_other, Guest_addr start_this)
   {
     if (typeid (*this) != typeid (*other.get()))
       return false;
@@ -42,48 +45,63 @@ struct Mmio_device : public virtual Vdev::Dev_ref
   };
 
   /**
-   * Check whether a superpage containing address is inside a region
+   * Check whether a log2-sized page containing address is inside a region
    *
-   * \param addr     address to check
-   * \param start    start of region.
-   * \param end      end of region; do not check end of region if end is zero.
-   * \return true if there is a superpage containing the address
+   * \param align    log2 of the page alignment.
+   * \param addr     Address to check.
+   * \param start    Start of region.
+   * \param end      Last byte of region; do not check end of region if zero.
+   * \return true if there is a log2-aligned page containing the address
    *                 inside the region
    */
-  inline bool sp_in_range(l4_addr_t addr, l4_addr_t start, l4_addr_t end)
-
+  inline bool log2_page_in_range(unsigned char align, l4_addr_t addr,
+                                 l4_addr_t start, l4_addr_t end) const
   {
-    auto superpage = l4_trunc_size(addr, L4_SUPERPAGESHIFT);
-    return    (start <= superpage)
-           && (!end || ((superpage + L4_SUPERPAGESIZE - 1) <= end));
+    auto log2page = l4_trunc_size(addr, align);
+    return    start <= log2page
+           && (!end || (log2page + (1UL << align) - 1) <= end);
   }
+
+  inline bool log2_alignment_compatible(unsigned char align, l4_addr_t addr1,
+                                        l4_addr_t addr2) const
+  { return (addr1 & ((1UL << align) - 1)) == (addr2 & ((1UL << align) - 1)); }
 
   /**
    * Calculate log_2(pagesize) for a location in a region
    *
    * \param addr     Guest-physical address where the access occurred.
    * \param start    Guest-physical address of start of memory region.
-   * \param end      Guest-physical address of end of memory region.
+   * \param end      Guest-physical address of last byte of memory region.
    * \param offset   Accessed address relative to the beginning of the region.
    * \param l_start  Local address of start of memory region.
    * \param l_end    Local address of end of memory region, default 0.
-   * \return largest possible pageshift (currently either L4_PAGESHIFT
-   *                 or L4_SUPERPAGESHIFT)
+   *
+   * \return largest possible pageshift.
    */
   inline char get_page_shift(l4_addr_t addr, l4_addr_t start, l4_addr_t end,
-                                 l4_addr_t offset, l4_addr_t l_start,
-                                 l4_addr_t l_end = 0)
+                             l4_addr_t offset, l4_addr_t l_start,
+                             l4_addr_t l_end = 0) const
   {
-    // Check whether a superpage is inside the regions
-    if (   !sp_in_range(addr, start, end)
-        || !sp_in_range(l_start + offset, l_start, l_end))
+    if (end <= start)
       return L4_PAGESHIFT;
 
-    // Check whether both regions have a compatible alignment
-    if ((start & (L4_SUPERPAGESIZE - 1)) != (l_start & (L4_SUPERPAGESIZE - 1)))
-      return L4_PAGESHIFT;
+    // Start with a reasonable maximum value: log2 of the memory region size
+    l4_addr_t const size = end - start + 1;
+    unsigned char align = sizeof(l4_addr_t) * 8 - (__builtin_clzl(size) + 1);
+    for (; align > L4_PAGESHIFT; --align)
+      {
+        // Check whether a log2-sized page is inside the regions
+        if (   !log2_page_in_range(align, addr, start, end)
+            || !log2_page_in_range(align, l_start + offset, l_start, l_end))
+          continue;
 
-    return L4_SUPERPAGESHIFT;
+        if (!log2_alignment_compatible(align, start, l_start))
+          continue;
+
+        return align;
+      }
+
+    return L4_PAGESHIFT;
   }
 
   /**
@@ -97,8 +115,8 @@ struct Mmio_device : public virtual Vdev::Dev_ref
    * This function iterates over the specified local area and maps
    * everything into the address space of the guest.
    */
-  void map_guest_range(L4::Cap<L4::Task> vm_task, l4_addr_t dest, l4_addr_t src,
-                       l4_size_t size, unsigned attr);
+  void map_guest_range(L4::Cap<L4::Vm> vm_task, Vmm::Guest_addr dest,
+                       l4_addr_t src, l4_size_t size, unsigned attr);
 
 
   /**
@@ -110,33 +128,29 @@ struct Mmio_device : public virtual Vdev::Dev_ref
    * This function iterates over the local area associated with the region and
    * tries to map everything into the address space of the guest if possible.
    */
-  virtual void map_eager(L4::Cap<L4::Task> vm_task, l4_addr_t start,
-                         l4_addr_t end) = 0;
+  virtual void map_eager(L4::Cap<L4::Vm> vm_task, Vmm::Guest_addr start,
+                         Vmm::Guest_addr end) = 0;
 
   /**
    * Page in memory for specified address.
    *
-   * \param addr        An address to page in memory for
-   * \retval 0          Success
-   * \retval L4_EINVAL  Either address is not valid or the address is not
-   *                    writable
+   * \param addr         An address to page in memory for
+   * \retval 0           Success
+   * \retval L4_ENOMEM   Address is not valid
+   * \retval L4_EACCESS  Address is not writable or executable
    *
-   * \retval <0         IPC errors
+   * \retval <0          IPC errors
    */
   long page_in(l4_addr_t addr, bool writable)
   {
     auto *e = L4Re::Env::env();
-    l4_mword_t result = 0;
     L4::Ipc::Snd_fpage rfp;
 
     l4_msgtag_t msgtag = e->rm()
-      ->page_fault(((addr & L4_PAGEMASK) | (writable ? 2 : 0)), -3UL, result,
+      ->page_fault(((addr & L4_PAGEMASK) | (writable ? 2 : 0)), -3UL,
                    L4::Ipc::Rcv_fpage::mem(0, L4_WHOLE_ADDRESS_SPACE, 0),
                    rfp);
-    if (!l4_error(msgtag))
-      return result != -1 ? L4_EOK : -L4_EINVAL;
-    else
-      return l4_error(msgtag);
+    return l4_error(msgtag);
   }
 
   /**
@@ -156,7 +170,7 @@ struct Mmio_device : public virtual Vdev::Dev_ref
    * \
    */
   virtual int access(l4_addr_t pfa, l4_addr_t offset, Vcpu_ptr vcpu,
-                     L4::Cap<L4::Task> vm_task, l4_addr_t s, l4_addr_t e) = 0;
+                     L4::Cap<L4::Vm> vm_task, l4_addr_t s, l4_addr_t e) = 0;
   virtual char const *dev_info(char *buf, size_t size) const
   {
     if (size > 0)
@@ -169,8 +183,8 @@ struct Mmio_device : public virtual Vdev::Dev_ref
 
 private:
   virtual bool _mergable(cxx::Ref_ptr<Mmio_device> /* other */,
-                         l4_addr_t /* start_other */,
-                         l4_addr_t /* start_this */)
+                         Guest_addr /* start_other */,
+                         Guest_addr /* start_this */)
   { return false; }
 };
 
@@ -193,7 +207,7 @@ template<typename DEV>
 struct Mmio_device_t : Mmio_device
 {
   int access(l4_addr_t pfa, l4_addr_t offset, Vcpu_ptr vcpu,
-             L4::Cap<L4::Task>, l4_addr_t, l4_addr_t) override
+             L4::Cap<L4::Vm>, l4_addr_t, l4_addr_t) override
   {
     auto insn = vcpu.decode_mmio();
 
@@ -222,7 +236,7 @@ struct Mmio_device_t : Mmio_device
     return Jump_instr;
   }
 
-  void map_eager(L4::Cap<L4::Task>, l4_addr_t, l4_addr_t) override
+  void map_eager(L4::Cap<L4::Vm>, Vmm::Guest_addr, Vmm::Guest_addr) override
   {} // nothing to map
 
 private:
@@ -245,7 +259,7 @@ template<typename BASE>
 struct Ro_ds_mapper_t : Mmio_device
 {
   int access(l4_addr_t pfa, l4_addr_t offset, Vcpu_ptr vcpu,
-             L4::Cap<L4::Task> vm_task, l4_addr_t min, l4_addr_t max) override
+             L4::Cap<L4::Vm> vm_task, l4_addr_t min, l4_addr_t max) override
   {
     auto insn = vcpu.decode_mmio();
 
@@ -277,14 +291,16 @@ struct Ro_ds_mapper_t : Mmio_device
     return Jump_instr;
   }
 
-  void map_eager(L4::Cap<L4::Task> vm_task, l4_addr_t start,
-                 l4_addr_t end) override
+  void map_eager(L4::Cap<L4::Vm> vm_task, Vmm::Guest_addr start,
+                 Vmm::Guest_addr end) override
   {
 #ifndef MAP_OTHER
     l4_size_t size = end - start + 1;
     if (size > dev()->mapped_mmio_size())
       size = dev()->mapped_mmio_size();
     map_guest_range(vm_task, start, dev()->local_addr(), size, L4_FPAGE_RX);
+#else
+  (void)vm_task; (void)start; (void)end;
 #endif
   }
 
@@ -316,11 +332,12 @@ struct Ro_ds_mapper_t : Mmio_device
     return Mem_access::read_width(local_addr() + offset, width);
   }
 
-  void map_mmio(l4_addr_t pfa, l4_addr_t offset, L4::Cap<L4::Task> vm_task,
+  void map_mmio(l4_addr_t pfa, l4_addr_t offset, L4::Cap<L4::Vm> vm_task,
                 l4_addr_t min, l4_addr_t max)
   {
 #ifdef MAP_OTHER
-    auto res = dev()->mmio_ds()->map(offset, 0, pfa, min, max, vm_task);
+    auto res = dev()->mmio_ds()->map(offset, L4Re::Dataspace::F::RX, pfa,
+                                     min, max, vm_task);
 #else
     auto local_start = local_addr();
 
@@ -334,7 +351,7 @@ struct Ro_ds_mapper_t : Mmio_device
         // client.
         unsigned char ps =
           get_page_shift(pfa, min, max, offset, local_start,
-                         local_start + dev()->mapped_mmio_size());
+                         local_start + dev()->mapped_mmio_size() - 1);
         l4_addr_t base = l4_trunc_size(local_start + offset, ps);
 
         res = l4_error(vm_task->map(L4Re::This_task,
@@ -391,37 +408,30 @@ struct Read_mapped_mmio_device_t : Ro_ds_mapper_t<BASE>
    *       the area then needs to be emulated as in the standard MMIO device.
    */
   explicit Read_mapped_mmio_device_t(l4_size_t size,
-                                     unsigned rm_flags = L4Re::Rm::Cache_uncached)
-  : _mapped_size(size)
+                                     L4Re::Rm::Flags rm_flags = L4Re::Rm::F::Cache_uncached)
   {
     auto *e = L4Re::Env::env();
-    auto ds = L4Re::chkcap(L4Re::Util::make_unique_del_cap<L4Re::Dataspace>());
+
+    L4Re::Util::Ref_cap<L4Re::Dataspace>::Cap ds
+      = L4Re::chkcap(L4Re::Util::make_ref_cap<L4Re::Dataspace>());
+
     L4Re::chksys(e->mem_alloc()->alloc(size, ds.get()));
-
-    rm_flags |= L4Re::Rm::Search_addr | L4Re::Rm::Eager_map;
-    L4Re::Rm::Unique_region<T *> mem;
-    L4Re::chksys(e->rm()->attach(&mem, size, rm_flags,
-                                 L4::Ipc::make_cap_rw(ds.get())));
-
-    _mmio_region = cxx::move(mem);
-    _ds = cxx::move(ds);
+    _mgr = cxx::make_unique<Ds_manager>(ds, 0, size, rm_flags.region_flags()
+                                                     | L4Re::Rm::F::RW);
+    _mgr->local_addr<void *>();
   }
 
   l4_size_t mapped_mmio_size() const
-  { return _mapped_size; }
+  { return _mgr->size(); }
 
   L4::Cap<L4Re::Dataspace> mmio_ds() const
-  { return _ds.get(); }
+  { return _mgr->dataspace().get(); }
 
   T *mmio_local_addr() const
-  { return _mmio_region.get(); }
+  { return _mgr->local_addr<T *>(); }
 
 private:
-  L4Re::Util::Unique_del_cap<L4Re::Dataspace> _ds;
-
-protected:
-  L4Re::Rm::Unique_region<T *> _mmio_region;
-  l4_size_t _mapped_size;
+  cxx::unique_ptr<Ds_manager> _mgr;
 };
 
 inline Mmio_device::~Mmio_device() = default;

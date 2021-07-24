@@ -4,7 +4,7 @@ bootstrap supports different boot modi.
 For x86:
 
   1)
-     boostrap is started by a multiboot compliant bootloader and modules are
+     bootstrap is started by a multiboot compliant bootloader and modules are
      attached as multiboot modules. GRUB example:
 
        kernel bootstrap arg1 args2 ...

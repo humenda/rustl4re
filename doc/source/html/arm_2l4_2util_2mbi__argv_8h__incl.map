@@ -1,6 +1,8 @@
 <map id="arm/l4/util/mbi_argv.h" name="arm/l4/util/mbi_argv.h">
-<area shape="rect" id="node2" href="$x86_2l4_2util_2mbi__argv_8h.html" title="command line handling " alt="" coords="27,80,181,107"/>
-<area shape="rect" id="node3" href="$l4_2sys_2l4int_8h.html" title="Fixed sized integer types, generic version. " alt="" coords="5,229,104,256"/>
-<area shape="rect" id="node4" href="$mb__info_8h.html" title="Multiboot info structure as defined by GRUB. " alt="" coords="45,155,163,181"/>
-<area shape="rect" id="node5" href="$compiler_8h.html" title="L4 compiler related defines. " alt="" coords="187,155,314,181"/>
+<area shape="rect" id="node1" title="Multiboot." alt="" coords="26,5,191,32"/>
+<area shape="rect" id="node2" href="$x86_2l4_2util_2mbi__argv_8h.html" title="command line handling" alt="" coords="27,80,190,107"/>
+<area shape="rect" id="node3" href="$l4_2sys_2l4int_8h.html" title="Fixed sized integer types, generic version." alt="" coords="5,229,111,256"/>
+<area shape="rect" id="node4" href="$mb__info_8h.html" title="Multiboot info structure as defined by GRUB." alt="" coords="45,155,173,181"/>
+<area shape="rect" id="node5" href="$compiler_8h.html" title="L4 compiler related defines." alt="" coords="197,155,329,181"/>
+<area shape="rect" id="node6" title=" " alt="" coords="202,229,325,256"/>
 </map>

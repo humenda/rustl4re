@@ -1,6 +1,3 @@
 <map id="Graphical Class Hierarchy" name="Graphical Class Hierarchy">
-<area shape="rect" id="node1" href="$structL4_1_1Types_1_1Bool.html" title="L4::Types::Bool\&lt; true \&gt;" alt="" coords="5,46,171,73"/>
-<area shape="rect" id="node2" href="$structL4_1_1Types_1_1True.html" title="True meta value. " alt="" coords="219,46,337,73"/>
-<area shape="rect" id="node3" href="$structL4_1_1Ipc_1_1Msg_1_1Is__valid__rpc__type.html" title="L4::Ipc::Msg::Is_valid\l_rpc_type\&lt; A *\&gt;" alt="" coords="385,5,536,47"/>
-<area shape="rect" id="node4" href="$structL4_1_1Ipc_1_1Msg_1_1Is__valid__rpc__type.html" title="Type trait defining a valid RPC parameter type. " alt="" coords="385,71,536,112"/>
+<area shape="rect" id="node1" href="$unionl4__msg__regs__t.html" title="Encapsulation of the message&#45;register block in the UTCB." alt="" coords="5,5,121,32"/>
 </map>

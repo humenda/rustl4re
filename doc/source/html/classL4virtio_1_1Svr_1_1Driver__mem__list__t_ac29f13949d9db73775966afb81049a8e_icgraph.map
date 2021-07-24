@@ -1,3 +1,5 @@
 <map id="L4virtio::Svr::Driver_mem_list_t::find" name="L4virtio::Svr::Driver_mem_list_t::find">
-<area shape="rect" id="node2" href="$classL4virtio_1_1Svr_1_1Device__t.html#ab906b4cc61026fd815a8056f07bef10e" title="Enable/disable the specified queue. " alt="" coords="192,5,389,47"/>
+<area shape="rect" id="node1" title="Find memory region containing the given driver address region." alt="" coords="228,39,376,80"/>
+<area shape="rect" id="node2" href="$classL4virtio_1_1Svr_1_1Driver__mem__list__t.html#a270520dc38853577d41834c95148eb43" title="Default implementation for loading an indirect descriptor." alt="" coords="5,5,180,47"/>
+<area shape="rect" id="node3" href="$classL4virtio_1_1Svr_1_1Device__t.html#ab906b4cc61026fd815a8056f07bef10e" title="Enable/disable the specified queue." alt="" coords="16,71,169,112"/>
 </map>

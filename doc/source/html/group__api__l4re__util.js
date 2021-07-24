@@ -1,11 +1,11 @@
 var group__api__l4re__util =
 [
-    [ "Kumem utiltities", "group__l4re__util__kumem.html", "group__l4re__util__kumem" ],
-    [ "L4Re Capability API", "group__l4re__cap__api.html", "group__l4re__cap__api" ],
+    [ "Kumem utiltities", "group__l4re__util__kumem.html", null ],
+    [ "L4Re Capability API", "group__l4re__cap__api.html", null ],
     [ "Smart_cap_auto", "classL4Re_1_1Smart__cap__auto.html", null ],
     [ "Cap_alloc_base", "classL4Re_1_1Util_1_1Cap__alloc__base.html", [
-      [ "alloc", "classL4Re_1_1Util_1_1Cap__alloc__base.html#a1f778e439544f9118287ade4e055ce1c", null ],
-      [ "free", "classL4Re_1_1Util_1_1Cap__alloc__base.html#a31c89aaa2ab78ca277cedad435a52162", null ]
+      [ "alloc", "classL4Re_1_1Util_1_1Cap__alloc__base.html#aaca35a0ee9a762411d88720ec48589e7", null ],
+      [ "free", "classL4Re_1_1Util_1_1Cap__alloc__base.html#afe4cbd695e9050e2827d17e7e960e67d", null ]
     ] ],
     [ "Br_manager", "classL4Re_1_1Util_1_1Br__manager.html", [
       [ "Br_manager", "classL4Re_1_1Util_1_1Br__manager.html#a9a58e2029692a47257671d53c6bca492", null ],
@@ -19,19 +19,19 @@ var group__api__l4re__util =
       [ "setup_wait", "classL4Re_1_1Util_1_1Br__manager.html#a9921eb68b599590eab08aaf503d7d3df", null ]
     ] ],
     [ "Counting_cap_alloc", "classL4Re_1_1Util_1_1Counting__cap__alloc.html", [
-      [ "Counting_cap_alloc", "classL4Re_1_1Util_1_1Counting__cap__alloc.html#a9f18bbc07ffa2bb6d83be5cf368a3ba0", null ],
-      [ "alloc", "classL4Re_1_1Util_1_1Counting__cap__alloc.html#a74c8a55d97d844b8228d0a378ab48d34", null ],
-      [ "alloc", "classL4Re_1_1Util_1_1Counting__cap__alloc.html#a4f4222a51bf36d9f597a3417170e52a6", null ],
-      [ "free", "classL4Re_1_1Util_1_1Counting__cap__alloc.html#aecd7d5744bae1cbdc6da24a9c443f8bb", null ],
-      [ "last", "classL4Re_1_1Util_1_1Counting__cap__alloc.html#ac6cc62bb721bb31002b99b892717e262", null ],
-      [ "release", "classL4Re_1_1Util_1_1Counting__cap__alloc.html#a256ec4df19309885a394418848121081", null ],
-      [ "setup", "classL4Re_1_1Util_1_1Counting__cap__alloc.html#a35040fe51730adb1ae89ba685104dbe3", null ],
-      [ "take", "classL4Re_1_1Util_1_1Counting__cap__alloc.html#a2ab8f6c0583e98cd7e1e4fe9a36c02fb", null ]
+      [ "Counting_cap_alloc", "classL4Re_1_1Util_1_1Counting__cap__alloc.html#a849f1a48f5f9f29d974b1d7bb000d1ef", null ],
+      [ "alloc", "classL4Re_1_1Util_1_1Counting__cap__alloc.html#a0ae2cdee30f100b8df9f5ea63fa2d31a", null ],
+      [ "alloc", "classL4Re_1_1Util_1_1Counting__cap__alloc.html#a7620032a3a03d07e70b95f92776e82c2", null ],
+      [ "free", "classL4Re_1_1Util_1_1Counting__cap__alloc.html#a4f65c951a2cc3aae899c67e1ef325a8a", null ],
+      [ "last", "classL4Re_1_1Util_1_1Counting__cap__alloc.html#aa1caa6e0b07fa3b34e5690825d2ed4bd", null ],
+      [ "release", "classL4Re_1_1Util_1_1Counting__cap__alloc.html#aa27af115ce976a4073a5c53f09a88ee4", null ],
+      [ "setup", "classL4Re_1_1Util_1_1Counting__cap__alloc.html#a846a529e791401a6b301b40c4d7d9c71", null ],
+      [ "take", "classL4Re_1_1Util_1_1Counting__cap__alloc.html#a0139ab5116b54be7efe539f1d1e98741", null ]
     ] ],
     [ "Event_buffer_t", "classL4Re_1_1Util_1_1Event__buffer__t.html", [
-      [ "attach", "classL4Re_1_1Util_1_1Event__buffer__t.html#af8bab7db99fa72c6e88dc3152158ff02", null ],
-      [ "buf", "classL4Re_1_1Util_1_1Event__buffer__t.html#ac3e96caab5b6b8f715c45c26dc74099d", null ],
-      [ "detach", "classL4Re_1_1Util_1_1Event__buffer__t.html#a2a890642127e5b6ab079d4d870f4d38e", null ]
+      [ "attach", "classL4Re_1_1Util_1_1Event__buffer__t.html#a7ccb828618951c13cd1ccd7ebe1959e2", null ],
+      [ "buf", "classL4Re_1_1Util_1_1Event__buffer__t.html#a54fc4248a2f189f750dc55e5fada193a", null ],
+      [ "detach", "classL4Re_1_1Util_1_1Event__buffer__t.html#a64b1b0c692062cef44f1fdd07ed98278", null ]
     ] ],
     [ "Event_buffer_consumer_t", "classL4Re_1_1Util_1_1Event__buffer__consumer__t.html", [
       [ "foreach_available_event", "classL4Re_1_1Util_1_1Event__buffer__consumer__t.html#af28d452e8c1b3720b4bc26117d4f7e1c", null ],

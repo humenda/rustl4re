@@ -1,5 +1,5 @@
 var structl4re__ds__stats__t =
 [
-    [ "flags", "structl4re__ds__stats__t.html#ad769f520cb4adea7947135c467988335", null ],
-    [ "size", "structl4re__ds__stats__t.html#a8d3036ea6573820db84828d618981405", null ]
+    [ "flags", "structl4re__ds__stats__t.html#a194a58a2ecc118aa6108779433db6d08", null ],
+    [ "size", "structl4re__ds__stats__t.html#a2856017930046897a266f17f942bb3c0", null ]
 ];

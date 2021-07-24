@@ -36,7 +36,7 @@ static inline void rmb() { asm volatile ("dsb ishld" : : : "memory"); }
 #elif defined(__mips__)
 static inline void wmb() { asm volatile ("sync" : : : "memory"); }
 static inline void rmb() { asm volatile ("sync" : : : "memory"); }
-#elif defined(__amd64__) || defined (__i686__)
+#elif defined(__amd64__) || defined(__i386__) || defined(__i686__)
 static inline void wmb() { asm volatile ("sfence" : : : "memory"); }
 static inline void rmb() { asm volatile ("lfence" : : : "memory"); }
 #else
@@ -83,6 +83,8 @@ private:
  *
  * This class represents a single virtqueue, with a local running available
  * index.
+ *
+ * \note The Virtqueue implementation is not thread-safe.
  */
 class Virtqueue
 {
@@ -467,6 +469,8 @@ namespace Driver {
  *
  * Adds function for managing the descriptor list, enqueueing new
  * and dequeueing finished requests.
+ *
+ * \note The Virtqueue implementation is not thread-safe.
  */
 class Virtqueue : public L4virtio::Virtqueue
 {
@@ -558,7 +562,6 @@ public:
    */
   l4_uint16_t alloc_descriptor()
   {
-    // XXX needs to be locked
     l4_uint16_t idx = _next_free;
     if (idx == Eoq)
       return Eoq;
@@ -578,7 +581,6 @@ public:
     if (descno > _idx_mask)
       throw L4::Bounds_error();
 
-    // TODO lock required
     _avail->ring[_avail->idx & _idx_mask] = descno; // _avail->idx expected to wrap
     wmb();
     ++_avail->idx;
@@ -611,7 +613,6 @@ public:
    */
   l4_uint16_t find_next_used(l4_uint32_t *len = nullptr)
   {
-    // TODO lock required
     if (_current_avail == _used->idx)
       return Eoq;
 
@@ -637,7 +638,6 @@ public:
     if (head > _idx_mask || tail > _idx_mask)
       throw L4::Bounds_error();
 
-    // TODO lock required
     _desc[tail].next = _next_free;
     _next_free = head;
   }

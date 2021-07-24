@@ -31,6 +31,10 @@ class Platform_arm_rcar3 : public Platform_base,
     kuart.base_baud    = 14745600;
     kuart.baud         = 115200;
     kuart.irqno        = 196;
+    kuart.access_type  = L4_kernel_options::Uart_type_mmio;
+    kuart_flags       |=   L4_kernel_options::F_uart_base
+                         | L4_kernel_options::F_uart_baud
+                         | L4_kernel_options::F_uart_irq;
     static L4::Uart_sh _uart;
     static L4::Io_register_block_mmio r(kuart.base_address);
     _uart.startup(&r);
@@ -45,7 +49,7 @@ class Platform_arm_rcar3 : public Platform_base,
     l4_uint32_t prr = *(l4_uint32_t*)0xFFF00044;
     l4_uint32_t ufamily = (prr & 0xff00) >> 8;
     const char *sfamily = NULL;
-    mem_manager->ram->add(Region(0x048000000, 0x07fffffff, ".ram", Region::Ram));
+    mem_manager->ram->add(Region(RAM_BASE,    0x07fffffff, ".ram", Region::Ram));
     mem_manager->ram->add(Region(0x600000000, 0x63fffffff, ".ram", Region::Ram));
     switch (ufamily)
       {
@@ -75,9 +79,7 @@ class Platform_arm_rcar3 : public Platform_base,
 
   void reboot()
   {
-    // Call PSCI-SYSTEM_RESET
-    register unsigned long r0 asm("r0") = 0x84000009;
-    asm volatile("smc #0" : : "r" (r0));
+    reboot_psci();
   }
 };
 }

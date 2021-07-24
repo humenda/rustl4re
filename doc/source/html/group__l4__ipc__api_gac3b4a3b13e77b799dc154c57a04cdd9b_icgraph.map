@@ -1,3 +1,5 @@
 <map id="l4_ipc_sleep" name="l4_ipc_sleep">
-<area shape="rect" id="node2" href="$group__l4util__api.html#ga3a74b4dee439a339ed5a6368845cad37" title="Go sleep and never wake up. " alt="" coords="155,5,283,32"/>
+<area shape="rect" id="node1" title="Sleep for an amount of time." alt="" coords="184,31,287,57"/>
+<area shape="rect" id="node2" href="$group__l4util__api.html#ga3a74b4dee439a339ed5a6368845cad37" title="Go sleep and never wake up." alt="" coords="5,5,136,32"/>
+<area shape="rect" id="node3" href="$group__l4util__api.html#ga88934d990c73f40eebe52998d894ff69" title="Suspend thread for a period of us microseconds." alt="" coords="29,56,113,83"/>
 </map>

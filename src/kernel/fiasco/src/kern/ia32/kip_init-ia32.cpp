@@ -18,6 +18,7 @@ public:
   static void setup_kmem_region (Address kmem_base, Address kmem_size);
 };
 
+//----------------------------------------------------------------------------
 IMPLEMENTATION [!ux]:
 
 PRIVATE static inline
@@ -25,6 +26,7 @@ void
 Kip_init::setup_ux(Kip *)
 {}
 
+//----------------------------------------------------------------------------
 IMPLEMENTATION [ia32,ux,amd64]:
 
 #include <cstring>
@@ -48,7 +50,7 @@ namespace KIP_namespace
 {
   enum
   {
-    Num_mem_descs = 50,
+    Num_mem_descs = 64,
     Max_len_version = 512,
 
     Size_mem_descs = sizeof(Mword) * 2 * Num_mem_descs,
@@ -74,7 +76,7 @@ namespace KIP_namespace
 	/* 50/A0  */ 0, (sizeof(Kip) << (sizeof(Mword)*4)) | Num_mem_descs, {},
 	/* 60/C0  */ {},
 	/* A0/140 */ 0, 0, 0, 0,
-	/* B0/160 */ {},
+	/* B8/160 */ {},
 	/* E0/1C0 */ 0, 0, {},
 	/* F0/1D0 */ {"", 0}, {},
       },
@@ -91,8 +93,7 @@ void Kip_init::init()
 
   Kip::init_global_kip(kinfo);
 
-  Kip::k()->clock = 0;
-  Kip::k()->sched_granularity = Config::Scheduler_granularity;
+  Kip::k()->clock(0);
 
   setup_user_virtual(kinfo);
 
@@ -120,7 +121,33 @@ void Kip_init::init()
     }
 }
 
+PUBLIC static FIASCO_INIT
+void
+Kip_init::init_kip_clock()
+{
+  union K
+  {
+    Kip       k;
+    Unsigned8 b[Config::PAGE_SIZE];
+  };
+  extern char kip_time_fn_read_us[];
+  extern char kip_time_fn_read_us_end[];
+  extern char kip_time_fn_read_ns[];
+  extern char kip_time_fn_read_ns_end[];
 
+  K *k = reinterpret_cast<K *>(Kip::k());
+
+  Cpu cpu = Cpu::cpus.cpu(Cpu_number::boot_cpu());
+  *(Mword*)(k->b + 0x9f0) = cpu.get_scaler_tsc_to_us();
+  *(Mword*)(k->b + 0x9f8) = cpu.get_scaler_tsc_to_ns();
+
+  memcpy(k->b + 0x900, kip_time_fn_read_us,
+         kip_time_fn_read_us_end - kip_time_fn_read_us);
+  memcpy(k->b + 0x980, kip_time_fn_read_ns,
+         kip_time_fn_read_ns_end - kip_time_fn_read_ns);
+}
+
+//----------------------------------------------------------------------------
 IMPLEMENTATION [amd64]:
 
 PRIVATE static inline NOEXPORT NEEDS["kip.h"]
@@ -132,6 +159,7 @@ Kip_init::reserve_amd64_hole()
 	                   Mem_desc::Reserved, true));
 }
 
+//----------------------------------------------------------------------------
 IMPLEMENTATION [!amd64]:
 
 PRIVATE static inline NOEXPORT
@@ -139,6 +167,7 @@ void
 Kip_init::reserve_amd64_hole()
 {}
 
+//---------------------------------------------------------------------------
 IMPLEMENTATION [!ux]:
 
 PUBLIC static FIASCO_INIT

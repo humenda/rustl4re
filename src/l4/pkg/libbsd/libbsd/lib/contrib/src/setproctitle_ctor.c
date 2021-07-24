@@ -49,4 +49,4 @@
  * move them from .ctors to .init_array.
  */
 void (*libbsd_init_func)(int argc, char *argv[], char *envp[])
-	__attribute__((section(".init_array"))) = setproctitle_init;
+	__attribute__((__section__(".init_array"))) = setproctitle_init;

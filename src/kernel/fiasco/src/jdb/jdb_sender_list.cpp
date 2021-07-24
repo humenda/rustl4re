@@ -15,7 +15,9 @@ class Jdb_sender_list : public Jdb_module, public Jdb_kobject_handler
 public:
   Jdb_sender_list() FIASCO_INIT;
 
-  virtual bool show_kobject(Kobject_common *, int) { return true; }
+  bool show_kobject(Kobject_common *, int) override
+  { return true; }
+
 private:
   static Kobject *object;
 };
@@ -27,33 +29,34 @@ Kobject *Jdb_sender_list::object;
 
 PRIVATE
 void
-Jdb_sender_list::show_sender_list(Prio_list *t, int overlayprint,
-                                  int printnone,
+Jdb_sender_list::show_sender_list(Prio_list *t,
+                                  int overlayprint, int printnone,
                                   const char *tag = 0, unsigned long dbgid = 0)
 {
   if (overlayprint)
     {
-      puts(Jdb_screen::Line);
-      Jdb::clear_to_eol();
+      Jdb::line();
+      putchar('\n');
     }
 
   Prio_list::P_list::Iterator p = t->begin();
   if (p == t->end())
     {
-      if (overlayprint)
-        Jdb::clear_to_eol();
       if (printnone)
-        printf("%s (%lx): Nothing in sender list\n", tag, dbgid);
+        {
+          printf("%s (%lx): Nothing in sender list", tag, dbgid);
+          if (overlayprint)
+            Jdb::clear_to_eol();
+          putchar('\n');
+        }
       if (overlayprint)
-        puts(Jdb_screen::Line);
+        Jdb::line();
       return;
     }
 
   bool first = true;
   for (; p != t->end(); ++p)
     {
-      if (overlayprint)
-        Jdb::clear_to_eol();
       if (first)
         {
           printf("%s (%lx): ", tag, dbgid);
@@ -69,11 +72,13 @@ Jdb_sender_list::show_sender_list(Prio_list *t, int overlayprint,
           ++s;
         }
       while (*s != *p);
-      puts("");
+      if (overlayprint)
+        Jdb::clear_to_eol();
+      putchar('\n');
     }
 
   if (overlayprint)
-    puts(Jdb_screen::Line);
+    Jdb::line();
 }
 
 PRIVATE
@@ -96,7 +101,7 @@ Jdb_sender_list::show_obj(Kobject *o, int printnone)
 
 PUBLIC
 Jdb_module::Action_code
-Jdb_sender_list::action(int cmd, void *&, char const *&, int &)
+Jdb_sender_list::action(int cmd, void *&, char const *&, int &) override
 {
   if (cmd)
     return NOTHING;
@@ -113,7 +118,7 @@ Jdb_sender_list::action(int cmd, void *&, char const *&, int &)
 
 PUBLIC
 bool
-Jdb_sender_list::handle_key(Kobject_common *o, int keycode)
+Jdb_sender_list::handle_key(Kobject_common *o, int keycode) override
 {
   if (keycode != 'S')
     return false;
@@ -130,11 +135,21 @@ Jdb_sender_list::handle_key(Kobject_common *o, int keycode)
 }
 
 PUBLIC
-int Jdb_sender_list::num_cmds() const
+char const *
+Jdb_sender_list::help_text(Kobject_common *o) const override
+{
+  if (cxx::dyn_cast<Thread *>(o) || cxx::dyn_cast<Ipc_gate_obj *>(o))
+    return "S=sndlist";
+
+  return 0;
+}
+
+PUBLIC
+int Jdb_sender_list::num_cmds() const override
 { return 1; }
 
 PUBLIC
-Jdb_module::Cmd const * Jdb_sender_list::cmds() const
+Jdb_module::Cmd const * Jdb_sender_list::cmds() const override
 {
   static Cmd cs[] =
     {

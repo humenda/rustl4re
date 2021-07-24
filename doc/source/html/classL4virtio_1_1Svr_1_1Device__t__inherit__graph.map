@@ -1,4 +1,5 @@
 <map id="L4virtio::Svr::Device_t&lt; DATA &gt;" name="L4virtio::Svr::Device_t&lt; DATA &gt;">
-<area shape="rect" id="node2" href="$classL4virtio_1_1Svr_1_1Device__t.html" title="{L4virtio::Svr::Device\l_t\&lt; Ds_data \&gt;\n|# _mem_info\l|+ L4_RPC_LEGACY_DISPATCH()\l+ virtio_dispatch()\l+ reset()\l+ check_queues()\l+ reconfig_queue()\l+ register_single_driver_irq()\l+ device_notify_irq()\l+ server_iface()\l+ Device_t()\l+ mem_info()\land 10 more...\l}" alt="" coords="5,307,245,545"/>
-<area shape="rect" id="node3" href="$classL4virtio_1_1Svr_1_1Block__dev.html" title="Base class for virtio block devices. " alt="" coords="40,595,211,936"/>
+<area shape="rect" id="node1" title="Server&#45;side L4&#45;VIRTIO device stub." alt="" coords="5,5,228,273"/>
+<area shape="rect" id="node2" href="$classL4virtio_1_1Svr_1_1Device__t.html" title=" " alt="" coords="5,336,228,604"/>
+<area shape="rect" id="node3" href="$classL4virtio_1_1Svr_1_1Block__dev__base.html" title="Base class for virtio block devices." alt="" coords="27,653,206,1053"/>
 </map>

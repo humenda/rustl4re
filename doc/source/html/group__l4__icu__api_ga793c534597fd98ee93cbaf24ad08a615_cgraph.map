@@ -1,4 +1,5 @@
 <map id="l4_icu_bind" name="l4_icu_bind">
-<area shape="rect" id="node2" href="$group__l4__icu__api.html#ga29217a67f405c5d860002dd902bf71e4" title="Bind an interrupt line of an interrupt controller to an interrupt object. " alt="" coords="145,5,252,32"/>
-<area shape="rect" id="node3" href="$group__l4__utcb__api.html#gadc099b4a59e1d99638c72c11a8c8b644" title="Get the UTCB address. " alt="" coords="165,56,232,83"/>
+<area shape="rect" id="node1" title="Bind an interrupt line of an interrupt controller to an interrupt object." alt="" coords="5,31,100,57"/>
+<area shape="rect" id="node2" href="$group__l4__icu__api.html#ga29217a67f405c5d860002dd902bf71e4" title="Bind an interrupt line of an interrupt controller to an interrupt object." alt="" coords="148,5,259,32"/>
+<area shape="rect" id="node3" href="$group__l4__utcb__api.html#gadc099b4a59e1d99638c72c11a8c8b644" title="Get the UTCB address." alt="" coords="169,56,238,83"/>
 </map>

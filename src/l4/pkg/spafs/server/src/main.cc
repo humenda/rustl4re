@@ -102,7 +102,7 @@ Fprov_server::Fprov_server(L4::Cap<L4Re::Dataspace> ds)
 
   _addr = 0;
   if ((ret = L4Re::Env::env()->rm()
-               ->attach(&_addr, ds->size(), L4Re::Rm::Search_addr,
+               ->attach(&_addr, ds->size(), L4Re::Rm::F::Search_addr | L4Re::Rm::F::RW,
                         L4::Ipc::make_cap_rw(ds))))
     {
       printf("Attach of dataspace failed with error %d\n", ret);
@@ -213,7 +213,7 @@ public:
     if (type != 0 && type != L4Re::Namespace::Protocol)
       return -L4_ENODEV;
 
-    L4::Ipc::Varg name = args.next();
+    L4::Ipc::Varg name = args.pop_front();
     if (!name.is_of<char const *>())
       return -L4_EINVAL;
 

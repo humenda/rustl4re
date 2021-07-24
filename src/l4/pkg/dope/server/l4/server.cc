@@ -303,7 +303,7 @@ Dope_fb::Dope_fb(L4::Ipc::Varg_list_ref is)
 
   dope_registry->register_obj(this);
 
-  for (L4::Ipc::Varg opt = is.next(); !opt.is_nil(); opt = is.next())
+  for (auto opt: is)
     {
       if (!opt.is_of<char const *>())
         {
@@ -459,13 +459,13 @@ public:
           }
       case 0: // dope iface
           {
-            L4::Ipc::Varg arg = args.next();
+            L4::Ipc::Varg arg = args.pop_front();
             if (!arg.is_of<char const*>())
               return -L4_EINVAL;
-            unsigned long size = 100;
+            const unsigned size = 250;
             char s[size];
             strncpy(s, arg.value<char const*>(), cxx::min<int>(size, arg.length()));
-            s[size] = 0;
+            s[size - 1] = 0;
             Dope_app *x = new Dope_app(s);
             obj = L4::Ipc::make_cap(x->obj_cap(), L4_CAP_FPAGE_RWD);
             return L4_EOK;

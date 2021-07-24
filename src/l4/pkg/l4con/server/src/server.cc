@@ -16,30 +16,24 @@
 
 #include <l4/sys/capability>
 #include <l4/sys/factory>
-#include <l4/cxx/ipc_timeout_queue>
 #include <l4/sys/cxx/ipc_epiface>
-#include <l4/cxx/minmax>
 
-#include <cstdio>
 #include <l4/l4con/l4con.h>
-#include <l4/input/libinput.h>
 
-#include <l4/re/util/video/goos_svr>
-#include <l4/re/util/video/goos_fb>
-#include <l4/re/util/event_svr>
-#include <l4/re/util/event_buffer>
 #include <l4/re/util/cap_alloc>
 #include <l4/re/util/unique_cap>
-#include <l4/re/console>
+#include <l4/re/util/event_buffer>
+
+#include <cstdio>
 
 #include "object_registry_gc"
 #include "main.h"
 #include "l4con.h"
-#include "gmode.h"
 #include "srv.h"
 #include "vc.h"
 
-// XXX: why is this in the L4Re::Util namespace ???
+#include "vc"
+
 struct My_hooks :
   L4::Ipc_svr::Ignore_errors,
   L4::Ipc_svr::Timeout_queue_hooks<My_hooks, L4Re::Util::Br_manager>
@@ -49,81 +43,7 @@ struct My_hooks :
 };
 
 static L4::Server<My_hooks> con_server(l4_utcb());
-static L4Re::Util::Object_registry_gc
-                              con_registry(&con_server,
-                                           L4Re::Env::env()->main_thread(),
-                                           L4Re::Env::env()->factory());
-
-class Vc : public L4Re::Util::Video::Goos_svr,
-           public L4Re::Util::Event_svr<Vc>,
-	   public L4::Epiface_t<Vc, L4con>,
-	   public l4con_vc
-{
-public:
-  using L4Re::Util::Video::Goos_svr::op_info;
-  using L4Re::Util::Event_svr<Vc>::op_info;
-
-  explicit Vc();
-  ~Vc();
-
-  void setup_info(l4con_vc *vc);
-  void reg_fbds(l4_cap_idx_t c);
-  void send_event(l4input *ev);
-  int create_event();
-
-  long close();
-
-  long op_close(L4con::Rights)
-  { return close(); }
-
-  long op_pslim_fill(L4con::Rights, int x, int y, int w, int h,
-                     l4con_pslim_color_t color)
-  {
-    l4con_pslim_rect_t r(x, y, w, h);
-    return con_vc_pslim_fill_component(this, &r, color);
-  }
-
-  long op_pslim_copy(L4con::Rights, int x, int y, int w, int h,
-                     l4_int16_t dx, l4_int16_t dy)
-  {
-    l4con_pslim_rect_t r(x, y, w, h);
-    return con_vc_pslim_copy_component(this, &r, dx, dy);
-  }
-
-  long op_puts(L4con::Rights, short x, short y, l4con_pslim_color_t fg_color,
-               l4con_pslim_color_t bg_color,
-               L4::Ipc::Array_in_buf<char, unsigned long> const &text)
-  {
-      return con_vc_puts_component(this, text.data, text.length, x, y,
-                                   fg_color, bg_color);
-  }
-
-  long op_puts_scale(L4con::Rights, short x, short y, l4con_pslim_color_t fg_color,
-                     l4con_pslim_color_t bg_color, short scale_x, short scale_y,
-                     L4::Ipc::Array_in_buf<char, unsigned long> const &text)
-  {
-      return con_vc_puts_scale_component(this, text.data, text.length, x, y,
-                                         fg_color, bg_color, scale_x, scale_y);
-  }
-
-  long op_get_font_size(L4con::Rights, short &w, short &h)
-  {
-    w = FONT_XRES;
-    h = FONT_YRES;
-    return L4_EOK;
-  }
-
-
-  virtual int refresh(int x, int y, int w, int h);
-
-  void reset_event_buffer() { evbuf.reset(); }
-private:
-  L4Re::Util::Event_buffer evbuf;
-};
-
-Vc::Vc()
-{
-}
+static Object_registry_gc con_registry(&con_server);
 
 int
 Vc::refresh(int x, int y, int w, int h)
@@ -169,6 +89,39 @@ Vc::~Vc()
   con_vc_close_component(this);
 }
 
+long
+Vc::op_pslim_fill(L4con::Rights, int x, int y, int w, int h,
+                     l4con_pslim_color_t color)
+{
+  l4con_pslim_rect_t r(x, y, w, h);
+  return con_vc_pslim_fill_component(this, &r, color);
+}
+
+long
+Vc::op_pslim_copy(L4con::Rights, int x, int y, int w, int h,
+                   l4_int16_t dx, l4_int16_t dy)
+{
+  l4con_pslim_rect_t r(x, y, w, h);
+  return con_vc_pslim_copy_component(this, &r, dx, dy);
+}
+
+long
+Vc::op_puts(L4con::Rights, short x, short y, l4con_pslim_color_t fg_color,
+             l4con_pslim_color_t bg_color,
+             L4::Ipc::Array_in_buf<char, unsigned long> const &text)
+{
+  return con_vc_puts_component(this, text.data, text.length, x, y,
+                                 fg_color, bg_color);
+}
+
+long
+Vc::op_puts_scale(L4con::Rights, short x, short y, l4con_pslim_color_t fg_color,
+                   l4con_pslim_color_t bg_color, short scale_x, short scale_y,
+                   L4::Ipc::Array_in_buf<char, unsigned long> const &text)
+{
+  return con_vc_puts_scale_component(this, text.data, text.length, x, y,
+                                       fg_color, bg_color, scale_x, scale_y);
+}
 
 extern "C" l4con_vc *alloc_vc()
 { return new Vc(); }
@@ -237,7 +190,7 @@ public:
     if (connum < 0)
       return -L4_ENOMEM;
 
-    con_registry.register_obj_with_gc((Vc *)vc[connum], 0);
+    con_registry.register_obj_with_gc((Vc *)vc[connum]);
 
     obj = L4::Ipc::make_cap(((Vc *)vc[connum])->obj_cap(), L4_CAP_FPAGE_RWSD);
     return L4_EOK;
@@ -245,24 +198,9 @@ public:
 };
 
 // ---------------------------------------------------------------
-struct Periodic : L4::Ipc_svr::Timeout_queue::Timeout
-{
-  void expired()
-  {
-    periodic_work();
-    con_registry.gc_run(500);
-    con_server.queue.add(this, timeout() + REQUEST_TIMEOUT_DELTA);
-  }
-};
-
-static Periodic periodic;
-
 int server_loop(void)
 {
   static Controller ctrl;
-  con_server.queue.add(&periodic,
-                       l4_kip_clock(l4re_kip()) + REQUEST_TIMEOUT_DELTA);
-
   if (!con_registry.register_obj(&ctrl, "con"))
     {
       printf("Service registration failed.\n");
@@ -270,6 +208,6 @@ int server_loop(void)
     }
 
   printf("Ready. Waiting for clients\n");
-  con_server.loop<L4::Runtime_error, L4Re::Util::Object_registry_gc &>(con_registry);
+  con_server.loop<L4::Runtime_error, Object_registry_gc &>(con_registry);
   return 0;
 }

@@ -27,14 +27,21 @@
 #ifndef LIBBSD_NLIST_H
 #define LIBBSD_NLIST_H
 
+#ifdef LIBBSD_OVERLAY
 #include <sys/cdefs.h>
+#else
+#include <bsd/sys/cdefs.h>
+#endif
 
 struct nlist {
 	union {
 		char *n_name;
-		struct n_list *n_next;
-		long n_strx;
-	} n_un;
+		union {
+			char *n_name;
+			struct n_list *n_next;
+			long n_strx;
+		} n_un;
+	};
 	unsigned char n_type;
 	char n_other;
 	short n_desc;

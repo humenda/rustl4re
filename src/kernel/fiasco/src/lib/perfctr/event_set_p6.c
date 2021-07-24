@@ -1,4 +1,4 @@
-/* $Id: event_set_p6.c 37048 2009-11-12 21:44:56Z adam $
+/* $Id$
  * Performance counter event descriptions for the Intel P6 family.
  *
  * Copyright (C) 2003-2004  Mikael Pettersson

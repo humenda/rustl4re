@@ -12,8 +12,8 @@
 #include <l4/util/port_io.h>
 #include <l4/cxx/static_container>
 
-#include <cassert>
-#include <cstdio>
+#include <assert.h>
+#include <stdio.h>
 
 /** VGA console output */
 
@@ -301,7 +301,7 @@ struct Pci_iterator
             else
               ++dev;
           }
-        else if (func < 8)
+        else if (func < 7)
           ++func;
         else
           {
@@ -589,6 +589,10 @@ struct Pci_com_moschip : public Pci_com_drv
 {
   bool setup(Pci_iterator const &dev, Serial_board *board) const
   {
+    // only subclass 0x0 is the serial port, subclass 0x1 is the parallel port
+    if (dev.subclass() != 0x00)
+      return false;
+
     read_bars(dev, board);
 
     int first_port = board->first_io_bar();
@@ -972,7 +976,5 @@ public:
             printf("UART init failed\n");
           }
       }
-    else
-      kuart_flags |= L4_kernel_options::F_noserial;
   }
 };

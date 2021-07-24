@@ -9,7 +9,7 @@
  *
  * 1. Copyright Notice
  *
- * Some or all of this work - Copyright (c) 1999 - 2017, Intel Corp.
+ * Some or all of this work - Copyright (c) 1999 - 2019, Intel Corp.
  * All rights reserved.
  *
  * 2. License
@@ -112,10 +112,45 @@
  * other governmental approval, or letter of assurance, without first obtaining
  * such license, approval or letter.
  *
+ *****************************************************************************
+ *
+ * Alternatively, you may choose to be licensed under the terms of the
+ * following license:
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions, and the following disclaimer,
+ *    without modification.
+ * 2. Redistributions in binary form must reproduce at minimum a disclaimer
+ *    substantially similar to the "NO WARRANTY" disclaimer below
+ *    ("Disclaimer") and any redistribution must be conditioned upon
+ *    including a substantially similar Disclaimer requirement for further
+ *    binary redistribution.
+ * 3. Neither the names of the above-listed copyright holders nor the names
+ *    of any contributors may be used to endorse or promote products derived
+ *    from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+ * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * Alternatively, you may choose to be licensed under the terms of the
+ * GNU General Public License ("GPL") version 2 as published by the Free
+ * Software Foundation.
+ *
  *****************************************************************************/
 
 #include "aslcompiler.h"
-#include "dtcompiler.h"
 
 #define _COMPONENT          DT_COMPILER
         ACPI_MODULE_NAME    ("dtparser")
@@ -131,7 +166,7 @@ int                         DtParserlex (void);
 int                         DtParserparse (void);
 void                        DtParsererror (char const *msg);
 extern char                 *DtParsertext;
-extern DT_FIELD             *Gbl_CurrentField;
+extern DT_FIELD             *AslGbl_CurrentField;
 
 UINT64                      DtParserResult; /* Expression return value */
 
@@ -158,26 +193,26 @@ UINT64                      DtParserResult; /* Expression return value */
 
 %type  <value>  Expression
 
-%token <op>     EXPOP_EOF
-%token <op>     EXPOP_NEW_LINE
-%token <op>     EXPOP_NUMBER
-%token <op>     EXPOP_HEX_NUMBER
-%token <op>     EXPOP_DECIMAL_NUMBER
-%token <op>     EXPOP_LABEL
-%token <op>     EXPOP_PAREN_OPEN
-%token <op>     EXPOP_PAREN_CLOSE
+%token <op>     OP_EXP_EOF
+%token <op>     OP_EXP_NEW_LINE
+%token <op>     OP_EXP_NUMBER
+%token <op>     OP_EXP_HEX_NUMBER
+%token <op>     OP_EXP_DECIMAL_NUMBER
+%token <op>     OP_EXP_LABEL
+%token <op>     OP_EXP_PAREN_OPEN
+%token <op>     OP_EXP_PAREN_CLOSE
 
-%left <op>      EXPOP_LOGICAL_OR
-%left <op>      EXPOP_LOGICAL_AND
-%left <op>      EXPOP_OR
-%left <op>      EXPOP_XOR
-%left <op>      EXPOP_AND
-%left <op>      EXPOP_EQUAL EXPOP_NOT_EQUAL
-%left <op>      EXPOP_GREATER EXPOP_LESS EXPOP_GREATER_EQUAL EXPOP_LESS_EQUAL
-%left <op>      EXPOP_SHIFT_RIGHT EXPOP_SHIFT_LEFT
-%left <op>      EXPOP_ADD EXPOP_SUBTRACT
-%left <op>      EXPOP_MULTIPLY EXPOP_DIVIDE EXPOP_MODULO
-%right <op>     EXPOP_ONES_COMPLIMENT EXPOP_LOGICAL_NOT
+%left <op>      OP_EXP_LOGICAL_OR
+%left <op>      OP_EXP_LOGICAL_AND
+%left <op>      OP_EXP_OR
+%left <op>      OP_EXP_XOR
+%left <op>      OP_EXP_AND
+%left <op>      OP_EXP_EQUAL OP_EXP_NOT_EQUAL
+%left <op>      OP_EXP_GREATER OP_EXP_LESS OP_EXP_GREATER_EQUAL OP_EXP_LESS_EQUAL
+%left <op>      OP_EXP_SHIFT_RIGHT OP_EXP_SHIFT_LEFT
+%left <op>      OP_EXP_ADD OP_EXP_SUBTRACT
+%left <op>      OP_EXP_MULTIPLY OP_EXP_DIVIDE OP_EXP_MODULO
+%right <op>     OP_EXP_ONES_COMPLIMENT OP_EXP_LOGICAL_NOT
 
 %%
 
@@ -198,58 +233,65 @@ UINT64                      DtParserResult; /* Expression return value */
  *  12)     ||
  */
 Value
-    : Expression EXPOP_NEW_LINE                     { DtParserResult=$1; return 0; } /* End of line (newline) */
-    | Expression EXPOP_EOF                          { DtParserResult=$1; return 0; } /* End of string (0) */
+    : Expression OP_EXP_NEW_LINE                     { DtParserResult=$1; return 0; } /* End of line (newline) */
+    | Expression OP_EXP_EOF                          { DtParserResult=$1; return 0; } /* End of string (0) */
     ;
 
 Expression
 
       /* Unary operators */
 
-    : EXPOP_LOGICAL_NOT         Expression          { $$ = DtDoOperator ($2, EXPOP_LOGICAL_NOT,     $2);}
-    | EXPOP_ONES_COMPLIMENT     Expression          { $$ = DtDoOperator ($2, EXPOP_ONES_COMPLIMENT, $2);}
+    : OP_EXP_LOGICAL_NOT         Expression          { $$ = DtDoOperator ($2, OP_EXP_LOGICAL_NOT,     $2);}
+    | OP_EXP_ONES_COMPLIMENT     Expression          { $$ = DtDoOperator ($2, OP_EXP_ONES_COMPLIMENT, $2);}
 
       /* Binary operators */
 
-    | Expression EXPOP_MULTIPLY         Expression  { $$ = DtDoOperator ($1, EXPOP_MULTIPLY,        $3);}
-    | Expression EXPOP_DIVIDE           Expression  { $$ = DtDoOperator ($1, EXPOP_DIVIDE,          $3);}
-    | Expression EXPOP_MODULO           Expression  { $$ = DtDoOperator ($1, EXPOP_MODULO,          $3);}
-    | Expression EXPOP_ADD              Expression  { $$ = DtDoOperator ($1, EXPOP_ADD,             $3);}
-    | Expression EXPOP_SUBTRACT         Expression  { $$ = DtDoOperator ($1, EXPOP_SUBTRACT,        $3);}
-    | Expression EXPOP_SHIFT_RIGHT      Expression  { $$ = DtDoOperator ($1, EXPOP_SHIFT_RIGHT,     $3);}
-    | Expression EXPOP_SHIFT_LEFT       Expression  { $$ = DtDoOperator ($1, EXPOP_SHIFT_LEFT,      $3);}
-    | Expression EXPOP_GREATER          Expression  { $$ = DtDoOperator ($1, EXPOP_GREATER,         $3);}
-    | Expression EXPOP_LESS             Expression  { $$ = DtDoOperator ($1, EXPOP_LESS,            $3);}
-    | Expression EXPOP_GREATER_EQUAL    Expression  { $$ = DtDoOperator ($1, EXPOP_GREATER_EQUAL,   $3);}
-    | Expression EXPOP_LESS_EQUAL       Expression  { $$ = DtDoOperator ($1, EXPOP_LESS_EQUAL,      $3);}
-    | Expression EXPOP_EQUAL            Expression  { $$ = DtDoOperator ($1, EXPOP_EQUAL,           $3);}
-    | Expression EXPOP_NOT_EQUAL        Expression  { $$ = DtDoOperator ($1, EXPOP_NOT_EQUAL,       $3);}
-    | Expression EXPOP_AND              Expression  { $$ = DtDoOperator ($1, EXPOP_AND,             $3);}
-    | Expression EXPOP_XOR              Expression  { $$ = DtDoOperator ($1, EXPOP_XOR,             $3);}
-    | Expression EXPOP_OR               Expression  { $$ = DtDoOperator ($1, EXPOP_OR,              $3);}
-    | Expression EXPOP_LOGICAL_AND      Expression  { $$ = DtDoOperator ($1, EXPOP_LOGICAL_AND,     $3);}
-    | Expression EXPOP_LOGICAL_OR       Expression  { $$ = DtDoOperator ($1, EXPOP_LOGICAL_OR,      $3);}
+    | Expression OP_EXP_MULTIPLY         Expression  { $$ = DtDoOperator ($1, OP_EXP_MULTIPLY,        $3);}
+    | Expression OP_EXP_DIVIDE           Expression  { $$ = DtDoOperator ($1, OP_EXP_DIVIDE,          $3);}
+    | Expression OP_EXP_MODULO           Expression  { $$ = DtDoOperator ($1, OP_EXP_MODULO,          $3);}
+    | Expression OP_EXP_ADD              Expression  { $$ = DtDoOperator ($1, OP_EXP_ADD,             $3);}
+    | Expression OP_EXP_SUBTRACT         Expression  { $$ = DtDoOperator ($1, OP_EXP_SUBTRACT,        $3);}
+    | Expression OP_EXP_SHIFT_RIGHT      Expression  { $$ = DtDoOperator ($1, OP_EXP_SHIFT_RIGHT,     $3);}
+    | Expression OP_EXP_SHIFT_LEFT       Expression  { $$ = DtDoOperator ($1, OP_EXP_SHIFT_LEFT,      $3);}
+    | Expression OP_EXP_GREATER          Expression  { $$ = DtDoOperator ($1, OP_EXP_GREATER,         $3);}
+    | Expression OP_EXP_LESS             Expression  { $$ = DtDoOperator ($1, OP_EXP_LESS,            $3);}
+    | Expression OP_EXP_GREATER_EQUAL    Expression  { $$ = DtDoOperator ($1, OP_EXP_GREATER_EQUAL,   $3);}
+    | Expression OP_EXP_LESS_EQUAL       Expression  { $$ = DtDoOperator ($1, OP_EXP_LESS_EQUAL,      $3);}
+    | Expression OP_EXP_EQUAL            Expression  { $$ = DtDoOperator ($1, OP_EXP_EQUAL,           $3);}
+    | Expression OP_EXP_NOT_EQUAL        Expression  { $$ = DtDoOperator ($1, OP_EXP_NOT_EQUAL,       $3);}
+    | Expression OP_EXP_AND              Expression  { $$ = DtDoOperator ($1, OP_EXP_AND,             $3);}
+    | Expression OP_EXP_XOR              Expression  { $$ = DtDoOperator ($1, OP_EXP_XOR,             $3);}
+    | Expression OP_EXP_OR               Expression  { $$ = DtDoOperator ($1, OP_EXP_OR,              $3);}
+    | Expression OP_EXP_LOGICAL_AND      Expression  { $$ = DtDoOperator ($1, OP_EXP_LOGICAL_AND,     $3);}
+    | Expression OP_EXP_LOGICAL_OR       Expression  { $$ = DtDoOperator ($1, OP_EXP_LOGICAL_OR,      $3);}
 
       /* Parentheses: '(' Expression ')' */
 
-    | EXPOP_PAREN_OPEN          Expression
-        EXPOP_PAREN_CLOSE                           { $$ = $2;}
+    | OP_EXP_PAREN_OPEN          Expression
+        OP_EXP_PAREN_CLOSE                           { $$ = $2;}
 
       /* Label references (prefixed with $) */
 
-    | EXPOP_LABEL                                   { $$ = DtResolveLabel (DtParsertext);}
+    | OP_EXP_LABEL                                   { $$ = DtResolveLabel (DtParsertext);}
 
-      /* Default base for a non-prefixed integer is 16 */
+      /*
+       * All constants for the data table compiler are in hex, whether a (optional) 0x
+       * prefix is present or not. For example, these two input strings are equivalent:
+       *    1234
+       *    0x1234
+       */
 
-    | EXPOP_NUMBER                                  { AcpiUtStrtoul64 (DtParsertext, (ACPI_STRTOUL_BASE16 | ACPI_STRTOUL_64BIT), &$$);}
+      /* Non-prefixed hex number */
+
+    | OP_EXP_NUMBER                                  { $$ = DtDoConstant (DtParsertext);}
 
       /* Standard hex number (0x1234) */
 
-    | EXPOP_HEX_NUMBER                              { AcpiUtStrtoul64 (DtParsertext, (ACPI_STRTOUL_BASE16 | ACPI_STRTOUL_64BIT), &$$);}
+    | OP_EXP_HEX_NUMBER                              { $$ = DtDoConstant (DtParsertext);}
 
-      /* TBD: Decimal number with prefix (0d1234) - Not supported by strtoul64 at this time */
+      /* Possible TBD: Decimal number with prefix (0d1234) - Not supported this time */
 
-    | EXPOP_DECIMAL_NUMBER                          { AcpiUtStrtoul64 (DtParsertext, ACPI_STRTOUL_64BIT, &$$);}
+    | OP_EXP_DECIMAL_NUMBER                          { $$ = DtDoConstant (DtParsertext);}
     ;
 %%
 
@@ -258,7 +300,7 @@ Expression
 /*
  * Local support functions, including parser entry point
  */
-#define PR_FIRST_PARSE_OPCODE   EXPOP_EOF
+#define PR_FIRST_PARSE_OPCODE   OP_EXP_EOF
 #define PR_YYTNAME_START        3
 
 
@@ -279,7 +321,7 @@ DtParsererror (
     char const              *Message)
 {
     DtError (ASL_ERROR, ASL_MSG_SYNTAX,
-        Gbl_CurrentField, (char *) Message);
+        AslGbl_CurrentField, (char *) Message);
 }
 
 
@@ -287,7 +329,7 @@ DtParsererror (
  *
  * FUNCTION:    DtGetOpName
  *
- * PARAMETERS:  ParseOpcode         - Parser token (EXPOP_*)
+ * PARAMETERS:  ParseOpcode         - Parser token (OP_EXP_*)
  *
  * RETURN:      Pointer to the opcode name
  *
@@ -302,7 +344,7 @@ DtGetOpName (
 #ifdef ASL_YYTNAME_START
     /*
      * First entries (PR_YYTNAME_START) in yytname are special reserved names.
-     * Ignore first 6 characters of name (EXPOP_)
+     * Ignore first 6 characters of name (OP_EXP_)
      */
     return ((char *) yytname
         [(ParseOpcode - PR_FIRST_PARSE_OPCODE) + PR_YYTNAME_START] + 6);
@@ -339,7 +381,7 @@ DtEvaluateExpression (
     if (DtInitLexer (ExprString))
     {
         DtError (ASL_ERROR, ASL_MSG_COMPILER_INTERNAL,
-            Gbl_CurrentField, "Could not initialize lexer");
+            AslGbl_CurrentField, "Could not initialize lexer");
         return (0);
     }
 

@@ -1,3 +1,4 @@
 <map id="operator&lt;&lt;" name="operator&lt;&lt;">
-<area shape="rect" id="node2" href="$classL4_1_1Ipc_1_1Ostream.html#a143eae895a15ac555c7ae7279812bff7" title="Extract the L4 message tag from the stream. " alt="" coords="145,5,295,32"/>
+<area shape="rect" id="node1" title="Insert the L4 message tag into the stream s." alt="" coords="5,5,104,32"/>
+<area shape="rect" id="node2" href="$classL4_1_1Ipc_1_1Ostream.html#a143eae895a15ac555c7ae7279812bff7" title="Extract the L4 message tag from the stream." alt="" coords="152,5,309,32"/>
 </map>

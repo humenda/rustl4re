@@ -15,7 +15,7 @@ USE_M_FLAG := $(if $(call checkcc,-m32),1)
 M_FLAG = $(if $(USE_M_FLAG),-m$(1))
 
 checkbuild = $(shell if    $(CC) $(call M_FLAG,$(1)) \
-                                 -c -o /dev/null $(SRC_DIR)/syscall.c \
+                                 -c -o /dev/null $(SRC_DIR)/syscall.c 2> /dev/null \
                         && echo 'int main(){}' | $(CC) $(call M_FLAG,$(1)) \
 			                               -o /dev/null -x c - \
                         > /dev/null 2>&1 ; then echo 1; fi)
@@ -35,10 +35,8 @@ cmd_link = $(HOST_CC) $(call M_FLAG,$(2)) -shared -Wl,--no-as-needed \
            -Wl,-soname,$(1) $(LIBDL-$(HOST_SYSTEM)) -o $(1)
 else
 ifeq ($(HOST_SYSTEM),darwin)
-LIB     := $(OBJ_DIR)/libgendep.so
-cmd_link = $(HOST_CC) $(call M_FLAG,$(2)) -dynamiclib -o $(1)
-$(LIB): $(LIB32) $(LIB64)
-	lipo -create $^ -output $@
+LIB     := $(LIB96)
+cmd_link = $(HOST_CC) -dynamiclib -o $(1)
 else
 $(error Your host system type "$(HOST_SYSTEM)" is not supported here. Fix me.)
 endif
@@ -59,24 +57,26 @@ endif
 all:: $(LIB)
 
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.c $(SRC_DIR)/Makefile
+	$(VERBOSE)$(call create_dir,$(@D))
 	$(CC) $(CFLAGS) -c $< -o $@
 
 $(OBJ_DIR)/%.32.o: $(SRC_DIR)/%.c $(SRC_DIR)/Makefile
+	$(VERBOSE)$(call create_dir,$(@D))
 	$(CC) $(CFLAGS) -m32 -c $< -o $@
 
 $(OBJ_DIR)/%.64.o: $(SRC_DIR)/%.c $(SRC_DIR)/Makefile
+	$(VERBOSE)$(call create_dir,$(@D))
 	$(CC) $(CFLAGS) -m64 -c $< -o $@
 
 $(LIB96): $(OBJS96) $(SRC_DIR)/Makefile
-	$(MKDIR) $(OBJ_DIR)
 	$(call cmd_link,$@) $(OBJS96)
 
 $(LIB32): $(OBJS32) $(SRC_DIR)/Makefile
-	$(MKDIR) $(OBJ_DIR)/32
+	$(VERBOSE)$(call create_dir,$(OBJ_DIR)/32)
 	$(call cmd_link,$@,32) $(OBJS32)
 
 $(LIB64): $(OBJS64) $(SRC_DIR)/Makefile
-	$(MKDIR) $(OBJ_DIR)/64
+	$(VERBOSE)$(call create_dir,$(OBJ_DIR)/64)
 	$(call cmd_link,$@,64) $(OBJS64)
 
 doc: $(MAN)

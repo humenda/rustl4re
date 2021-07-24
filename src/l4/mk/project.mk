@@ -4,8 +4,7 @@ BID_PRJ_DIR_MAX_DEPTH ?= 4
 ifneq ($(S),)
 # handle explicit subdir builds here
 
-comma := ,
-ALL_SUBDIRS   := $(subst :, ,$(subst $(comma), ,$(S)))
+ALL_SUBDIRS   := $(subst :, ,$(subst $(BID_COMMA), ,$(S)))
 
 BID_DCOLON_TARGETS := all clean cleanall install scrub DROPSCONF_CONFIG_MK_POST_HOOK
 
@@ -55,7 +54,7 @@ $(error Missing Control files: $(filter-out $(wildcard $(addsuffix /Control,$(BU
 endif
 
 BID_STATE_FILE = $(OBJ_DIR)/BUILD.state
-BID_SAFE_STATE = @echo 'BID_STATE_DONE+=$@' >> $(BID_STATE_FILE)
+BID_SAVE_STATE = @echo 'BID_STATE_DONE+=$@' >> $(BID_STATE_FILE)
 
 # a working heuristic
 PRJ_DIRS := \
@@ -125,7 +124,7 @@ include $(OBJ_DIR)/.Package.deps
 $(ALL_SUBDIRS):%:%/Makefile BID_cont_reset
 	@$(PKG_MESSAGE)
 	$(VERBOSE)PWD=$(PWD)/$@ $(MAKE) -C $@ all
-	$(VERBOSE)$(BID_SAFE_STATE)
+	$(VERBOSE)$(BID_SAVE_STATE)
 
 install::
 	$(VERBOSE)set -e; for i in $(BUILD_SUBDIRS); do \

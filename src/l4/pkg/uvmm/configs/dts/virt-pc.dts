@@ -1,5 +1,10 @@
 /*
  * Device tree for a virtual machine without any hardware pass-through.
+ *
+ * Information sources:
+ *  https://github.com/devicetree-org/devicetree-specification/releases/tag/v0.3
+ *  For PCI reg cell encoding:
+ *    https://www.devicetree.org/open-firmware/bindings/pci/pci2_1.pdf
  */
 
 /dts-v1/;
@@ -10,17 +15,30 @@
         model = "L4 VM";
         compatible = "l4,virt", "linux,dummy-virt";
 
+        memory@0 {
+            device_type = "memory";
+            reg = <0x0 0x00000000 0x0 0x80000000
+                   0x1 0x00000000 0xffffffff 0x0>;
+            l4vmm,dscap = "ram";
+        };
+
         IOAPIC: ioapic {
             compatible = "intel,ioapic";
             interrupt-controller;
             #interrupt-cells = <1>;
         };
 
+        msi_ctrl: msictrl {
+            compatible = "intel,msi-controller";
+            msi-controller;
+            #msi-cells = <0>;
+        };
+
         cpus {
           #address-cells = <1>;
           #size-cells = <0>;
 
-            cpu0 {
+            cpu0: cpu@0 {
                 device_type = "cpu";
                 compatible = "virt-intel";
                 reg = <0>;
@@ -28,12 +46,40 @@
                 #address-cells = <2>;
                 #size-cells = <2>;
             };
+
+            cpu1: cpu@1 {
+                device_type = "cpu";
+                compatible = "virt-intel";
+                reg = <1>;
+
+                #address-cells = <2>;
+                #size-cells = <2>;
+            };
+        };
+
+        PIC: pic {
+          compatible = "virt-i8259-pic";
+          reg = <0x0 0x0 0x0 0x0>;
+          msi-parent = <&msi_ctrl>;
+          interrupt-controller;
+          #interrupt-cells = <1>;
         };
 
         pit {
           compatible = "virt-pit";
           reg = <0x0 0x0 0x0 0x0>;
-          interrupt-parent = <&IOAPIC>;
+          interrupt-parent = <&PIC>;
+          interrupts = <0>;
+        };
+
+        acpi_platform {
+          compatible = "virt-acpi";
+          interrupt-parent = <&PIC>;
+          interrupts = <9>;
+        };
+
+        acpi_timer {
+           compatible = "acpi-timer";
         };
 
         rtc {
@@ -41,31 +87,61 @@
             reg = <0x0 0x0 0x0 0x0>;
         };
 
+        uart8250 {
+          compatible = "ns8250", "uart,8250";
+          reg = <0x0 0x0 0x0 0x0>;
+          interrupt-parent = <&PIC>;
+          interrupts = <4>;
+          l4vmm,vcon_cap = "uart";
+        };
+
+        kvm_clock {
+            compatible = "kvm-clock";
+            reg = <0x0 0x0 0x0 0x0>;
+        };
+
         pci0: pci@aaaa0000 {
             compatible = "virt-pci-bridge";
-            // reg 1: MMIO memory area for PCI devices
+            // reg 1: MMIO memory region for PCI devices
             reg = <0x0 0xaaaa0000 0x0 0x00010000>;
             interrupt-parent = <&IOAPIC>;
+            msi-parent = <&msi_ctrl>;
             bus-range = <0x0 0xff>;
             #address-cells = <3>;
             #size-cells = <2>;
             #interrupt-cells = <1>;
-            // first cell encodes IO[24], MMIO(32[25],64[26:25]), Prefetch[30]
+            // The first cell encodes in the upper 8-bits the following
+            // information:
+            // The register type is determined by the bits set in the following
+            // fields: I/O port [24], MMIO32 [25], MMIO64 [26:25],
+            //         prefetchable [30].
+            //
+            // The translation of child device memory region into this nodes
+            // memory is described in the device-tree standard.
             ranges = <0x02000000 0x0 0xaaaa0000 0x0 0xaaaa0000 0x0 0x10000>;
 
-            virtio_uart@f000 {
+            virtio_uart@aaaa0000 {
               compatible = "virtio,pci";
-              // reg 1: MMIO memory for the MSIX table: 2pages;
-              // reg 2: IO ports
-              // first address cells encodes bus-dev-fn(<<16, <<11, <<8);
+              // The register property is required to be structured as follows:
+              //    reg 1: MMIO memory region for the MSIX table: 2 pages.
+              //    reg 2: IO port range for the device configuration.
+              //
+              // The upper 8-bits of the first cell encodes information as
+              // described at the ranges property above.
               reg = <0x02000000 0x0 0xaaaa0000 0x0 0x2000
-                     0x01000000 0x0 0x800 0x0 0x100>;
-              // XXX The interrupt-parent is used as MSI-interrupt-parent, as
-              // we currently only resolve references for the interrupt-parent
-              // property. This is only a preliminary measure and must be fixed
-              // ASAP.
-              interrupt-parent = <&IOAPIC>;
+                     0x01000000 0x0 0x800 0x0 0x80>;
+              msi-parent = <&msi_ctrl>;
               l4vmm,vdev = "console";
+            };
+
+            virtio_net@aaaa2000 {
+                compatible = "virtio,pci";
+                // The reg property requirements are described in virtio_uart.
+                reg = <0x2000000 0x0 0xaaaa2000 0x0 0x2000
+                       0x1000000 0x0 0x700 0x0 0x80>;
+                msi-parent = <&msi_ctrl>;
+                l4vmm,virtiocap = "net";
+                l4vmm,vdev = "proxy";
             };
         };
 

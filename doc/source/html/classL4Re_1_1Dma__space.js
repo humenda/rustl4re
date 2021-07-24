@@ -18,6 +18,6 @@ var classL4Re_1_1Dma__space =
     ] ],
     [ "associate", "classL4Re_1_1Dma__space.html#aa4bf648e57059a2b724735c5230e9346", null ],
     [ "disassociate", "classL4Re_1_1Dma__space.html#a065a50cd89ec723b38352a394a8c9aae", null ],
-    [ "map", "classL4Re_1_1Dma__space.html#ae1d04e6f43f2235c2895ee6e1a0094c3", null ],
+    [ "map", "classL4Re_1_1Dma__space.html#a1da94446989626b52746582bd83c0cb5", null ],
     [ "unmap", "classL4Re_1_1Dma__space.html#ae5f38bc7f823ce8e1f237ee76ea68abc", null ]
 ];

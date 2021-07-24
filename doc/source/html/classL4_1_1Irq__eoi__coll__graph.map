@@ -1,2 +1,3 @@
 <map id="L4::Irq_eoi" name="L4::Irq_eoi">
+<area shape="rect" id="node1" title="Interface for sending an acknowledge message to an object." alt="" coords="5,5,104,83"/>
 </map>

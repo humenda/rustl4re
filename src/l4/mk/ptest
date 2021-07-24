@@ -1,4 +1,4 @@
-#! /usr/bin/perl -W
+#! /usr/bin/env perl
 #
 # Run package tests using Fiasco-UX
 #
@@ -15,6 +15,7 @@
 #exit 0;
 
 use strict;
+use warnings;
 use Getopt::Long;
 
 my $FIASCOUX;

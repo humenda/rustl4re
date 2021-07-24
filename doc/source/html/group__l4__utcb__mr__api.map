@@ -1,4 +1,5 @@
 <map id="Message Registers (MRs)" name="Message Registers (MRs)">
-<area shape="rect" id="node1" href="$group__l4__utcb__api.html" title="L4 Virtual Registers (UTCB). " alt="" coords="5,5,135,47"/>
-<area shape="rect" id="node3" href="$group__l4__utcb__exc__api.html" title="Overly definition of the MRs for exception messages. " alt="" coords="417,13,560,39"/>
+<area shape="rect" id="node1" href="$group__l4__utcb__api.html" title="L4 Virtual Registers (UTCB)." alt="" coords="5,5,140,45"/>
+<area shape="rect" id="node2" title=" " alt="" coords="188,13,375,38"/>
+<area shape="rect" id="node3" href="$group__l4__utcb__exc__api.html" title="Overly definition of the MRs for exception messages." alt="" coords="423,13,569,38"/>
 </map>

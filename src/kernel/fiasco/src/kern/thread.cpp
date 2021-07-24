@@ -79,16 +79,6 @@ public:
     Vcpu_ctl_extended_vcpu = 0x10000,
   };
 
-  class Dbg_stack
-  {
-  public:
-    enum { Stack_size = Config::PAGE_SIZE };
-    void *stack_top;
-    Dbg_stack();
-  };
-
-  static Per_cpu<Dbg_stack> dbg_stack;
-
 public:
   typedef void (Utcb_copy_func)(Thread *sender, Thread *receiver);
 
@@ -120,6 +110,8 @@ private:
    * initialized context is being switch_exec()'ed.
    */
   static void user_invoke();
+
+  static void do_leave_and_kill_myself() asm("thread_do_leave_and_kill_myself");
 
 public:
   static bool pagein_tcb_request(Return_frame *regs);
@@ -156,6 +148,23 @@ protected:
   static const unsigned magic = 0xf001c001;
 };
 
+// ------------------------------------------------------------------------
+INTERFACE[debug]:
+
+EXTENSION class Thread
+{
+public:
+  class Dbg_stack
+  {
+  public:
+    enum { Stack_size = Config::PAGE_SIZE };
+    void *stack_top;
+    Dbg_stack();
+  };
+
+  static Per_cpu<Dbg_stack> dbg_stack;
+};
+
 
 IMPLEMENTATION:
 
@@ -183,25 +192,25 @@ IMPLEMENTATION:
 JDB_DEFINE_TYPENAME(Thread,  "\033[32mThread\033[m");
 DEFINE_PER_CPU Per_cpu<unsigned long> Thread::nested_trap_recover;
 
-IMPLEMENT
-Thread::Dbg_stack::Dbg_stack()
-{
-  stack_top = Kmem_alloc::allocator()->unaligned_alloc(Stack_size); 
-  if (stack_top)
-    stack_top = (char *)stack_top + Stack_size;
-  //printf("JDB STACK start= %p - %p\n", (char *)stack_top - Stack_size, (char *)stack_top);
-}
-
 
 PUBLIC inline
 void *
 Thread::operator new(size_t, Ram_quota *q) throw ()
 {
-  void *t = Kmem_alloc::allocator()->q_unaligned_alloc(q, Thread::Size);
+  void *t = Kmem_alloc::allocator()->q_alloc(q, Bytes(Thread::Size));
   if (t)
     memset(t, 0, sizeof(Thread));
 
   return t;
+}
+
+PUBLIC
+void
+Thread::kbind(Task *t)
+{
+  auto guard = lock_guard(_space.lock());
+  _space.space(t);
+  t->inc_ref();
 }
 
 PUBLIC
@@ -211,8 +220,7 @@ Thread::bind(Task *t, User<Utcb>::Ptr utcb)
   // _utcb == 0 for all kernel threads
   Space::Ku_mem const *u = t->find_ku_mem(utcb, sizeof(Utcb));
 
-  // kernel thread?
-  if (EXPECT_FALSE(utcb && !u))
+  if (EXPECT_FALSE(!u))
     return false;
 
   auto guard = lock_guard(_space.lock());
@@ -222,33 +230,33 @@ Thread::bind(Task *t, User<Utcb>::Ptr utcb)
   _space.space(t);
   t->inc_ref();
 
-  if (u)
-    {
-      _utcb.set(utcb, u->kern_addr(utcb));
-      arch_setup_utcb_ptr();
-    }
-
+  _utcb.set(utcb, u->kern_addr(utcb));
+  arch_setup_utcb_ptr();
   return true;
 }
 
 
-PUBLIC inline NEEDS["kdb_ke.h", "kernel_task.h", "cpu_lock.h", "space.h"]
-bool
+PUBLIC
+void
 Thread::unbind()
 {
+  assert(   (!(state() & Thread_dead) && current() == this)
+         || ( (state() & Thread_dead) && current() != this));
+
   Task *old;
 
     {
       auto guard = lock_guard(_space.lock());
 
       if (_space.space() == Kernel_task::kernel_task())
-        return true;
+        return;
 
       old = static_cast<Task*>(_space.space());
       _space.space(Kernel_task::kernel_task());
 
-      // switch to a safe page table
-      if (Mem_space::current_mem_space(current_cpu()) == old)
+      // switch to a safe page table if the thread is to be going itself
+      if (   current() == this
+          && Mem_space::current_mem_space(current_cpu()) == old)
         Kernel_task::kernel_task()->switchin_context(old);
 
       if (old->dec_ref())
@@ -256,21 +264,14 @@ Thread::unbind()
     }
 
   if (old)
-    {
-      current()->rcu_wait();
-      delete old;
-    }
-
-  return true;
+    delete old;
 }
 
 /** Cut-down version of Thread constructor; only for kernel threads
     Do only what's necessary to get a kernel thread started --
     skip all fancy stuff, no locking is necessary.
-    @param task the address space
-    @param id user-visible thread ID of the sender
  */
-IMPLEMENT inline
+IMPLEMENT inline NEEDS["kernel_task.h"]
 Thread::Thread(Ram_quota *q, Context_mode_kernel)
   : Receiver(), Sender(), _quota(q), _del_observer(0), _magic(magic)
 {
@@ -280,12 +281,13 @@ Thread::Thread(Ram_quota *q, Context_mode_kernel)
   if (Config::Stack_depth)
     std::memset((char*)this + sizeof(Thread), '5',
                 Thread::Size-sizeof(Thread) - 64);
+
+  alloc_eager_fpu_state();
 }
 
 
 /** Destructor.  Reestablish the Context constructor's precondition.
-    @pre current() == thread_lock()->lock_owner()
-         && state() == Thread_dead
+    @pre state() == Thread_dead
     @pre lock_cnt() == 0
     @post (_kernel_sp == 0)  &&  (* (stack end) == 0)  &&  !exists()
  */
@@ -327,7 +329,7 @@ Mword Del_irq_chip::pin(Thread *t)
 
 PUBLIC inline
 void
-Del_irq_chip::unbind(Irq_base *irq)
+Del_irq_chip::unbind(Irq_base *irq) override
 { thread(irq->pin())->remove_delete_irq(); }
 
 
@@ -412,31 +414,6 @@ Thread::handle_timer_interrupt()
 }
 
 
-PUBLIC
-void
-Thread::halt()
-{
-  // Cancel must be cleared on all kernel entry paths. See slowtraps for
-  // why we delay doing it until here.
-  state_del(Thread_cancel);
-
-  // we haven't been re-initialized (cancel was not set) -- so sleep
-  if (state_change_safely(~Thread_ready, Thread_cancel | Thread_dead))
-    while (! (state() & Thread_ready))
-      schedule();
-}
-
-PUBLIC static
-void
-Thread::halt_current()
-{
-  for (;;)
-    {
-      current_thread()->halt();
-      kdb_ke("Thread not halted");
-    }
-}
-
 PRIVATE static inline
 void
 Thread::user_invoke_generic()
@@ -454,8 +431,9 @@ Thread::user_invoke_generic()
 }
 
 
-PRIVATE static void
-Thread::leave_and_kill_myself()
+IMPLEMENT /* static */
+void
+Thread::do_leave_and_kill_myself()
 {
   current_thread()->do_kill();
 #ifdef CONFIG_JDB
@@ -494,9 +472,6 @@ PRIVATE
 bool
 Thread::do_kill()
 {
-  if (is_invalid())
-    return false;
-
   //
   // Kill this thread
   //
@@ -584,14 +559,21 @@ Thread::do_kill()
   return true;
 }
 
+PRIVATE inline
+void
+Thread::prepare_kill()
+{
+  extern void  FIASCO_NORETURN leave_and_kill_myself() asm ("leave_and_kill_myself");
+  state_add_dirty(Thread_cancel | Thread_ready);
+  _exc_cont.restore(regs()); // overwrite an already triggered exception
+  do_trigger_exception(regs(), (void*)&leave_and_kill_myself);
+}
+
 PRIVATE static
 Context::Drq::Result
 Thread::handle_remote_kill(Drq *, Context *self, void *)
 {
-  Thread *c = nonull_static_cast<Thread*>(self);
-  c->state_add_dirty(Thread_cancel | Thread_ready);
-  c->_exc_cont.restore(c->regs());
-  c->do_trigger_exception(c->regs(), (void*)&Thread::leave_and_kill_myself);
+  nonull_static_cast<Thread*>(self)->prepare_kill();
   return Drq::done();
 }
 
@@ -606,14 +588,12 @@ Thread::kill() override
 
   if (home_cpu() == current_cpu())
     {
-      state_add_dirty(Thread_cancel | Thread_ready);
+      prepare_kill();
       Sched_context::rq.current().deblock(sched(), current()->sched());
-      _exc_cont.restore(regs()); // overwrite an already triggered exception
-      do_trigger_exception(regs(), (void*)&Thread::leave_and_kill_myself);
       return true;
     }
 
-  drq(Thread::handle_remote_kill, 0, Drq::Any_ctxt);
+  drq(Thread::handle_remote_kill, 0);
 
   return true;
 }
@@ -784,7 +764,7 @@ Thread::finish_migration() override
 { enqueue_timeout_again(); }
 
 //---------------------------------------------------------------------------
-IMPLEMENTATION [fpu && !ux]:
+IMPLEMENTATION [fpu && !ux && lazy_fpu]:
 
 #include "fpu.h"
 #include "fpu_alloc.h"
@@ -799,6 +779,8 @@ Thread::switchin_fpu(bool alloc_new_fpu = true)
 {
   if (state() & Thread_vcpu_fpu_disabled)
     return 0;
+
+  (void)alloc_new_fpu;
 
   Fpu &f = Fpu::fpu.current();
   // If we own the FPU, we should never be getting an "FPU unavailable" trap
@@ -825,6 +807,11 @@ Thread::switchin_fpu(bool alloc_new_fpu = true)
   f.set_owner(this);
   return 1;
 }
+
+PUBLIC inline
+bool
+Thread::alloc_eager_fpu_state()
+{ return true; }
 
 PUBLIC inline NEEDS["fpu.h", "fpu_alloc.h"]
 void
@@ -870,6 +857,47 @@ Thread::transfer_fpu(Thread *to) //, Trap_state *trap_state, Utcb *to_utcb)
 }
 
 //---------------------------------------------------------------------------
+IMPLEMENTATION [fpu && !ux && !lazy_fpu]:
+
+#include "fpu.h"
+#include "fpu_alloc.h"
+#include "fpu_state.h"
+
+/*
+ * Handle FPU trap for this context. Assumes disabled interrupts
+ */
+PUBLIC inline
+int
+Thread::switchin_fpu(bool alloc_new_fpu = true)
+{
+  if (state() & Thread_vcpu_fpu_disabled)
+    return 0;
+
+  (void)alloc_new_fpu;
+  panic("must not see any FPU trap with eager FPU\n");
+}
+
+PUBLIC inline NEEDS["fpu.h", "fpu_alloc.h"]
+bool
+Thread::alloc_eager_fpu_state()
+{
+  return Fpu_alloc::alloc_state(_quota, fpu_state());
+}
+
+PUBLIC inline NEEDS["fpu.h", "fpu_state.h"]
+void
+Thread::transfer_fpu(Thread *to) //, Trap_state *trap_state, Utcb *to_utcb)
+{
+  auto *curr = current();
+  if (this == curr)
+    Fpu::save_state(to->fpu_state());
+  else if (curr == to)
+    Fpu::fpu.current().restore_state(fpu_state());
+  else
+    memcpy(to->fpu_state()->state_buffer(), fpu_state()->state_buffer(), Fpu::state_size());
+}
+
+//---------------------------------------------------------------------------
 IMPLEMENTATION [!fpu]:
 
 PUBLIC inline
@@ -882,6 +910,13 @@ Thread::switchin_fpu(bool alloc_new_fpu = true)
 
 //---------------------------------------------------------------------------
 IMPLEMENTATION [!fpu || ux]:
+
+PUBLIC inline
+bool
+Thread::alloc_eager_fpu_state()
+{
+  return true;
+}
 
 PUBLIC inline
 void
@@ -1138,13 +1173,15 @@ Thread::migrate_away(Migration *inf, bool remote)
   bool resched = false;
 
   if (_timeout)
-    _timeout->reset();
+    {
+      _timeout->reset();
+    }
 
   //printf("[%u] %lx: m %lx %u -> %u\n", current_cpu(), current_thread()->dbg_id(), this->dbg_id(), cpu(), inf->cpu);
     {
       Sched_context::Ready_queue &rq = EXPECT_TRUE(!remote)
                                      ? Sched_context::rq.current()
-                                     :  Sched_context::rq.cpu(home_cpu());
+                                     : Sched_context::rq.cpu(home_cpu());
 
       // if we are in the middle of the scheduler, leave it now
       if (rq.schedule_in_progress == this)
@@ -1174,7 +1211,7 @@ Thread::migrate_away(Migration *inf, bool remote)
       assert (q.q_lock()->test());
       // potentially dequeue from our local queue
       if (_pending_rq.queued())
-        check (q.dequeue(&_pending_rq, Queue_item::Ok));
+        check (q.dequeue(&_pending_rq));
 
       Sched_context *sc = sched_context();
       sc->set(inf->sp);
@@ -1295,6 +1332,17 @@ IMPLEMENTATION [debug]:
 #include "kdb_ke.h"
 #include "terminate.h"
 
+IMPLEMENT
+Thread::Dbg_stack::Dbg_stack()
+{
+  stack_top = Kmem_alloc::allocator()->alloc(Bytes(Stack_size));
+  if (stack_top)
+    stack_top = (char *)stack_top + Stack_size;
+  //printf("JDB STACK start= %p - %p\n", (char *)stack_top - Stack_size, (char *)stack_top);
+}
+
+DEFINE_PER_CPU Per_cpu<Thread::Dbg_stack> Thread::dbg_stack;
+
 PUBLIC static
 void FIASCO_NORETURN
 Thread::system_abort()
@@ -1312,6 +1360,31 @@ Thread::Migration_log::print(String_buffer *buf) const
   buf->printf("migrate from %u to %u (state=%lx user ip=%lx)",
               cxx::int_value<Cpu_number>(src_cpu),
               cxx::int_value<Cpu_number>(target_cpu), state, user_ip);
+}
+
+PUBLIC
+void
+Thread::halt()
+{
+  // Cancel must be cleared on all kernel entry paths. See slowtraps for
+  // why we delay doing it until here.
+  state_del(Thread_cancel);
+
+  // we haven't been re-initialized (cancel was not set) -- so sleep
+  if (state_change_safely(~Thread_ready, Thread_cancel | Thread_dead))
+    while (! (state() & Thread_ready))
+      schedule();
+}
+
+PUBLIC static
+void
+Thread::halt_current()
+{
+  for (;;)
+    {
+      current_thread()->halt();
+      kdb_ke("Thread not halted");
+    }
 }
 
 //----------------------------------------------------------------------------

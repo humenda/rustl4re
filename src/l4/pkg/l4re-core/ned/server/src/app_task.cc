@@ -42,7 +42,7 @@ App_task::op_signal(L4Re::Parent::Rights, unsigned long sig, unsigned long val)
     {
     case 0: // exit
         {
-          // kick the capability refernce
+          // kick the capability reference
           // long refs = remove_ref();
           _state = Zombie;
           _exit_code = val;
@@ -78,7 +78,7 @@ App_task::App_task(Ned::Registry *r,
 {
   chksys(alloc->create(_rm.get()), "allocating new region map");
 
-  _r->register_obj(this);
+  chkcap(_r->register_obj(this), "register App_task endpoint");
 }
 
 void

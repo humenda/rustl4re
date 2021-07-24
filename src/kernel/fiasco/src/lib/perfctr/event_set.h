@@ -1,4 +1,4 @@
-/* $Id: event_set.h 37048 2009-11-12 21:44:56Z adam $
+/* $Id$
  * Common definitions used when creating event set descriptions.
  *
  * Copyright (C) 2003  Mikael Pettersson

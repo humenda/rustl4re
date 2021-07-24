@@ -1,6 +1,5 @@
 var group__cxx__api =
 [
-    [ "cxx", "namespacecxx.html", null ],
     [ "Alloc_list", "classL4_1_1Alloc__list.html", null ],
     [ "Auto_ptr", "classcxx_1_1Auto__ptr.html", [
       [ "Ref_type", "classcxx_1_1Auto__ptr.html#a11e60f984c2dff0dd2c32eb1a8b2e68e", null ],
@@ -20,13 +19,11 @@ var group__cxx__api =
       [ "Char", "classcxx_1_1Bitmap__base_1_1Char.html", null ],
       [ "Word", "classcxx_1_1Bitmap__base_1_1Word.html", null ],
       [ "word_type", "classcxx_1_1Bitmap__base.html#a6f52a1661a4cbd0738d8975db7ec0eb7", null ],
-      [ "W_bits", "classcxx_1_1Bitmap__base.html#ada613666b20e400bb90992393c770be1a7b0fa9b852475888c170f2b377d78578", null ],
-      [ "C_bits", "classcxx_1_1Bitmap__base.html#ada613666b20e400bb90992393c770be1ad2de31016bb1c41cd56e4c9bbac30dde", null ],
+      [ "bit", "classcxx_1_1Bitmap__base.html#a07d2b2f587792524a27b5c956c6e603e", null ],
       [ "bit", "classcxx_1_1Bitmap__base.html#a90b85625fab909f4bfa3cad35ccfba77", null ],
-      [ "bit", "classcxx_1_1Bitmap__base.html#ad94b89c9d1e7dd7b68c5d43d113a8e11", null ],
       [ "clear_bit", "classcxx_1_1Bitmap__base.html#a141862ab924ef2580d1f73d7f55e7e8d", null ],
-      [ "operator[]", "classcxx_1_1Bitmap__base.html#a15db5e4d5366a13cb5a49aeb357635a7", null ],
       [ "operator[]", "classcxx_1_1Bitmap__base.html#a6d3c655690f5e2a57967fb35e1ebdd28", null ],
+      [ "operator[]", "classcxx_1_1Bitmap__base.html#a15db5e4d5366a13cb5a49aeb357635a7", null ],
       [ "scan_zero", "classcxx_1_1Bitmap__base.html#a1d6b445c937da45a056416e90643288e", null ],
       [ "set_bit", "classcxx_1_1Bitmap__base.html#a67b5fac835cd7e13de70e191e487d3c5", null ],
       [ "_bits", "classcxx_1_1Bitmap__base.html#afa048bbe3937117191c144a884d53ca7", null ]
@@ -50,16 +47,15 @@ var group__cxx__api =
       [ "First_type", "structcxx_1_1Pair.html#a8ac7ea0d0da854c19178810a4a9e6b56", null ],
       [ "Second_type", "structcxx_1_1Pair.html#a0f3984071f05f60512ae1c7ce38d8129", null ],
       [ "Pair", "structcxx_1_1Pair.html#aa36cc83aa95fbf17c665098bdbb9a9b7", null ],
-      [ "Pair", "structcxx_1_1Pair.html#afcf995c132fcc1e445fa3b3fe4d08630", null ],
+      [ "Pair", "structcxx_1_1Pair.html#a976f05f570b77e5f2d353af794c8d88e", null ],
       [ "first", "structcxx_1_1Pair.html#ae4b62c38c9af46282232356d3cedc880", null ],
       [ "second", "structcxx_1_1Pair.html#a5c1ced80a3c5af2f6af48ad8b61c06d7", null ]
     ] ],
     [ "Base_slab", "classcxx_1_1Base__slab.html", [
+      [ "Slab_i", "structcxx_1_1Base__slab_1_1Slab__i.html", null ],
       [ "Slab_alloc", "classcxx_1_1Base__slab.html#a1a18ed9f5accef27a92276ef4125d112", null ],
-      [ "object_size", "classcxx_1_1Base__slab.html#a8e10ebe9b687c632831e61ee08d37528a7a19f42244350fe3d22c4a710f540fe8", null ],
-      [ "slab_size", "classcxx_1_1Base__slab.html#a8e10ebe9b687c632831e61ee08d37528a2481a821eaf7aaf45ce00a0ad5f52e58", null ],
-      [ "objects_per_slab", "classcxx_1_1Base__slab.html#a8e10ebe9b687c632831e61ee08d37528ac3eaffb400ba8b32a2d0fac26174ebef", null ],
-      [ "max_free_slabs", "classcxx_1_1Base__slab.html#a8e10ebe9b687c632831e61ee08d37528a02a4bdaa07af8ec9e34fedc5deb7fff5", null ],
+      [ "alloc", "classcxx_1_1Base__slab.html#a48ac5e888c4292fc5b1662b3a5e01997", null ],
+      [ "free", "classcxx_1_1Base__slab.html#af7f8144a14030567ab8f83e88b9cf20b", null ],
       [ "free_objects", "classcxx_1_1Base__slab.html#a713bccdce1778215a5eeb037002e4637", null ],
       [ "total_objects", "classcxx_1_1Base__slab.html#aadd7b7334423885a21f16926ef06d3be", null ]
     ] ],
@@ -68,10 +64,6 @@ var group__cxx__api =
       [ "free", "classcxx_1_1Slab.html#a4cb4172624c74d39a5830fb4f2664121", null ]
     ] ],
     [ "Base_slab_static", "classcxx_1_1Base__slab__static.html", [
-      [ "object_size", "classcxx_1_1Base__slab__static.html#aba32308b9a130ce8b000af1b68e113faad3d1cac8f380cbf73963702295264922", null ],
-      [ "slab_size", "classcxx_1_1Base__slab__static.html#aba32308b9a130ce8b000af1b68e113faaa07f8bedddb5beff7ac2cae01fc661b9", null ],
-      [ "objects_per_slab", "classcxx_1_1Base__slab__static.html#aba32308b9a130ce8b000af1b68e113faaaa418f7ffc4da2c0622cf0c34f322bc8", null ],
-      [ "max_free_slabs", "classcxx_1_1Base__slab__static.html#aba32308b9a130ce8b000af1b68e113faa6dc84eb87654a77812372af101503430", null ],
       [ "alloc", "classcxx_1_1Base__slab__static.html#ac14d1b49aa4cae0545c3965f63bb9892", null ],
       [ "free", "classcxx_1_1Base__slab__static.html#ac373452de268f7dfb05cc73f51bfd8ce", null ],
       [ "free_objects", "classcxx_1_1Base__slab__static.html#a3defcaba78286729fd24bb77053272b0", null ],
@@ -85,6 +77,6 @@ var group__cxx__api =
     [ "String", "classL4_1_1String.html", null ],
     [ "max", "group__cxx__api.html#ga1d7a566ab5b06016155d693f91a7ee2d", null ],
     [ "min", "group__cxx__api.html#ga0bd9662898a7499fcd3feefe594a699b", null ],
-    [ "operator new", "group__cxx__api.html#ga114420df22cc4348747794919284980f", null ],
-    [ "operator new", "group__cxx__api.html#gabd1e1548c743c7d6ec8c89b84b4e7c35", null ]
+    [ "operator new", "group__cxx__api.html#gabd1e1548c743c7d6ec8c89b84b4e7c35", null ],
+    [ "operator new", "group__cxx__api.html#ga114420df22cc4348747794919284980f", null ]
 ];

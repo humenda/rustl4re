@@ -5,6 +5,11 @@
  * GNU General Public License 2.
  * Please see the COPYING-GPL-2 file for details.
  */
+/**
+ * \file vbus_interfaces.h
+ * This header contains the definition of VBUS sub-interfaces and
+ * convenience functions to work with the interface IDs.
+ */
 #pragma once
 
 #include <l4/sys/types.h>

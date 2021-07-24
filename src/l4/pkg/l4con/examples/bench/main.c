@@ -40,7 +40,7 @@ main(int argc, char **argv)
   int error, i;
   l4_addr_t map_addr, write_addr;
   l4_uint32_t map_area;
-  l4_offs_t offset;
+  l4_addr_t offset;
   l4_snd_fpage_t snd_fpage;
   l4_cpu_time_t start, stop;
   unsigned int dummy;

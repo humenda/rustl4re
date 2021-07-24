@@ -142,7 +142,7 @@ static void l4drv_connect(struct serio *serio, struct serio_driver *drv)
   }
 
   strcpy(data->name, serio->name);
-  sprintf(data->phys, "%s/input0", serio->phys);
+  snprintf(data->phys, sizeof(data->phys), "%s/input0", serio->phys);
   l4drv_set_device_attrs(data);
   data->enabled = 1;
 

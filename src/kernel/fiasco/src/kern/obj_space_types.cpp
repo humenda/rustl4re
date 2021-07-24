@@ -44,7 +44,7 @@ namespace Obj {
     Mword _obj;
 
   public:
-    Capability() {}
+    Capability() = default;
     explicit Capability(Mword v) : _obj(v) {}
     Kobject_iface *obj() const { return (Kobject_iface *)(_obj & ~3UL); }
     void set(Kobject_iface *obj, unsigned char rights)
@@ -209,6 +209,6 @@ namespace Obj
 INTERFACE [!debug]:
 
 namespace Obj {
-  static void add_cap_page_dbg_info(void *, void *, Address) {}
-  static void remove_cap_page_dbg_info(void *) {}
+  static inline void add_cap_page_dbg_info(void *, void *, Address) {}
+  static inline void remove_cap_page_dbg_info(void *) {}
 }

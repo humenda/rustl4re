@@ -1,5 +1,6 @@
 <map id="L4virtio::Virtqueue::Desc" name="L4virtio::Virtqueue::Desc">
-<area shape="rect" id="node2" href="$structL4virtio_1_1Virtqueue_1_1Desc_1_1Flags.html" title="Type for descriptor flags. " alt="" coords="5,204,139,443"/>
-<area shape="rect" id="node3" href="$classL4virtio_1_1Ptr.html" title="{L4virtio::Ptr\&lt; void \&gt;\n||+ Ptr()\l+ Ptr()\l+ Ptr()\l+ get()\l+ is_valid()\l}" alt="" coords="163,255,306,391"/>
-<area shape="rect" id="node4" href="$classL4virtio_1_1Ptr.html" title="Pointer used in virtio descriptors. " alt="" coords="172,5,297,141"/>
+<area shape="rect" id="node1" title="Descriptor in the descriptor table." alt="" coords="44,505,187,612"/>
+<area shape="rect" id="node2" href="$structL4virtio_1_1Virtqueue_1_1Desc_1_1Flags.html" title="Type for descriptor flags." alt="" coords="5,204,148,443"/>
+<area shape="rect" id="node3" href="$classL4virtio_1_1Ptr.html" title=" " alt="" coords="173,255,327,391"/>
+<area shape="rect" id="node4" href="$classL4virtio_1_1Ptr.html" title="Pointer used in virtio descriptors." alt="" coords="183,5,317,141"/>
 </map>

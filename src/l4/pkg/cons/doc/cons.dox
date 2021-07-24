@@ -28,8 +28,8 @@
  * a server that speaks an appropriate server protocol. By default
  * the L4.Env.log capability is used.
  *
- * At the moment, cons only implements the L4::Vcon protocol for both,
- * clients and frontends.
+ * For clients cons implements the L4::Vcon and the Virtio console interface.
+ * The supported frontends is limited to L4::Vcon only.
  *
  * Command Line Options
  * --------------------
@@ -58,9 +58,9 @@
  *
  *     Default buffer size per client in bytes. Default: 40960
  *
- *   * `-m <prompt name>`, `--mux <promt name>`
+ *   * `-m <prompt name>`, `--mux <prompt name>`
  *
- *     Add a new multiplexer named <prompt name>. This is necessary if output
+ *     Add a new multiplexer named \<prompt name\>. This is necessary if output
  *     should be sent to different frontends.
  *
  *   * `-f <cap>`, `--frontend <cap>`
@@ -68,5 +68,18 @@
  *     Set the frontend for the current multiplexer. Output for the multiplexer
  *     is then sent to the capability with the given name. The server connected
  *     to the capability needs to understand the L4::Vcon protocol.
+ *
+ *
+ * Connecting a client
+ * -------------------
+ *
+ *      create(backend_type, ["client_name"], ["color"], ["options"])
+ *
+ *   * `backend_type`
+ *
+ *      The type of backend that should be created for the client. The type is a positive
+ *      integer and currently the following types are supported:
+ *      * `L4.Proto.Log`: L4::Vcon client
+ *      * `1`: Virtio console client
  *
  */

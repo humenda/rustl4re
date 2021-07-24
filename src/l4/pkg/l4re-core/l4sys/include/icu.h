@@ -35,7 +35,7 @@
  *
  * To setup an IRQ line the following steps are required:
  * 1. #l4_icu_set_mode() (optional if IRQ has a default mode)
- * 2. #l4_irq_attach() to attach the IRQ capability to a thread
+ * 2. #l4_rcv_ep_bind_thread() to bind the IRQ capability to a thread
  * 3. #l4_icu_bind()
  * 4. #l4_icu_unmask() to receive the first IRQ
  *
@@ -377,7 +377,7 @@ l4_icu_bind_u(l4_cap_idx_t icu, unsigned irqnum, l4_cap_idx_t irq,
   m->mr[0] = L4_ICU_OP_BIND;
   m->mr[1] = irqnum;
   m->mr[2] = l4_map_obj_control(0, 0);
-  m->mr[3] = l4_obj_fpage(irq, 0, L4_FPAGE_RWX).raw;
+  m->mr[3] = l4_obj_fpage(irq, 0, L4_CAP_FPAGE_RWS).raw;
   return l4_ipc_call(icu, utcb, l4_msgtag(L4_PROTO_IRQ, 2, 1, 0), L4_IPC_NEVER);
 }
 
@@ -389,7 +389,7 @@ l4_icu_unbind_u(l4_cap_idx_t icu, unsigned irqnum, l4_cap_idx_t irq,
   m->mr[0] = L4_ICU_OP_UNBIND;
   m->mr[1] = irqnum;
   m->mr[2] = l4_map_obj_control(0, 0);
-  m->mr[3] = l4_obj_fpage(irq, 0, L4_FPAGE_RWX).raw;
+  m->mr[3] = l4_obj_fpage(irq, 0, L4_CAP_FPAGE_RWS).raw;
   return l4_ipc_call(icu, utcb, l4_msgtag(L4_PROTO_IRQ, 2, 1, 0), L4_IPC_NEVER);
 }
 

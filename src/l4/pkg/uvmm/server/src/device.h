@@ -10,17 +10,21 @@
 #include <l4/cxx/ref_ptr>
 #include <l4/cxx/exceptions>
 
+#include <string>
+
 #include "device_tree.h"
 #include "debug.h"
 
 namespace Gic {
   struct Ic;
+  struct Msix_controller;
 }
 namespace Vmm {
   class Guest;
-  class Ram_ds;
+  class Vm_ram;
   class Virt_bus;
   class Cpu_dev_array;
+  class Pm;
 }
 
 namespace Vdev {
@@ -77,35 +81,23 @@ struct Dt_error_hdl
 typedef Dtb::Node<Dt_error_hdl> Dt_node;
 typedef Dtb::Tree<Dt_error_hdl> Device_tree;
 
-struct Dev_ref
-{
-  virtual void add_ref() const noexcept = 0;
-  virtual int remove_ref() const noexcept = 0;
-};
-
-template <typename BASE>
-class Dev_ref_obj : public virtual Dev_ref, public BASE
+class Dev_ref
 {
 private:
-  mutable int _ref_cnt;
+  mutable int _ref_cnt = 0;
 
 public:
-  template <typename... Args>
-  Dev_ref_obj(Args &&... args)
-  : BASE(cxx::forward<Args>(args)...), _ref_cnt(0)
-  {}
-
-  void add_ref() const noexcept override
+  void add_ref() const noexcept
   { __atomic_add_fetch(&_ref_cnt, 1, __ATOMIC_ACQUIRE); }
 
-  int remove_ref() const noexcept override
+  int remove_ref() const noexcept
   { return __atomic_sub_fetch(&_ref_cnt, 1, __ATOMIC_RELEASE); }
 };
 
 template< typename T, typename... Args >
 cxx::Ref_ptr<T>
 make_device(Args &&... args)
-{ return cxx::make_ref_obj<Dev_ref_obj<T> >(cxx::forward<Args>(args)...); }
+{ return cxx::make_ref_obj<T>(cxx::forward<Args>(args)...); }
 
 struct Device_lookup;
 
@@ -125,12 +117,16 @@ inline Device::~Device() = default;
 struct Device_lookup
 {
   virtual void add_device(Vdev::Dt_node const &node,
-                          cxx::Ref_ptr<Vdev::Device> dev) = 0;
-  virtual cxx::Ref_ptr<Device> device_from_node(Dt_node const &node) const = 0;
+                          cxx::Ref_ptr<Vdev::Device> dev,
+                          std::string const &path = std::string()) = 0;
+  virtual cxx::Ref_ptr<Device> device_from_node(Dt_node const &node,
+                                                std::string *path = nullptr)
+                                                const = 0;
   virtual Vmm::Guest *vmm() const = 0;
-  virtual cxx::Ref_ptr<Vmm::Ram_ds> ram() const = 0;
+  virtual cxx::Ref_ptr<Vmm::Vm_ram> ram() const = 0;
   virtual cxx::Ref_ptr<Vmm::Virt_bus> vbus() const = 0;
   virtual cxx::Ref_ptr<Vmm::Cpu_dev_array> cpus() const = 0;
+  virtual cxx::Ref_ptr<Vmm::Pm> pm() const = 0;
 
   /// Result values for get_or_create_ic()
   enum Ic_error
@@ -160,25 +156,7 @@ struct Device_lookup
     };
     return (res < sizeof(err)/sizeof(err[0])) ? err[res] : "unknown error";
   }
-  /**
-   * Get the interrupt controller for a given node.
-   *
-   * \param node   The device tree node an interrupt parent is looked for.
-   * \param fatal  Abort if true and no virtual device for the interrupt parent
-   *               could be found.
-   *
-   * \return Either a pointer to the virtual device of the interrupt parent or
-   *         nullptr in case of an error
-   *
-   * This method tries to fetch and return the interrupt parent of the node. If
-   * the device doesn't exist yet and is a virtual device it tries to create it.
-   * It walks the interrupt tree up and creates the missing devices starting
-   * with the top most missing device. If creation of any device fails it
-   * emits a diagnostic message and aborts if fatal is true. Otherwise it
-   * returns a nullptr.
-   */
-  virtual cxx::Ref_ptr<Gic::Ic>get_or_create_ic_dev(Vdev::Dt_node const &node,
-                                                    bool fatal) = 0;
+
   /**
    * Get the interrupt controller for a given node.
    *
@@ -200,8 +178,17 @@ struct Device_lookup
    * points to the virtual device of the interrupt parent. Otherwise one of the
    * remaining return codes describes the error.
    */
-   virtual Ic_error get_or_create_ic(Vdev::Dt_node const &node,
-                                     cxx::Ref_ptr<Gic::Ic> *ic_ptr) = 0;
+  virtual Ic_error get_or_create_ic(Vdev::Dt_node const &node,
+                                    cxx::Ref_ptr<Gic::Ic> *ic_ptr) = 0;
 
+  /**
+   * Get the virtual MSI controller device for a given node.
+   *
+   * \param node   The device tree node to look for the MSI parent for.
+   *
+   * \returns  A virtual MSI controller device or an exception is thrown.
+   */
+  virtual cxx::Ref_ptr<Gic::Msix_controller>
+  get_or_create_mc_dev(Vdev::Dt_node const &node) = 0;
 };
 } // namespace

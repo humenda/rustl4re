@@ -1,3 +1,4 @@
 <map id="L4vbus::Device::get_resource" name="L4vbus::Device::get_resource">
-<area shape="rect" id="node2" href="$group__l4vbus__module.html#gac60ae2d46f8158a887ce4b8a1bf447bd" title="Obtain the resource description of an individual device resource. " alt="" coords="195,13,347,39"/>
+<area shape="rect" id="node1" title="Obtain the resource description of an individual device resource." alt="" coords="5,5,156,47"/>
+<area shape="rect" id="node2" href="$group__l4vbus__module.html#gac60ae2d46f8158a887ce4b8a1bf447bd" title="Obtain the resource description of an individual device resource." alt="" coords="204,13,360,39"/>
 </map>

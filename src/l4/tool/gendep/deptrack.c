@@ -51,7 +51,7 @@ static int detection_done;
 static struct strlist{
 	const char*name;
 	struct strlist *next;
-} *dependencies; 
+} *dependencies;
 
 #define STRLEN 1024
 
@@ -249,7 +249,7 @@ setup_regexps (void)
   /*
     Duh.  The strength of C : string handling. (not).   Pull apart the whitespace delimited
     list of regexps, and try to compile them.
-    Be really gnuish with dynamic allocation of arrays. 
+    Be really gnuish with dynamic allocation of arrays.
    */
   do {
     char * end_re = 0;
@@ -314,6 +314,8 @@ static void get_executable_name(void)
   while ((c = fgetc(cmdline))!=EOF && c && i < STRLEN-1)
     cmd[i++] = c;
 
+  fclose(cmdline);
+
   cmd[i++] = 0;
 #elif defined(__APPLE__) || defined(__FreeBSD__)
   int mib[3], arglen;
@@ -372,6 +374,28 @@ static void get_executable_name(void)
 
 static void initialize (void) __attribute__ ((constructor));
 
+/* Unlike strcpy()/strncpy(), don't write beyond the dst buffer (dst_max).
+ * Also return the position of terminating '\0' of dst.
+ * Still no terminating '\0' if buffer too small! */
+
+static char* strcpy_safe(char *dst, const char *dst_max, const char *src)
+{
+  while (dst < dst_max && *src != '\0')
+    *dst++ = *src++;
+  if (dst < dst_max)
+    *dst = '\0';
+  return dst;
+}
+
+static char* strncpy_safe(char *dst, const char *dst_max, const char *src, size_t n)
+{
+  while (dst < dst_max && n-- > 0 && *src != '\0')
+    *dst++ = *src++;
+  if (dst < dst_max)
+    *dst = '\0';
+  return dst;
+}
+
 static void initialize (void)
 {
   get_executable_name ();
@@ -380,21 +404,23 @@ static void initialize (void)
   if (target && !detection_mode)
     {
       char fn[STRLEN];
+      char *dst = fn;
       char *slash;
 
       fn[0] = '\0';
-      if(depfile_name){
-          strncpy(fn, depfile_name, STRLEN);
+      if(depfile_name) {
+          strcpy_safe(fn, fn + STRLEN, depfile_name);
       } else {
           slash = strrchr(target, '/');
           /* copy the path */
-          strncat (fn, target, min(STRLEN, slash?slash-target+1:0));
-          strncat (fn, ".", STRLEN);
+          if (slash)
+            dst = strncpy_safe(dst, fn + STRLEN, target, slash - target + 1);
+          dst = strcpy_safe(dst, fn + STRLEN, ".");
           /* copy the name */
-          strncat(fn, slash?slash+1:target, STRLEN);
-          strncat (fn, ".d", STRLEN);
+          dst = strcpy_safe(dst, fn + STRLEN, slash ? slash + 1 : target);
+          strcpy_safe(dst, fn + STRLEN, ".d");
       }
-      fn[STRLEN-1]=0;
+      fn[STRLEN-1] = '\0';
 
       if((output = fopen (fn, "w"))==0){
         fprintf(stderr, "libgendep.so: cannot open %s for writing\n", fn);

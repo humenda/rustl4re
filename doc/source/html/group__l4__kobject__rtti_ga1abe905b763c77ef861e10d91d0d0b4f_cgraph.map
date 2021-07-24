@@ -1,0 +1,4 @@
+<map id="L4::kobject_typeid" name="L4::kobject_typeid">
+<area shape="rect" id="node1" title="Get the L4::Type_info for the L4Re interface given in T." alt="" coords="5,5,145,32"/>
+<area shape="rect" id="node2" href="$structL4_1_1Kobject__typeid.html#a40a9686961d4d79ac0d0588d704a4b50" title="Get a pointer to teh Kobject type information of T." alt="" coords="193,5,355,32"/>
+</map>

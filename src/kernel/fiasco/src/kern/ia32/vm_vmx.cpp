@@ -46,7 +46,7 @@ IMPLEMENTATION [vmx]:
 #include "thread_state.h" // XXX: circular dep, move this out here!
 #include "virt.h"
 #include "idt.h"
-
+#include "cpu.h"
 
 PUBLIC inline
 Vm_vmx_b::Vm_vmx_b(Ram_quota *q) : Vm(q)
@@ -252,7 +252,8 @@ Vm_vmx_t<X>::load_guest_state(Cpu_number cpu, void *src)
 #endif
 
   // write 32-bit fields
-  load(0x4800, 0x482a, src);
+  load(0x4800, 0x4826, src);
+  load(0x482a, src);
 
   if (pinbased_ctls.test(6)) // activate vmx-preemption timer
     load(Vmx::F_preempt_timer, src);
@@ -424,7 +425,7 @@ Vm_vmx_t<X>::do_resume_vcpu(Context *ctxt, Vcpu_state *vcpu, void *vmcs_s)
       WARNX(Info, "VMX: not supported/enabled\n");
       return -L4_err::ENodev;
     }
-
+#ifdef CONFIG_LAZY_FPU
   // XXX:
   // This generates a circular dep between thread<->task, this cries for a
   // new abstraction...
@@ -436,7 +437,7 @@ Vm_vmx_t<X>::do_resume_vcpu(Context *ctxt, Vcpu_state *vcpu, void *vmcs_s)
           return -L4_err::EInval;
         }
     }
-
+#endif
 #if 0
   if (EXPECT_FALSE(read<Unsigned32>(vmcs_s, 0x201a) != 0)) // EPT POINTER
     {
@@ -471,6 +472,10 @@ Vm_vmx_t<X>::do_resume_vcpu(Context *ctxt, Vcpu_state *vcpu, void *vmcs_s)
   Unsigned64 host_xcr0 = Fpu::fpu.current().get_xcr0();
 
   load_guest_xcr0(host_xcr0, guest_xcr0);
+
+  if (Cpu::cpus.cpu(cpu).has_l1d_flush()
+      && !Cpu::cpus.cpu(cpu).skip_l1dfl_vmentry())
+    Cpu::wrmsr(1UL, MSR_IA32_FLUSH_CMD);
 
   unsigned long ret = resume_vm_vmx(&vcpu->_regs);
   // vmread error?
@@ -524,7 +529,7 @@ Vm_vmx_t<X>::do_resume_vcpu(Context *ctxt, Vcpu_state *vcpu, void *vmcs_s)
 
 PUBLIC template<typename X> inline
 int
-Vm_vmx_t<X>::resume_vcpu(Context *ctxt, Vcpu_state *vcpu, bool user_mode)
+Vm_vmx_t<X>::resume_vcpu(Context *ctxt, Vcpu_state *vcpu, bool user_mode) override
 {
   (void)user_mode;
   assert (user_mode);

@@ -1,17 +1,18 @@
 <map id="l4/re/cap_alloc" name="l4/re/cap_alloc">
-<area shape="rect" id="node2" href="$vfs_8h_source.html" title="l4/l4re_vfs/vfs.h" alt="" coords="429,80,549,107"/>
-<area shape="rect" id="node13" href="$unique__cap.html" title="Unique_cap / Unique_del_cap. " alt="" coords="161,162,288,189"/>
-<area shape="rect" id="node14" href="$env__ns_source.html" title="l4/re/util/env_ns" alt="" coords="5,162,127,189"/>
-<area shape="rect" id="node15" href="$shared__cap.html" title="Shared_cap / Shared_del_cap. " alt="" coords="275,80,404,107"/>
-<area shape="rect" id="node16" href="$util_2event.html" title="l4/re/util/event" alt="" coords="573,80,684,107"/>
-<area shape="rect" id="node3" href="$backend_source.html" title="l4/l4re_vfs/backend" alt="" coords="417,162,561,189"/>
-<area shape="rect" id="node11" href="$fd__store_8h_source.html" title="l4/l4re_vfs/impl/fd\l_store.h" alt="" coords="713,155,845,196"/>
-<area shape="rect" id="node4" href="$ns__fs_8h_source.html" title="l4/l4re_vfs/impl/ns_fs.h" alt="" coords="142,251,307,278"/>
-<area shape="rect" id="node6" href="$vfs__impl_8h_source.html" title="l4/l4re_vfs/impl/vfs\l_impl.h" alt="" coords="275,333,414,375"/>
-<area shape="rect" id="node7" href="$ro__file_8h_source.html" title="l4/l4re_vfs/impl/ro\l_file.h" alt="" coords="609,244,742,285"/>
-<area shape="rect" id="node9" href="$vcon__stream_8h_source.html" title="l4/l4re_vfs/impl/vcon\l_stream.h" alt="" coords="433,244,584,285"/>
-<area shape="rect" id="node5" href="$ns__fs__impl_8h_source.html" title="l4/l4re_vfs/impl/ns\l_fs_impl.h" alt="" coords="37,333,172,375"/>
-<area shape="rect" id="node8" href="$ro__file__impl_8h_source.html" title="l4/l4re_vfs/impl/ro\l_file_impl.h" alt="" coords="614,333,747,375"/>
-<area shape="rect" id="node10" href="$vcon__stream__impl_8h_source.html" title="l4/l4re_vfs/impl/vcon\l_stream_impl.h" alt="" coords="439,333,589,375"/>
-<area shape="rect" id="node12" href="$fd__store__impl_8h_source.html" title="l4/l4re_vfs/impl/fd\l_store_impl.h" alt="" coords="817,244,949,285"/>
+<area shape="rect" id="node1" title="Abstract capability&#45;allocator interface." alt="" coords="287,5,403,32"/>
+<area shape="rect" id="node2" href="$vfs_8h_source.html" title=" " alt="" coords="433,80,560,107"/>
+<area shape="rect" id="node13" href="$shared__cap.html" title="Shared_cap / Shared_del_cap." alt="" coords="280,80,409,107"/>
+<area shape="rect" id="node14" href="$unique__cap.html" title="Unique_cap / Unique_del_cap." alt="" coords="167,162,296,189"/>
+<area shape="rect" id="node15" href="$env__ns_source.html" title=" " alt="" coords="5,162,132,189"/>
+<area shape="rect" id="node16" href="$util_2event.html" title=" " alt="" coords="585,80,702,107"/>
+<area shape="rect" id="node3" href="$backend_source.html" title=" " alt="" coords="423,162,571,189"/>
+<area shape="rect" id="node11" href="$fd__store_8h_source.html" title=" " alt="" coords="735,155,875,196"/>
+<area shape="rect" id="node4" href="$ns__fs_8h_source.html" title=" " alt="" coords="145,251,318,278"/>
+<area shape="rect" id="node6" href="$vfs__impl_8h_source.html" title=" " alt="" coords="282,333,429,375"/>
+<area shape="rect" id="node7" href="$ro__file_8h_source.html" title=" " alt="" coords="627,244,767,285"/>
+<area shape="rect" id="node9" href="$vcon__stream_8h_source.html" title=" " alt="" coords="444,244,603,285"/>
+<area shape="rect" id="node5" href="$ns__fs__impl_8h_source.html" title=" " alt="" coords="36,333,179,375"/>
+<area shape="rect" id="node8" href="$ro__file__impl_8h_source.html" title=" " alt="" coords="636,333,776,375"/>
+<area shape="rect" id="node10" href="$vcon__stream__impl_8h_source.html" title=" " alt="" coords="453,333,612,375"/>
+<area shape="rect" id="node12" href="$fd__store__impl_8h_source.html" title=" " alt="" coords="843,244,983,285"/>
 </map>

@@ -9,7 +9,6 @@ var dir_d1a376e4e13c495211e57ea71486fb55 =
     [ "l4int.h", "x86_2l4_2sys_2l4int_8h.html", "x86_2l4_2sys_2l4int_8h" ],
     [ "linkage.h", "x86_2l4_2sys_2linkage_8h.html", "x86_2l4_2sys_2linkage_8h" ],
     [ "segment.h", "x86_2l4_2sys_2segment_8h.html", "x86_2l4_2sys_2segment_8h" ],
-    [ "syscall-invoke.h", "syscall-invoke_8h_source.html", null ],
     [ "utcb.h", "x86_2l4_2sys_2utcb_8h.html", "x86_2l4_2sys_2utcb_8h" ],
     [ "vm.h", "x86_2l4_2sys_2vm_8h_source.html", null ]
 ];

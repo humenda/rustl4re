@@ -1,0 +1,10 @@
+<map id="L4::Ipc_svr::Timeout_queue_hooks::remove_timeout" name="L4::Ipc_svr::Timeout_queue_hooks::remove_timeout">
+<area shape="rect" id="node1" title="Remove timeout from the queue." alt="" coords="5,43,179,99"/>
+<area shape="rect" id="node2" href="$classL4_1_1Ipc__svr_1_1Timeout__queue.html#a172e0ca0f7fcb845b75939c4f30ceebb" title="Remove timeout from the queue." alt="" coords="237,7,391,49"/>
+<area shape="rect" id="node4" href="$classL4_1_1Ipc__svr_1_1Timeout__queue__hooks.html#ae4a6bd9781bf97a37dbff039db58d47d" title="get the time for the next timeout" alt="" coords="227,82,401,123"/>
+<area shape="rect" id="node3" href="$classcxx_1_1H__list.html#abc13d604f76c1da4ea72c30c1302835d" title="Remove the given element from its list." alt="" coords="457,5,605,32"/>
+<area shape="rect" id="node5" href="$group__l4__timeout__api.html#ga3345aebfb9e55eccf20ff8b765197bae" title="Combine send and receive timeout in a timeout." alt="" coords="485,56,577,83"/>
+<area shape="rect" id="node6" href="$group__l4__timeout__api.html#gab3eeabba0542c7723fbd5628c6e4d6c3" title="Set an absolute timeout." alt="" coords="470,107,593,133"/>
+<area shape="rect" id="node7" href="$classL4_1_1Ipc__svr_1_1Timeout__queue.html#a4d3404d1f551f06f9ef98121bd150569" title="Get the time for the next timeout." alt="" coords="449,158,613,199"/>
+<area shape="rect" id="node8" href="$classcxx_1_1Bits_1_1Basic__list.html#afe4330106fdfcc338e7c01b1e32cdbac" title="Return the first element in the list." alt="" coords="661,158,809,199"/>
+</map>

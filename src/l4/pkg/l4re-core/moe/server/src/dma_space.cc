@@ -57,7 +57,6 @@ public:
     // XXX: think about splitting etc.
     delete m;
     return 0;
-    //return ds->dma_unmap(0, offset, size, attrs, dir);
   }
 
   void remove(Dma::Mapping *m) override
@@ -122,14 +121,15 @@ private:
       }
   }
 
-  L4::Cap<L4::Task> dma_kern_space;
+  L4::Cap<L4::Task> _dma_kern_space;
 
   bool is_equal(L4::Cap<L4::Task> s) const
   {
     L4::Cap<L4::Task> myself(L4_BASE_TASK_CAP);
-    return myself->cap_equal(s, dma_kern_space).label();
+    return myself->cap_equal(s, _dma_kern_space).label();
   }
 
+public:
   void remove(Dma::Mapping *m) override
   {
     _map.remove(m->key);
@@ -153,21 +153,20 @@ private:
          if (0)
            printf("DMA: unmap   %lx-%lx\n", a, a+(1UL << o)-1);
 
-         dma_kern_space->unmap(fp, L4_FP_ALL_SPACES);
+         _dma_kern_space->unmap(fp, L4_FP_ALL_SPACES);
          s -= (1UL << o);
          a += (1UL << o);
        }
   }
 
-public:
   explicit Task_mapper(L4::Cap<L4::Task> s)
-  : dma_kern_space(s)
+  : _dma_kern_space(s)
   { _mappers.add(this); }
 
   ~Task_mapper() noexcept
   {
-    if (dma_kern_space)
-      object_pool.cap_alloc()->free(dma_kern_space);
+    if (_dma_kern_space)
+      object_pool.cap_alloc()->free(_dma_kern_space);
   }
 
   static Task_mapper *find_mapper(L4::Cap<L4::Task> task)
@@ -209,7 +208,11 @@ public:
 
     node->key = Region(a, a + size - 1);
     if (!_map.insert(node.get()).second)
-      L4Re::chksys(-L4_ENOMEM);
+      {
+        // This should not really happen if find_free() above found a free
+        // region.
+        L4Re::chksys(-L4_EEXIST);
+      }
 
     node->mapper = this;
     node->attrs = attrs;
@@ -221,14 +224,14 @@ public:
     for (;;)
       {
         L4::Ipc::Snd_fpage fpage;
-        L4Re::chksys(ds->map(aligned_offset, a, Moe::Dataspace::Writable,
+        L4Re::chksys(ds->map(aligned_offset, a, L4Re::Dataspace::F::RW,
                              a, a + size - 1, fpage));
 
         L4::Cap<L4::Task> myself(L4_BASE_TASK_CAP);
 
         l4_fpage_t f;
         f.raw = fpage.data();
-        L4Re::chksys(dma_kern_space->map(myself, f, a));
+        L4Re::chksys(_dma_kern_space->map(myself, f, a));
 
         unsigned long s = 1UL << fpage.order();
         if (size <= s)
@@ -250,7 +253,6 @@ public:
 
     // XXX: think about node splitting, merging
     delete m;
-    //return ds->dma_unmap(0, offset, size, attrs, dir);
     return 0;
   }
 };

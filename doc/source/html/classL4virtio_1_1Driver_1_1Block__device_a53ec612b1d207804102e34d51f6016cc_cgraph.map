@@ -1,0 +1,7 @@
+<map id="L4virtio::Driver::Block_device::add_block" name="L4virtio::Driver::Block_device::add_block">
+<area shape="rect" id="node1" title="Add a data block to a request that has already been set up." alt="" coords="5,104,168,145"/>
+<area shape="rect" id="node2" href="$classL4virtio_1_1Driver_1_1Virtqueue.html#a60e0cff278a11e1aeb749c17e809e093" title="Allocate and return an unused descriptor from the descriptor table." alt="" coords="216,5,407,47"/>
+<area shape="rect" id="node3" href="$classL4virtio_1_1Driver_1_1Virtqueue.html#a2b806bcf98022b49453a80bdd2944b04" title="Return a reference to a descriptor in the descriptor table." alt="" coords="216,71,407,112"/>
+<area shape="rect" id="node4" href="$structL4virtio_1_1Virtqueue_1_1Desc_1_1Flags.html#a4c91d7f9a29c6b9f80d7db69ea066863" title="Get the next bits ( 0 to 0 ) of raw." alt="" coords="240,136,383,177"/>
+<area shape="rect" id="node5" href="$structL4virtio_1_1Virtqueue_1_1Desc_1_1Flags.html#a30ec0bb337904ddd9b321e41f6e5a2b0" title="Get the write bits ( 1 to 1 ) of raw." alt="" coords="238,201,385,243"/>
+</map>

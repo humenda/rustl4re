@@ -13,7 +13,7 @@
 #include "pages.h"
 
 Moe::Dataspace_cont::Dataspace_cont(void *start, unsigned long size,
-                                    unsigned short flags,
+                                    Flags flags,
                                     unsigned char page_shift)
 : Dataspace(size, flags, page_shift), _start((char*)start)
 {
@@ -27,9 +27,9 @@ Moe::Dataspace_cont::Dataspace_cont(void *start, unsigned long size,
 }
 
 
-Moe::Dataspace::Address 
+Moe::Dataspace::Address
 Moe::Dataspace_cont::address(l4_addr_t offset,
-                             Ds_rw rw, l4_addr_t hot_spot,
+                             Flags flags, l4_addr_t hot_spot,
                              l4_addr_t min, l4_addr_t max) const
 {
   if (!check_limit(offset))
@@ -67,25 +67,32 @@ Moe::Dataspace_cont::address(l4_addr_t offset,
   l4_addr_t map_base = l4_trunc_size(adr, order);
   l4_addr_t offs = adr & ~(~0UL << order);
 
-  if (!is_writable())
-    rw = Read_only;
-
-  return Address(map_base, order, rw, offs);
+  return Address(map_base, order, flags & map_flags(), offs);
 }
 
-void Moe::Dataspace_cont::unmap(bool ro) const throw()
+int
+Moe::Dataspace_cont::copy_address(l4_addr_t offset, Flags, l4_addr_t *addr,
+                                  unsigned long *size) const
 {
-  unsigned long _size = round_size();
+  if (!check_limit(offset))
+    return -L4_ERANGE;
+
+  *addr = l4_addr_t(_start) + offset;
+  *size = this->size() - offset;
+  return 0;
+}
+
+void Moe::Dataspace_cont::unmap() const throw()
+{
+  unsigned long size = round_size();
   l4_addr_t offs = 0;
 
-  while (_size)
+  while (size)
     {
-      Address addr = address(offs, Writable, ~0);
-      l4_fpage_t fp
-        = l4_fpage_set_rights(addr.fp(), ro ? L4_FPAGE_W : L4_FPAGE_RWX);
-      l4_task_unmap(L4_BASE_TASK_CAP, fp, L4_FP_OTHER_SPACES);
-      _size -= (1UL << l4_fpage_size(fp));
-      offs  += (1UL << l4_fpage_size(fp));
+      Address addr = address(offs, L4Re::Dataspace::F::RWX, ~0);
+      l4_task_unmap(L4_BASE_TASK_CAP, addr.fp(), L4_FP_OTHER_SPACES);
+      size -= (1UL << l4_fpage_size(addr.fp()));
+      offs  += (1UL << l4_fpage_size(addr.fp()));
     }
 }
 
@@ -103,12 +110,5 @@ Moe::Dataspace_cont::dma_map(Dma_space *dma, l4_addr_t offset, l4_size_t *size,
 
   *dma_addr = (l4_addr_t)start() + offset;
   *size = cxx::min(*size, (l4_size_t)(this->size() - offset));
-  return 0;
-}
-
-int
-Moe::Dataspace_cont::dma_unmap(Dma_space *, l4_addr_t, l4_size_t,
-                               Dma_attribs, Dma_space::Direction)
-{
   return 0;
 }

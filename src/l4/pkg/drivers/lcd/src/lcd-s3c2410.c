@@ -6,16 +6,19 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+#include <l4/sys/factory.h>
 #include <l4/re/c/dataspace.h>
 #include <l4/re/c/rm.h>
 #include <l4/re/c/util/cap_alloc.h>
 #include <l4/re/c/mem_alloc.h>
+#include <l4/re/c/dma_space.h>
+#include <l4/re/protocols.h>
 #include <l4/io/io.h>
 
 #define LCD_NAME "LCD s3c2410"
 
 static void *fb_vaddr;
-static l4_addr_t fb_paddr;
+static l4re_dma_space_dma_addr_t fb_paddr;
 
 enum {
   LCDCON1   = 0x00,
@@ -92,6 +95,7 @@ static int get_fbinfo(l4re_video_view_info_t *vinfo)
 
 static void setup_memory(void)
 {
+  l4re_dma_space_t dma;
   l4_size_t phys_size;
   l4io_device_handle_t dh;
   l4io_resource_handle_t hdl;
@@ -126,7 +130,7 @@ static void setup_memory(void)
 
   fb_vaddr = 0;
   if (l4re_rm_attach(&fb_vaddr, fbmem_size(),
-                     L4RE_RM_SEARCH_ADDR | L4RE_RM_EAGER_MAP,
+                     L4RE_RM_F_SEARCH_ADDR | L4RE_RM_F_EAGER_MAP | L4RE_RM_F_RW,
                      mem, 0, L4_PAGESHIFT))
 
     {
@@ -138,13 +142,31 @@ static void setup_memory(void)
          fb_vaddr, fbmem_size());
 
   // get physical address
-  if (l4re_ds_phys(mem, 0, &fb_paddr, &phys_size)
+  dma = l4re_util_cap_alloc();
+  if (l4_is_invalid_cap(dma))
+    {
+      printf("error: failed to allocate DMA space capability.\n");
+      return;
+    }
+
+  if (l4_error(l4_factory_create(l4re_global_env->mem_alloc,
+                                 L4RE_PROTO_DMA_SPACE, dma)))
+    {
+      printf("error: failed to create DMA space\n");
+      return;
+    }
+
+  phys_size = fbmem_size();
+
+  // get physical address
+  if (l4re_dma_space_map(dma, mem | L4_CAP_FPAGE_RW, 0, &phys_size, 0,
+                         L4RE_DMA_SPACE_BIDIRECTIONAL, &fb_paddr)
       || phys_size != fbmem_size())
     {
       printf("Getting the physical address failed or not contiguous\n");
       return;
     }
-  printf("Physical video memory is at %p\n", (void *)fb_paddr);
+  printf("Physical video memory is at %llx\n", fb_paddr);
 }
 
 static inline void wr(unsigned long val, unsigned long regoff)

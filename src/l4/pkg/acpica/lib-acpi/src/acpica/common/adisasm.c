@@ -8,7 +8,7 @@
  *
  * 1. Copyright Notice
  *
- * Some or all of this work - Copyright (c) 1999 - 2017, Intel Corp.
+ * Some or all of this work - Copyright (c) 1999 - 2019, Intel Corp.
  * All rights reserved.
  *
  * 2. License
@@ -111,6 +111,42 @@
  * other governmental approval, or letter of assurance, without first obtaining
  * such license, approval or letter.
  *
+ *****************************************************************************
+ *
+ * Alternatively, you may choose to be licensed under the terms of the
+ * following license:
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions, and the following disclaimer,
+ *    without modification.
+ * 2. Redistributions in binary form must reproduce at minimum a disclaimer
+ *    substantially similar to the "NO WARRANTY" disclaimer below
+ *    ("Disclaimer") and any redistribution must be conditioned upon
+ *    including a substantially similar Disclaimer requirement for further
+ *    binary redistribution.
+ * 3. Neither the names of the above-listed copyright holders nor the names
+ *    of any contributors may be used to endorse or promote products derived
+ *    from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+ * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * Alternatively, you may choose to be licensed under the terms of the
+ * GNU General Public License ("GPL") version 2 as published by the Free
+ * Software Foundation.
+ *
  *****************************************************************************/
 
 #include "aslcompiler.h"
@@ -194,24 +230,36 @@ AdInitialize (
     Status = AcpiOsInitialize ();
     if (ACPI_FAILURE (Status))
     {
+        fprintf (stderr, "Could not initialize ACPICA subsystem: %s\n",
+            AcpiFormatException (Status));
+
         return (Status);
     }
 
     Status = AcpiUtInitGlobals ();
     if (ACPI_FAILURE (Status))
     {
+        fprintf (stderr, "Could not initialize ACPICA globals: %s\n",
+            AcpiFormatException (Status));
+
         return (Status);
     }
 
     Status = AcpiUtMutexInitialize ();
     if (ACPI_FAILURE (Status))
     {
+        fprintf (stderr, "Could not initialize ACPICA mutex objects: %s\n",
+            AcpiFormatException (Status));
+
         return (Status);
     }
 
     Status = AcpiNsRootInitialize ();
     if (ACPI_FAILURE (Status))
     {
+        fprintf (stderr, "Could not initialize ACPICA namespace: %s\n",
+            AcpiFormatException (Status));
+
         return (Status);
     }
 
@@ -221,7 +269,7 @@ AdInitialize (
     AcpiGbl_RootTableList.CurrentTableCount = 0;
     AcpiGbl_RootTableList.Tables = LocalTables;
 
-    return (Status);
+    return (AE_OK);
 }
 
 
@@ -360,6 +408,8 @@ Cleanup:
         ACPI_FREE (Table);
     }
 
+    AcDeleteTableList (ListHead);
+
     if (File)
     {
         fclose (File);
@@ -397,6 +447,21 @@ AdDisassembleOneTable (
     ACPI_STATUS             Status;
     ACPI_OWNER_ID           OwnerId;
 
+
+#ifdef ACPI_ASL_COMPILER
+
+    /*
+     * For ASL-/ASL+ converter: replace the temporary "XXXX"
+     * table signature with the original. This "XXXX" makes
+     * it harder for the AML interpreter to run the badaml
+     * (.xxx) file produced from the converter in case if
+     * it fails to get deleted.
+     */
+    if (AcpiGbl_CaptureComments)
+    {
+        strncpy (Table->Signature, AcpiGbl_TableSig, ACPI_NAMESEG_SIZE);
+    }
+#endif
 
     /* ForceAmlDisassembly means to assume the table contains valid AML */
 
@@ -474,7 +539,7 @@ AdDisassembleOneTable (
      * the entire tree with the new information (namely, the
      * number of arguments per method)
      */
-    if (AcpiDmGetExternalMethodCount ())
+    if (AcpiDmGetUnresolvedExternalMethodCount ())
     {
         Status = AdReparseOneTable (Table, File, OwnerId);
         if (ACPI_FAILURE (Status))
@@ -490,7 +555,7 @@ AdDisassembleOneTable (
      * 1) Convert fixed-offset references to resource descriptors
      *    to symbolic references (Note: modifies namespace)
      */
-    AcpiDmConvertResourceIndexes (AcpiGbl_ParseOpRoot, AcpiGbl_RootNode);
+    AcpiDmConvertParseObjects (AcpiGbl_ParseOpRoot, AcpiGbl_RootNode);
 
     /* Optional displays */
 
@@ -511,11 +576,11 @@ AdDisassembleOneTable (
                 DisasmFilename, CmGetFileSize (File));
         }
 
-        if (Gbl_MapfileFlag)
+        if (AslGbl_MapfileFlag)
         {
             fprintf (stderr, "%14s %s - %u bytes\n",
-                Gbl_Files[ASL_FILE_MAP_OUTPUT].ShortDescription,
-                Gbl_Files[ASL_FILE_MAP_OUTPUT].Filename,
+                AslGbl_FileDescs[ASL_FILE_MAP_OUTPUT].ShortDescription,
+                AslGbl_Files[ASL_FILE_MAP_OUTPUT].Filename,
                 FlGetFileSize (ASL_FILE_MAP_OUTPUT));
         }
     }
@@ -547,12 +612,13 @@ AdReparseOneTable (
     ACPI_OWNER_ID           OwnerId)
 {
     ACPI_STATUS             Status;
+    ACPI_COMMENT_ADDR_NODE  *AddrListHead;
 
 
     fprintf (stderr,
         "\nFound %u external control methods, "
         "reparsing with new information\n",
-        AcpiDmGetExternalMethodCount ());
+        AcpiDmGetUnresolvedExternalMethodCount ());
 
     /* Reparse, rebuild namespace */
 
@@ -578,7 +644,16 @@ AdReparseOneTable (
 
     /* New namespace, add the external definitions first */
 
-    AcpiDmAddExternalsToNamespace ();
+    AcpiDmAddExternalListToNamespace ();
+
+    /* For -ca option: clear the list of comment addresses. */
+
+    while (AcpiGbl_CommentAddrListHead)
+    {
+        AddrListHead= AcpiGbl_CommentAddrListHead;
+        AcpiGbl_CommentAddrListHead = AcpiGbl_CommentAddrListHead->Next;
+        AcpiOsFree(AddrListHead);
+    }
 
     /* Parse the table again. No need to reload it, however */
 
@@ -675,6 +750,7 @@ AdDoExternalFileList (
                 continue;
             }
 
+            AcDeleteTableList (ExternalListHead);
             return (Status);
         }
 
@@ -688,6 +764,7 @@ AdDoExternalFileList (
             {
                 AcpiOsPrintf ("Could not parse external ACPI tables, %s\n",
                     AcpiFormatException (Status));
+                AcDeleteTableList (ExternalListHead);
                 return (Status);
             }
 
@@ -706,6 +783,8 @@ AdDoExternalFileList (
 
         ExternalFileList = ExternalFileList->Next;
     }
+
+    AcDeleteTableList (ExternalListHead);
 
     if (ACPI_FAILURE (GlobalStatus))
     {

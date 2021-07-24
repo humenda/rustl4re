@@ -1,4 +1,5 @@
 <map id="l4_thread_ex_regs" name="l4_thread_ex_regs">
-<area shape="rect" id="node2" href="$group__l4__thread__api.html#ga9387fbfe618c3ede0eae63261ce1662e" title="Exchange basic thread registers. " alt="" coords="195,5,351,32"/>
-<area shape="rect" id="node3" href="$group__l4__utcb__api.html#gadc099b4a59e1d99638c72c11a8c8b644" title="Get the UTCB address. " alt="" coords="239,56,306,83"/>
+<area shape="rect" id="node1" title="Exchange basic thread registers." alt="" coords="5,31,147,57"/>
+<area shape="rect" id="node2" href="$group__l4__thread__api.html#ga9387fbfe618c3ede0eae63261ce1662e" title="Exchange basic thread registers." alt="" coords="195,5,351,32"/>
+<area shape="rect" id="node3" href="$group__l4__utcb__api.html#gadc099b4a59e1d99638c72c11a8c8b644" title="Get the UTCB address." alt="" coords="238,56,307,83"/>
 </map>

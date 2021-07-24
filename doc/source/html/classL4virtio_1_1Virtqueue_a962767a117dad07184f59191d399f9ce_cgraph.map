@@ -1,0 +1,4 @@
+<map id="L4virtio::Virtqueue::avail_size" name="L4virtio::Virtqueue::avail_size">
+<area shape="rect" id="node1" title="Calculate the size of the available ring for num entries." alt="" coords="5,5,148,47"/>
+<area shape="rect" id="node2" href="$classL4virtio_1_1Virtqueue.html#af61e3e4e436b93f37f22243a1c0ffe0e" title=" " alt="" coords="196,13,375,39"/>
+</map>

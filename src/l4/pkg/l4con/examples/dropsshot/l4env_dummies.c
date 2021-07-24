@@ -50,7 +50,7 @@
 
 int
 l4rm_lookup(const void * addr, l4_addr_t * map_addr, l4_size_t * map_size,
-            l4dm_dataspace_t * ds, l4_offs_t * offset, l4_threadid_t * pager)
+            l4dm_dataspace_t * ds, l4_addr_t * offset, l4_threadid_t * pager)
 {
   return -L4_ENOTSUPP;
 }

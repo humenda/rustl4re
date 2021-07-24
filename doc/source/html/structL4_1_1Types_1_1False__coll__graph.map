@@ -1,4 +1,5 @@
 <map id="L4::Types::False" name="L4::Types::False">
-<area shape="rect" id="node2" href="$structL4_1_1Types_1_1Bool.html" title="{L4::Types::Bool\&lt; false \&gt;\n||}" alt="" coords="5,145,176,223"/>
-<area shape="rect" id="node3" href="$structL4_1_1Types_1_1Bool.html" title="Boolean meta type. " alt="" coords="15,5,166,83"/>
+<area shape="rect" id="node1" title="False meta value." alt="" coords="35,272,157,349"/>
+<area shape="rect" id="node2" href="$structL4_1_1Types_1_1Bool.html" title=" " alt="" coords="5,145,187,223"/>
+<area shape="rect" id="node3" href="$structL4_1_1Types_1_1Bool.html" title="Boolean meta type." alt="" coords="17,5,175,83"/>
 </map>

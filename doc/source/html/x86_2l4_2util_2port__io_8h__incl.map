@@ -1,4 +1,6 @@
 <map id="x86/l4/util/port_io.h" name="x86/l4/util/port_io.h">
-<area shape="rect" id="node2" href="$l4_2sys_2l4int_8h.html" title="Fixed sized integer types, generic version. " alt="" coords="5,80,104,107"/>
-<area shape="rect" id="node3" href="$compiler_8h.html" title="L4 compiler related defines. " alt="" coords="129,80,255,107"/>
+<area shape="rect" id="node1" title="x86 port I/O" alt="" coords="55,5,203,32"/>
+<area shape="rect" id="node2" href="$l4_2sys_2l4int_8h.html" title="Fixed sized integer types, generic version." alt="" coords="5,80,111,107"/>
+<area shape="rect" id="node3" href="$compiler_8h.html" title="L4 compiler related defines." alt="" coords="135,80,267,107"/>
+<area shape="rect" id="node4" title=" " alt="" coords="139,155,262,181"/>
 </map>

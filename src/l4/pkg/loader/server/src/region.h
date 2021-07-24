@@ -55,7 +55,8 @@ public:
   typedef L4::Cap<L4Re::Dataspace> Dataspace;
   enum { Have_find = true };
   static int validate_ds(L4::Ipc_svr::Server_iface *sif,
-                         L4::Ipc::Snd_fpage const & /*ds_cap*/, unsigned,
+                         L4::Ipc::Snd_fpage const & /*ds_cap*/,
+                         L4Re::Rm::Flags,
                          L4::Cap<L4Re::Dataspace> *ds)
   {
     // XXX: must check that ds is from trusted allocator!
@@ -76,7 +77,6 @@ public:
   Region_map();
   long op_io_page_fault(L4::Io_pager::Rights,
                         l4_fpage_t io_pfa, l4_umword_t pc,
-                        L4::Ipc::Opt<l4_mword_t> &result,
                         L4::Ipc::Opt<L4::Ipc::Snd_fpage> &);
 
   virtual ~Region_map() {}

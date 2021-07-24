@@ -8,7 +8,7 @@
  *
  * 1. Copyright Notice
  *
- * Some or all of this work - Copyright (c) 1999 - 2017, Intel Corp.
+ * Some or all of this work - Copyright (c) 1999 - 2019, Intel Corp.
  * All rights reserved.
  *
  * 2. License
@@ -111,6 +111,42 @@
  * other governmental approval, or letter of assurance, without first obtaining
  * such license, approval or letter.
  *
+ *****************************************************************************
+ *
+ * Alternatively, you may choose to be licensed under the terms of the
+ * following license:
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions, and the following disclaimer,
+ *    without modification.
+ * 2. Redistributions in binary form must reproduce at minimum a disclaimer
+ *    substantially similar to the "NO WARRANTY" disclaimer below
+ *    ("Disclaimer") and any redistribution must be conditioned upon
+ *    including a substantially similar Disclaimer requirement for further
+ *    binary redistribution.
+ * 3. Neither the names of the above-listed copyright holders nor the names
+ *    of any contributors may be used to endorse or promote products derived
+ *    from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+ * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * Alternatively, you may choose to be licensed under the terms of the
+ * GNU General Public License ("GPL") version 2 as published by the Free
+ * Software Foundation.
+ *
  *****************************************************************************/
 
 #include "aslcompiler.h"
@@ -205,7 +241,7 @@ OptSearchToRoot (
      * not match, and we cannot use this optimization.
      */
     Path = &(((char *) TargetPath->Pointer)[
-        TargetPath->Length - ACPI_NAME_SIZE]);
+        TargetPath->Length - ACPI_NAMESEG_SIZE]);
     ScopeInfo.Scope.Node = CurrentNode;
 
     /* Lookup the NameSeg using SEARCH_PARENT (search-to-root) */
@@ -239,7 +275,7 @@ OptSearchToRoot (
 
     /* We must allocate a new string for the name (TargetPath gets deleted) */
 
-    *NewPath = UtStringCacheCalloc (ACPI_NAME_SIZE + 1);
+    *NewPath = UtLocalCacheCalloc (ACPI_NAMESEG_SIZE + 1);
     strcpy (*NewPath, Path);
 
     if (strncmp (*NewPath, "_T_", 3))
@@ -307,7 +343,7 @@ OptBuildShortestPath (
      * can possibly have in common. (To optimize, we have to have at least 1)
      *
      * Note: The external NamePath string lengths are always a multiple of 5
-     * (ACPI_NAME_SIZE + separator)
+     * (ACPI_NAMESEG_SIZE + separator)
      */
     MaxCommonSegments = TargetPath->Length / ACPI_PATH_SEGMENT_LENGTH;
     if (CurrentPath->Length < TargetPath->Length)
@@ -327,7 +363,7 @@ OptBuildShortestPath (
 
         Index = (NumCommonSegments * ACPI_PATH_SEGMENT_LENGTH) + 1;
 
-        if (!ACPI_COMPARE_NAME (
+        if (!ACPI_COMPARE_NAMESEG (
             &(ACPI_CAST_PTR (char, TargetPath->Pointer)) [Index],
             &(ACPI_CAST_PTR (char, CurrentPath->Pointer)) [Index]))
         {
@@ -370,7 +406,7 @@ OptBuildShortestPath (
      * Construct a new target string
      */
     NewPathExternal =
-        ACPI_ALLOCATE_ZEROED (TargetPath->Length + NumCarats + 1);
+        UtLocalCacheCalloc (TargetPath->Length + NumCarats + 1);
 
     /* Insert the Carats into the Target string */
 
@@ -486,7 +522,6 @@ OptBuildShortestPath (
 
 Cleanup:
 
-    ACPI_FREE (NewPathExternal);
     return (Status);
 }
 
@@ -643,7 +678,7 @@ OptOptimizeNamePath (
 
     /* This is an optional optimization */
 
-    if (!Gbl_ReferenceOptimizationFlag)
+    if (!AslGbl_ReferenceOptimizationFlag)
     {
         return_VOID;
     }
@@ -663,7 +698,7 @@ OptOptimizeNamePath (
 
     if (!(Flags & (AML_NAMED | AML_CREATE)))
     {
-        if (Op->Asl.CompileFlags & NODE_IS_NAME_DECLARATION)
+        if (Op->Asl.CompileFlags & OP_IS_NAME_DECLARATION)
         {
             /* We don't want to fuss with actual name declaration nodes here */
 
@@ -678,7 +713,7 @@ OptOptimizeNamePath (
      * to be any possibility that it can be optimized to a shorter string
      */
     AmlNameStringLength = strlen (AmlNameString);
-    if (AmlNameStringLength <= ACPI_NAME_SIZE)
+    if (AmlNameStringLength <= ACPI_NAMESEG_SIZE)
     {
         ACPI_DEBUG_PRINT_RAW ((ACPI_DB_OPTIMIZATIONS,
             "NAMESEG %4.4s\n", AmlNameString));
@@ -779,7 +814,7 @@ OptOptimizeNamePath (
     ACPI_FREE (ExternalNameString);
 
     /*
-     * Attempt an optmization depending on the type of namepath
+     * Attempt an optimization depending on the type of namepath
      */
     if (Flags & (AML_NAMED | AML_CREATE))
     {
@@ -857,7 +892,7 @@ OptOptimizeNamePath (
             /* Name must appear as the last parameter */
 
             NextOp = Op->Asl.Child;
-            while (!(NextOp->Asl.CompileFlags & NODE_IS_NAME_DECLARATION))
+            while (!(NextOp->Asl.CompileFlags & OP_IS_NAME_DECLARATION))
             {
                 NextOp = NextOp->Asl.Next;
             }

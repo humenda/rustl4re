@@ -1,0 +1,4 @@
+<map id="l4_kip_clock" name="l4_kip_clock">
+<area shape="rect" id="node1" title="Return clock value from the KIP." alt="" coords="5,5,108,32"/>
+<area shape="rect" id="node2" href="$compiler_8h.html#a5d5bbbe36a0d144d1f465dbca715718e" title="Memory barrier." alt="" coords="156,5,219,32"/>
+</map>

@@ -60,7 +60,11 @@ public:
   };
 
   virtual void mask(Mword pin) = 0;
+  virtual void mask_percpu(Cpu_number, Mword pin)
+  { mask(pin); }
   virtual void unmask(Mword pin) = 0;
+  virtual void unmask_percpu(Cpu_number, Mword pin)
+  { unmask(pin); }
   virtual void ack(Mword pin) = 0;
   virtual void mask_and_ack(Mword pin) = 0;
 
@@ -86,16 +90,14 @@ public:
 class Irq_chip_soft : public Irq_chip
 {
 public:
-  void mask(Mword) {}
-  void unmask(Mword) {}
-  void mask_and_ack(Mword) {}
-  void ack(Mword) {}
+  void mask(Mword) override {}
+  void unmask(Mword) override {}
+  void mask_and_ack(Mword) override {}
+  void ack(Mword) override {}
 
-  void set_cpu(Mword, Cpu_number) {}
-  int set_mode(Mword, Mode) { return 0; }
-  bool is_edge_triggered(Mword) const { return true; }
-
-  char const *chip_type() const { return "Soft"; }
+  void set_cpu(Mword, Cpu_number) override {}
+  int set_mode(Mword, Mode) override { return 0; }
+  bool is_edge_triggered(Mword) const override { return true; }
 
   static Irq_chip_soft sw_chip;
 };
@@ -108,7 +110,7 @@ class Irq_chip_icu : public Irq_chip
 {
 public:
   virtual bool reserve(Mword pin) = 0;
-  virtual bool alloc(Irq_base *irq, Mword pin) = 0;
+  virtual bool alloc(Irq_base *irq, Mword pin, bool init = true) = 0;
   virtual Irq_base *irq(Mword pin) const = 0;
   virtual unsigned nr_irqs() const = 0;
   virtual ~Irq_chip_icu() = 0;
@@ -159,9 +161,6 @@ public:
 
   void set_cpu(Cpu_number cpu) { _chip->set_cpu(_pin, cpu); }
 
-  unsigned get_mode() const
-  { return _flags & 0xe; }
-
   bool masked() const { return !(_flags & F_enabled); }
   Mword flags() const { return _flags; }
 
@@ -204,6 +203,15 @@ EXTENSION class Irq_chip
 public:
   virtual char const *chip_type() const = 0;
 };
+
+
+//--------------------------------------------------------------------------
+IMPLEMENTATION[debug]:
+
+PUBLIC
+char const *
+Irq_chip_soft::chip_type() const override
+{ return "Soft"; }
 
 
 //--------------------------------------------------------------------------

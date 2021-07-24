@@ -80,7 +80,7 @@ int ferret_attach(l4_cap_idx_t srv,
 		}
 
 		err =  L4Re::Env::env()->rm()->attach(addr, ds->size(),
-		                                      L4Re::Rm::Search_addr,
+		                                      L4Re::Rm::F::Search_addr | L4Re::Rm::F::RW,
 		                                      ds);
 		if (err < 0)
 		{

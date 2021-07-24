@@ -1,0 +1,5 @@
+<map id="L4::Kip::Mem_desc::end" name="L4::Kip::Mem_desc::end">
+<area shape="rect" id="node1" title="Return end address of memory descriptor." alt="" coords="232,31,408,57"/>
+<area shape="rect" id="node2" href="$classL4_1_1Kip_1_1Mem__desc.html#a48fd081bd276556acfbaae5f3f8f814b" title="Set values of a memory descriptor." alt="" coords="9,5,181,32"/>
+<area shape="rect" id="node3" href="$classL4_1_1Kip_1_1Mem__desc.html#aed690d186404b5bc353e9e60a52d9d80" title="Return size of region described by the memory descriptor." alt="" coords="5,56,184,83"/>
+</map>

@@ -1,0 +1,6 @@
+<map id="L4virtio::Driver::Device::wait" name="L4virtio::Driver::Device::wait">
+<area shape="rect" id="node1" title="Wait for a notification from the device." alt="" coords="680,5,852,47"/>
+<area shape="rect" id="node2" href="$classL4virtio_1_1Driver_1_1Device.html#a156576a5d43ef2fe11b39f4d8ffc4c9e" title="Wait for the next item to arrive in the used queue and return it." alt="" coords="460,5,632,47"/>
+<area shape="rect" id="node3" href="$classL4virtio_1_1Driver_1_1Device.html#af4aa9ac34ce928b9d437f1bb6a2ec216" title="Send a request to the device and wait for it to be processed." alt="" coords="240,5,412,47"/>
+<area shape="rect" id="node4" href="$classL4virtio_1_1Driver_1_1Block__device.html#a63f21e71556accc8c669ef80161ecd8e" title="Process request synchronously." alt="" coords="5,5,192,47"/>
+</map>

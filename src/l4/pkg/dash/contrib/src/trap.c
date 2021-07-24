@@ -51,10 +51,6 @@
 #include "trap.h"
 #include "mystring.h"
 
-#ifdef HETIO
-#include "hetio.h"
-#endif
-
 /*
  * Sigmode records the current value of the signal handlers for the various
  * modes.  A value of zero means that the current handler is not known.
@@ -77,11 +73,13 @@ char sigmode[NSIG - 1];
 /* indicates specified signal received */
 static char gotsig[NSIG - 1];
 /* last pending signal */
-volatile sig_atomic_t pendingsigs;
+volatile sig_atomic_t pending_sig;
 /* received SIGCHLD */
 int gotsigchld;
 
 extern char *signal_names[];
+
+static int decode_signum(const char *);
 
 #ifdef mkinit
 INCLUDE "trap.h"
@@ -116,7 +114,7 @@ trapcmd(int argc, char **argv)
 		}
 		return 0;
 	}
-	if (!ap[1])
+	if (!ap[1] || decode_signum(*ap) >= 0)
 		action = NULL;
 	else
 		action = *ap++;
@@ -293,7 +291,7 @@ onsig(int signo)
 	}
 
 	gotsig[signo - 1] = 1;
-	pendingsigs = signo;
+	pending_sig = signo;
 
 	if (signo == SIGINT && !trap[SIGINT]) {
 		if (!suppressint)
@@ -314,25 +312,40 @@ void dotrap(void)
 	char *p;
 	char *q;
 	int i;
-	int savestatus;
+	int status, last_status;
 
-	savestatus = exitstatus;
-	pendingsigs = 0;
+	if (!pending_sig)
+		return;
+
+	status = savestatus;
+	last_status = status;
+	if (likely(status < 0)) {
+		status = exitstatus;
+		savestatus = status;
+	}
+	pending_sig = 0;
 	barrier();
 
 	for (i = 0, q = gotsig; i < NSIG - 1; i++, q++) {
 		if (!*q)
 			continue;
+
+		if (evalskip) {
+			pending_sig = i + 1;
+			break;
+		}
+
 		*q = 0;
 
 		p = trap[i + 1];
 		if (!p)
 			continue;
 		evalstring(p, 0);
-		exitstatus = savestatus;
-		if (evalskip)
-			break;
+		if (evalskip != SKIPFUNC)
+			exitstatus = status;
 	}
+
+	savestatus = last_status;
 }
 
 
@@ -366,18 +379,11 @@ exitshell(void)
 {
 	struct jmploc loc;
 	char *p;
-	volatile int status;
 
-#ifdef HETIO
-	hetio_reset_term();
-#endif
-	status = exitstatus;
-	TRACE(("pid %d, exitshell(%d)\n", getpid(), status));
-	if (setjmp(loc.loc)) {
-		if (exception == EXEXIT)
-			status = exitstatus;
+	savestatus = exitstatus;
+	TRACE(("pid %d, exitshell(%d)\n", getpid(), savestatus));
+	if (setjmp(loc.loc))
 		goto out;
-	}
 	handler = &loc;
 	if ((p = trap[0])) {
 		trap[0] = NULL;
@@ -392,21 +398,30 @@ out:
 	if (likely(!setjmp(loc.loc)))
 		setjobctl(0);
 	flushall();
-	_exit(status);
+	_exit(savestatus);
 	/* NOTREACHED */
+}
+
+static int decode_signum(const char *string)
+{
+	int signo = -1;
+
+	if (is_number(string)) {
+		signo = atoi(string);
+		if (signo >= NSIG)
+			signo = -1;
+	}
+
+	return signo;
 }
 
 int decode_signal(const char *string, int minsig)
 {
 	int signo;
 
-	if (is_number(string)) {
-		signo = atoi(string);
-		if (signo >= NSIG) {
-			return -1;
-		}
+	signo = decode_signum(string);
+	if (signo >= 0)
 		return signo;
-	}
 
 	for (signo = minsig; signo < NSIG; signo++) {
 		if (!strcasecmp(string, signal_names[signo])) {

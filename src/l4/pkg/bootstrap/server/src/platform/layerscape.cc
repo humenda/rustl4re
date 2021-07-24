@@ -56,6 +56,10 @@ class Platform_arm_ls10xxa : public Platform_single_region_ram
 
     kuart.baud         = 115200;
     kuart.reg_shift    = 0;
+    kuart.access_type  = L4_kernel_options::Uart_type_mmio;
+    kuart_flags       |=   L4_kernel_options::F_uart_base
+                         | L4_kernel_options::F_uart_baud
+                         | L4_kernel_options::F_uart_irq;
     static L4::Uart_16550 _uart(kuart.base_baud);
     setup_16550_mmio_uart(&_uart);
   }

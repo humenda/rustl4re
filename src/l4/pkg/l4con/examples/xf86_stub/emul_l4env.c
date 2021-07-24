@@ -60,7 +60,7 @@ struct vm_area_struct
 {
     void *                addr;
     l4_size_t	          size;
-    l4_offs_t             offs;
+    l4_addr_t             offs;
     l4dm_dataspace_t      ds;
     struct vm_area_struct *next;
 };
@@ -159,7 +159,7 @@ static struct vm_area_struct *remove_virtual_area(l4_addr_t addr)
  */
 int
 l4rm_do_attach(const l4dm_dataspace_t * ds, l4_uint32_t area, l4_addr_t * addr, 
-               l4_size_t size, l4_offs_t ds_offs, l4_uint32_t flags)
+               l4_size_t size, l4_addr_t ds_offs, l4_uint32_t flags)
 {
   struct vm_area_struct *vm;
   unsigned off;
@@ -247,7 +247,7 @@ int l4rm_do_reserve(l4_addr_t *addr, l4_size_t size, l4_uint32_t flags,
  * \brief Lookup VM address
  */
 int l4rm_lookup(const void * addr, l4_addr_t * map_addr, l4_size_t * map_size,
-                l4dm_dataspace_t * ds, l4_offs_t * offset, l4_threadid_t * pager)
+                l4dm_dataspace_t * ds, l4_addr_t * offset, l4_threadid_t * pager)
 {
   struct vm_area_struct * vm;
   l4_addr_t a = (l4_addr_t)addr;

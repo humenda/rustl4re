@@ -7,6 +7,7 @@
  * GNU General Public License 2.
  * Please see the COPYING-GPL-2 file for details.
  */
+#include <l4/sys/assert.h>
 #include <l4/sys/kip>
 #include <l4/re/env>
 
@@ -26,7 +27,7 @@ Phys_space Phys_space::space;
 Phys_space::Phys_space()
 {
   int err = _set.insert(Phys_region(0, Phys_region::Addr(~0))).second;
-  assert (err >= 0);
+  l4_check (err >= 0);
 
   for (auto const &md: L4::Kip::Mem_desc::all(l4re_kip()))
     {
@@ -81,7 +82,7 @@ Phys_space::alloc_from(Set::Iterator const &o, Phys_region const &r)
   Phys_region nr(r.end() + 1, o->end());
   o->set_end(r.start() - 1);
   int err = _set.insert(nr).second;
-  assert (err >= 0);
+  l4_check (err >= 0);
   return true;
 }
 
@@ -105,7 +106,7 @@ Phys_space::reserve(Phys_region const &r)
 }
 
 bool
-Phys_space::alloc(Phys_region const &r)
+Phys_space::request(Phys_region const &r)
 {
 
   Set::Iterator n;

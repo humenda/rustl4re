@@ -8,7 +8,7 @@
  *
  * 1. Copyright Notice
  *
- * Some or all of this work - Copyright (c) 1999 - 2017, Intel Corp.
+ * Some or all of this work - Copyright (c) 1999 - 2019, Intel Corp.
  * All rights reserved.
  *
  * 2. License
@@ -110,6 +110,42 @@
  * United States government or any agency thereof requires an export license,
  * other governmental approval, or letter of assurance, without first obtaining
  * such license, approval or letter.
+ *
+ *****************************************************************************
+ *
+ * Alternatively, you may choose to be licensed under the terms of the
+ * following license:
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions, and the following disclaimer,
+ *    without modification.
+ * 2. Redistributions in binary form must reproduce at minimum a disclaimer
+ *    substantially similar to the "NO WARRANTY" disclaimer below
+ *    ("Disclaimer") and any redistribution must be conditioned upon
+ *    including a substantially similar Disclaimer requirement for further
+ *    binary redistribution.
+ * 3. Neither the names of the above-listed copyright holders nor the names
+ *    of any contributors may be used to endorse or promote products derived
+ *    from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+ * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * Alternatively, you may choose to be licensed under the terms of the
+ * GNU General Public License ("GPL") version 2 as published by the Free
+ * Software Foundation.
  *
  *****************************************************************************/
 
@@ -561,6 +597,11 @@ ACPI_EFI_STATUS
 
 typedef
 ACPI_EFI_STATUS
+(ACPI_EFI_API *ACPI_EFI_STALL) (
+    UINTN                           Microseconds);
+
+typedef
+ACPI_EFI_STATUS
 (ACPI_EFI_API *ACPI_EFI_SET_WATCHDOG_TIMER) (
     UINTN                           Timeout,
     UINT64                          WatchdogCode,
@@ -626,6 +667,27 @@ typedef
 ACPI_EFI_STATUS
 (ACPI_EFI_API *ACPI_EFI_FREE_POOL) (
     VOID                            *Buffer);
+
+
+/*
+ * EFI Time
+ */
+typedef struct {
+    UINT32 Resolution;
+    UINT32 Accuracy;
+    BOOLEAN SetsToZero;
+} ACPI_EFI_TIME_CAPABILITIES;
+
+typedef
+ACPI_EFI_STATUS
+(ACPI_EFI_API *ACPI_EFI_GET_TIME) (
+    ACPI_EFI_TIME                   *Time,
+    ACPI_EFI_TIME_CAPABILITIES      *Capabilities);
+
+typedef
+ACPI_EFI_STATUS
+(ACPI_EFI_API *ACPI_EFI_SET_TIME) (
+    ACPI_EFI_TIME                   *Time);
 
 
 /*
@@ -854,12 +916,11 @@ typedef struct _ACPI_EFI_BOOT_SERVICES {
 #if 0
     ACPI_EFI_EXIT_BOOT_SERVICES         ExitBootServices;
     ACPI_EFI_GET_NEXT_MONOTONIC_COUNT   GetNextMonotonicCount;
-    ACPI_EFI_STALL                      Stall;
 #else
     ACPI_EFI_UNKNOWN_INTERFACE          ExitBootServices;
     ACPI_EFI_UNKNOWN_INTERFACE          GetNextMonotonicCount;
-    ACPI_EFI_UNKNOWN_INTERFACE          Stall;
 #endif
+    ACPI_EFI_STALL                      Stall;
     ACPI_EFI_SET_WATCHDOG_TIMER         SetWatchdogTimer;
 
 #if 0
@@ -890,6 +951,54 @@ typedef struct _ACPI_EFI_BOOT_SERVICES {
     ACPI_EFI_UNKNOWN_INTERFACE      CreateEventEx;
 #endif
 } ACPI_EFI_BOOT_SERVICES;
+
+
+/*
+ * EFI Runtime Services Table
+ */
+#define ACPI_EFI_RUNTIME_SERVICES_SIGNATURE 0x56524553544e5552
+#define ACPI_EFI_RUNTIME_SERVICES_REVISION  (EFI_SPECIFICATION_MAJOR_REVISION<<16) | (EFI_SPECIFICATION_MINOR_REVISION)
+
+typedef struct _ACPI_EFI_RUNTIME_SERVICES {
+    ACPI_EFI_TABLE_HEADER               Hdr;
+
+    ACPI_EFI_GET_TIME                   GetTime;
+    ACPI_EFI_SET_TIME                   SetTime;
+#if 0
+    ACPI_EFI_GET_WAKEUP_TIME            GetWakeupTime;
+    ACPI_EFI_SET_WAKEUP_TIME            SetWakeupTime;
+#else
+    ACPI_EFI_UNKNOWN_INTERFACE          GetWakeupTime;
+    ACPI_EFI_UNKNOWN_INTERFACE          SetWakeupTime;
+#endif
+
+#if 0
+    ACPI_EFI_SET_VIRTUAL_ADDRESS_MAP    SetVirtualAddressMap;
+    ACPI_EFI_CONVERT_POINTER            ConvertPointer;
+#else
+    ACPI_EFI_UNKNOWN_INTERFACE          SetVirtualAddressMap;
+    ACPI_EFI_UNKNOWN_INTERFACE          ConvertPointer;
+#endif
+
+#if 0
+    ACPI_EFI_GET_VARIABLE               GetVariable;
+    ACPI_EFI_GET_NEXT_VARIABLE_NAME     GetNextVariableName;
+    ACPI_EFI_SET_VARIABLE               SetVariable;
+#else
+    ACPI_EFI_UNKNOWN_INTERFACE          GetVariable;
+    ACPI_EFI_UNKNOWN_INTERFACE          GetNextVariableName;
+    ACPI_EFI_UNKNOWN_INTERFACE          SetVariable;
+#endif
+
+#if 0
+    ACPI_EFI_GET_NEXT_HIGH_MONO_COUNT   GetNextHighMonotonicCount;
+    ACPI_EFI_RESET_SYSTEM               ResetSystem;
+#else
+    ACPI_EFI_UNKNOWN_INTERFACE          GetNextHighMonotonicCount;
+    ACPI_EFI_UNKNOWN_INTERFACE          ResetSystem;
+#endif
+
+} ACPI_EFI_RUNTIME_SERVICES;
 
 
 /*
@@ -928,11 +1037,7 @@ typedef struct _ACPI_EFI_SYSTEM_TABLE {
     ACPI_EFI_HANDLE                     StandardErrorHandle;
     ACPI_SIMPLE_TEXT_OUTPUT_INTERFACE   *StdErr;
 
-#if 0
     ACPI_EFI_RUNTIME_SERVICES           *RuntimeServices;
-#else
-    ACPI_EFI_HANDLE                     *RuntimeServices;
-#endif
     ACPI_EFI_BOOT_SERVICES              *BootServices;
 
     UINTN                               NumberOfTableEntries;
@@ -1015,18 +1120,33 @@ union acpi_efi_file {
 };
 
 
-/* GNU EFI definitions */
+/* EFI definitions */
 
-#if defined(_GNU_EFI)
+#if defined(_GNU_EFI) || defined(_EDK2_EFI)
 
 /*
  * This is needed to hide platform specific code from ACPICA
  */
-UINT64
+UINT64 ACPI_EFI_API
 DivU64x32 (
     UINT64                  Dividend,
     UINTN                   Divisor,
     UINTN                   *Remainder);
+
+UINT64 ACPI_EFI_API
+MultU64x32 (
+    UINT64                  Multiplicand,
+    UINTN                   Multiplier);
+
+UINT64 ACPI_EFI_API
+LShiftU64 (
+    UINT64                  Operand,
+    UINTN                   Count);
+
+UINT64 ACPI_EFI_API
+RShiftU64 (
+    UINT64                  Operand,
+    UINTN                   Count);
 
 /*
  * EFI specific prototypes
@@ -1040,7 +1160,6 @@ int
 acpi_main (
     int                     argc,
     char                    *argv[]);
-
 
 #endif
 

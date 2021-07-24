@@ -8,8 +8,12 @@
  */
 #pragma once
 
+#include "device.h"
+
 #include <l4/vbus/vbus>
 #include <l4/sys/platform_control>
+
+namespace Vmm {
 
 /**
  * Guest interface for system power control.
@@ -24,10 +28,11 @@
  * a guest to suspend/shutdown/reboot the machine.
  */
 class Pm
+: public virtual Vdev::Dev_ref
 {
 public:
   Pm();
-  ~Pm();
+  virtual ~Pm();
 
   /**
    * Configure if guest should resume on system resume.
@@ -51,10 +56,12 @@ private:
   L4::Cap<L4Re::Inhibitor> _vbus;
   L4::Cap<L4::Platform_control> _pfc;
 
-  bool _use_wakeup_inhibitor = true;
+  bool _use_wakeup_inhibitor = false;
 
   /**
    * \pre _vbus must be valid
    */
   bool acquire_wakeup_inhibitor();
 };
+
+} // namespace

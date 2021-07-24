@@ -1,5 +1,9 @@
 # -*- makefile -*-
 # vi:se ft=make:
+
+# Include for unit tests, enable by including UTEST in SUBSYSTEMS.
+include $(srcdir)/test/utest/Modules.utest
+
 PREPROCESS_PARTS-$(CONFIG_JDB_LOGGING)       += jdb_logging
 
 INTERFACES_KERNEL	:= cpu_mask rcupdate kobject_mapdb context_base pm \
@@ -13,7 +17,7 @@ INTERFACES_KERNEL	:= cpu_mask rcupdate kobject_mapdb context_base pm \
 			   ref_obj mem_space space string_buffer \
 			   vlog kmem kmem_alloc slab_cache mem_layout        \
 			   kmem_slab switch_lock kip_init   \
-			   thread_lock helping_lock cpu_lock timer timeout   \
+			   helping_lock cpu_lock timer timeout   \
 			   ipc_timeout timeslice_timeout per_cpu_data_alloc  \
 			   vcpu_host_regs                                    \
 			   vcpu kobject_helper icu_helper thread_state       \
@@ -47,17 +51,21 @@ timer_tick_IMPL         := timer_tick
 
 vcpu_host_regs_IMPL	:= vcpu_host_regs-$(CONFIG_XARCH)
 
+kdb_ke_IMPL             := kdb_ke
+
 INTERFACES_JDB += \
+	jdb_types                                                          \
 	jdb jdb_util jdb_core jdb_module jdb_prompt_ext jdb_list           \
 	jdb_handler_queue jdb_attach_irq jdb_entry_frame                   \
 	jdb_exit_module jdb_bp jdb_factory jdb_input jdb_ipc_gate          \
-	jdb_kobject jdb_kobject_names jdb_lines jdb_prompt_module          \
-	jdb_obj_space jdb_screen jdb_space jdb_symbol jdb_table jdb_tcb    \
+	jdb_kobject jdb_kobject_names jdb_prompt_module                    \
+	jdb_obj_space jdb_screen jdb_space jdb_table jdb_tcb               \
 	jdb_thread jdb_thread_list kern_cnt jdb_counters push_console      \
 	jdb_regex jdb_disasm jdb_tbuf_output jdb_input_task jdb_tbuf_show  \
 	jdb_report jdb_dump jdb_mapdb jdb_timeout jdb_kern_info_kmem_alloc \
 	jdb_kern_info_kip jdb_kern_info jdb_kern_info_data jdb_utcb        \
-	jdb_trap_state jdb_rcupdate jdb_sender_list
+	jdb_trap_state jdb_rcupdate jdb_sender_list jdb_tbuf_fe            \
+	jdb_cpu_call jdb_ipi
 
 jdb_IMPL	+= jdb jdb-ansi jdb-thread
 jdb_tbuf_IMPL	+= jdb_tbuf jdb_tbuf-$(CONFIG_XARCH)
@@ -67,3 +75,13 @@ ifeq ("$(CONFIG_JDB)","y")
 INTERFACES_KERNEL += \
 	jdb_tbuf jdb_tbuf_init tb_entry jdb_trace
 endif
+
+# - do not profile all of MINILIBC, because it is used in the BOOT subsystem
+# - save some space for debugger, disassembler, ...
+NOOPT			+= $(patsubst %.o, %,\
+			   $(OBJ_MINILIBC) $(OBJ_JDB) $(OBJ_LIBDISASM))
+
+# Helper function to generate CXXFLAGS_uart-libuart
+LIBUART_UART = -include uart_$(strip $(1)).h \
+	       -DFIASCO_UART_TYPE=L4::Uart_$(strip $(if $(2),$(2),$(1)))
+

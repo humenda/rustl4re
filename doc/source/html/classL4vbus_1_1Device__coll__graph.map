@@ -1,7 +1,8 @@
 <map id="L4vbus::Device" name="L4vbus::Device">
-<area shape="rect" id="node2" href="$classL4vbus_1_1Pm.html" title="{L4vbus::Pm\&lt; Device \&gt;\n||+ pm_suspend()\l+ pm_resume()\l}" alt="" coords="5,639,164,731"/>
-<area shape="rect" id="node3" href="$classL4vbus_1_1Pm.html" title="Power&#45;management API mixin. " alt="" coords="12,396,157,488"/>
-<area shape="rect" id="node4" href="$classL4_1_1Cap.html" title="{L4::Cap\&lt; L4vbus::Vbus \&gt;\n||+ Cap()\l+ Cap()\l+ Cap()\l+ Cap()\l+ Cap()\l+ move()\l+ copy()\l+ operator&#45;\&gt;()\l}" alt="" coords="188,595,363,775"/>
-<area shape="rect" id="node5" href="$classL4_1_1Cap__base.html" title="Base class for all kinds of capabilities. " alt="" coords="131,5,363,303"/>
-<area shape="rect" id="node6" href="$classL4_1_1Cap.html" title="C++ interface for capabilities. " alt="" coords="255,352,365,532"/>
+<area shape="rect" id="node1" title="Device on a L4vbus::Vbus." alt="" coords="123,837,263,1061"/>
+<area shape="rect" id="node2" href="$classL4vbus_1_1Pm.html" title=" " alt="" coords="5,639,177,731"/>
+<area shape="rect" id="node3" href="$classL4vbus_1_1Pm.html" title="Power&#45;management API mixin." alt="" coords="14,396,169,488"/>
+<area shape="rect" id="node4" href="$classL4_1_1Cap.html" title=" " alt="" coords="202,595,389,775"/>
+<area shape="rect" id="node5" href="$classL4_1_1Cap__base.html" title="Base class for all kinds of capabilities." alt="" coords="159,5,397,303"/>
+<area shape="rect" id="node6" href="$classL4_1_1Cap.html" title="C++ interface for capabilities." alt="" coords="300,352,419,532"/>
 </map>

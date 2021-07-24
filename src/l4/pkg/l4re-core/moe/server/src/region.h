@@ -32,15 +32,7 @@ public:
   static int map(Region_handler const *h, l4_addr_t adr,
                  L4Re::Util::Region const &r, bool writable,
                  L4::Ipc::Snd_fpage *result);
-  static void unmap(Region_handler const * /*h*/, l4_addr_t /*vaddr*/,
-                    l4_addr_t /*offs*/, unsigned long /*size*/)
-  {}
-
   static void free(Region_handler const *h, l4_addr_t start, unsigned long size);
-
-  static void take(Region_handler const * /*h*/) {}
-  static void release(Region_handler const * /*h*/) {}
-
 };
 
 class Region_map
@@ -56,7 +48,7 @@ public:
   typedef cxx::Weak_ref<Moe::Dataspace const> Dataspace;
   enum { Have_find = false };
   static int validate_ds(void *, L4::Ipc::Snd_fpage const &ds_cap,
-                         unsigned flags, Dataspace *ds);
+                         L4Re::Rm::Region_flags flags, Dataspace *ds);
   static l4_umword_t find_res(Dataspace const &) { return 0; }
 
   Region_map();
@@ -64,7 +56,6 @@ public:
 
   long op_io_page_fault(L4::Io_pager::Rights,
                         l4_fpage_t io_pfa, l4_umword_t pc,
-                        L4::Ipc::Opt<l4_mword_t> &result,
                         L4::Ipc::Opt<L4::Ipc::Snd_fpage> &);
 };
 

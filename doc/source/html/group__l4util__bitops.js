@@ -10,7 +10,7 @@ var group__l4util__bitops =
     [ "l4util_complement_bit", "group__l4util__bitops.html#gaf84c2a88f1ff6e02fd813a5c8c8210ea", null ],
     [ "l4util_find_first_set_bit", "group__l4util__bitops.html#ga6372526aa85a7f0d425ab706aa5e29d0", null ],
     [ "l4util_find_first_zero_bit", "group__l4util__bitops.html#gaac1a9ad2db5efada47175656682e0eb7", null ],
-    [ "l4util_next_power2", "group__l4util__bitops.html#ga434052ce9ef38d535aa94a98b981289d", null ],
+    [ "l4util_next_power2", "group__l4util__bitops.html#ga30375b2869622616b5b5957261e9cb64", null ],
     [ "l4util_set_bit", "group__l4util__bitops.html#ga1e5017ce33e0af71dc00a526ffa46f0b", null ],
     [ "l4util_test_bit", "group__l4util__bitops.html#gab7c484d395cb55509f16ad13adff2e92", null ]
 ];

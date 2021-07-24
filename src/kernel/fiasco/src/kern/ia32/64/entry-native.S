@@ -37,7 +37,7 @@ entry_vec01_debug:
 
 
 	.section ".entry.text.dbf", "ax", @progbits
-	.p2align(4)
+	.p2align 4
 	.globl	entry_vec08_dbf
 entry_vec08_dbf:
 	SWITCH_TO_KERNEL_CR3 0
@@ -67,7 +67,7 @@ entry_vec08_dbf:
 
 
 	.section ".entry.text.tss", "ax", @progbits
-	.p2align(4)
+	.p2align 4
 	.globl	entry_vec0a_invalid_tss
 entry_vec0a_invalid_tss:
 	andq	$0xffffffffffffbfff, 24(%rsp)
@@ -79,7 +79,7 @@ entry_vec0a_invalid_tss:
  * See "Pentium Pro Processor Specification Update / January 1999"
  * Erratum "Virtual Wire mode through local APIC may cause int 15"
  * This exception can be silently ignored */
-	.p2align(4)
+	.p2align 4
 	.globl	entry_vec0f_apic_spurious_interrupt_bug
 entry_vec0f_apic_spurious_interrupt_bug:
 #ifndef CONFIG_KERNEL_ISOLATION
@@ -90,7 +90,7 @@ entry_vec0f_apic_spurious_interrupt_bug:
 
 /* XXX has to be fixed */
 /* APIC error interrupt */
-	.p2align(4)
+	.p2align 4
 	.globl	entry_apic_error_interrupt
 entry_apic_error_interrupt:
 	cld
@@ -106,7 +106,7 @@ entry_apic_error_interrupt:
  * Spurious Interrupt: "If at the time the INTA cycle is issued, the
  * interupt that was to be dispensed has become masked (programmed by
  * software), the local APIC will deliver a spurious-interrupt vector." */
-	.p2align(4)
+	.p2align 4
 	.globl	entry_apic_spurious_interrupt
 entry_apic_spurious_interrupt:
 #ifndef CONFIG_KERNEL_ISOLATION
@@ -114,7 +114,7 @@ entry_apic_spurious_interrupt:
 #endif
 	iretq
 
-	.p2align(4)
+	.p2align 4
 	.global	entry_int_apic_ignore
 entry_int_apic_ignore:
 	SWITCH_TO_KERNEL_CR3 0
@@ -129,7 +129,7 @@ entry_int_apic_ignore:
 
 #if defined(CONFIG_JDB)
 	.section ".entry.text.syscalls_log", "ax", @progbits
-	.p2align(4)
+	.p2align 4
 	.global entry_syscall_log
 	.global entry_sys_fast_ipc_log
 entry_syscall_log:
@@ -163,7 +163,7 @@ alien_sys_fast_ipc_log:
 #endif // CONFIG_JDB
 
 	.section ".entry.text.syscalls", "ax", @progbits
-	.p2align(4)
+	.p2align 4
 	.global entry_syscall_c
 	.global entry_sys_fast_ipc_c
 entry_syscall_c:
@@ -197,7 +197,7 @@ alien_sys_fast_ipc_c:
 
 	.globl	in_sc_ipc2
 
-	.p2align(4)
+	.p2align 4
 	.globl	leave_from_syscall_by_iret
 leave_from_syscall_by_iret:
 	RESTORE_STATE_SYSEXIT
@@ -210,16 +210,32 @@ leave_from_syscall_by_iret:
 dbf_stack_top:
 
 	.section ".text.syscall_entry"
-/* This code shall be copied to Kentry_cpu_page + 0xa0 */
-#define CPUE_OFFSET syscall_entry_code - 0xa0
+
+#ifdef CONFIG_KERNEL_NX
+
+/*
+ * This code shall be mapped to Kentry_cpu_page_text, exactly one page above
+ * Kentry_cpu_page, which makes it possible to refer to the data without
+ * cloberring a register.
+ */
+#define CPUE_OFFSET syscall_entry_code - 0x1000
+
+	.align 0x1000
+
+#else
+
+/* This code shall be copied to Kentry_cpu_syscall_entry */
+#define CPUE_OFFSET syscall_entry_code - 0x30
+
+#endif
 	.global syscall_entry_code
 syscall_entry_code:
-	mov	%rsp, CPUE_STACK(CPUE_OFFSET + 0, %rip)
+	mov	%rsp, (CPUE_OFFSET + CPUE_SCRATCH_OFS)(%rip)
 	mov	(CPUE_OFFSET + CPUE_CR3_OFS)(%rip), %rsp
 	mov	%rsp, %cr3
 	mov	(CPUE_OFFSET + CPUE_KSP_OFS)(%rip), %rsp
 	pushq	$(GDT_DATA_USER | 3)
-	pushq	CPUE_STACK(CPUE_OFFSET + 0, %rip)
+	pushq	(CPUE_OFFSET + CPUE_SCRATCH_OFS)(%rip)
 	push	%r11				/* save user rflags */
 	IA32_IBRS
 	.global syscall_entry_reloc
@@ -246,8 +262,8 @@ safe_iret:
 	test	$3, %r14
 	jz	1f
 
-	mov	$0xffff817fffffc000, %r14
-	mov	%r13, CPUE_STACK( 0, %r14)
+	mov	$VAL__MEM_LAYOUT__KENTRY_CPU_PAGE, %r14
+	mov	%r13, CPUE_STACK(-56, %r14)
 #ifdef CONFIG_INTEL_IA32_BRANCH_BARRIERS
 	/* check for exit flags (need IBTPB?) */
 	mov	CPUE_EXIT(%r14), %r13
@@ -256,30 +272,36 @@ safe_iret:
 	and	$(~CPUE_EXIT_NEED_IBPB), %r13
 	mov	%r13, CPUE_EXIT(%r14)
 	IA32_IBPB
+	mov	GDT_DATA_KERNEL, %r13
+	verw	%r13w
 22:
 #endif
 	mov	(%rsp), %r13
-	mov	%r13, CPUE_STACK( 8, %r14)
+	mov	%r13, CPUE_STACK(-48, %r14)
 	mov	32(%rsp), %r13
-	mov	%r13, CPUE_STACK(16, %r14)
+	mov	%r13, CPUE_STACK(-40, %r14)
 	mov	40(%rsp), %r13
-	mov	%r13, CPUE_STACK(24, %r14)
+	mov	%r13, CPUE_STACK(-32, %r14)
 	mov	48(%rsp), %r13
-	mov	%r13, CPUE_STACK(32, %r14)
+	mov	%r13, CPUE_STACK(-24, %r14)
 	mov	56(%rsp), %r13
-	mov	%r13, CPUE_STACK(40, %r14)
+	mov	%r13, CPUE_STACK(-16, %r14)
 	mov	64(%rsp), %r13
-	mov	%r13, CPUE_STACK(48, %r14)
-	lea	CPUE_STACK(0, %r14), %rsp
-	mov	CPUE_CR3(%r14), %r13
-	or	$0x1000, %r13
+	mov	%r13, CPUE_STACK( -8, %r14)
+	lea	CPUE_STACK(-56, %r14), %rsp
+	mov	CPUE_CR3U(%r14), %r13
 	mov	%r13, %cr3
 	pop	%r13
 	pop	%r14
-	iretq
-1:
-	pop	%r14
+6:	iretq
+
+1:	pop	%r14
 	add	$24, %rsp
-	iretq	/* direct iret to kernel mode */
+5:	iretq	/* direct iret to kernel mode */
+
+.global safe_iret_insn
+	ASM_KEX 6b, 0, iretq_exception_handler
+	/* the in kernel iret should actually never trigger this */
+	ASM_KEX 5b, 0, iretq_exception_handler
 #endif
 

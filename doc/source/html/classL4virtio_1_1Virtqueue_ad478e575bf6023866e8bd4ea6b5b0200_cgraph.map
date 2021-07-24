@@ -1,3 +1,4 @@
 <map id="L4virtio::Virtqueue::no_notify_host" name="L4virtio::Virtqueue::no_notify_host">
-<area shape="rect" id="node2" href="$structL4virtio_1_1Virtqueue_1_1Used_1_1Flags.html#ac3ce47fc7d1ceb8cbe209a71d898bc6e" title="Get the no_notify bits ( 0 to 0 ) of raw . " alt="" coords="187,5,352,47"/>
+<area shape="rect" id="node1" title="Get the no notify flag of this queue." alt="" coords="5,5,148,47"/>
+<area shape="rect" id="node2" href="$structL4virtio_1_1Virtqueue_1_1Used_1_1Flags.html#ac3ce47fc7d1ceb8cbe209a71d898bc6e" title="Get the no_notify bits ( 0 to 0 ) of raw." alt="" coords="196,5,371,47"/>
 </map>

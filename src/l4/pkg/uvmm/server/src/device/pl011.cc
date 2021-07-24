@@ -18,6 +18,7 @@
 #include "device_factory.h"
 #include "guest.h"
 #include "irq.h"
+#include "irq_dt.h"
 #include "mmio_device.h"
 
 namespace {
@@ -29,18 +30,50 @@ namespace {
  *
  * To use this device e.g. under Linux add something like the following to the
  * device tree:
- *   pl011_uart@30018000 {
+ *   uart0: pl011_uart@30018000 {
  *    compatible = "arm,primecell", "arm,pl011";
- *    reg = <...>;
- *    clocks = <&sysclk>;
+ *    reg = <... 0x1000>;
+ *    interrupts = <0 ... 4>;
+ *    clocks = <&apb_dummy_pclk>;
  *    clock-names = "apb_pclk";
+ *    l4vmm,pl011cap = "log";
  *   };
  *
+ *  apb_dummy_pclk: dummy_clk {
+ *   compatible = "fixed-clock";
+ *   #clock-cells = <0>;
+ *   clock-frequency = <1000000>;
+ *  };
+ *
  * "arm,pl011" is the compatible string used by this device. "arm,primecell" is
- * one of those in linux/Documentation/devicetree/bindings/serial/pl011.txt.
+ * one of those in linux/Documentation/devicetree/bindings/serial/pl011.yaml.
  * Although the linux documentation states that the clock properties are
  * optional, it's impossible to add the device, if these are missing (see add
  * and probe code in linux/drivers/amba/bus.c).
+ *
+ * You may add 'l4vmm,pl011cap = "log";' to the pl011 node to use a
+ * different vcon. Per default the standard uvmm console is used.
+ *
+ * For running this successfully in Linux (around 4.19 - 5.5 era), consider
+ * the required settings:
+ * - The size of the reg must be 0x1000
+ * - The clock must be named "apb_pclk"
+ * - The clock-frequency value of apb_dummy_pclk must be at least 1000000
+ *
+ * On the Linux command line, add "console=ttyAMA0" to use it as the
+ * console.
+ *
+ * For earlycon (at least with arm64), add the following to the device tree
+ * (typically in the very beginning of the device tree):
+ *
+ *   chosen {
+ *     stdout-path = "serial0";
+ *   };
+ *   aliases {
+ *     serial0 = &uart0;
+ *   };
+ *
+ * And add "earlycon" to your Linux command line.
  */
 class Pl011_mmio
 : public Vmm::Mmio_device_t<Pl011_mmio>,
@@ -126,7 +159,7 @@ public:
     CXX_BITFIELD_MEMBER(4, 4, rx, raw);
   };
 
-  explicit Pl011_mmio(Gic::Ic *ic, int irq,
+  explicit Pl011_mmio(cxx::Ref_ptr<Gic::Ic> const &ic, int irq,
                       L4::Cap<L4::Vcon> con = L4Re::Env::env()->log())
   : _con(con), _sink(ic, irq)
   {
@@ -318,30 +351,23 @@ struct F : Vdev::Factory
                                     Vdev::Dt_node const &node) override
   {
     Dbg(Dbg::Dev, Dbg::Info).printf("Create virtual pl011 console\n");
-    int cap_name_len;
-    L4::Cap<L4::Vcon> cap = L4Re::Env::env()->log();
 
-    char const *cap_name = node.get_prop<char>("l4vmm,pl011cap", &cap_name_len);
-    if (cap_name)
-      {
-        cap = L4Re::Env::env()->get_cap<L4::Vcon>(cap_name, cap_name_len);
-        if (!cap)
-          {
-            Dbg(Dbg::Dev, Dbg::Warn, "pl011")
-              .printf("'l4vmm,pl011cap' property: capability %.*s is invalid.\n",
-                      cap_name_len, cap_name);
-            return nullptr;
-          }
-      }
-
-    cxx::Ref_ptr<Gic::Ic> ic = devs->get_or_create_ic_dev(node, false);
-    if (!ic)
+    L4::Cap<L4::Vcon> cap = Vdev::get_cap<L4::Vcon>(node, "l4vmm,pl011cap",
+                                                    L4Re::Env::env()->log());
+    if (!cap)
       return nullptr;
 
-    auto c = Vdev::make_device<Pl011_mmio>(ic.get(),
-                                           ic->dt_get_interrupt(node, 0), cap);
+    Vdev::Irq_dt_iterator it(devs, node);
+
+    if (it.next(devs) < 0)
+      return nullptr;
+
+    if (!it.ic_is_virt())
+      L4Re::chksys(-L4_EINVAL, "PL011 requires a virtual interrupt controller");
+
+    auto c = Vdev::make_device<Pl011_mmio>(it.ic(), it.irq(), cap);
     c->register_obj(devs->vmm()->registry());
-    devs->vmm()->register_mmio_device(c, node);
+    devs->vmm()->register_mmio_device(c, Vmm::Region_type::Virtual, node);
     return c;
   }
 };

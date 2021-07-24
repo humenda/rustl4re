@@ -1,0 +1,5 @@
+<map id="L4virtio::Svr::Driver_mem_region_t::Driver_mem_region_t" name="L4virtio::Svr::Driver_mem_region_t::Driver_mem_region_t">
+<area shape="rect" id="node1" title="Make a local memory region for the given driver values." alt="" coords="5,5,176,61"/>
+<area shape="rect" id="node2" href="$namespaceL4Re.html#a3f17984019f06676a7e3eecb41bbb0bb" title="Generate C++ exception on error." alt="" coords="224,20,331,47"/>
+<area shape="rect" id="node3" href="$namespaceL4Re.html#ae27ac6f274f4ad1267d0d1c0c033c00b" title="Generate C++ exception." alt="" coords="379,20,516,47"/>
+</map>

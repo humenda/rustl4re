@@ -54,7 +54,7 @@ class Acpi_madt : public Acpi_table_head
 public:
   enum Type
   { LAPIC, IOAPIC, Irq_src_ovr, NMI, LAPIC_NMI, LAPIC_adr_ovr, IOSAPIC,
-    LSAPIC, Irq_src };
+    LSAPIC, Irq_src, LOCAL_X2APIC = 9, LOCAL_X2APIC_NMI = 10 };
 
   struct Apic_head
   {
@@ -88,6 +88,15 @@ public:
     Unsigned16 flags;
   } __attribute__((packed));
 
+  struct Local_x2apic : public Apic_head
+  {
+    enum { ID = LOCAL_X2APIC };
+    Unsigned16 reserved;
+    Unsigned32 local_apic_id;
+    Unsigned32 lapic_flags;
+    Unsigned32 uid;
+  } __attribute__((packed));
+
 public:
   Unsigned32 local_apic;
   Unsigned32 apic_flags;
@@ -95,6 +104,68 @@ public:
 private:
   char data[0];
 } __attribute__((packed));
+
+class Acpi_srat : public Acpi_table_head
+{
+public:
+  struct Acpi_subtable_header
+  {
+    Unsigned8 type;
+    Unsigned8 len;
+  } __attribute__((packed));
+
+  class Type
+  {
+  public:
+    enum
+    {
+      Cpu_affinity        = 0,
+      Memory_affinity     = 1,
+      X2APIC_cpu_affinity = 2,
+      Gicc_affinity       = 3,
+    };
+  };
+
+  enum Cpu_affinity_flags
+  {
+    Cpu_use_affinity = 1,
+  };
+
+  struct Cpu_affinity : public Acpi_subtable_header
+  {
+    Unsigned8  proximity_domain_lo;
+    Unsigned8  apic_id;
+    Unsigned32 flags;
+    Unsigned8  local_sapic_eid;
+    Unsigned8  proximity_domain_hi[3];
+    Unsigned32 clock_domain;
+  } __attribute__((packed));
+
+  enum Mem_affinity_flags
+  {
+    Mem_enabled       = 1,
+    Mem_hot_pluggable = 1 << 1,
+    Mem_non_volatile  = 1 << 2,
+  };
+
+  struct Mem_affinity : public Acpi_subtable_header
+  {
+    Unsigned32 proximity_domain;
+    Unsigned16 reserved;           /* Reserved, must be zero */
+    Unsigned64 base_Address;
+    Unsigned64 length;
+    Unsigned32 reserved1;
+    Unsigned32 flags;
+    Unsigned64 reserved2;          /* Reserved, must be zero */
+  } __attribute__((packed));
+
+
+  Unsigned32 table_revision;
+  Unsigned64 reserved;
+
+//private:
+  char data[0];
+};
 
 template< bool >
 struct Acpi_helper_get_msb
@@ -299,6 +370,10 @@ Acpi::init_virt()
             {
               x->print_info();
               _sdt.print_summary();
+
+              Acpi_srat const *srat = Acpi::find<Acpi_srat const *>("SRAT");
+              if (srat)
+                srat->show();
             }
           return;
         }
@@ -318,6 +393,10 @@ Acpi::init_virt()
             {
               r->print_info();
               _sdt.print_summary();
+
+              Acpi_srat const *srat = Acpi::find<Acpi_srat const *>("SRAT");
+              if (srat)
+                srat->show();
             }
           return;
         }
@@ -446,6 +525,61 @@ Acpi_madt::find(int idx) const
   return static_cast<T const *>(find(T::ID, idx));
 }
 
+
+
+PUBLIC template<typename T> inline
+T const *
+Acpi_srat::find() const
+{
+  return 0;
+}
+
+PUBLIC
+void
+Acpi_srat::show() const
+{
+  printf("SRAT Table Revision: 0x%x (len: %d)\n",
+         table_revision, len);
+
+  unsigned l = 0;
+
+  while (l < len - sizeof(Acpi_srat))
+    {
+      Acpi_subtable_header const *h
+        = reinterpret_cast<Acpi_subtable_header const *>(data + l);
+
+      switch (h->type)
+        {
+        case Type::Cpu_affinity:
+            {
+              Cpu_affinity const *c
+                = reinterpret_cast<Cpu_affinity const *>(data + l);
+              if (c->flags & Cpu_use_affinity)
+                printf("  Cpu: prox_dom_lo,hi[3]=%x,%x,%x,%x apic_id=0x%x local_sapic_eid=0x%x clk_dom=0x%x\n",
+                       c->proximity_domain_lo, c->proximity_domain_hi[0],
+                       c->proximity_domain_hi[1], c->proximity_domain_hi[2],
+                       c->apic_id, c->local_sapic_eid, c->clock_domain);
+            }
+          break;
+        case Type::Memory_affinity:
+            {
+              Mem_affinity const *m
+                = reinterpret_cast<Mem_affinity const *>(data + l);
+              if (m->flags & Mem_enabled)
+                printf("  Mem: Proxdomain=%d Baseaddr=%llx Len=%llx %s %s\n",
+                       m->proximity_domain, m->base_Address, m->length,
+                       (m->flags & Mem_hot_pluggable) ? "HotPluggable" : "Noplug",
+                       (m->flags & Mem_non_volatile) ? "NonVolatile" : "Forgetting");
+            }
+          break;
+        default:
+          printf("Unhandled SRAT type %d\n", h->type);
+          break;
+        };
+
+      l += h->len;
+    }
+}
 
 // ------------------------------------------------------------------------
 IMPLEMENTATION [ia32,amd64]:

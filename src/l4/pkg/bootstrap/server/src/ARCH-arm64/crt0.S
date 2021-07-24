@@ -32,24 +32,24 @@ _start:
 
 	/* Disable caches as we're moving code around */
 	ic	iallu
-	mrs	x2, CurrentEL
-	ubfx	x2, x2, #2, #2
-	cmp	x2, #3
+	mrs	x12, CurrentEL
+	ubfx	x12, x12, #2, #2
+	cmp	x12, #3
 	b.eq	.Lsctlr_el3
-	cmp	x2, #2
+	cmp	x12, #2
 	b.eq	.Lsctlr_el2
 
-	set_sctlr SCTLR_EL1, x2
+	set_sctlr SCTLR_EL1, x12
 	b .Lsctlr_done
 .Lsctlr_el2:
-	set_sctlr SCTLR_EL2, x2
+	set_sctlr SCTLR_EL2, x12
 	b .Lsctlr_done
 .Lsctlr_el3:
-	set_sctlr SCTLR_EL3, x2
+	set_sctlr SCTLR_EL3, x12
 .Lsctlr_done:
 
 	/* Figure how to move */
-        ldr     x7, .LCend_bin
+        ldr     x7, crt_end_bin
 	subs	x8, x5, x4	/* x8 is the distance between the blocks */
 	b.pl	move_behind
 
@@ -57,13 +57,13 @@ _start:
 	/* First, copy our copy loop to the very beginning to avoid code
 	 * overwrites */
 	mov	x9, x5			/* x9: run address */
-	ldr	x2, .LCstart_bin
-	ldr	x3, 3f
-	str	x3, [x2], #8
-	ldr	x3, 33f
-	str	x3, [x2], #8
-	ldr	x3, 35f
-	str	x3, [x2], #8
+	ldr	x12, .LCstart_bin
+	ldr	x13, 3f
+	str	x13, [x12], #8
+	ldr	x13, 33f
+	str	x13, [x12], #8
+	ldr	x13, 35f
+	str	x13, [x12], #8
 	ldr	x10, .LCstart_bin
 	br	x10
 
@@ -88,8 +88,10 @@ move_behind:
 	.align 3
 .LCrun:       .8byte run
 .LCstart_bin: .8byte _start
-.LCend_bin:   .8byte _module_data_end
+crt_end_bin:  .8byte _module_data_end
 
+	.global cpu_bootup_code_start
+cpu_bootup_code_start:
 run:
 	mrs	x9, MPIDR_EL1              /* CPU ID */
 	and	x9, x9, #0xf               /* CPU id */
@@ -103,8 +105,15 @@ run:
 	cmp	x9, #0
 	beq	2f                         /* Still not set */
 	blr	x9
-2:	wfi
+2:	wfe
 	b	1b
+	.global cpu_bootup_code_end
+cpu_bootup_code_end:
+
+	.align 3
+	.global mp_launch_spin_addr
+mp_launch_spin_addr:
+	.space 8
 
 do_bootstrap:
 	adr	x9, crt0_stack_high
@@ -126,7 +135,3 @@ crt0_stack_low:
 	.space	8192
 	.global crt0_stack_high
 crt0_stack_high:
-
-	.global mp_launch_spin_addr
-mp_launch_spin_addr:
-	.space 8

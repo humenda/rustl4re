@@ -26,10 +26,10 @@ var group__api__l4re__c__video =
       [ "view_index", "structl4re__video__view__info__t.html#ab610cdddbe77052b69778e0cab1d1486", null ]
     ] ],
     [ "l4re_video_view_t", "structl4re__video__view__t.html", null ],
-    [ "l4re_video_color_component_t", "group__api__l4re__c__video.html#ga9e14ff1cd7ba9736f2a2ef4945a2fe6b", null ],
-    [ "l4re_video_pixel_info_t", "group__api__l4re__c__video.html#gad1954094c0c7e0fcdd874a4e03db1ecf", null ],
-    [ "l4re_video_view_info_t", "group__api__l4re__c__video.html#ga9eec39bc5a55381d29f5a345ccce7bc9", null ],
-    [ "l4re_video_view_t", "group__api__l4re__c__video.html#ga75db0934a23ca6c41c64c10f4efe12c3", null ],
+    [ "l4re_video_color_component_t", "group__api__l4re__c__video.html#gad5cb3debbf5306dbdb52edec678aa92d", null ],
+    [ "l4re_video_pixel_info_t", "group__api__l4re__c__video.html#gaba0de4b90035fa35ef37922e97566cb0", null ],
+    [ "l4re_video_view_info_t", "group__api__l4re__c__video.html#ga31edccf417fc2c05946b583cd24fc23a", null ],
+    [ "l4re_video_view_t", "group__api__l4re__c__video.html#ga34a8e567159ae804ed6b658f4af45f73", null ],
     [ "l4re_video_goos_info_flags_t", "group__api__l4re__c__video.html#ga0df3b9a30dd6be3c6b6d624879809c36", [
       [ "F_l4re_video_goos_auto_refresh", "group__api__l4re__c__video.html#gga0df3b9a30dd6be3c6b6d624879809c36abeeb2e624b50a8a2a05d5398887069cb", null ],
       [ "F_l4re_video_goos_pointer", "group__api__l4re__c__video.html#gga0df3b9a30dd6be3c6b6d624879809c36a871e9e4d60a75b7964f5ebbe5c75d721", null ],

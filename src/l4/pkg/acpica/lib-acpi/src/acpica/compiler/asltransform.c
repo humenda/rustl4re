@@ -8,7 +8,7 @@
  *
  * 1. Copyright Notice
  *
- * Some or all of this work - Copyright (c) 1999 - 2017, Intel Corp.
+ * Some or all of this work - Copyright (c) 1999 - 2019, Intel Corp.
  * All rights reserved.
  *
  * 2. License
@@ -110,6 +110,42 @@
  * United States government or any agency thereof requires an export license,
  * other governmental approval, or letter of assurance, without first obtaining
  * such license, approval or letter.
+ *
+ *****************************************************************************
+ *
+ * Alternatively, you may choose to be licensed under the terms of the
+ * following license:
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions, and the following disclaimer,
+ *    without modification.
+ * 2. Redistributions in binary form must reproduce at minimum a disclaimer
+ *    substantially similar to the "NO WARRANTY" disclaimer below
+ *    ("Disclaimer") and any redistribution must be conditioned upon
+ *    including a substantially similar Disclaimer requirement for further
+ *    binary redistribution.
+ * 3. Neither the names of the above-listed copyright holders nor the names
+ *    of any contributors may be used to endorse or promote products derived
+ *    from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+ * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * Alternatively, you may choose to be licensed under the terms of the
+ * GNU General Public License ("GPL") version 2 as published by the Free
+ * Software Foundation.
  *
  *****************************************************************************/
 
@@ -368,8 +404,8 @@ TrAmlTransformWalkEnd (
 
     if (Op->Asl.ParseOpcode == PARSEOP_DEFINITION_BLOCK)
     {
-        Op->Asl.Value.Arg = Gbl_ExternalsListHead;
-        Gbl_ExternalsListHead = NULL;
+        Op->Asl.Value.Arg = AslGbl_ExternalsListHead;
+        AslGbl_ExternalsListHead = NULL;
     }
 
     return (AE_OK);
@@ -394,6 +430,8 @@ static void
 TrTransformSubtree (
     ACPI_PARSE_OBJECT           *Op)
 {
+    ACPI_PARSE_OBJECT           *MethodOp;
+
 
     if (Op->Asl.AmlOpcode == AML_RAW_DATA_BYTE)
     {
@@ -417,15 +455,61 @@ TrTransformSubtree (
          * TBD: Zero the tempname (_T_x) count. Probably shouldn't be a global,
          * however
          */
-        Gbl_TempCount = 0;
+        AslGbl_TempCount = 0;
         break;
 
     case PARSEOP_EXTERNAL:
 
-        if (Gbl_DoExternals == TRUE)
+        ExDoExternal (Op);
+        break;
+
+    case PARSEOP___METHOD__:
+
+        /* Transform to a string op containing the parent method name */
+
+        Op->Asl.ParseOpcode = PARSEOP_STRING_LITERAL;
+        UtSetParseOpName (Op);
+
+        /* Find the parent control method op */
+
+        MethodOp = Op;
+        while (MethodOp)
         {
-            ExDoExternal (Op);
+            if (MethodOp->Asl.ParseOpcode == PARSEOP_METHOD)
+            {
+                /* First child contains the method name */
+
+                MethodOp = MethodOp->Asl.Child;
+                Op->Asl.Value.String = MethodOp->Asl.Value.String;
+                return;
+            }
+
+            MethodOp = MethodOp->Asl.Parent;
         }
+
+        /* At the root, invocation not within a control method */
+
+        Op->Asl.Value.String = "\\";
+        break;
+
+    case PARSEOP_UNLOAD:
+
+        AslError (ASL_WARNING, ASL_MSG_UNLOAD, Op, NULL);
+        break;
+
+    case PARSEOP_SLEEP:
+
+        /* Remark for very long sleep values */
+
+        if (Op->Asl.Child->Asl.Value.Integer > 1000)
+        {
+            AslError (ASL_REMARK, ASL_MSG_LONG_SLEEP, Op, NULL);
+        }
+        break;
+
+    case PARSEOP_PROCESSOR:
+
+        AslError (ASL_WARNING, ASL_MSG_LEGACY_PROCESSOR_OP, Op, Op->Asl.ExternalName);
 
         break;
 
@@ -462,7 +546,7 @@ TrDoDefinitionBlock (
 
     /* Reset external list when starting a definition block */
 
-    Gbl_ExternalsListHead = NULL;
+    AslGbl_ExternalsListHead = NULL;
 
     Next = Op->Asl.Child;
     for (i = 0; i < 5; i++)
@@ -475,14 +559,14 @@ TrDoDefinitionBlock (
              * to be at the root of the namespace;  Therefore, namepath
              * optimization can only be performed on the DSDT.
              */
-            if (!ACPI_COMPARE_NAME (Next->Asl.Value.String, ACPI_SIG_DSDT))
+            if (!ACPI_COMPARE_NAMESEG (Next->Asl.Value.String, ACPI_SIG_DSDT))
             {
-                Gbl_ReferenceOptimizationFlag = FALSE;
+                AslGbl_ReferenceOptimizationFlag = FALSE;
             }
         }
     }
 
-    Gbl_FirstLevelInsertionNode = Next;
+    AslGbl_FirstLevelInsertionNode = Next;
 }
 
 
@@ -528,7 +612,7 @@ TrDoSwitch (
 
     /* Create a new temp name of the form _T_x */
 
-    PredicateValueName = TrAmlGetNextTempName (StartNode, &Gbl_TempCount);
+    PredicateValueName = TrAmlGetNextTempName (StartNode, &AslGbl_TempCount);
     if (!PredicateValueName)
     {
         return;
@@ -566,7 +650,7 @@ TrDoSwitch (
             {
                 /* Add an ELSE to complete the previous CASE */
 
-                NewOp = TrCreateLeafNode (PARSEOP_ELSE);
+                NewOp = TrCreateLeafOp (PARSEOP_ELSE);
                 NewOp->Asl.Parent = Conditional->Asl.Parent;
                 TrAmlInitLineNumbers (NewOp, NewOp->Asl.Parent);
 
@@ -591,49 +675,49 @@ TrDoSwitch (
                  * If (LNotEqual (Match (Package(<size>){<data>},
                  *                       MEQ, _T_x, MTR, Zero, Zero), Ones))
                  */
-                NewOp2              = TrCreateLeafNode (PARSEOP_MATCHTYPE_MEQ);
+                NewOp2              = TrCreateLeafOp (PARSEOP_MATCHTYPE_MEQ);
                 Predicate->Asl.Next = NewOp2;
                 TrAmlInitLineNumbers (NewOp2, Conditional);
 
                 NewOp               = NewOp2;
-                NewOp2              = TrCreateValuedLeafNode (PARSEOP_NAMESTRING,
+                NewOp2              = TrCreateValuedLeafOp (PARSEOP_NAMESTRING,
                                         (UINT64) ACPI_TO_INTEGER (PredicateValueName));
                 NewOp->Asl.Next     = NewOp2;
                 TrAmlInitLineNumbers (NewOp2, Predicate);
 
                 NewOp               = NewOp2;
-                NewOp2              = TrCreateLeafNode (PARSEOP_MATCHTYPE_MTR);
+                NewOp2              = TrCreateLeafOp (PARSEOP_MATCHTYPE_MTR);
                 NewOp->Asl.Next     = NewOp2;
                 TrAmlInitLineNumbers (NewOp2, Predicate);
 
                 NewOp               = NewOp2;
-                NewOp2              = TrCreateLeafNode (PARSEOP_ZERO);
+                NewOp2              = TrCreateLeafOp (PARSEOP_ZERO);
                 NewOp->Asl.Next     = NewOp2;
                 TrAmlInitLineNumbers (NewOp2, Predicate);
 
                 NewOp               = NewOp2;
-                NewOp2              = TrCreateLeafNode (PARSEOP_ZERO);
+                NewOp2              = TrCreateLeafOp (PARSEOP_ZERO);
                 NewOp->Asl.Next     = NewOp2;
                 TrAmlInitLineNumbers (NewOp2, Predicate);
 
-                NewOp2              = TrCreateLeafNode (PARSEOP_MATCH);
+                NewOp2              = TrCreateLeafOp (PARSEOP_MATCH);
                 NewOp2->Asl.Child   = Predicate;  /* PARSEOP_PACKAGE */
                 TrAmlInitLineNumbers (NewOp2, Conditional);
                 TrAmlSetSubtreeParent (Predicate, NewOp2);
 
                 NewOp               = NewOp2;
-                NewOp2              = TrCreateLeafNode (PARSEOP_ONES);
+                NewOp2              = TrCreateLeafOp (PARSEOP_ONES);
                 NewOp->Asl.Next     = NewOp2;
                 TrAmlInitLineNumbers (NewOp2, Conditional);
 
-                NewOp2              = TrCreateLeafNode (PARSEOP_LEQUAL);
+                NewOp2              = TrCreateLeafOp (PARSEOP_LEQUAL);
                 NewOp2->Asl.Child   = NewOp;
                 NewOp->Asl.Parent   = NewOp2;
                 TrAmlInitLineNumbers (NewOp2, Conditional);
                 TrAmlSetSubtreeParent (NewOp, NewOp2);
 
                 NewOp               = NewOp2;
-                NewOp2              = TrCreateLeafNode (PARSEOP_LNOT);
+                NewOp2              = TrCreateLeafOp (PARSEOP_LNOT);
                 NewOp2->Asl.Child   = NewOp;
                 NewOp2->Asl.Parent  = Conditional;
                 NewOp->Asl.Parent   = NewOp2;
@@ -654,12 +738,12 @@ TrDoSwitch (
                  * CaseOp->Child is the case value
                  * CaseOp->Child->Peer is the beginning of the case block
                  */
-                NewOp = TrCreateValuedLeafNode (PARSEOP_NAMESTRING,
+                NewOp = TrCreateValuedLeafOp (PARSEOP_NAMESTRING,
                     (UINT64) ACPI_TO_INTEGER (PredicateValueName));
                 NewOp->Asl.Next = Predicate;
                 TrAmlInitLineNumbers (NewOp, Predicate);
 
-                NewOp2              = TrCreateLeafNode (PARSEOP_LEQUAL);
+                NewOp2              = TrCreateLeafOp (PARSEOP_LEQUAL);
                 NewOp2->Asl.Parent  = Conditional;
                 NewOp2->Asl.Child   = NewOp;
                 TrAmlInitLineNumbers (NewOp2, Conditional);
@@ -756,7 +840,7 @@ TrDoSwitch (
     /* Create the Name node */
 
     Predicate = StartNode->Asl.Child;
-    NewOp = TrCreateLeafNode (PARSEOP_NAME);
+    NewOp = TrCreateLeafOp (PARSEOP_NAME);
     TrAmlInitLineNumbers (NewOp, StartNode);
 
     /* Find the parent method */
@@ -769,7 +853,7 @@ TrDoSwitch (
     }
     MethodOp = Next;
 
-    NewOp->Asl.CompileFlags |= NODE_COMPILER_EMITTED;
+    NewOp->Asl.CompileFlags |= OP_COMPILER_EMITTED;
     NewOp->Asl.Parent = Next;
 
     /* Insert name after the method name and arguments */
@@ -800,10 +884,10 @@ TrDoSwitch (
 
     /* Create the NameSeg child for the Name node */
 
-    NewOp2 = TrCreateValuedLeafNode (PARSEOP_NAMESEG,
+    NewOp2 = TrCreateValuedLeafOp (PARSEOP_NAMESEG,
         (UINT64) ACPI_TO_INTEGER (PredicateValueName));
     TrAmlInitLineNumbers (NewOp2, NewOp);
-    NewOp2->Asl.CompileFlags |= NODE_IS_NAME_DECLARATION;
+    NewOp2->Asl.CompileFlags |= OP_IS_NAME_DECLARATION;
     NewOp->Asl.Child  = NewOp2;
 
     /* Create the initial value for the Name. Btype was already validated above */
@@ -812,31 +896,32 @@ TrDoSwitch (
     {
     case ACPI_BTYPE_INTEGER:
 
-        NewOp2->Asl.Next = TrCreateValuedLeafNode (PARSEOP_ZERO,
+        NewOp2->Asl.Next = TrCreateValuedLeafOp (PARSEOP_ZERO,
             (UINT64) 0);
         TrAmlInitLineNumbers (NewOp2->Asl.Next, NewOp);
         break;
 
     case ACPI_BTYPE_STRING:
 
-        NewOp2->Asl.Next = TrCreateValuedLeafNode (PARSEOP_STRING_LITERAL,
+        NewOp2->Asl.Next = TrCreateValuedLeafOp (PARSEOP_STRING_LITERAL,
             (UINT64) ACPI_TO_INTEGER (""));
         TrAmlInitLineNumbers (NewOp2->Asl.Next, NewOp);
         break;
 
     case ACPI_BTYPE_BUFFER:
 
-        (void) TrLinkPeerNode (NewOp2, TrCreateValuedLeafNode (PARSEOP_BUFFER,
+        (void) TrLinkPeerOp (NewOp2, TrCreateValuedLeafOp (PARSEOP_BUFFER,
             (UINT64) 0));
         Next = NewOp2->Asl.Next;
         TrAmlInitLineNumbers (Next, NewOp2);
-        (void) TrLinkChildren (Next, 1, TrCreateValuedLeafNode (PARSEOP_ZERO,
+
+        (void) TrLinkOpChildren (Next, 1, TrCreateValuedLeafOp (PARSEOP_ZERO,
             (UINT64) 1));
         TrAmlInitLineNumbers (Next->Asl.Child, Next);
 
-        BufferOp = TrCreateValuedLeafNode (PARSEOP_DEFAULT_ARG, (UINT64) 0);
+        BufferOp = TrCreateValuedLeafOp (PARSEOP_DEFAULT_ARG, (UINT64) 0);
         TrAmlInitLineNumbers (BufferOp, Next->Asl.Child);
-        (void) TrLinkPeerNode (Next->Asl.Child, BufferOp);
+        (void) TrLinkPeerOp (Next->Asl.Child, BufferOp);
 
         TrAmlSetSubtreeParent (Next->Asl.Child, Next);
         break;
@@ -855,7 +940,7 @@ TrDoSwitch (
      * where _T_x is the temp variable.
      */
     TrAmlInitNode (StartNode, PARSEOP_WHILE);
-    NewOp = TrCreateLeafNode (PARSEOP_ONE);
+    NewOp = TrCreateLeafOp (PARSEOP_ONE);
     TrAmlInitLineNumbers (NewOp, StartNode);
     NewOp->Asl.Next = Predicate->Asl.Next;
     NewOp->Asl.Parent = StartNode;
@@ -863,7 +948,7 @@ TrDoSwitch (
 
     /* Create a Store() node */
 
-    StoreOp = TrCreateLeafNode (PARSEOP_STORE);
+    StoreOp = TrCreateLeafOp (PARSEOP_STORE);
     TrAmlInitLineNumbers (StoreOp, NewOp);
     StoreOp->Asl.Parent = StartNode;
     TrAmlInsertPeer (NewOp, StoreOp);
@@ -873,7 +958,7 @@ TrDoSwitch (
     StoreOp->Asl.Child = Predicate;
     Predicate->Asl.Parent = StoreOp;
 
-    NewOp = TrCreateValuedLeafNode (PARSEOP_NAMESEG,
+    NewOp = TrCreateValuedLeafOp (PARSEOP_NAMESEG,
         (UINT64) ACPI_TO_INTEGER (PredicateValueName));
     TrAmlInitLineNumbers (NewOp, StoreOp);
     NewOp->Asl.Parent    = StoreOp;
@@ -887,7 +972,7 @@ TrDoSwitch (
         Conditional = Conditional->Asl.Next;
     }
 
-    BreakOp = TrCreateLeafNode (PARSEOP_BREAK);
+    BreakOp = TrCreateLeafOp (PARSEOP_BREAK);
     TrAmlInitLineNumbers (BreakOp, NewOp);
     BreakOp->Asl.Parent = StartNode;
     TrAmlInsertPeer (Conditional, BreakOp);

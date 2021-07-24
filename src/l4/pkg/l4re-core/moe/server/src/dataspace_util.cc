@@ -24,25 +24,31 @@ namespace {
 unsigned long trunc_page(unsigned page_size, unsigned long addr)
 { return addr & ~(page_size-1); }
 
-inline void 
+inline void
 __do_real_copy(Dataspace *dst, unsigned long &dst_offs,
     Dataspace const *src, unsigned long &src_offs, unsigned long sz)
 {
   while (sz)
     {
-      Dataspace::Address src_a = src->address(src_offs, Dataspace::Read_only);
-      Dataspace::Address dst_a = dst->address(dst_offs, Dataspace::Writable);
+      l4_addr_t src_addr, dst_addr;
+      unsigned long src_size, dst_size;
+      if (   src->copy_address(src_offs, L4Re::Dataspace::F::R,
+                               &src_addr, &src_size) < 0
+          || dst->copy_address(dst_offs, L4Re::Dataspace::F::W,
+                               &dst_addr, &dst_size) < 0)
+        return;
 
-      unsigned long b_sz = min(min(src_a.sz() - src_a.of(),
-            dst_a.sz() - dst_a.of()), sz);
+      unsigned long b_sz = min(min(src_size, dst_size), sz);
+      if (!b_sz)
+        return;
 
-      memcpy(dst_a.adr(), src_a.adr(), b_sz);
+      memcpy((void*)dst_addr, (void const *)src_addr, b_sz);
       // FIXME: we should change the API to pass a flag for executable target pages,
       // and do the I cache coherence only in this case.
       // And we should change the cache API to allow for a single call to handle
       // I-cache coherency and D-cache writeback.
-      l4_cache_coherent((l4_addr_t)dst_a.adr(), (l4_addr_t)dst_a.adr() + b_sz - 1);
-      l4_cache_clean_data((l4_addr_t)dst_a.adr(), (l4_addr_t)dst_a.adr() + b_sz - 1);
+      l4_cache_coherent(dst_addr, dst_addr + b_sz);
+      l4_cache_clean_data(dst_addr, dst_addr + b_sz);
 
       src_offs += b_sz;
       dst_offs += b_sz;
@@ -50,13 +56,13 @@ __do_real_copy(Dataspace *dst, unsigned long &dst_offs,
     }
 }
 
-inline void 
+inline void
 __do_cow_copy(Dataspace_noncont *dst, unsigned long &dst_offs, unsigned dst_pg_sz,
     Dataspace const *src, unsigned long &src_offs, unsigned long sz)
 {
   while (sz)
     {
-      Dataspace::Address src_a = src->address(src_offs, Dataspace::Read_only);
+      Dataspace::Address src_a = src->address(src_offs, L4Re::Dataspace::F::R);
       Dataspace_noncont::Page &dst_p = dst->alloc_page(dst_offs);
       dst->free_page(dst_p);
       void *src_p = (void*)trunc_page(dst_pg_sz,src_a.adr<unsigned long>());
@@ -69,7 +75,7 @@ __do_cow_copy(Dataspace_noncont *dst, unsigned long &dst_offs, unsigned dst_pg_s
     }
 }
 
-inline void 
+inline void
 __do_cow_copy2(Dataspace_noncont *dst, unsigned long &dst_offs, unsigned dst_pg_sz,
     Dataspace_noncont const *src, unsigned long &src_offs, unsigned long sz)
 {
@@ -102,7 +108,7 @@ __do_cow_copy2(Dataspace_noncont *dst, unsigned long &dst_offs, unsigned dst_pg_
     }
 }
 
-unsigned long 
+unsigned long
 __do_eager_copy(Dataspace *dst, unsigned long dst_offs,
     Dataspace const *src, unsigned long src_offs, unsigned long size)
 {
@@ -143,7 +149,7 @@ __do_lazy_copy(Dataspace_noncont *dst, unsigned long dst_offs,
   if (dst_align != (src_offs & (dst_pg_sz-1)))
     {
         if (0)
-          L4::cout << "alignment error " << L4::hex << src_offs 
+          L4::cout << "alignment error " << L4::hex << src_offs
                    << " " << dst_offs << L4::dec << '\n';
 
       return false;
@@ -151,7 +157,7 @@ __do_lazy_copy(Dataspace_noncont *dst, unsigned long dst_offs,
   if (0)
     L4::cout << "do copy on write\n";
 
-  unsigned long copy_sz = size 
+  unsigned long copy_sz = size
     = min(min(size, dst_sz - dst_offs), src_sz - src_offs);
 
   if (dst_align)
@@ -211,7 +217,7 @@ __do_lazy_copy2(Dataspace_noncont *dst, unsigned long dst_offs,
   if (0)
     L4::cout << "do copy on write\n";
 
-  unsigned long copy_sz = size 
+  unsigned long copy_sz = size
     = min(min(size, dst_sz - dst_offs), src_sz - src_offs);
 
   if (dst_align)
@@ -239,13 +245,13 @@ __do_lazy_copy2(Dataspace_noncont *dst, unsigned long dst_offs,
 
 }; // and local anon namespace
 
-unsigned long 
+unsigned long
 Dataspace_util::copy(Dataspace *dst, unsigned long dst_offs,
     Dataspace const *src, unsigned long src_offs, unsigned long size)
 {
   if (src->can_cow() && dst->can_cow())
     {
-      if (!src->is_writable() && src->is_static())
+      if (!src->map_flags().w() && src->is_static())
         {
           Dataspace_noncont *nc = dynamic_cast<Dataspace_noncont*>(dst);
           if (nc && __do_lazy_copy(nc, dst_offs, src, src_offs, size))
@@ -255,7 +261,7 @@ Dataspace_util::copy(Dataspace *dst, unsigned long dst_offs,
         {
           Dataspace_noncont *dst_n = dynamic_cast<Dataspace_noncont*>(dst);
           Dataspace_noncont const *src_n = dynamic_cast<Dataspace_noncont const *>(src);
-          if (dst_n && src_n 
+          if (dst_n && src_n
               && __do_lazy_copy2(dst_n, dst_offs, src_n, src_offs, size))
             return size;
         }

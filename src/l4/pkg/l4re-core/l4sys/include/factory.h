@@ -85,7 +85,7 @@
  */
 L4_INLINE l4_msgtag_t
 l4_factory_create_task(l4_cap_idx_t factory,
-                       l4_cap_idx_t target_cap, l4_fpage_t const utcb_area) L4_NOTHROW;
+                       l4_cap_idx_t target_cap, l4_fpage_t utcb_area) L4_NOTHROW;
 
 /**
  * \ingroup l4_factory_api
@@ -95,7 +95,7 @@ l4_factory_create_task(l4_cap_idx_t factory,
  */
 L4_INLINE l4_msgtag_t
 l4_factory_create_task_u(l4_cap_idx_t factory, l4_cap_idx_t target_cap,
-                         l4_fpage_t const utcb_area, l4_utcb_t *utcb) L4_NOTHROW;
+                         l4_fpage_t utcb_area, l4_utcb_t *utcb) L4_NOTHROW;
 
 /**
  * \ingroup l4_factory_api
@@ -167,7 +167,7 @@ l4_factory_create_factory_u(l4_cap_idx_t factory, l4_cap_idx_t target_cap,
  * \retval -L4_ENOMEM  Out-of-memory during allocation of the Ipc_gate object.
  * \retval -L4_ENOENT  `thread_cap` is void or points to something that is not
  *                     a thread.
- * \retval -L4_EPERM   No write rights on `thread_cap`.
+ * \retval -L4_EPERM   No #L4_CAP_FPAGE_S rights on `thread_cap`.
  *
  * An unbound IPC gate can be bound to a thread using #l4_ipc_gate_bind_thread.
  *
@@ -262,7 +262,7 @@ l4_factory_create_add_str_u(char const *s, l4_msgtag_t *tag,
                             l4_utcb_t *utcb) L4_NOTHROW;
 
 L4_INLINE int
-l4_factory_create_add_lstr_u(char const *s, int len, l4_msgtag_t *tag,
+l4_factory_create_add_lstr_u(char const *s, unsigned len, l4_msgtag_t *tag,
                              l4_utcb_t *utcb) L4_NOTHROW;
 
 L4_INLINE int
@@ -330,7 +330,7 @@ l4_factory_create_gate_u(l4_cap_idx_t factory,
     {
       items = 1;
       v->mr[3] = l4_map_obj_control(0,0);
-      v->mr[4] = l4_obj_fpage(thread_cap, 0, L4_FPAGE_RWX).raw;
+      v->mr[4] = l4_obj_fpage(thread_cap, 0, L4_CAP_FPAGE_RWS).raw;
     }
   t = l4_msgtag(l4_msgtag_label(t), l4_msgtag_words(t), items, l4_msgtag_flags(t));
   return l4_factory_create_commit_u(factory, t, u);
@@ -357,7 +357,7 @@ l4_factory_create_vm_u(l4_cap_idx_t factory,
 
 L4_INLINE l4_msgtag_t
 l4_factory_create_task(l4_cap_idx_t factory,
-                       l4_cap_idx_t target_cap, l4_fpage_t const utcb_area) L4_NOTHROW
+                       l4_cap_idx_t target_cap, l4_fpage_t utcb_area) L4_NOTHROW
 {
   return l4_factory_create_task_u(factory, target_cap, utcb_area, l4_utcb());
 }
@@ -464,17 +464,16 @@ l4_factory_create_add_str_u(char const *s, l4_msgtag_t *tag,
 }
 
 L4_INLINE int
-l4_factory_create_add_lstr_u(char const *s, int len, l4_msgtag_t *tag,
+l4_factory_create_add_lstr_u(char const *s, unsigned len, l4_msgtag_t *tag,
                              l4_utcb_t *u) L4_NOTHROW
 {
 
   l4_msg_regs_t *v = l4_utcb_mr_u(u);
-  int w = l4_msgtag_words(*tag);
+  unsigned w = l4_msgtag_words(*tag);
   char *c;
-  int i;
+  unsigned i;
 
-  if (w + 1 + (len + sizeof(l4_umword_t) - 1) / sizeof(l4_umword_t)
-      > L4_UTCB_GENERIC_DATA_SIZE)
+  if (w + 1 + l4_bytes_to_mwords(len) > L4_UTCB_GENERIC_DATA_SIZE)
     return 0;
 
   v->mr[w] = L4_VARG_TYPE_STRING | (len << 16);
@@ -482,7 +481,7 @@ l4_factory_create_add_lstr_u(char const *s, int len, l4_msgtag_t *tag,
   for (i = 0; i < len; ++i)
     *c++ = *s++;
 
-  w = w + 1 + (len + sizeof(l4_umword_t) - 1) / sizeof(l4_umword_t);
+  w = w + 1 + l4_bytes_to_mwords(len);
 
   tag->raw = (tag->raw & ~0x3fUL) | (w & 0x3f);
   return 1;

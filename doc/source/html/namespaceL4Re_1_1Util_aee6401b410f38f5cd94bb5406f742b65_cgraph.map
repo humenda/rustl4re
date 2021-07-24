@@ -1,0 +1,4 @@
+<map id="L4Re::Util::make_ref_del_cap" name="L4Re::Util::make_ref_del_cap">
+<area shape="rect" id="node1" title="Allocate a capability slot and wrap it in a Ref_del_cap." alt="" coords="5,5,160,47"/>
+<area shape="rect" id="node2" href="$classL4Re_1_1Util_1_1Counting__cap__alloc.html#a0ae2cdee30f100b8df9f5ea63fa2d31a" title="Allocate a new capability slot." alt="" coords="208,5,359,47"/>
+</map>

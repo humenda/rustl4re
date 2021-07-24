@@ -1,5 +1,6 @@
 <map id="l4re_env_get_cap" name="l4re_env_get_cap">
-<area shape="rect" id="node2" href="$group__api__l4re__env.html#gac103498c48310ccea751065ca4d1678a" title="Get L4Re initial environment. " alt="" coords="227,5,304,32"/>
-<area shape="rect" id="node3" href="$group__api__l4re__env.html#ga788aedd589b464cccbeff610416cced9" title="Get the capability selector for the object named name. " alt="" coords="189,56,341,83"/>
-<area shape="rect" id="node4" href="$group__api__l4re__env.html#gadb38a15f6070f3c4e264532f3779d3bc" title="Get the full l4re_env_cap_entry_t for the object named name. " alt="" coords="389,56,536,83"/>
+<area shape="rect" id="node1" title="Get the capability selector for the object named name." alt="" coords="5,31,141,57"/>
+<area shape="rect" id="node2" href="$group__api__l4re__env.html#gac103498c48310ccea751065ca4d1678a" title="Get L4Re initial environment." alt="" coords="225,5,304,32"/>
+<area shape="rect" id="node3" href="$group__api__l4re__env.html#ga788aedd589b464cccbeff610416cced9" title="Get the capability selector for the object named name." alt="" coords="189,56,340,83"/>
+<area shape="rect" id="node4" href="$group__api__l4re__env.html#gadb38a15f6070f3c4e264532f3779d3bc" title="Get the full l4re_env_cap_entry_t for the object named name." alt="" coords="388,56,535,83"/>
 </map>

@@ -8,7 +8,7 @@
  *
  * 1. Copyright Notice
  *
- * Some or all of this work - Copyright (c) 1999 - 2017, Intel Corp.
+ * Some or all of this work - Copyright (c) 1999 - 2019, Intel Corp.
  * All rights reserved.
  *
  * 2. License
@@ -111,6 +111,42 @@
  * other governmental approval, or letter of assurance, without first obtaining
  * such license, approval or letter.
  *
+ *****************************************************************************
+ *
+ * Alternatively, you may choose to be licensed under the terms of the
+ * following license:
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions, and the following disclaimer,
+ *    without modification.
+ * 2. Redistributions in binary form must reproduce at minimum a disclaimer
+ *    substantially similar to the "NO WARRANTY" disclaimer below
+ *    ("Disclaimer") and any redistribution must be conditioned upon
+ *    including a substantially similar Disclaimer requirement for further
+ *    binary redistribution.
+ * 3. Neither the names of the above-listed copyright holders nor the names
+ *    of any contributors may be used to endorse or promote products derived
+ *    from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+ * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * Alternatively, you may choose to be licensed under the terms of the
+ * GNU General Public License ("GPL") version 2 as published by the Free
+ * Software Foundation.
+ *
  *****************************************************************************/
 
 #include "aslcompiler.h"
@@ -161,7 +197,7 @@ RsSmallAddressCheck (
     ACPI_PARSE_OBJECT       *Op)
 {
 
-    if (Gbl_NoResourceChecking)
+    if (AslGbl_NoResourceChecking)
     {
         return;
     }
@@ -293,7 +329,7 @@ RsLargeAddressCheck (
     ACPI_PARSE_OBJECT       *Op)
 {
 
-    if (Gbl_NoResourceChecking)
+    if (AslGbl_NoResourceChecking)
     {
         return;
     }
@@ -537,7 +573,7 @@ RsCreateResourceField (
 {
 
     Op->Asl.ExternalName = Name;
-    Op->Asl.CompileFlags |= NODE_IS_RESOURCE_FIELD;
+    Op->Asl.CompileFlags |= OP_IS_RESOURCE_FIELD;
 
     Op->Asl.Value.Tag.BitOffset = (ByteOffset * 8) + BitOffset;
     Op->Asl.Value.Tag.BitLength = BitLength;
@@ -683,9 +719,9 @@ RsCheckListForDuplicates (
                 {
                     /* Emit error only once per duplicate node */
 
-                    if (!(NextOp->Asl.CompileFlags & NODE_IS_DUPLICATE))
+                    if (!(NextOp->Asl.CompileFlags & OP_IS_DUPLICATE))
                     {
-                        NextOp->Asl.CompileFlags |= NODE_IS_DUPLICATE;
+                        NextOp->Asl.CompileFlags |= OP_IS_DUPLICATE;
                         AslError (ASL_ERROR, ASL_MSG_DUPLICATE_ITEM,
                             NextOp, NULL);
                     }
@@ -954,6 +990,31 @@ RsDoOneResourceDescriptor (
         Rnode = RsDoUartSerialBusDescriptor (Info);
         break;
 
+    case PARSEOP_PINCONFIG:
+
+        Rnode = RsDoPinConfigDescriptor (Info);
+        break;
+
+    case PARSEOP_PINFUNCTION:
+
+        Rnode = RsDoPinFunctionDescriptor (Info);
+        break;
+
+    case PARSEOP_PINGROUP:
+
+        Rnode = RsDoPinGroupDescriptor (Info);
+        break;
+
+    case PARSEOP_PINGROUPFUNCTION:
+
+        Rnode = RsDoPinGroupFunctionDescriptor (Info);
+        break;
+
+    case PARSEOP_PINGROUPCONFIG:
+
+        Rnode = RsDoPinGroupConfigDescriptor (Info);
+        break;
+
     case PARSEOP_DEFAULT_ARG:
 
         /* Just ignore any of these, they are used as fillers/placeholders */
@@ -972,7 +1033,7 @@ RsDoOneResourceDescriptor (
      * references to the descriptor can be resolved.
      */
     Info->DescriptorTypeOp->Asl.ParseOpcode = PARSEOP_DEFAULT_ARG;
-    Info->DescriptorTypeOp->Asl.CompileFlags = NODE_IS_RESOURCE_DESC;
+    Info->DescriptorTypeOp->Asl.CompileFlags = OP_IS_RESOURCE_DESC;
     Info->DescriptorTypeOp->Asl.Value.Integer = Info->CurrentByteOffset;
 
     if (Rnode)
@@ -1071,7 +1132,7 @@ RsDoResourceTemplate (
 
     if (Op->Asl.Parent)
     {
-        Op->Asl.Parent->Asl.CompileFlags |= NODE_IS_RESOURCE_DESC;
+        Op->Asl.Parent->Asl.CompileFlags |= OP_IS_RESOURCE_DESC;
     }
 
     /* ResourceTemplate Opcode is first (Op) */
@@ -1086,6 +1147,14 @@ RsDoResourceTemplate (
     /* First Descriptor type is next */
 
     DescriptorTypeOp = ASL_GET_PEER_NODE (BufferOp);
+
+    /* DEFAULT_ARG indicates null template - ResourceTemplate(){} */
+
+    if (DescriptorTypeOp->Asl.ParseOpcode == PARSEOP_DEFAULT_ARG)
+    {
+        AslError (ASL_WARNING, ASL_MSG_NULL_RESOURCE_TEMPLATE,
+            DescriptorTypeOp, DescriptorTypeOp->Asl.Value.String);
+    }
 
     /*
      * Process all resource descriptors in the list
@@ -1110,7 +1179,7 @@ RsDoResourceTemplate (
         Info.DescriptorTypeOp = DescriptorTypeOp;
         Info.CurrentByteOffset = CurrentByteOffset;
 
-        DescriptorTypeOp->Asl.CompileFlags |= NODE_IS_RESOURCE_DESC;
+        DescriptorTypeOp->Asl.CompileFlags |= OP_IS_RESOURCE_DESC;
         Rnode = RsDoOneResourceDescriptor (&Info, &State);
 
         /*
@@ -1145,7 +1214,7 @@ RsDoResourceTemplate (
      */
     Op->Asl.ParseOpcode               = PARSEOP_BUFFER;
     Op->Asl.AmlOpcode                 = AML_BUFFER_OP;
-    Op->Asl.CompileFlags              = NODE_AML_PACKAGE | NODE_IS_RESOURCE_DESC;
+    Op->Asl.CompileFlags              = OP_AML_PACKAGE | OP_IS_RESOURCE_DESC;
     UtSetParseOpName (Op);
 
     BufferLengthOp->Asl.ParseOpcode   = PARSEOP_INTEGER;
@@ -1158,7 +1227,7 @@ RsDoResourceTemplate (
     BufferOp->Asl.AmlOpcodeLength     = 0;
     BufferOp->Asl.AmlLength           = CurrentByteOffset;
     BufferOp->Asl.Value.Buffer        = (UINT8 *) HeadRnode.Next;
-    BufferOp->Asl.CompileFlags       |= NODE_IS_RESOURCE_DATA;
+    BufferOp->Asl.CompileFlags       |= OP_IS_RESOURCE_DATA;
     UtSetParseOpName (BufferOp);
 
     return;

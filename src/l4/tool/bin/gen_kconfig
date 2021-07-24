@@ -1,6 +1,7 @@
-#! /usr/bin/perl -W
+#! /usr/bin/env perl
 
 use strict;
+use warnings;
 
 my $kconfig_src_file = shift;
 my $kconfig_obj_file = shift;
@@ -59,6 +60,7 @@ foreach my $f (@ARGV) {
 }
 open(IN, "$kconfig_src_file") || die "Cannot open $kconfig_src_file: $!";
 open(OUT, ">$kconfig_obj_file") || die "Cannot open $kconfig_obj_file: $!";
+print OUT "# vi:set ft=kconfig:\n# This Kconfig is auto-generated.\n";
 while ($_=<IN>) {
   print OUT;
   if (/$tag ARCH_CHOICE_DEFAULT\W/x) {
@@ -78,6 +80,15 @@ while ($_=<IN>) {
       print OUT "\tdefault $archs{$i}{default_pf}  if $i\n"
         if defined $archs{$i}{default_pf};
     }
+  }
+  if (/$tag ARCH_PLATFORMS\W/x) {
+    my $f = "$kconfig_obj_file.platforms";
+    open(my $pf, $f) || die "Cannot open '$f': $!";
+    while (my $l = <$pf>)
+      {
+        print OUT $l;
+      }
+    close $pf;
   }
   if (/$tag ARCH_NAME\W/x) {
     foreach my $i (sort keys %archs) {

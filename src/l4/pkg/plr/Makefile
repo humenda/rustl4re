@@ -10,6 +10,6 @@ SYSTEMS = x86-l4f
 
 TARGET = include server lib ex
 
-ex : lib server
-
 include $(L4DIR)/mk/subdir.mk
+
+ex : lib server

@@ -1,12 +1,5 @@
 <map id="l4_trunc_size" name="l4_trunc_size">
-<area shape="rect" id="node2" href="$classcxx_1_1List__alloc.html#a6add9811cb611b9a1e7ee21c92809131" title="Allocate a memory block of min &lt;= size &lt;=max. " alt="" coords="159,17,336,43"/>
-<area shape="rect" id="node4" href="$group__l4__fpage__api.html#ga960465b596caf60adc6c5042e9257f0a" title="Determine maximum flex page size of a region. " alt="" coords="171,125,324,151"/>
-<area shape="rect" id="node6" href="$classL4Re_1_1Dataspace.html#a089936bd4f23665cb8c968c8679d3ab2" title="Map a part of a dataspace completely. " alt="" coords="384,71,547,112"/>
-<area shape="rect" id="node8" href="$group__l4__memory__api.html#ga70b72ae96c18cb49a3445198711bba0d" title="Round an address down to the next lower page boundary. " alt="" coords="191,175,303,202"/>
-<area shape="rect" id="node3" href="$classcxx_1_1List__alloc.html#a1fdfc49fafa608f60c191916629b61a4" title="Initializes an empty list allocator. " alt="" coords="397,5,533,47"/>
-<area shape="rect" id="node5" href="$classL4Re_1_1Dataspace.html#a01f1c1c3511f0a802313113f661ee94d" title="Request a flex&#45;page mapping from the dataspace. " alt="" coords="384,137,547,163"/>
-<area shape="rect" id="node7" href="$classL4Re_1_1Rm.html#ac85c7b70e1b4cbdd34a9b2399d6bf985" title="Attach a data space to a region. " alt="" coords="595,78,723,105"/>
-<area shape="rect" id="node9" href="$group__l4util__api.html#gac1e88025beb28c8f090592bf2f046080" title="Touch data area to force mapping (read&#45;only) " alt="" coords="417,187,513,214"/>
-<area shape="rect" id="node11" href="$group__l4util__api.html#ga8e840257faffbb57a49003cfb7d41594" title="Touch data areas to force mapping (read&#45;write) " alt="" coords="416,238,515,265"/>
-<area shape="rect" id="node10" href="$group__l4util__api.html#ga3a74b4dee439a339ed5a6368845cad37" title="Go sleep and never wake up. " alt="" coords="595,213,723,239"/>
+<area shape="rect" id="node1" title="Round an address down to the next lower flex page with size bits." alt="" coords="243,31,349,57"/>
+<area shape="rect" id="node2" href="$classcxx_1_1List__alloc.html#a9028a4d3bf8a79f61b2d6ee16736f51a" title="Allocate a memory block of min &lt;= size &lt;= max." alt="" coords="5,5,195,32"/>
+<area shape="rect" id="node3" href="$group__l4__fpage__api.html#ga960465b596caf60adc6c5042e9257f0a" title="Determine maximum flex page size of a region." alt="" coords="23,56,177,83"/>
 </map>

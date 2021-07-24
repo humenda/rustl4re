@@ -234,7 +234,7 @@ Dmar_space::initialize()
   if (!_initialized)
     return false;
 
-  b = Kmem_alloc::allocator()->q_alloc(ram_quota(), Config::PAGE_SHIFT);
+  b = Kmem_alloc::allocator()->q_alloc(ram_quota(), Config::page_order());
   if (EXPECT_FALSE(!b))
     return false;
 
@@ -257,7 +257,7 @@ Dmar_space::initialize()
       // allocated and fail.
       _dmarpt->destroy(Virt_addr(0UL), Virt_addr(~0UL), 0, Dmar_pt::Depth,
                        Kmem_alloc::q_allocator(ram_quota()));
-      Kmem_alloc::allocator()->q_free(ram_quota(), Config::PAGE_SHIFT, _dmarpt);
+      Kmem_alloc::allocator()->q_free(ram_quota(), Config::page_order(), _dmarpt);
       _dmarpt = 0;
       return false;
     }
@@ -448,20 +448,19 @@ void
 Dmar_space::v_set_access_flags(Mem_space::Vaddr, L4_fpage::Rights) override
 {}
 
-static Mem_space::Fit_size::Size_array __dmar_ps;
+static Mem_space::Fit_size __dmar_ps;
 
 PUBLIC
-Mem_space::Fit_size
+Mem_space::Fit_size const &
 Dmar_space::mem_space_fitting_sizes() const override
-{ return Mem_space::Fit_size(__dmar_ps); }
+{ return __dmar_ps; }
 
 PRIVATE static
 void
 Dmar_space::add_page_size(Mem_space::Page_order o)
 {
   add_global_page_size(o);
-  for (Mem_space::Page_order c = o; c < __dmar_ps.size(); ++c)
-    __dmar_ps[c] = o;
+  __dmar_ps.add_page_size(o);
 }
 
 PUBLIC
@@ -541,7 +540,7 @@ Dmar_space::~Dmar_space()
     {
       _dmarpt->destroy(Virt_addr(0UL), Virt_addr(~0UL), 0, Dmar_pt::Depth,
                        Kmem_alloc::q_allocator(ram_quota()));
-      Kmem_alloc::allocator()->q_free(ram_quota(), Config::PAGE_SHIFT, _dmarpt);
+      Kmem_alloc::allocator()->q_free(ram_quota(), Config::page_order(), _dmarpt);
       _dmarpt = 0;
     }
 }

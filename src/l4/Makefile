@@ -10,11 +10,15 @@ install-dirs  := tool pkg
 clean-dirs    := tool pkg tests doc
 cleanall-dirs := tool pkg tests doc
 
-BUILD_TOOLS	= bash bison flex gawk gcc g++ ld perl tput
+BUILD_TOOLS    = bash bison flex gawk perl tput \
+                 $(foreach v,CC CXX LD HOST_CC HOST_CXX HOST_LD, \
+                           $(firstword $(foreach x,$($(v)),\
+			                         $(if $(findstring =,$(x)),,$(x)))))
+BUILD_TOOLS_pkg/uvmm  := dtc
 
 CMDS_WITHOUT_OBJDIR := help checkbuild checkbuild.% up update check_build_tools
-CMDS_NO_PROJECT_MK  := $(CMDS_WITHOUT_OBJDIR) \
-                       listplatforms listentries
+CMDS_PROJECT_MK     := all clean cleanall install scrub cont doc help \
+                       $(wildcard $(MAKECMDGOALS))
 
 # our default target is all::
 all::
@@ -69,16 +73,15 @@ MAKECONFLOCAL		= /dev/null
 
 
 # Use project.mk if we use the default goal (MAKECMDGOALS is empty)
-# or if any our goals are not CMDS_NO_PROJECT_MK goals.
-# If all goals are CMDS_NO_PROJECT_MK use 'Makeconf', that saves us
+# or any of the goals listed in CMDS_PROJECT_MK, this saves us
 # from running the time consuming project.mk find operations.
 ifeq ($(MAKECMDGOALS),)
   include $(L4DIR)/mk/project.mk
 else
-  ifeq ($(filter-out $(CMDS_NO_PROJECT_MK),$(MAKECMDGOALS)),)
-    include $(L4DIR)/mk/Makeconf
-  else
+  ifneq ($(filter $(CMDS_PROJECT_MK),$(MAKECMDGOALS)),)
     include $(L4DIR)/mk/project.mk
+  else
+    include $(L4DIR)/mk/Makeconf
   endif
 endif
 
@@ -101,7 +104,7 @@ ifneq ($(strip $(BUILDDIR_TO_CREATE)),)
 ifneq ($(wildcard $(L4DIR)/mk/defconfig/config.$(T)),)
   DROPSCONF_DEFCONFIG=$(L4DIR)/mk/defconfig/config.$(T)
 endif
-all:: check_build_tools
+all::
 	@echo "Creating build directory \"$(BUILDDIR_TO_CREATE)\"..."
 	@if [ -e "$(BUILDDIR_TO_CREATE)" ]; then	\
 		echo "Already exists, aborting.";	\
@@ -110,7 +113,8 @@ all:: check_build_tools
 	@mkdir -p "$(BUILDDIR_TO_CREATE)"
 	@cp $(DROPSCONF_DEFCONFIG) $(BUILDDIR_TO_CREATE)/.kconfig
 	@echo CONFIG_PLATFORM_TYPE_$(PT)=y >> $(BUILDDIR_TO_CREATE)/.kconfig
-	@$(MAKE) B= BUILDDIR_TO_CREATE= O=$(BUILDDIR_TO_CREATE) olddefconfig
+	@$(MAKE) B= BUILDDIR_TO_CREATE= O=$(BUILDDIR_TO_CREATE) olddefconfig \
+	  || ( $(RM) -r "$(BUILDDIR_TO_CREATE)" ; exit 1 )
 	@echo "done."
 else
 
@@ -239,58 +243,22 @@ DROPSCONF_CONFIG_MK_POST_HOOK:: check_build_tools $(OBJ_DIR)/Makefile
 	$(VEROBSE)$(LN) -snf $(L4DIR_ABS) $(OBJ_BASE)/source
 	$(VERBOSE)$(MAKE) checkconf
 
-define extract_var
-	$(1)=$$((cat $(2); echo printit:;                  \
-	         echo '	@echo $$($(3))') |                 \
-		$(MAKE) --no-print-directory -f - printit)
-endef
+KCONFIGS_ARCH     := $(wildcard $(L4DIR)/mk/arch/Kconfig.*.inc)
+KCONFIG_PLATFORMS := $(wildcard $(L4DIR)/mk/platforms/*.conf $(L4DIR)/conf/platforms/*.conf)
 
-define create_kconfig
-	$(VERBOSE)echo "# vi:set ft=kconfig:" > $(1)
-	$(VERBOSE)echo "# This Kconfig is auto-generated." >> $(1)
-	$(VERBOSE)pt="";                                             \
-	while IFS="" read l; do                                      \
-	  if [ "$$l" = "INSERT_PLATFORMS" ]; then                    \
-	    for p in $(wildcard $(L4DIR)/conf/platforms/*.conf       \
-	                        $(L4DIR)/mk/platforms/*.conf); do    \
-	      $(call extract_var,n,$$p,PLATFORM_NAME);               \
-	      pn=$${p##*/};                                          \
-	      pn=$${pn%.conf};                                       \
-	      echo "config PLATFORM_TYPE_$${pn}" >> $(1);            \
-	      echo "  bool \"$$n\"" >> $(1);                         \
-	      pt="$$pt  default \"$$pn\" if PLATFORM_TYPE_$${pn}\n"; \
-	      $(call extract_var,n,$$p,PLATFORM_ARCH);               \
-	      dep="";                                                \
-	      for a in $$n; do                                       \
-		if [ -z "$$dep" ]; then                              \
-		  dep="  depends on BUILD_ARCH_$$a";                 \
-		else                                                 \
-		  dep="$$dep || BUILD_ARCH_$$a";                     \
-		fi;                                                  \
-	      done;                                                  \
-	      echo "$$dep" >> $(1);                                  \
-	      echo "" >> $(1);                                       \
-	    done;                                                    \
-	  elif [ "$$l" = "INSERT_PLATFORM_TYPES" ]; then             \
-	    echo "config PLATFORM_TYPE" >> $(1);                     \
-	    echo "  string" >> $(1);                                 \
-	    echo -e "$$pt" >> $(1);                                  \
-	  else                                                       \
-	    echo "$$l" >> $(1);                                      \
-	  fi;                                                        \
-	done < $(2)
-endef
+$(KCONFIG_FILE)%platform_types $(KCONFIG_FILE)%platforms $(KCONFIG_FILE)%platforms.list: Makefile $(L4DIR)/tool/bin/gen_kconfig_includes \
+                                                          $(KCONFIG_PLATFORMS)
+	$(file >$(KCONFIG_FILE_DEPS).platforms,$(KCONFIG_FILE): $^)
+	$(foreach f,$^,$(file >>$(KCONFIG_FILE_DEPS).platforms,$(f):))
+	$(VERBOSE)MAKE="$(MAKE)"; $(L4DIR)/tool/bin/gen_kconfig_includes $(KCONFIG_FILE) $(KCONFIG_PLATFORMS)
 
-KCONFIGS_ARCH := $(wildcard $(L4DIR)/mk/arch/Kconfig.*.inc)
+$(KCONFIG_FILE): $(KCONFIG_FILE_SRC) Makefile $(KCONFIGS_ARCH) $(L4DIR)/tool/bin/gen_kconfig\
+                 | $(KCONFIG_FILE).platform_types $(KCONFIG_FILE).platforms $(KCONFIG_FILE).platforms.list
+	$(file >$(KCONFIG_FILE_DEPS),$(KCONFIG_FILE): $^)
+	$(foreach f,$^,$(file >>$(KCONFIG_FILE_DEPS),$(f):))
+	$(VERBOSE)$(L4DIR)/tool/bin/gen_kconfig $(KCONFIG_FILE_SRC) $(KCONFIG_FILE) $(KCONFIGS_ARCH)
 
-$(KCONFIG_FILE): $(KCONFIG_FILE_SRC) Makefile $(wildcard $(L4DIR)/mk/platforms/*.conf $(L4DIR)/conf/platforms/*.conf) \
-                 $(KCONFIGS_ARCH) $(L4DIR)/tool/bin/gen_kconfig
-	$(VERBOSE)echo $(KCONFIG_FILE): $^ > $(KCONFIG_FILE_DEPS)
-	$(VERBOSE)$(foreach f,$^,echo $(f): >> $(KCONFIG_FILE_DEPS) ; )
-	$(VERBOSE)$(L4DIR)/tool/bin/gen_kconfig $(KCONFIG_FILE_SRC) $(KCONFIG_FILE).im $(KCONFIGS_ARCH)
-	+$(call create_kconfig,$@,$(KCONFIG_FILE).im)
-
--include $(KCONFIG_FILE_DEPS)
+-include $(KCONFIG_FILE_DEPS) $(KCONFIG_FILE_DEPS).platforms
 
 checkconf:
 	$(VERBOSE)if [ -n "$(GCCDIR)" -a ! -e $(GCCDIR)/include/stddef.h ]; then \
@@ -332,9 +300,10 @@ Makeconf.bid.local-helper:
 	               $(ARCH)_$(CPU)-$(BUILD_ABI))" >> $(DROPSCONF_CONFIG_MK)
 	$(VERBOSE)$(foreach v, BID_COMPILER_TYPE GCCDIR GCCLIB_HOST GCCLIB_EH GCCLIB_S_SO \
 	                GCCVERSION GCCMAJORVERSION GCCMINORVERSION      \
-			GCCPATCHLEVEL GCC_HAS_ATOMICS                   \
+			GCCPATCHLEVEL GCC_HAS_ATOMICS GCCPREFIXOPT      \
 			GCCNOSTACKPROTOPT GCCSTACKPROTOPT GCCSTACKPROTALLOPT LDVERSION \
-			GCCSYSLIBDIRS GCCFORTRANAVAIL GCCINCFIXEDPATH                  \
+			GCCWNONOEXCEPTTYPE GCCWNOPSABI GCCSYSLIBDIRS GCCFORTRANAVAIL \
+			GCCINCFIXEDPATH CONDITIONAL_WARNINGS_MEDIUM CONDITIONAL_WARNINGS_FULL \
 			$(if $(GCCNOFPU_$(ARCH)_f),GCCNOFPU_$(ARCH))    \
 			$(if $(GCCIS_$(ARCH)_leon_f),GCCIS_$(ARCH)_leon),   \
 			echo $(v)=$(call $(v)_f,$(ARCH))                \
@@ -373,7 +342,10 @@ ifneq ($(CONFIG_INT_CPP_NAME_SWITCH),)
 		echo 'int main(void){}'>$$X ; \
 		rm -f $$X.out ; $(LD_GENDEP_PREFIX) GENDEP_SOURCE=$$X \
 		GENDEP_OUTPUT=$$X.out $(CC) $(CCXX_FLAGS) -c $$X -o $$X.o; \
-		test -e $$X.out; echo INT_CPP_NAME=`cat $$X.out` \
+		if [ ! -e $$X.out ]; then \
+			echo -e "\n\033[1;31mGendep did not generate output. Is the compiler ($(CC)) statically linked?\033[0m"; \
+			echo -e "Please use a dynamically linked compiler.\n"; exit 1; \
+		fi; echo INT_CPP_NAME=`cat $$X.out` \
 			>>$(DROPSCONF_CONFIG_MK); \
 		rm -f $$X $$X.{o,out};
 	$(VERBOSE)set -e; X="$(OBJ_BASE)/tmp.$$$$$$RANDOM.cc" ; \
@@ -387,7 +359,7 @@ endif
 ifneq ($(CONFIG_INT_LD_NAME_SWITCH),)
 	$(VERBOSE) set -e; echo INT_LD_NAME=$$($(LD) 2>&1 | perl -p -e 's,^(.+/)?(.+):.+,$$2,') >> $(DROPSCONF_CONFIG_MK)
 endif
-	$(VERBOSE)emulations=$$(LANG= $(firstword $(LD)) --help |        \
+	$(VERBOSE)emulations=$$(LC_ALL=C $(firstword $(LD)) --help |     \
 	                        grep -i "supported emulations:" |        \
 	                        sed -e 's/.*supported emulations: //') ; \
 	unset found_it;                                                  \
@@ -414,9 +386,15 @@ libgendep:
 	          fi
 	$(VERBOSE)PWD=$(PWD)/tool/gendep $(MAKE) -C tool/gendep
 
+DIRS_FOR_BUILD_TOOLS_CHECKS = $(patsubst BUILD_TOOLS_%,%,    \
+                                         $(filter BUILD_TOOLS_%,$(.VARIABLES)))
+BUILD_TOOLS += $(foreach dir,$(DIRS_FOR_BUILD_TOOLS_CHECKS), \
+                         $(if $(wildcard $(L4DIR)/$(dir)),   \
+                              $(BUILD_TOOLS_$(dir))))
+
 check_build_tools:
 	@unset mis;                                                \
-	for i in $(BUILD_TOOLS); do                                \
+	for i in $(sort $(BUILD_TOOLS)); do                        \
 	  if ! command -v $$i >/dev/null 2>&1; then                \
 	    [ -n "$$mis" ] && mis="$$mis ";                        \
 	    mis="$$mis$$i";                                        \
@@ -466,12 +444,13 @@ define checkx86amd64build
 	fi
 endef
 define genimage
-	+$(VERBOSE)$(entryselection);                                     \
-	$(MKDIR) $(IMAGES_DIR);                                           \
-	PWD=$(PWD)/pkg/bootstrap/server/src $(common_envvars)             \
-	    $(MAKE) -C pkg/bootstrap/server/src ENTRY="$$e"               \
-	            BOOTSTRAP_MODULES_LIST=$$ml $(1)                      \
-		    BOOTSTRAP_MODULE_PATH_BINLIB="$(BUILDDIR_SEARCHPATH)" \
+	+$(VERBOSE)$(entryselection);                                                 \
+	$(MKDIR) $(IMAGES_DIR);                                                       \
+	PWD=$(PWD)/pkg/bootstrap/server/src $(common_envvars)                         \
+	    QEMU_BINARY_NAME=$(if $(QEMU_PATH),$(QEMU_PATH),$(QEMU_ARCH_MAP_$(ARCH))) \
+	    $(MAKE) -C pkg/bootstrap/server/src ENTRY="$$e"                           \
+	            BOOTSTRAP_MODULES_LIST=$$ml $(1)                                  \
+		    BOOTSTRAP_MODULE_PATH_BINLIB="$(BUILDDIR_SEARCHPATH)"             \
 		    BOOTSTRAP_SEARCH_PATH="$(MODULE_SEARCH_PATH)"
 endef
 
@@ -479,12 +458,13 @@ define switch_ram_base_func
 	echo "  ... Regenerating RAM_BASE settings"; set -e; \
 	echo "# File semi-automatically generated by 'make switch_ram_base'" > $(OBJ_BASE)/Makeconf.ram_base; \
 	echo "RAM_BASE := $(1)"                                             >> $(OBJ_BASE)/Makeconf.ram_base; \
-	PWD=$(PWD)/l4re-core/pkg/sigma0/server/src $(MAKE) RAM_BASE=$(1) -C pkg/l4re-core/sigma0/server/src;                      \
-	PWD=$(PWD)/l4re-core/pkg/moe/server/src    $(MAKE) RAM_BASE=$(1) -C pkg/l4re-core/moe/server/src;                         \
+	echo "RAM_BASE_SWITCH_PLATFORM_TYPE := $(PLATFORM_TYPE)"            >> $(OBJ_BASE)/Makeconf.ram_base; \
+	PWD=$(PWD)/pkg/l4re-core/sigma0/server/src $(MAKE) RAM_BASE=$(1) -C pkg/l4re-core/sigma0/server/src;                      \
+	PWD=$(PWD)/pkg/l4re-core/moe/server/src    $(MAKE) RAM_BASE=$(1) -C pkg/l4re-core/moe/server/src;                         \
 	echo "RAM_BASE_SWITCH_OK := yes"                                    >> $(OBJ_BASE)/Makeconf.ram_base
 endef
 
-BUILDDIR_SEARCHPATH = $(OBJ_BASE)/bin/$(ARCH)_$(CPU):$(OBJ_BASE)/bin/$(ARCH)_$(CPU)/$(BUILD_ABI):$(OBJ_BASE)/lib/$(ARCH)_$(CPU):$(OBJ_BASE)/lib/$(ARCH)_$(CPU)/$(BUILD_ABI)
+BUILDDIR_SEARCHPATH = $(OBJ_BASE)/bin/$(ARCH)_$(CPU):$(OBJ_BASE)/bin/$(ARCH)_$(CPU)/$(BUILD_ABI):$(OBJ_BASE)/lib/$(ARCH)_$(CPU):$(OBJ_BASE)/lib/$(ARCH)_$(CPU)/$(BUILD_ABI):$(OBJ_BASE)/assets
 
 QEMU_ARCH_MAP_$(ARCH) ?= qemu-system-$(ARCH)
 
@@ -500,7 +480,7 @@ FASTBOOT_BOOT_CMD    ?= fastboot boot
 check_and_adjust_ram_base:
 	$(VERBOSE)if [ -z "$(PLATFORM_RAM_BASE)" ]; then          \
 	  echo "ERROR: Platform \"$(PLATFORM_TYPE)\" not known."; \
-	  echo "Available platform:";                             \
+	  echo "Available platforms:";                            \
 	  $(MAKE) listplatforms;                                  \
 	  exit 1;                                                 \
 	fi
@@ -508,7 +488,8 @@ check_and_adjust_ram_base:
 	  echo "Platform \"$(PLATFORM_TYPE)\" not available for $(ARCH)."; \
 	  exit 1;                                                          \
 	fi
-	+$(VERBOSE)if [ $$(($(RAM_BASE))) != $$(($(PLATFORM_RAM_BASE))) -o -z "$(RAM_BASE)" -o -z "$(RAM_BASE_SWITCH_OK)" ]; then \
+	+$(VERBOSE)if [ -n "$(RAM_BASE_SWITCH_OK)" ] && [ "$(RAM_BASE_SWITCH_PLATFORM_TYPE)" != "$(PLATFORM_TYPE)" ] && [ $$(($(RAM_BASE))) != $$(($(PLATFORM_RAM_BASE))) ] \
+	                || [ -z "$(RAM_BASE)" ] || [ -z "$(RAM_BASE_SWITCH_OK)" ]; then \
 	  echo "=========== Updating RAM_BASE for platform $(PLATFORM_TYPE) to $(PLATFORM_RAM_BASE) =========" ; \
 	  $(call switch_ram_base_func,$(PLATFORM_RAM_BASE)); \
 	fi
@@ -532,6 +513,7 @@ uimage: check_and_adjust_ram_base
 
 itb: check_and_adjust_ram_base
 	$(call genimage,BOOTSTRAP_DO_ITB=y)
+	$(VERBOSE)$(if $(POST_IMAGE_CMD),$(call POST_IMAGE_CMD,$(IMAGES_DIR)/bootstrap.itb))
 
 rawimage: check_and_adjust_ram_base
 	$(call genimage,BOOTSTRAP_DO_UIMAGE= BOOTSTRAP_DO_RAW_IMAGE=y)
@@ -621,10 +603,11 @@ exportpack: $(if $(filter $(ARCH),x86 amd64),,$(QEMU_KERNEL_TYPE))
 	 TARGETDIR=$(EXPORTPACKTARGETDIR);                                \
 	 qemu=$(if $(QEMU_PATH),$(QEMU_PATH),$(QEMU_ARCH_MAP_$(ARCH)));   \
 	 QEMU=$$qemu L4DIR=$(L4DIR) QEMU_OPTIONS="$(QEMU_OPTIONS)"        \
+	 OUTPUT_DIR="$(BOOTSTRAP_OUTPUT_DIR)"                             \
 	 IMAGE_FILE="$(QEMU_KERNEL_FILE)"                                 \
 	 $(tool_envvars) $(common_envvars)                                \
 	  $(L4DIR)/tool/bin/genexportpack --timeout=$(GRUB_TIMEOUT)       \
-	                                  --grubpathprefix=$(GRUB_PATHPREFIX) \
+	                                  --grubpathprefix="$(GRUB_PATHPREFIX)" \
 	                                  --grubentrytitle="$(GRUB_ENTRY_TITLE)" \
 	                                   $$ml $$TARGETDIR $$e;
 
@@ -649,24 +632,8 @@ help::
 	@echo " Add 'E=name' to directly select the entry without using the menu."
 	@echo " Modules are defined in conf/modules.list."
 
-listplatforms:
-	$(VERBOSE)for p in $(wildcard $(L4DIR)/conf/platforms/*.conf    \
-	                              $(L4DIR)/mk/platforms/*.conf); do \
-	  $(call extract_var,a,$$p,PLATFORM_ARCH);                      \
-	  for ar in $$a; do                                             \
-	    [ "$$ar" = "$(BUILD_ARCH)" ] && arch_hit=1;                 \
-	  done;                                                         \
-	  if [ -n "$$arch_hit" ]; then                                  \
-	    $(call extract_var,n,$$p,PLATFORM_NAME);                    \
-	    pn=$${p##*/};                                               \
-	    pn=$${pn%.conf};                                            \
-	    priv="";                                                    \
-	    [ $${p#$(L4DIR)/conf/platforms/} != $$p -a                  \
-	      -e $(L4DIR)/conf/platforms/$$pn.conf ] && priv=" [priv]"; \
-	    printf "%20s -- %s\n" $$pn "$$n$$priv";                     \
-	  fi;                                                           \
-	  unset arch_hit;                                               \
-	done | sort -b
+listplatforms: $(KCONFIG_FILE).platforms.list
+	$(VERBOSE)sed -nE "s/^\[$(BUILD_ARCH)\](.*)/\1/p" $(KCONFIG_FILE).platforms.list | sort -b
 
 
 .PHONY: elfimage rawimage uimage qemu vbox ux switch_ram_base \
@@ -699,6 +666,7 @@ $(CHECK_BASE_DIR)/config.%/.kconfig: mk/defconfig/config.% checkbuild_prepare.%
 
 $(CHECK_BASE_DIR)/config.%/.config.all: $(CHECK_BASE_DIR)/config.%/.kconfig FORCE
 	find $(@D) -xtype l -delete
+	rm -rf $(@D)/pc
 	$(MAKE) -j 1 O=$(@D) olddefconfig $(call BID_CHECKBUILD_LOG_REDIR_f, $*)
 
 checkbuild.%: $(CHECK_BASE_DIR)/config.%/.config.all $(CHECK_BASE_DIR)/config.%/.kconfig check_base_dir
@@ -717,23 +685,23 @@ checkbuild: $(if $(USE_CONFIGS),$(addprefix checkbuild.,$(USE_CONFIGS)),$(patsub
 report:
 	@echo -e $(EMPHSTART)"============================================================="$(EMPHSTOP)
 	@echo -e $(EMPHSTART)" Note, this report might disclose private information"$(EMPHSTOP)
-	@echo -e $(EMPHSTART)" Please review (and edit) before sending it to public lists"$(EMPHSTOP)
+	@echo -e $(EMPHSTART)" Please review (and edit) before making it public"$(EMPHSTOP)
 	@echo -e $(EMPHSTART)"============================================================="$(EMPHSTOP)
 	@echo
 	@echo "make -v:"
 	@make -v || true
 	@echo
 	@echo "CC: $(CC) -v:"
-	@$(CC) -v || true
+	@$(CC) -v 2>&1 || true
 	@echo
 	@echo "CXX: $(CXX) -v:"
-	@$(CXX) -v || true
+	@$(CXX) -v 2>&1 || true
 	@echo
 	@echo "HOST_CC: $(HOST_CC) -v:"
-	@$(HOST_CC) -v || true
+	@$(HOST_CC) -v 2>&1 || true
 	@echo
 	@echo "HOST_CXX: $(HOST_CXX) -v:"
-	@$(HOST_CXX) -v || true
+	@$(HOST_CXX) -v 2>&1 || true
 	@echo
 	@echo -n "ld: $(LD) -v: "
 	@$(LD) -v || true
@@ -743,6 +711,12 @@ report:
 	@echo
 	@echo -n "python -V: "
 	@python -V || true
+	@echo
+	@echo -n "python2 -V: "
+	@python2 -V || true
+	@echo
+	@echo -n "python3 -V: "
+	@python3 -V || true
 	@echo
 	@echo "svn --version: "
 	@svn --version || true
@@ -793,8 +767,11 @@ report:
 	fi
 	@lsb_release -a || true
 	@echo
-	@echo "Running as PID"
-	@id -u || true
+	@echo "Running as PID / User"
+	@id || true
+	@echo
+	@echo Locale info:
+	@locale
 	@echo
 	@echo "Archive information:"
 	@echo "SVN:"
@@ -827,9 +804,9 @@ report:
 	@echo Configuration:
 	@for i in $(OBJ_DIR)/.config.all $(OBJ_DIR)/.kconfig   \
 	          $(OBJ_DIR)/Makeconf.local                    \
-		  $(L4DIR_ABS)/Makeconf.local                  \
-		  $(OBJ_DIR)/conf/Makeconf.boot                \
-		  $(L4DIR_ABS)/conf/Makeconf.boot; do          \
+	          $(L4DIR_ABS)/Makeconf.local                  \
+	          $(OBJ_DIR)/conf/Makeconf.boot                \
+	          $(L4DIR_ABS)/conf/Makeconf.boot; do          \
 	  if [ -e "$$i" ]; then                                \
 	    echo "______start_______________________________:";\
 	    echo "$$i:";                                       \
@@ -841,7 +818,7 @@ report:
 	done
 	@echo -e $(EMPHSTART)"============================================================="$(EMPHSTOP)
 	@echo -e $(EMPHSTART)" Note, this report might disclose private information"$(EMPHSTOP)
-	@echo -e $(EMPHSTART)" Please review (and edit) before sending it to public lists"$(EMPHSTOP)
+	@echo -e $(EMPHSTART)" Please review (and edit) before making it public"$(EMPHSTOP)
 	@echo -e $(EMPHSTART)"============================================================="$(EMPHSTOP)
 
 help::
@@ -853,22 +830,43 @@ help::
 	@echo "  cont             - Continue building after fixing a build error."
 	@echo "  clean            - Call 'clean' target recursively."
 	@echo "  cleanfast        - Delete all directories created during build."
+	@echo "  doc              - Generate documentation."
+	@echo "                     The default behavior is building HTML with"
+	@echo "                     graphics. To change the default behavior,"
+	@echo "                     set DOC_VARIANT to one of the following values:"
+	@echo "                     * DOC_VARIANT=fast: Build HTML without graphics."
+	@echo "                     * DOC_VARIANT=full: Build HTML and a PDF with graphics."
+	@echo "                       The PDF is named doc/source/l4re/latex/refman.pdf."
+	@echo "                     * DOC_VARIANT=release: Build everything like 'full'"
+	@echo "                       excluding internal information."
 	@echo "  report           - Print out host configuration information."
 	@echo "  help             - Print this help text."
-	@echo "  test             - Execute unit tests."
+	@echo "  test             - Run kernel and user-land tests. If 'TEST_KUNIT_DIR' is"
+	@echo "                     not provided, only user-land tests run."
 	@echo "  listplatforms    - List available platforms."
 
 
+.PHONY: test
 test:
 	$(VERBOSE)taparchive="$(TAPARCHIVE)"; \
 	if [ -n "$${taparchive%%/*}" ]; then \
 	  echo "ERROR: TAPARCHIVE must be an absolute path."; \
 	  exit 1; \
 	fi
-	$(VERBOSE)tmptestdir=$$(mktemp -d); \
+	$(VERBOSE)if [ -z "$(TEST_KUNIT_DIR)" ]; then \
+	  echo "INFO: TEST_KUNIT_DIR not provided. No kernel tests."; \
+	fi
+	$(VERBOSE)test_tmp_dir=$$(mktemp -d); \
+	\
 	ln -fs "$(OBJ_BASE)/test/t/$(ARCH)_$(CPU)/$(BUILD_ABI)" \
-	       "$${tmptestdir}/bid-tests"; \
-	(cd $$tmptestdir && \
+	       "$${test_tmp_dir}/bid-tests"; \
+	\
+	$(if $(TEST_KUNIT_DIR),\
+	  $(L4DIR)/tool/bin/gen_kunit_test --ddir=$${test_tmp_dir}/kunit-tests \
+	    --sdir=$(TEST_KUNIT_DIR) --obj-base=$(OBJ_BASE);) \
+	\
+	(cd $${test_tmp_dir} && \
 	 prove $(if $(TAPARCHIVE),-a $(TAPARCHIVE)) $(if $(VERBOSE),,-v) \
-	       -m -r "bid-tests/$${TESTS#bid-tests/}"); \
-	rm -fr "$$tmptestdir"
+	       -m -r $(if $(TEST_KUNIT_DIR),kunit-tests) \
+	       "bid-tests/$${TESTS#bid-tests/}"); \
+	rm -fr "$${test_tmp_dir}"

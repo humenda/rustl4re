@@ -29,6 +29,7 @@
 #include "mem_access.h"
 #include "vm_ram.h"
 #include "virtio_qword.h"
+#include "monitor/virtio_cmd_handler.h"
 
 namespace Virtio {
 
@@ -81,7 +82,9 @@ public:
   virtual void clear_events(unsigned mask) = 0;
 };
 
-class Dev : public Vdev::Device
+class Dev
+: public Vdev::Device,
+  public Monitor::Virtio_dev_cmd_handler<Monitor::Enabled, Dev>
 {
 public:
   typedef L4virtio::Svr::Dev_status Status;
@@ -99,12 +102,12 @@ protected:
   void update_virtio_config()
   {
     l4_cache_clean_data((l4_addr_t)_cfg_header.get(),
-                        (l4_addr_t)_cfg_header.get() + Config_ds_size - 1);
+                        (l4_addr_t)_cfg_header.get() + Config_ds_size);
   }
 
 public:
-  Dev(Vmm::Vm_ram *iommu, l4_uint32_t vendor, l4_uint32_t device)
-  : _iommu(iommu)
+  Dev(Vmm::Vm_ram *ram, l4_uint32_t vendor, l4_uint32_t device)
+  : _ram(ram)
   {
     auto *e = L4Re::Env::env();
     auto ds = L4Re::chkcap(L4Re::Util::make_unique_del_cap<L4Re::Dataspace>());
@@ -113,7 +116,8 @@ public:
 
     L4Re::Rm::Unique_region<l4virtio_config_hdr_t *> cfg;
     L4Re::chksys(e->rm()->attach(&cfg, Config_ds_size,
-                                 L4Re::Rm::Search_addr | L4Re::Rm::Eager_map
+                                 L4Re::Rm::F::Search_addr | L4Re::Rm::F::Eager_map
+                                 | L4Re::Rm::F::RW
                                  , //| L4Re::Rm::Cache_uncached,
                                  L4::Ipc::make_cap_rw(ds.get())));
 
@@ -166,27 +170,30 @@ public:
 
   template<typename T>
   T *devaddr_to_virt(l4_addr_t devaddr, l4_size_t len = 0) const
-  {
-    if (devaddr < _iommu->vm_start()
-        || devaddr - _iommu->vm_start() + len > _iommu->size())
-      L4Re::chksys(-L4_ERANGE, "Virtio pointer outside RAM region");
-
-    return _iommu->access(L4virtio::Ptr<T>(devaddr));
-  }
+  { return _ram->guest2host<T *>(Vmm::Region::ss(Vmm::Guest_addr(devaddr), len, Vmm::Region_type::Ram)); }
 
 private:
-  Vmm::Vm_ram *_iommu;
+  Vmm::Vm_ram *_ram;
 };
 
 
 template<typename DEV>
 class Mmio_connector
 {
-private:
+  enum { Device_config_start = 0x100 };
+
+protected:
   template<typename T>
   void writeback_cache(T const *p)
   {
-    l4_cache_clean_data((l4_addr_t)p, (l4_addr_t)p + sizeof(T) - 1);
+    l4_cache_clean_data((l4_addr_t)p, (l4_addr_t)p + sizeof(T));
+  }
+
+  template<typename T>
+  T *virtio_device_config()
+  {
+    return reinterpret_cast<T *>(  (l4_addr_t)dev()->virtio_cfg()
+                                 + Device_config_start);
   }
 
 public:
@@ -208,11 +215,11 @@ public:
 
     if (L4_UNLIKELY(reg & ((1U << size) - 1)))
       return;
-    if (reg >= 0x100)
+    if (reg >= Device_config_start)
       {
         l4_addr_t a = (l4_addr_t)vcfg + reg;
         if (Vmm::Mem_access::write_width(a, value, size) == L4_EOK)
-          dev()->virtio_device_config_written(reg);
+          dev()->virtio_device_config_written(reg - Device_config_start);
         return;
       }
 

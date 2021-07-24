@@ -47,7 +47,7 @@ public:
   void thread_attach()
   {
     control_ext(L4::Cap<L4::Thread>());
-    *reinterpret_cast<l4_utcb_t **>((char *)_s + L4_VCPU_OFFSET_EXT_INFOS) = l4_utcb();
+    reinterpret_cast<l4_utcb_t **>(l4_vcpu_e_info_user(_s))[0] = l4_utcb();
   }
 
   Arm::Hsr hsr() const
@@ -80,6 +80,11 @@ public:
       case 13: _s->r.sp = value; break;
       default: _s->r.r[x] = value; break;
       }
+  }
+
+  l4_umword_t get_lr() const
+  {
+    return _s->r.lr;
   }
 
   Mem_access decode_mmio() const

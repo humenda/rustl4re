@@ -1,0 +1,16 @@
+<map id="L4virtio::Driver::Device::driver_connect" name="L4virtio::Driver::Device::driver_connect">
+<area shape="rect" id="node1" title="Contacts the device and starts the initial handshake." alt="" coords="5,274,177,315"/>
+<area shape="rect" id="node2" href="$classL4_1_1Icu.html#ada7541da586ea09b925b4d90d7dc357e" title="Bind an interrupt line of an interrupt controller to an interrupt object." alt="" coords="263,56,363,83"/>
+<area shape="rect" id="node6" href="$namespaceL4Re.html#a64b057254a760643ba67a9ed452fede8" title="Check for valid capability or raise C++ exception." alt="" coords="259,107,367,133"/>
+<area shape="rect" id="node8" href="$namespaceL4Re.html#a3f17984019f06676a7e3eecb41bbb0bb" title="Generate C++ exception on error." alt="" coords="259,157,366,184"/>
+<area shape="rect" id="node9" href="$classL4virtio_1_1Device.html#a47e53efa92534451e46ecd4fef7060da" title="Get the dataspace with the L4virtio configuration page." alt="" coords="225,209,400,250"/>
+<area shape="rect" id="node10" href="$classL4virtio_1_1Device.html#a2c81a536513972d43f95394d88c39147" title="Get the notification interrupt corresponding to the given index." alt="" coords="225,274,400,315"/>
+<area shape="rect" id="node11" href="$classL4Re_1_1Env.html#a0e7a55ebbac0dedc9fa6859d32687d35" title="Returns the initial environment for the current task." alt="" coords="254,340,371,367"/>
+<area shape="rect" id="node12" href="$group__l4__ipc__err__api.html#ga05c11e3e10b6c2aa941396ac2018899f" title="Return error code of a system call return message tag or the tag label." alt="" coords="277,391,349,417"/>
+<area shape="rect" id="node13" href="$namespaceL4_1_1Ipc.html#a71861fba8b1db3d4fb5768ba65c89d94" title="Make an L4::Ipc::Cap&lt;T&gt; for the given capability with L4_CAP_FPAGE_RW rights." alt="" coords="232,441,393,468"/>
+<area shape="rect" id="node14" href="$classL4virtio_1_1Device.html#ab2e1044b9a29628c3ed7945b9dfe4cad" title="Write the VIRTIO status register." alt="" coords="237,493,389,534"/>
+<area shape="rect" id="node3" href="$classL4_1_1Cap__base.html#a90ff089ca2442b128c2b2b0e1c22c6d7" title="Return capability selector." alt="" coords="448,5,587,32"/>
+<area shape="rect" id="node4" href="$classL4_1_1Kobject.html#a4f2117ae76762f4084e6a1adb915863c" title="Return capability selector." alt="" coords="455,56,579,83"/>
+<area shape="rect" id="node5" href="$group__l4__icu__api.html#ga29217a67f405c5d860002dd902bf71e4" title="Bind an interrupt line of an interrupt controller to an interrupt object." alt="" coords="462,107,573,133"/>
+<area shape="rect" id="node7" href="$namespaceL4Re.html#ae27ac6f274f4ad1267d0d1c0c033c00b" title="Generate C++ exception." alt="" coords="449,157,586,184"/>
+</map>

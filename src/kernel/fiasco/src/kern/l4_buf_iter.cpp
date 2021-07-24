@@ -69,6 +69,12 @@ IMPLEMENT inline
 bool
 L4_buf_iter::next()
 {
+  if (EXPECT_FALSE(_buf >= _max))
+    {
+      c.b = L4_msg_item(0);
+      return false;
+    }
+
   c.b = L4_msg_item(_buf[0]);
   if (EXPECT_FALSE(c.b.is_void()))
     return false;
@@ -79,10 +85,10 @@ L4_buf_iter::next()
     {
       ++_buf;
       if (EXPECT_FALSE(_buf >= _max))
-	{
-	  c.b = L4_msg_item(0);
-	  return false;
-	}
+        {
+          c.b = L4_msg_item(0);
+          return false;
+        }
 
       c.d = _buf[0];
     }
@@ -100,13 +106,13 @@ L4_snd_item_iter::next()
 
   ++_buf;
 
-  if (EXPECT_FALSE(c.b.is_void()))
-    return true;
+  if (EXPECT_TRUE(!c.b.is_void()))
+    {
+      if (EXPECT_FALSE(_buf >= _max))
+        return false;
 
-  if (EXPECT_FALSE(_buf >= _max))
-    return false;
-
-  c.d = _buf[0];
+      c.d = _buf[0];
+    }
 
   ++_buf;
   return true;

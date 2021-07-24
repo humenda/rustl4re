@@ -1,0 +1,5 @@
+<map id="L4virtio::Svr::Driver_mem_list_t::remove" name="L4virtio::Svr::Driver_mem_list_t::remove">
+<area shape="rect" id="node1" title="Remove the given region from the list." alt="" coords="5,5,165,47"/>
+<area shape="rect" id="node2" href="$namespaceL4Re.html#a3f17984019f06676a7e3eecb41bbb0bb" title="Generate C++ exception on error." alt="" coords="213,13,320,39"/>
+<area shape="rect" id="node3" href="$namespaceL4Re.html#ae27ac6f274f4ad1267d0d1c0c033c00b" title="Generate C++ exception." alt="" coords="368,13,505,39"/>
+</map>

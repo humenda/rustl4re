@@ -165,7 +165,7 @@ public:
       }
   }
 
-  void dump(int indent) const;
+  void dump(int indent) const override;
 
   Hw::Gpio_device *provider() const { return _hw; }
 

@@ -120,3 +120,27 @@ public:
     Gpc_phys_base        = 0x303a0000,
   };
 };
+
+INTERFACE [arm && pf_imx_8m]: // ----------------------------------------
+
+EXTENSION class Mem_layout
+{
+public:
+  enum Phys_layout_imx8m : Address {
+    Gic_dist_phys_base   = 0x38800000,
+    Gic_redist_phys_base = 0x38880000,
+    Gic_redist_phys_size = 0xc0000,
+  };
+};
+
+INTERFACE [arm && pf_imx_8xq]: // ---------------------------------------
+
+EXTENSION class Mem_layout
+{
+public:
+  enum Phys_layout_imx8xq : Address {
+    Gic_dist_phys_base = 0x51a00000,
+    Gic_redist_phys_base = 0x51b00000,
+    Gic_redist_phys_size = 0x100000,
+  };
+};

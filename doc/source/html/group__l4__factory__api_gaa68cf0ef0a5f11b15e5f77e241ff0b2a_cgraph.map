@@ -1,0 +1,5 @@
+<map id="l4_factory_create_task" name="l4_factory_create_task">
+<area shape="rect" id="node1" title="Create a new task." alt="" coords="5,31,176,57"/>
+<area shape="rect" id="node2" href="$group__l4__factory__api.html#gaf1c482ad38bad5429e3034c86aea435d" title="Create a new task." alt="" coords="224,5,409,32"/>
+<area shape="rect" id="node3" href="$group__l4__utcb__api.html#gadc099b4a59e1d99638c72c11a8c8b644" title="Get the UTCB address." alt="" coords="282,56,351,83"/>
+</map>

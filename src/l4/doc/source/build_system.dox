@@ -262,6 +262,10 @@ When TARGET is undefined, these targets are added to the list of targets for
 the specified architecture. For all targets `SRC_C[C]` files must be
 defined separately.
 
+\par `TEST_KERNEL_ARGS`
+Arguments to append to the kernel command line. These are also appended when
+specifying custom ones via a .t-file's -f parameter or when using -d.
+
 \par `TEST_EXPECTED`
 File containing expected output.
 By default the variable is empty, which means the test binary
@@ -290,8 +294,16 @@ Additional modules needed to run the test.
 Additional parameters to supply to QEMU.
 
 \par `MOE_ARGS`
-
 Additional parameters to supply to moe.
+
+\par `TEST_ARGS`
+Additional arguments for the `TEST_STARTER` (tapper-wrapper per default).
+
+\par `TEST_ROOT_TASK`
+Alternative root task to be used during a test instead of moe.
+
+\par `TEST_ROOT_TASK_ARGS`
+Arguments passed to `TEST_ROOT_TASK` if `TEST_ROOT_TASK` is different from moe.
 
 \par `KERNEL_CONF`
 Features the Fiasco kernel must have been compiled with.
@@ -309,7 +321,7 @@ in the directory of the L4Linux kernel.
 \par `TEST_SETUP`
 Command to execute before the test is run.
 The test will only be executed if the command returns 0.
-If the exit code is 2, the test is marked as skipped
+If the exit code is 69, the test is marked as skipped
 with the reason provided in the final line of stdout.
 
 \par `TEST_LOGFILE`
@@ -323,6 +335,41 @@ levels using the current test path, in order to guarantee conflict-free
 usage when running many different tests with a common workdir. When
 TEST_WORKDIR is provided then TEST_LOGFILE is ignored as it is
 organized below workdir.
+
+\par `TEST_TAGS`
+\parblock
+List of conditions for tags provided during execution of a test. A tag
+can be set to 1, set to 0 or be unspecified via TEST_RUN_TAGS during
+execution. Therefore there are 4 possible conditions for a tag that can
+be specified in TEST_TAGS: tag, !tag, +tag and -tag. The following table
+shows the conditions they represent.
+
+|TEST_RUN_TAGS \ TEST_TAGS | tag | !tag | +tag | -tag|
+|--------------------------|-----|------|------|-----|
+|tag or tag=1              |   y |      |    y |     |
+|unspecified               |     |    y |    y |     |
+|tag=0                     |     |    y |      |    y|
+
+_Example usage:_
+
+The tag `long-running` is used by tests which take a long time and should
+be skipped by default. These tests are marked with the tag long-running
+unprefixed.
+
+The tag `hardware` is set to 1 at runtime when the tests will run on real
+hardware. Tests that must not run on real hardware are marked with
+`!hardware`.
+
+The tag `impl-def` is used by tests that test implementation details.
+They are run by default but can be excluded from execution by settings
+TEST_RUN_TAGS to impl-def=0. These tests are marked using `+impl-def`.
+
+If you want to specify multiple tag conditions they need to be separated
+with a comma.
+\endparblock
+
+\par `TAPARCHIVE`
+Filename for an archive file to store the resulting TAP output.
 
 In addition to compiled tests, it is also possible to create tests
 where the test binary or script comes from a different source. These
@@ -347,7 +394,7 @@ In order for this to work, the `globalconfig.out` config file from the
 build directory needs to be available in the same directory as the
 kernel.
 
-\par `L4LX_KERNEL_<arch>`, `L4_LX_KERNEL`
+\par `L4LX_KERNEL_<arch>`, `L4LX_KERNEL`
 L4Linux binary to use. This is only required to run tests in
 `mode=l4linux`. If no L4Linux kernel is set then these tests
 will simply be skipped.
@@ -386,6 +433,38 @@ or running one or more tests through the test harness
     prove test/t/amd64_amdfam10/l4f/l4re-core/moe/test_namespace.t
     prove -r test/t/amd64_amdfam10/l4f/l4re-core/
     prove -rv test/t/amd64_amdfam10/l4f/l4re-core/
+
+TEST_TAGS allow for a way to include or exclude whole groups of tests
+during execution, primarily with prove. You can specify which tests to
+run at runtime using one of the following ways:
+
+    $ test/t/amd64_amdfam10/l4f/l4re-core/test_one.t --run-tags slow,gtest-shuffle=0
+    $ test/t/amd64_amdfam10/l4f/l4re-core/test_one.t -T slow,gtest-shuffle=0
+    $ prove -r test/t/amd64_amdfam10/l4f/l4re-core/ :: -T slow,gtest-shuffle=0
+    $ TEST_RUN_TAGS=slow,gtest-shuffle=0 prove -r test/t/amd64_amdfam10/l4f/l4re-core/
+
+For each test tag requirements defined in the corresponding TEST_TAGS
+Makefile variable are tested. If the requirements for tags do not match
+the test is skipped. The SKIP message will provide insight why the test
+was skipped:
+
+    $ make test
+    ...
+    test/t/amd64_amdfam10/test_one.t .... ok
+    test/t/amd64_amdfam10/test_two.t .... skipped: Running this test requires tag slow to be set to 1.
+    test/t/amd64_amdfam10/test_three.t .. ok
+
+When tags are provided, the tests requiring those tags are now also
+executed while the tests that forbid them are skipped:
+
+    $ TEST_RUN_TAGS=slow,gtest-shuffle
+    $ make test
+    ...
+    test/t/amd64_amdfam10/test_one.t .... ok
+    test/t/amd64_amdfam10/test_two.t .... ok
+    test/t/amd64_amdfam10/test_three.t .. skipped: Running this test requires tag gtest-shuffle to be set to 0 or not specified.
+
+For further details on how values in TEST_TAGS and TEST_RUN_TAGS interact, see the help text for TEST_TAGS.
 
 Running Tests in External Programs
 ----------------------------------
@@ -454,6 +533,17 @@ output. Default is `11111`.
 After starting the simulator it waits that many seconds before reading
 from the port. Default is `1` (second).
 
+Running tests without tapper-wrapper
+------------------------------------
+
+In case you want to replace the tapper-wrapper test starter, you can
+replace the default one by setting the environment variable
+`TEST_STARTER` to the path of your test starter. Then your test starter
+can use the same environment which is normally set up for the default
+starter, which includes environment variables provided by the build
+system as well as the test itself. Among these are `SEARCHPATH`, `MODE`,
+`ARCH`, `MOE_CFG`, `MOE_ARGS`, `TEST_TIMEOUT`, `TEST_TARGET`,
+`TEST_EXPECTED`, `QEMU_ARGS` and many more.
 
 Debugging Tests
 ---------------

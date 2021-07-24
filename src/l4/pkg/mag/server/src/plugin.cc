@@ -58,12 +58,8 @@ void
 Core_api::set_session_options(Session *s, L4::Ipc::Varg_list_ref args,
                               Session::Property_handler const *extra) const
 {
-  for (;;)
+  for (L4::Ipc::Varg opt: args)
     {
-      L4::Ipc::Varg opt = args.next();
-      if (!opt.tag())
-        break;
-
       if (!opt.is_of<char const *>())
 	{
 	  printf("skipping non string argument for session!\n");

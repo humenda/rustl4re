@@ -1,7 +1,7 @@
 /**
  * \file
- *
- * \brief	Multiboot info structure as defined by GRUB */
+ * \brief	Multiboot info structure as defined by GRUB
+ */
 /*
  * (c) 2008-2009 Adam Lackorzynski <adam@os.inf.tu-dresden.de>,
  *               Frank Mehnert <fm3@os.inf.tu-dresden.de>
@@ -22,12 +22,15 @@
 
 #include <l4/sys/l4int.h>
 
-/**
- * \anchor struct_l4util_mod_list
- *  The structure type "mod_list" is used by the
- *  \ref struct_l4util_mb_info "multiboot_info" structure.
+/*
+ * \defgroup l4util_mb_mod Multiboot v1
+ * \ingroup l4util_api
  */
 
+/**
+ *  The structure type "mod_list" is used by the
+ *  \ref l4util_mb_info_t "multiboot_info" structure.
+ */
 typedef struct
 {
   l4_uint32_t mod_start;	/**< Starting address of module in memory. */
@@ -43,7 +46,6 @@ typedef struct
  *  pointing to the next one, up until the full buffer length of the memory
  *  map has been reached.
  */
-
 typedef struct __attribute__((packed))
 {
   l4_uint32_t struct_size;	/**< Size of structure */
@@ -52,11 +54,6 @@ typedef struct __attribute__((packed))
   l4_uint32_t type;		/**< type of memory range */
   /* unspecified optional padding... */
 } l4util_mb_addr_range_t;
-
-#define l4util_mb_for_each_mmap_entry(i, mbi) \
-  for (i = (l4util_mb_addr_range_t *)(unsigned long)mbi->mmap_addr; \
-       (unsigned long)i < (unsigned long)mbi->mmap_addr + mbi->mmap_length; \
-       i = (l4util_mb_addr_range_t *)((unsigned long)i + mmap->struct_size + sizeof (mmap->struct_size)))
 
 /** usable memory "Type", all others are reserved.  */
 #define MB_ARD_MEMORY		1
@@ -196,11 +193,10 @@ typedef struct
 
 
 /**
- * \anchor struct_l4util_mb_info
- *  MultiBoot Info description
+ * \brief MultiBoot Info description
  *
- *  This is the struct passed to the boot image.  This is done by placing
- *  its address in the EAX register.
+ * This is the struct passed to the boot image.  This is done by placing
+ * its address in the EAX register.
  */
 
 typedef struct
@@ -251,6 +247,46 @@ typedef struct
   l4_uint16_t vbe_interface_off; /**< VESA offset of prot BIOS interface */
   l4_uint16_t vbe_interface_len; /**< VESA lenght of prot BIOS interface */
 } l4util_mb_info_t;
+
+/**
+ * Get the first entry of the memory map provided through a multi boot
+ * information (MBI) structure.
+ *
+ * \return A pointer to the first entry of the memory map.
+ */
+static inline l4util_mb_addr_range_t *
+l4util_mb_first_mmap_entry(l4util_mb_info_t *mbi)
+{
+  return (l4util_mb_addr_range_t *)(l4_addr_t)mbi->mmap_addr;
+}
+
+/**
+ * Advance to the next entry of a memory map provided through a multi boot
+ * information (MBI) structure.
+ *
+ * \return A pointer to the next entry of the memory map.
+ *
+ * \note   This function performs no checking. The user must ensure that the
+ *         returned pointer does not point beyond the end of the memory map.
+ */
+static inline l4util_mb_addr_range_t *
+l4util_mb_next_mmap_entry(l4util_mb_addr_range_t *e)
+{
+  return (l4util_mb_addr_range_t *)((l4_addr_t)e + e->struct_size
+                                    + sizeof(e->struct_size));
+}
+
+/**
+ * Iterate over a memory map provided in a Multiboot info.
+ *
+ * \param i   Name of a variable of type l4util_mb_addr_range_t * that is
+ *            consecutively assigned pointers to the entries of the memory map.
+ * \param mbi Pointer to the l4util_mb_info_t where the memory map can be found.
+ * */
+#define l4util_mb_for_each_mmap_entry(i, mbi)                                  \
+  for (i = l4util_mb_first_mmap_entry(mbi);                                    \
+       (unsigned long)i < (unsigned long)mbi->mmap_addr + mbi->mmap_length;    \
+       i = l4util_mb_next_mmap_entry(i))
 
 #endif /* ! __ASSEMBLY__ */
 
@@ -368,17 +404,23 @@ typedef struct
 #define L4UTIL_MB2_TERMINATOR_HEADER_TAG	0
 #define L4UTIL_MB2_INFO_REQUEST_HEADER_TAG	1
 #define L4UTIL_MB2_ENTRY_ADDRESS_HEADER_TAG	3
+#define L4UTIL_MB2_RELOCATABLE_HEADER_TAG	10
 
 #define L4UTIL_MB2_TAG_FLAG_REQUIRED		0
 
 #define L4UTIL_MB2_TAG_ALIGN_SHIFT		3
 #define L4UTIL_MB2_TAG_ALIGN			8
 
-#define L4UTIL_MB2_TERMINATOR_INFO_TAG		0
-#define L4UTIL_MB2_BOOT_CMDLINE_INFO_TAG	1
-#define L4UTIL_MB2_MODULE_INFO_TAG		3
-#define L4UTIL_MB2_MEMORY_MAP_INFO_TAG		6
-#define L4UTIL_MB2_RSDP_OLD_INFO_TAG		14
-#define L4UTIL_MB2_RSDP_NEW_INFO_TAG		15
+#define L4UTIL_MB2_TERMINATOR_INFO_TAG            0
+#define L4UTIL_MB2_BOOT_CMDLINE_INFO_TAG          1
+#define L4UTIL_MB2_MODULE_INFO_TAG                3
+#define L4UTIL_MB2_MEMORY_MAP_INFO_TAG            6
+#define L4UTIL_MB2_RSDP_OLD_INFO_TAG             14
+#define L4UTIL_MB2_RSDP_NEW_INFO_TAG             15
+#define L4UTIL_MB2_IMAGE_LOAD_BASE_PHYS_INFO_TAG 21
+
+#define L4UTIL_MB2_RELO_PREFERED_NONE 0
+#define L4UTIL_MB2_RELO_PREFERED_MIN  1
+#define L4UTIL_MB2_RELO_PREFERED_MAX  2
 
 #endif

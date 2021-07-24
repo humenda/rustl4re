@@ -9,7 +9,7 @@
  *
  * 1. Copyright Notice
  *
- * Some or all of this work - Copyright (c) 1999 - 2017, Intel Corp.
+ * Some or all of this work - Copyright (c) 1999 - 2019, Intel Corp.
  * All rights reserved.
  *
  * 2. License
@@ -112,6 +112,42 @@
  * other governmental approval, or letter of assurance, without first obtaining
  * such license, approval or letter.
  *
+ *****************************************************************************
+ *
+ * Alternatively, you may choose to be licensed under the terms of the
+ * following license:
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions, and the following disclaimer,
+ *    without modification.
+ * 2. Redistributions in binary form must reproduce at minimum a disclaimer
+ *    substantially similar to the "NO WARRANTY" disclaimer below
+ *    ("Disclaimer") and any redistribution must be conditioned upon
+ *    including a substantially similar Disclaimer requirement for further
+ *    binary redistribution.
+ * 3. Neither the names of the above-listed copyright holders nor the names
+ *    of any contributors may be used to endorse or promote products derived
+ *    from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+ * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * Alternatively, you may choose to be licensed under the terms of the
+ * GNU General Public License ("GPL") version 2 as published by the Free
+ * Software Foundation.
+ *
  *****************************************************************************/
 
 #include "aslcompiler.h"
@@ -135,37 +171,37 @@ NewLine         [\n]
 
 %%
 
-\(              return (EXPOP_PAREN_OPEN);
-\)              return (EXPOP_PAREN_CLOSE);
-\~              return (EXPOP_ONES_COMPLIMENT);
-\!              return (EXPOP_LOGICAL_NOT);
-\*              return (EXPOP_MULTIPLY);
-\/              return (EXPOP_DIVIDE);
-\%              return (EXPOP_MODULO);
-\+              return (EXPOP_ADD);
-\-              return (EXPOP_SUBTRACT);
-">>"            return (EXPOP_SHIFT_RIGHT);
-"<<"            return (EXPOP_SHIFT_LEFT);
-\<              return (EXPOP_LESS);
-\>              return (EXPOP_GREATER);
-"<="            return (EXPOP_LESS_EQUAL);
-">="            return (EXPOP_GREATER_EQUAL);
-"=="            return (EXPOP_EQUAL);
-"!="            return (EXPOP_NOT_EQUAL);
-\&              return (EXPOP_AND);
-\^              return (EXPOP_XOR);
-\|              return (EXPOP_OR);
-"&&"            return (EXPOP_LOGICAL_AND);
-"||"            return (EXPOP_LOGICAL_OR);
-<<EOF>>         return (EXPOP_EOF); /* null end-of-string */
+\(              return (OP_EXP_PAREN_OPEN);
+\)              return (OP_EXP_PAREN_CLOSE);
+\~              return (OP_EXP_ONES_COMPLIMENT);
+\!              return (OP_EXP_LOGICAL_NOT);
+\*              return (OP_EXP_MULTIPLY);
+\/              return (OP_EXP_DIVIDE);
+\%              return (OP_EXP_MODULO);
+\+              return (OP_EXP_ADD);
+\-              return (OP_EXP_SUBTRACT);
+">>"            return (OP_EXP_SHIFT_RIGHT);
+"<<"            return (OP_EXP_SHIFT_LEFT);
+\<              return (OP_EXP_LESS);
+\>              return (OP_EXP_GREATER);
+"<="            return (OP_EXP_LESS_EQUAL);
+">="            return (OP_EXP_GREATER_EQUAL);
+"=="            return (OP_EXP_EQUAL);
+"!="            return (OP_EXP_NOT_EQUAL);
+\&              return (OP_EXP_AND);
+\^              return (OP_EXP_XOR);
+\|              return (OP_EXP_OR);
+"&&"            return (OP_EXP_LOGICAL_AND);
+"||"            return (OP_EXP_LOGICAL_OR);
+<<EOF>>         return (OP_EXP_EOF); /* null end-of-string */
 
-{LabelRef}      return (EXPOP_LABEL);
-{Number}        return (EXPOP_NUMBER);
-{HexNumber}     return (EXPOP_HEX_NUMBER);
-{NewLine}       return (EXPOP_NEW_LINE);
+{LabelRef}      return (OP_EXP_LABEL);
+{Number}        return (OP_EXP_NUMBER);
+{HexNumber}     return (OP_EXP_HEX_NUMBER);
+{NewLine}       return (OP_EXP_NEW_LINE);
 {WhiteSpace}    /* Ignore */
 
-.               return (EXPOP_EOF);
+.               return (OP_EXP_EOF);
 
 %%
 
@@ -191,7 +227,6 @@ int
 DtInitLexer (
     char                    *String)
 {
-
     LexBuffer = yy_scan_string (String);
     return (LexBuffer == NULL);
 }
@@ -200,6 +235,5 @@ void
 DtTerminateLexer (
     void)
 {
-
     yy_delete_buffer (LexBuffer);
 }

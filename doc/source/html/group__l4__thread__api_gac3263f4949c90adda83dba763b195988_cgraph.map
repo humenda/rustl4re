@@ -1,4 +1,5 @@
 <map id="l4_thread_vcpu_control" name="l4_thread_vcpu_control">
-<area shape="rect" id="node2" href="$group__l4__thread__api.html#ga8ebc0dd643266610d76860cf0fb77f53" title="Enable or disable the vCPU feature for the thread. " alt="" coords="224,5,409,32"/>
-<area shape="rect" id="node3" href="$group__l4__utcb__api.html#gadc099b4a59e1d99638c72c11a8c8b644" title="Get the UTCB address. " alt="" coords="283,56,350,83"/>
+<area shape="rect" id="node1" title="Enable or disable the vCPU feature for the thread." alt="" coords="5,31,179,57"/>
+<area shape="rect" id="node2" href="$group__l4__thread__api.html#ga8ebc0dd643266610d76860cf0fb77f53" title="Enable or disable the vCPU feature for the thread." alt="" coords="227,5,415,32"/>
+<area shape="rect" id="node3" href="$group__l4__utcb__api.html#gadc099b4a59e1d99638c72c11a8c8b644" title="Get the UTCB address." alt="" coords="286,56,355,83"/>
 </map>

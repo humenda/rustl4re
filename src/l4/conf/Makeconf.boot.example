@@ -19,7 +19,7 @@
 # path.
 # MODULE_SEARCH_PATH = /path/to/cfgs:/path/to/foo:..
 #
-# For additional image buliding options see the header of
+# For additional image building options see the header of
 # pkg/bootstrap/server/src/Make.rules
 
 # Add fiasco build directory to MODULE_SEARCH_PATH
@@ -31,6 +31,8 @@ MODULE_SEARCH_PATH += /path/to/fiasco-build
 FIASCO_PATH-arm-integrator      = /path/to/fiasco-build-arm-integrator
 FIASCO_PATH-arm-rv_vexpress     = /path/to/fiasco-build-arm-rv_vexpress
 FIASCO_PATH-arm-rv_vexpress_a15 = /path/to/fiasco-build-arm-rv_vexpress_a15
+FIASCO_PATH-arm-arm_virt        = /path/to/fiasco-build-arm-arm_virt
+FIASCO_PATH-arm64-arm_virt      = /path/to/fiasco-build-arm64-arm_virt
 
 FIASCO_PATH-mips-malta          = /path/to/fiasco-build-mips-malta
 
@@ -57,12 +59,20 @@ QEMU_OPTIONS-arm-rv_vexpress     += -M vexpress-a9 -m 1024 -cpu cortex-a9 -smp 4
 QEMU_OPTIONS-arm-rv_vexpress_a15 += -M vexpress-a15 -m 2047 -cpu cortex-a15 \
                                     -smp 4
 QEMU_OPTIONS-arm-rv_pbx          += realview-pbx-a9 -m 512 -cpu cortex-a9 -smp 4
+QEMU_OPTIONS-arm-arm_virt        += -M virt -cpu cortex-a15 -m 1024
+# Requires at least QEMU-3.1
+#QEMU_OPTIONS-arm-arm_virt        += -M virt,virtualization=true -cpu cortex-a15 -m 1024
+
+QEMU_OPTIONS-arm64-arm_virt      += -M virt -cpu cortex-a57 -m 1024
+# Requires at least QEMU-3.1
+#QEMU_OPTIONS-arm64-arm_virt      += -M virt,virtualization=true -cpu cortex-a57 -m 1024
 
 QEMU_OPTIONS-mips-malta          += -M malta -m 256 -cpu P5600
 
-QEMU_OPTIONS-arm  += $(QEMU_OPTIONS-arm-$(PLATFORM_TYPE))
-QEMU_OPTIONS-mips += $(QEMU_OPTIONS-mips-$(PLATFORM_TYPE))
-QEMU_OPTIONS      += $(QEMU_OPTIONS-$(ARCH))
+QEMU_OPTIONS-arm   += $(QEMU_OPTIONS-arm-$(PLATFORM_TYPE))
+QEMU_OPTIONS-arm64 += $(QEMU_OPTIONS-arm64-$(PLATFORM_TYPE))
+QEMU_OPTIONS-mips  += $(QEMU_OPTIONS-mips-$(PLATFORM_TYPE))
+QEMU_OPTIONS       += $(QEMU_OPTIONS-$(ARCH))
 
 # The path to the QEMU binary - optional
 #QEMU_PATH-x86   = /path/to/qemu

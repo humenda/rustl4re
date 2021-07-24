@@ -294,15 +294,14 @@ static void jiffies_thread_fn(void *arg __attribute__((unused)))
 {
 	kinfo = l4re_kip();
 	l4_kernel_clock_t clock_inc = jiffies_to_ms(JIFFIES_COUNT) * 1000; // l4_clock is in µs
-	l4_kernel_clock_t pint; // point in time
+	l4_kernel_clock_t pint = l4_kip_clock(kinfo); // point in time
 	l4_timeout_t to;
 
 	for (;;)
 	{
-		pint = l4_kip_clock(kinfo);
 		pint += clock_inc;
 
-		l4_rcv_timeout(l4_timeout_abs(pint, L4_TIMEOUT_ABS_V64_ms), &to);
+		l4_rcv_timeout(l4_timeout_abs(pint, 1), &to);
 		l4_ipc_receive(L4_INVALID_CAP, l4_utcb(), to);
 
 		jiffies += JIFFIES_COUNT;

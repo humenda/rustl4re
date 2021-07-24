@@ -1,6 +1,7 @@
 INTERFACE:
 
 #include "types.h"
+#include "jdb_types.h"
 #include "l4_types.h"
 
 class Space;
@@ -19,7 +20,6 @@ IMPLEMENTATION:
 #include "jdb_input_task.h"
 #include "jdb_module.h"
 #include "jdb_screen.h"
-#include "jdb_symbol.h"
 #include "kernel_console.h"
 #include "keycodes.h"
 #include "simpleio.h"
@@ -31,9 +31,9 @@ class Jdb_dump : public Jdb_module, public Jdb_table
 {
 public:
   Jdb_dump() FIASCO_INIT;
-  unsigned long cols() const { return Jdb_screen::cols(); }
-  unsigned long rows() const { return Jdb_screen::rows(); }
-  void draw_entry(unsigned long row, unsigned long col);
+  unsigned long cols() const override { return Jdb_screen::cols(); }
+  unsigned long rows() const override { return Jdb_screen::rows(); }
+  void draw_entry(unsigned long row, unsigned long col) override;
   void print_statline();
 
 private:
@@ -63,16 +63,16 @@ Address Jdb_dump::virt_addr;
 extern int ignore_invalid_apic_reg_access
   __attribute__((weak));
 
-PRIVATE inline
-Address
+PRIVATE template<typename T = Mword> inline
+Jdb_addr<T>
 Jdb_dump::virt(unsigned long row, unsigned long col)
 {
-  return (col-1) * elb + row * (cols()-1) * elb;
+  return Jdb_addr<T>((T*)((col-1) * elb + row * (cols()-1) * elb), task);
 }
 
 PUBLIC
 unsigned
-Jdb_dump::col_width(unsigned col) const
+Jdb_dump::col_width(unsigned col) const override
 {
   if (col == 0)
     return Jdb_screen::Col_head_size;
@@ -84,17 +84,16 @@ Jdb_dump::col_width(unsigned col) const
 
 PUBLIC
 void
-Jdb_dump::print_statline(unsigned long row, unsigned long col)
+Jdb_dump::print_statline(unsigned long row, unsigned long col) override
 {
-  char const *s = dump_type == D_MODE
+  char const *str = dump_type == D_MODE
                   ? "e=edit u=disasm D=dump <Space>=mode <CR>=goto addr"
                   : "<Space>=mode";
-  if (task)
-    Jdb::printf_statline("dump", s, "%c<" L4_PTR_FMT "> task %p",
-                         dump_type, virt(row, col), task);
-  else
-    Jdb::printf_statline("dump", s, "%c<" L4_PTR_FMT "> physical",
-	                 dump_type, virt(row, col));
+  char s[16];
+  Jdb_address a = virt(row, col);
+  Jdb::printf_statline("dump", str, "%c<" L4_PTR_FMT "> %s",
+                       dump_type, a.addr(),
+                       Jdb::addr_space_to_str(a, s, sizeof(s)));
 }
 
 IMPLEMENT
@@ -107,23 +106,17 @@ Jdb_dump::draw_entry(unsigned long row, unsigned long col)
       return;
     }
 
-  Address entry = virt(row, col);
+  auto entry = virt(row, col);
 
   // prevent apic from getting confused by invalid register accesses
   if (&ignore_invalid_apic_reg_access)
     ignore_invalid_apic_reg_access = 1;
 
-  Mword dummy;
-  bool mapped  = Jdb::peek((Mword*)entry, task, dummy);
-  bool ram     = !Jdb::is_adapter_memory(entry, task);
-
-  if (mapped)
+  if (!Jdb::is_adapter_memory(entry) || show_adapter_memory)
     {
-      if (ram || show_adapter_memory)
-	{
-	  Mword mword;
-	  Jdb::peek((Mword*)entry, task, mword);
-
+      Mword mword;
+      if (Jdb::peek(entry, mword))
+        {
 	  if (dump_type==D_MODE)
 	    {
 	      if (mword == 0)
@@ -151,40 +144,36 @@ Jdb_dump::draw_entry(unsigned long row, unsigned long col)
 		  putchar(b>=32 && b<=126 ? b : '.');
 		}
 	    }
-	}
-      else // is_adapter_memory
-	{
-	  if (dump_type == C_MODE)
-	    printf("%.*s", (int)Jdb_screen::Mword_size_cmode, Jdb_screen::Mword_adapter);
-	  else
-	    printf("%.*s", (int)Jdb_screen::Mword_size_bmode, Jdb_screen::Mword_adapter);
-	}
+        }
+      else // !mapped
+        printf("%.*s",
+               dump_type == C_MODE ? (int)Jdb_screen::Mword_size_cmode
+                                   : (int)Jdb_screen::Mword_size_bmode,
+               Jdb_screen::Mword_not_mapped);
     }
-  else // !mapped
-    {
-      if (dump_type == C_MODE)
-	printf("%.*s", (int)Jdb_screen::Mword_size_cmode, Jdb_screen::Mword_not_mapped);
-      else
-        printf("%.*s", (int)Jdb_screen::Mword_size_bmode, Jdb_screen::Mword_not_mapped);
-    }
-  
+  else // is_adapter_memory
+    printf("%.*s",
+           dump_type == C_MODE ? (int)Jdb_screen::Mword_size_cmode
+                               : (int)Jdb_screen::Mword_size_bmode,
+           Jdb_screen::Mword_adapter);
+
   if (&ignore_invalid_apic_reg_access)
     ignore_invalid_apic_reg_access = 0;
 }
 
 PUBLIC
 Jdb_module::Action_code
-Jdb_dump::dump(Address virt, Space *task, int level)
+Jdb_dump::dump(Jdb_address virt, int level)
 { //printf("DU: %p %lx\n", task, virt); Jdb::getchar();
   int old_l = this->level;
   this->level = level;
-  this->task = task;
+  this->task = virt.space();
   dump_type = D_MODE;
   if (!level)
     Jdb::clear_screen();
 
-  unsigned long row =  virt / ((cols()-1) * elb);
-  unsigned long col = (virt % ((cols()-1) * elb)) / elb + 1;
+  unsigned long row =  virt.addr() / ((cols()-1) * elb);
+  unsigned long col = (virt.addr() % ((cols()-1) * elb)) / elb + 1;
   bool r = show(row, col);
   this->level = old_l;
   return r ? EXTRA_INPUT : NOTHING;
@@ -192,29 +181,29 @@ Jdb_dump::dump(Address virt, Space *task, int level)
 
 PUBLIC
 bool
-Jdb_dump::edit_entry(unsigned long row, unsigned long col, unsigned cx, unsigned cy)
+Jdb_dump::edit_entry(unsigned long row, unsigned long col, unsigned cx, unsigned cy) override
 {
-  Address entry = virt(row,col);
+  Jdb_addr<Mword> entry = virt(row,col);
 
   Mword mword;
-  if (!Jdb::peek((Mword*)entry, task, mword))
+  if (!Jdb::peek(entry, mword))
     return false;
 
   putstr(Jdb_screen::Mword_blank);
   Jdb::printf_statline("dump", "<CR>=commit change",
-		       "edit <" L4_PTR_FMT "> = " L4_PTR_FMT, entry, mword);
+		       "edit <" L4_PTR_FMT "> = " L4_PTR_FMT, entry.addr(), mword);
 
   Jdb::cursor(cy, cx);
   Mword new_mword;
   if (Jdb_input::get_mword(&new_mword, sizeof(Mword)*2, 16))
-    Jdb::poke((Mword*)entry, task, new_mword);
+    Jdb::poke(entry, new_mword);
 
   return true; // redraw
 }
 
 PUBLIC
 unsigned
-Jdb_dump::key_pressed(int c, unsigned long &row, unsigned long &col)
+Jdb_dump::key_pressed(int c, unsigned long &row, unsigned long &col) override
 {
   switch (c)
     {
@@ -224,16 +213,16 @@ Jdb_dump::key_pressed(int c, unsigned long &row, unsigned long &col)
     case KEY_CURSOR_HOME: // return to previous or go home
       if (level == 0)
 	{
-	  Address v = virt(row, col);
-	  if (v == 0)
+	  Jdb_addr<Mword> v = virt(row, col);
+	  if (v.is_null())
 	    return Handled;
 
-	  if ((v & ~Config::PAGE_MASK) == 0)
+	  if ((v.addr() & ~Config::PAGE_MASK) == 0)
 	    row -= Config::PAGE_SIZE / 32;
 	  else
 	    {
 	      col = 1;
-	      row = (v & Config::PAGE_MASK) / 32;
+	      row = (v.addr() & Config::PAGE_MASK) / 32;
 	    }
 	  return Redraw;
 	}
@@ -241,13 +230,13 @@ Jdb_dump::key_pressed(int c, unsigned long &row, unsigned long &col)
 
     case KEY_CURSOR_END:
 	{
-	  Address v = virt(row, col);
-	  if ((v & ~Config::PAGE_MASK) >> 2 == 0x3ff)
+	  Jdb_addr<Mword> v = virt(row, col);
+	  if ((v.addr() & ~Config::PAGE_MASK) >> 2 == 0x3ff)
 	    row += Config::PAGE_SIZE / 32;
 	  else
 	    {
 	      col = Jdb_screen::cols() - 1;
-	      row = ((v & Config::PAGE_MASK) + Config::PAGE_SIZE - 4) / 32;
+	      row = ((v.addr() & Config::PAGE_MASK) + Config::PAGE_SIZE - 4) / 32;
 	    }
 	}
       return Redraw;
@@ -309,9 +298,10 @@ Jdb_dump::key_pressed(int c, unsigned long &row, unsigned long &col)
       if (level<=7 && dump_type==D_MODE)
 	{
 	  Address virt1;
-	  if (Jdb::peek((Address*)virt(row,col), task, virt1))
+          Jdb_addr<Address> a = virt<Address>(row, col);
+	  if (Jdb::peek(a, virt1))
 	    {
-	      if (!dump(virt1, task, level +1))
+	      if (!dump(Jdb_address(virt1, a.space()), level + 1))
 		  return Exit;
 	      return Redraw;
 	    }
@@ -322,11 +312,13 @@ Jdb_dump::key_pressed(int c, unsigned long &row, unsigned long &col)
       if (Jdb_disasm::avail() && level<=7 && dump_type == D_MODE)
 	{
 	  Address virt1;
-	  if (Jdb::peek((Address*)virt(row,col), task, virt1))
+          Jdb_addr<Address> a = virt<Address>(row, col);
+	  if (Jdb::peek(a, virt1))
 	    {
+	      char s[16];
 	      Jdb::printf_statline("dump", "<CR>=disassemble here",
-				   "u[address=" L4_PTR_FMT " task=%p] ",
-				   virt1, task);
+				   "u[address=" L4_PTR_FMT "%s] ", virt1,
+				   Jdb::addr_space_to_str(a, s, sizeof(s)));
 	      int c1 = Jdb_core::getchar();
 	      if (c1 != KEY_RETURN && c1 != ' ' && c != KEY_RETURN_2)
 		{
@@ -335,7 +327,7 @@ Jdb_dump::key_pressed(int c, unsigned long &row, unsigned long &col)
 		  return Exit;
 		}
 
-              return Jdb_disasm::show(virt1, task, level+1, 1)
+              return Jdb_disasm::show(Jdb_address(virt1, a.space()), level + 1)
                      ? Redraw
                      : Exit;
 	    }
@@ -351,7 +343,7 @@ Jdb_dump::key_pressed(int c, unsigned long &row, unsigned long &col)
       if (level <= 7 && dump_type == D_MODE)
 	{
 	  Address a;
-	  if (Jdb::peek((Address*)virt(row,col), task, a))
+	  if (Jdb::peek(virt<Address>(row, col), a))
 	    {
 	      const Address pm = 0x100000;
 	      highlight_start = (a  > pm)        ? a - pm : 0;
@@ -371,7 +363,7 @@ Jdb_dump::key_pressed(int c, unsigned long &row, unsigned long &col)
 
 PUBLIC
 Jdb_module::Action_code
-Jdb_dump::action(int cmd, void *&args, char const *&fmt, int &next_char)
+Jdb_dump::action(int cmd, void *&args, char const *&fmt, int &next_char) override
 {
   if (cmd == 0)
     {
@@ -379,17 +371,10 @@ Jdb_dump::action(int cmd, void *&args, char const *&fmt, int &next_char)
 
       code = Jdb_input_task_addr::action(args, fmt, next_char);
       if (code == Jdb_module::NOTHING)
-	{
-	  Address addr  = Jdb_input_task_addr::addr();
-	  Space *space = Jdb_input_task_addr::space();
-	  if (addr == (Address)~0UL)
-	    addr = 0;
-
-	  return dump(addr, space, 0);
-	}
+        return dump(Jdb_input_task_addr::address(), 0);
 
       if (code != ERROR)
-	return code;
+        return code;
     }
 
   return NOTHING;
@@ -397,7 +382,7 @@ Jdb_dump::action(int cmd, void *&args, char const *&fmt, int &next_char)
 
 PUBLIC
 Jdb_module::Cmd const *
-Jdb_dump::cmds() const
+Jdb_dump::cmds() const override
 {
   static Cmd cs[] =
     {
@@ -410,7 +395,7 @@ Jdb_dump::cmds() const
 
 PUBLIC
 int
-Jdb_dump::num_cmds() const
+Jdb_dump::num_cmds() const override
 {
   return 1;
 }
@@ -423,5 +408,5 @@ Jdb_dump::Jdb_dump()
 static Jdb_dump jdb_dump INIT_PRIORITY(JDB_MODULE_INIT_PRIO);
 
 int
-jdb_dump_addr_task(Address addr, Space *task, int level)
-{ return jdb_dump.dump(addr, task, level); }
+jdb_dump_addr_task(Jdb_address addr, int level)
+{ return jdb_dump.dump(addr, level); }

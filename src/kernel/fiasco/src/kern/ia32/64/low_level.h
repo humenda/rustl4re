@@ -5,17 +5,28 @@
 #include "regdefs.h"
 #include "shortcut.h"
 #include "tcboffset.h"
+#include "globalconfig.h"
 
 
 #define REGISTER_SIZE 8
 
-#define CPUE_STACK(x, reg) (x + 0x20)(reg)
+/* Layout of Kentry_cpu_page */
+#ifndef CONFIG_KERNEL_NX
+#define CPUE_STACK_OFS (0x30 + (((syscall_entry_code_end - syscall_entry_code) + 0xf) & ~0xf))
+#else
+#define CPUE_STACK_OFS 0x30
+#endif
+#define CPUE_STACK_TOP_OFS (CPUE_STACK_OFS + 512)
+#define CPUE_STACK(x, reg) (CPUE_STACK_TOP_OFS + x)(reg)
 #define CPUE_CR3_OFS 0
 #define CPUE_KSP_OFS 8
 #define CPUE_KSP(reg) 8(reg)
 #define CPUE_CR3(reg) 0(reg)
 #define CPUE_EXIT(reg) 16(reg)
+#define CPUE_CR3U(reg) 24(reg)
 #define CPUE_EXIT_NEED_IBPB 1
+#define CPUE_SCRATCH(reg) 32(reg)
+#define CPUE_SCRATCH_OFS 32
 
 #if defined(CONFIG_KERNEL_ISOLATION) && defined(CONFIG_INTEL_IA32_BRANCH_BARRIERS)
 .macro IA32_IBRS_CLOBBER
@@ -57,18 +68,19 @@
 	shl     $16, %rcx
 	sar     $16, %rcx
 #ifdef CONFIG_KERNEL_ISOLATION
-	mov	$0xffff817fffffc000, %r15
-#ifdef CONFIG_INTEL_IA32_BRANCH_BARRIERS
+	mov	$VAL__MEM_LAYOUT__KENTRY_CPU_PAGE, %r15
+# ifdef CONFIG_INTEL_IA32_BRANCH_BARRIERS
 	mov	CPUE_EXIT(%r15), %r11
 	test	$(CPUE_EXIT_NEED_IBPB), %r11
 	jz	333f
 	and	$(~CPUE_EXIT_NEED_IBPB), %r11
 	mov	%r11, CPUE_EXIT(%r15)
 	IA32_IBPB
+	mov	GDT_DATA_KERNEL, %r11
+	verw	%r11w
 333:
-#endif
-	mov	CPUE_CR3(%r15), %r15
-	or	$0x1000, %r15
+# endif
+	mov	CPUE_CR3U(%r15), %r15
 #endif
 	mov	32(%rsp), %r11				/* load user rflags */
 	mov	40(%rsp), %rsp				/* load user rsp */
@@ -80,13 +92,14 @@
 
 .macro SAFE_IRET
 #ifndef CONFIG_KERNEL_ISOLATION
-	iretq
+66\@ :	iretq
+	ASM_KEX 66\@\()b, 0, iretq_exception_handler
 #else
 	jmp	safe_iret
 #endif
 .endm
 
-.macro  SWITCH_TO_KERNEL_CR3 err
+.macro  SWITCH_TO_KERNEL_CR3 err, from_iret_fault = 0
 #ifdef CONFIG_KERNEL_ISOLATION
 	push	%r14
 	.if \err == 1
@@ -94,11 +107,11 @@
 	.else
 	  mov	16(%rsp), %r14
 	.endif
-	test	$3, %r14
+	test	$3, %r14                                /* RPL of cs */
 	jz	5551f
 
 	push	%r13
-	mov	$0xffff817fffffc000, %r13
+	mov	$VAL__MEM_LAYOUT__KENTRY_CPU_PAGE, %r13
 	mov	CPUE_CR3(%r13), %r14
 	mov	%r14, %cr3
 	mov	CPUE_KSP(%r13), %r14
@@ -125,7 +138,56 @@
 	mov	%r14, %rsp
 
 5551:
-	pop	%r14
+	/* only exceptions with error code might happen during iretq */
+	.if \from_iret_fault == 1
+	  mov	%rsp, %r14
+	  shr	$36, %r14
+	  cmp	$0xffff817, %r14
+	  je	5553f
+	.endif
+5552:	pop	%r14
+
+	.if \from_iret_fault == 1
+	  .section .entry.text.xxx_exception_during_iret, "ax?", @progbits
+	  .align 8
+5553:
+	  push	%r13
+	  mov	$VAL__MEM_LAYOUT__KENTRY_CPU_PAGE, %r13
+	  mov	CPUE_CR3(%r13), %r14
+	  mov	%r14, %cr3
+	  /* now running in the kernel */
+	  mov	CPUE_KSP(%r13), %r14
+	  sub	$56, %r14
+#if 1
+	  /* NOTE: the new trap stack is aligned to 16byte before the
+	   * new iret frame is pushed by the CPU, this means we have
+	   * an 8byte gap to the original 5 * 8 bytes iret frame,
+	   * hence the offset is 48 (6 * 8).
+	   */
+	  /* copy original user stack frame from faulting iret */
+	  /* aw11: we could avoid this when we would always use
+	   * the top of the stack iret frame (e.g., in vcpu_resume) */
+	  mov	(56 + 48)(%rsp), %r13
+	  mov	%r13, 48(%r14)
+	  mov	(48 + 48)(%rsp), %r13
+	  mov	%r13, 40(%r14)
+	  mov	(40 + 48)(%rsp), %r13
+	  mov	%r13, 32(%r14)
+	  mov	(32 + 48)(%rsp), %r13
+	  mov	%r13, 24(%r14)
+	  mov	(24 + 48)(%rsp), %r13
+	  mov	%r13, 16(%r14)
+#endif
+	  /* copy error code and r13 + r14 from the fault stack frame */
+	  mov	16(%rsp), %r13
+	  mov	%r13, 8(%r14)
+	  mov	8(%rsp), %r13
+	  mov	%r13, (%r14)
+	  mov	(%rsp), %r13
+	  mov	%r14, %rsp
+	  jmp	5552b
+	  .previous
+	.endif
 #endif
 .endm
 
@@ -134,7 +196,7 @@
 	jc	1f
 	movq	$253, (16*8)(%rsp)
 	movq	$0,   (17*8)(%rsp)
-	sub	$2, (16*8 + 2*8)(%rsp) /* reset RIP to syscall */
+	subq	$2, (16*8 + 2*8)(%rsp) /* reset RIP to syscall */
 	jmp	\target
 1:	/* do alien IPC and raise a trap afterwards */
 	RESET_THREAD_CANCEL_AT %rbx

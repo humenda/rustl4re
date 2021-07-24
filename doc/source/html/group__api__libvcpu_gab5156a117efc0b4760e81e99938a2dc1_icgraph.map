@@ -1,3 +1,4 @@
 <map id="l4vcpu_is_page_fault_entry" name="l4vcpu_is_page_fault_entry">
-<area shape="rect" id="node2" href="$classL4vcpu_1_1Vcpu.html#af4e2482db06b36722046e173a09c7ae9" title="Return whether the entry reason was a page fault. " alt="" coords="208,5,368,47"/>
+<area shape="rect" id="node1" title="Return whether the entry reason was a page fault." alt="" coords="220,5,379,47"/>
+<area shape="rect" id="node2" href="$classL4vcpu_1_1Vcpu.html#af4e2482db06b36722046e173a09c7ae9" title="Return whether the entry reason was a page fault." alt="" coords="5,5,172,47"/>
 </map>

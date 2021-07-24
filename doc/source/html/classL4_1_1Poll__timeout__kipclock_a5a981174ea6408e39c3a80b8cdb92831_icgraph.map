@@ -1,0 +1,4 @@
+<map id="L4::Poll_timeout_kipclock::set" name="L4::Poll_timeout_kipclock::set">
+<area shape="rect" id="node1" title="(Re&#45;)Set relative timeout in microseconds" alt="" coords="241,13,457,39"/>
+<area shape="rect" id="node2" href="$classL4_1_1Poll__timeout__kipclock.html#a0b0d86579969353be5308ef67c875576" title="Initialise relative timeout in microseconds." alt="" coords="5,5,193,47"/>
+</map>

@@ -50,7 +50,7 @@ l4_addr_t Romain::App_model::local_attach_ds(Romain::App_model::Const_dataspace 
 	      << offset << " "
 	      << l4_round_page(offset);
 #endif
-	l4_umword_t flags = L4Re::Rm::Search_addr;
+	L4Re::Rm::Flags flags = L4Re::Rm::F::Search_addr | L4Re::Rm::F::RW;
 
 	/* This function is called during startup for attaching the
 	 * binary DS read-only to read ELF info. However, in this case
@@ -59,9 +59,9 @@ l4_addr_t Romain::App_model::local_attach_ds(Romain::App_model::Const_dataspace 
 	 * memory manager performs the right thing.
 	 */
 	if (ds == binary()) {
-		flags |= L4Re::Rm::Read_only;
+		flags &= ~L4Re::Rm::F::W;
 	}
-	Romain::Region_handler handler(ds, L4_INVALID_CAP, offset, 0,
+	Romain::Region_handler handler(ds, L4_INVALID_CAP, offset, L4Re::Rm::Region_flags(0),
 	                            Romain::Region(0, 0));
 	if (address_hint != 0) {
 		handler.alignToAddressAndSize(address_hint, size);
@@ -83,11 +83,11 @@ void Romain::App_model::local_detach_ds(l4_addr_t addr, l4_umword_t /*size*/) co
 
 
 l4_mword_t Romain::App_model::prog_reserve_area(l4_addr_t *start, l4_umword_t size,
-                                                l4_umword_t flags, l4_uint8_t align)
+                                                L4Re::Rm::Flags flags, l4_uint8_t align)
 {
 	MSG() << (void*)start << " "
 	      << size << " "
-	      << flags << " "
+	      << flags.raw << " "
 	      << align;
 	_check(1, "prog_reserve_area unimplemented");
 	return -1;
@@ -127,7 +127,7 @@ void Romain::App_model::prog_attach_kip()
 	MSG() << "ATTACHING KIP: " << (void*)this->prog_info()->kip;
 	this->prog_attach_ds(this->prog_info()->kip, L4_PAGESIZE,
 	                     this->local_kip_ds(), 0,
-	                     L4Re::Rm::Read_only, "attaching KIP segment",
+	                     L4Re::Rm::F::R, "attaching KIP segment",
 	                     (l4_addr_t)l4re_kip());
 	//enter_kdebug("kip");
 }
@@ -136,7 +136,7 @@ void Romain::App_model::prog_attach_kip()
 void*
 Romain::App_model::prog_attach_ds(l4_addr_t addr, l4_umword_t size,
                                   Romain::App_model::Const_dataspace ds, l4_umword_t offset,
-                                  l4_umword_t flags, char const *what, l4_addr_t local_start,
+                                  L4Re::Rm::Flags flags, char const *what, l4_addr_t local_start,
                                   bool sharedFlag)
 {
 	(void)what;
@@ -157,7 +157,7 @@ Romain::App_model::prog_attach_ds(l4_addr_t addr, l4_umword_t size,
 	 */
 	void* target = rm()->attach((void*)addr, size,
 	                            Romain::Region_handler(
-	                                ds, L4_INVALID_CAP, offset, flags,
+	                                ds, L4_INVALID_CAP, offset, flags.region_flags(),
 	                                Romain::Region(local_start, local_start + size - 1)),
 	                                flags, L4_PAGESHIFT, sharedFlag);
 #if 1
@@ -229,7 +229,7 @@ void Romain::App_model::prog_attach_stack(Romain::App_model::Dataspace app_stack
 	this->prog_attach_ds(this->_stack.target_addr(),
 	                     this->_stack.stack_size(),
 	                     app_stack,
-	                     0, 0, "stack segment", _local_stack_address);
+	                     0, L4Re::Rm::Flags(0), "stack segment", _local_stack_address);
 	prog_info()->stack_addr = _stack.target_addr() + _stack.stack_size();
 #if 0
 	MSG() << std::hex << (void*)_stack.ptr() << " <-> "
@@ -247,7 +247,7 @@ void Romain::App_model::prog_reserve_utcb_area()
 #endif
 	this->prog_attach_ds(this->prog_info()->utcbs_start,
 	                     1 << this->prog_info()->utcbs_log2size,
-	                     _utcb_area, 0, 0, "utcb area",
+	                     _utcb_area, 0, L4Re::Rm::Flags(0), "utcb area",
 	                     0);
 }
 

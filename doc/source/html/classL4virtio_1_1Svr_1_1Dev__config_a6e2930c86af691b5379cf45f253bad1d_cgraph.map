@@ -1,3 +1,4 @@
 <map id="L4virtio::Svr::Dev_config::change_queue_config" name="L4virtio::Svr::Dev_config::change_queue_config">
-<area shape="rect" id="node2" href="$classL4virtio_1_1Svr_1_1Dev__config.html#abfda82e19ccfbd5d40a0d8336c0d1815" title="Reset the config header to the initial contents. " alt="" coords="220,13,355,54"/>
+<area shape="rect" id="node1" title="Setup new queue configuration." alt="" coords="5,5,176,61"/>
+<area shape="rect" id="node2" href="$classL4virtio_1_1Svr_1_1Dev__config.html#abfda82e19ccfbd5d40a0d8336c0d1815" title="Reset the config header to the initial contents." alt="" coords="224,13,361,54"/>
 </map>

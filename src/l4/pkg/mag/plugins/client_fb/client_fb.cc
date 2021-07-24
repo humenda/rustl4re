@@ -142,7 +142,8 @@ Client_fb::setup()
 
   L4Re::Rm::Unique_region<void *> dsa;
   L4Re::chksys(L4Re::Env::env()->rm()
-                 ->attach(&dsa, ds->size(), L4Re::Rm::Search_addr,
+                 ->attach(&dsa, ds->size(),
+                          L4Re::Rm::F::Search_addr | L4Re::Rm::F::RW,
                           L4::Ipc::make_cap_rw(ds.get()), 0,
                           L4_SUPERPAGESHIFT));
 
@@ -177,7 +178,8 @@ Client_fb::setup()
 
 
   chksys(e->mem_alloc()->alloc(L4_PAGESIZE, _ev_ds.get()));
-  chksys(e->rm()->attach(&_ev_ds_m, L4_PAGESIZE, L4Re::Rm::Search_addr,
+  chksys(e->rm()->attach(&_ev_ds_m, L4_PAGESIZE,
+                         L4Re::Rm::F::Search_addr | L4Re::Rm::F::RW,
                          L4::Ipc::make_cap_rw(_ev_ds.get()), 0, L4_PAGESHIFT));
 
   _events = L4Re::Event_buffer(_ev_ds_m.get(), L4_PAGESIZE);

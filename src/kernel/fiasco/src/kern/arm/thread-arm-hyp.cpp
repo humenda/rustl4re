@@ -1,5 +1,7 @@
 IMPLEMENTATION [arm && 32bit && cpu_virt]:
 
+#include "slowtrap_entry.h"
+
 IMPLEMENT_OVERRIDE
 void
 Thread::arch_init_vcpu_state(Vcpu_state *vcpu_state, bool ext)
@@ -11,7 +13,13 @@ Thread::arch_init_vcpu_state(Vcpu_state *vcpu_state, bool ext)
 
   assert (check_for_current_cpu());
 
+  Vm_state::Vm_info *info
+    = reinterpret_cast<Vm_state::Vm_info *>((char *)vcpu_state + 0x200);
+
+  info->setup();
+
   Vm_state *v = vm_state(vcpu_state);
+
   v->hcr = Cpu::Hcr_host_bits;
   v->csselr = 0;
   v->sctlr = (Cpu::sctlr | Cpu::Cp15_c1_cache_bits) & ~(Cpu::Cp15_c1_mmu | (1 << 28));
@@ -32,8 +40,7 @@ Thread::arch_init_vcpu_state(Vcpu_state *vcpu_state, bool ext)
   v->svc.lr = regs()->ulr;
   v->svc.sp = regs()->sp();
 
-  v->gic.hcr = Gic_h::Hcr(0);
-  v->gic.apr = 0;
+  Gic_h_global::gic->setup_state(&v->gic);
 
   if (current() == this)
     {
@@ -47,11 +54,10 @@ Thread::arch_init_vcpu_state(Vcpu_state *vcpu_state, bool ext)
   // on and mask bits that should not be known to the user
   asm ("mrc p15, 0, %0, c0, c0, 5" : "=r" (v->vmpidr));
 
-}
+  // use the real MIDR as initial value
+  asm ("mrc p15, 0, %0, c0, c0, 0" : "=r" (v->vpidr));
 
-extern "C" void slowtrap_entry(Trap_state *ts);
-extern "C" Mword pagefault_entry(const Mword pfa, Mword error_code,
-                                 const Mword pc, Return_frame *ret_frame);
+}
 
 PUBLIC static inline template<typename T>
 T
@@ -98,34 +104,38 @@ Thread::get_lr_for_mode(Return_frame const *rf)
 extern "C" void hyp_mode_fault(Mword abort_type, Trap_state *ts)
 {
   Mword v;
+
+  Mword hsr;
+  asm volatile("mrc p15, 4, %0, c5, c2, 0" : "=r" (hsr));
+
   switch (abort_type)
     {
     case 0:
     case 1:
       ts->esr.ec() = abort_type ? 0x11 : 0;
-      printf("KERNEL%d: %s fault at %lx\n",
+      printf("KERNEL%d: %s fault at lr=%lx pc=%lx hsr=%lx\n",
              cxx::int_value<Cpu_number>(current_cpu()),
              abort_type ? "SWI" : "Undefined instruction",
-             ts->km_lr);
+             ts->km_lr, ts->pc, hsr);
       break;
     case 2:
       ts->esr.ec() = 0x21;
       asm volatile("mrc p15, 4, %0, c6, c0, 2" : "=r"(v));
-      printf("KERNEL%d: Instruction abort at %lx\n",
+      printf("KERNEL%d: Instruction abort at %lx hsr=%lx\n",
              cxx::int_value<Cpu_number>(current_cpu()),
-             v);
+             v, hsr);
       break;
     case 3:
       ts->esr.ec() = 0x25;
       asm volatile("mrc p15, 4, %0, c6, c0, 0" : "=r"(v));
-      printf("KERNEL%d: Data abort: pc=%lx pfa=%lx\n",
+      printf("KERNEL%d: Data abort: pc=%lx pfa=%lx hsr=%lx\n",
              cxx::int_value<Cpu_number>(current_cpu()),
-             ts->ip(), v);
+             ts->ip(), v, hsr);
       break;
     default:
-      printf("KERNEL%d: Unknown hyp fault at %lx\n",
+      printf("KERNEL%d: Unknown hyp fault at %lx hsr=%lx\n",
              cxx::int_value<Cpu_number>(current_cpu()),
-             ts->ip());
+             ts->ip(), hsr);
       break;
     };
 
@@ -166,7 +176,7 @@ IMPLEMENTATION [arm && cpu_virt]:
 
 #include "irq_mgr.h"
 
-PUBLIC inline
+PUBLIC inline NEEDS[Thread::save_fpu_state_to_utcb]
 void
 Thread::vcpu_vgic_upcall(unsigned virq)
 {
@@ -203,15 +213,15 @@ public:
     set_hit(handler_wrapper<Arm_ppi_virt>);
   }
 
-  void alloc()
+  void alloc(Cpu_number cpu)
   {
     printf("Allocate ARM PPI %d to virtual %d\n", _irq, _virq);
-    check (Irq_mgr::mgr->alloc(this, _irq));
-    chip()->unmask(pin());
+    check (Irq_mgr::mgr->alloc(this, _irq, false));
+    chip()->unmask_percpu(cpu, pin());
   }
 
 private:
-  void switch_mode(bool) {}
+  void switch_mode(bool) override {}
 
   unsigned _virq;
   unsigned _irq;
@@ -234,15 +244,15 @@ public:
     set_hit(handler_wrapper<Arm_vtimer_ppi>);
   }
 
-  void alloc()
+  void alloc(Cpu_number cpu)
   {
     printf("Allocate ARM PPI %d to virtual %d\n", _irq, 1);
-    check (Irq_mgr::mgr->alloc(this, _irq));
-    chip()->unmask(pin());
+    check (Irq_mgr::mgr->alloc(this, _irq, false));
+    chip()->unmask_percpu(cpu, pin());
   }
 
 private:
-  void switch_mode(bool) {}
+  void switch_mode(bool) override {}
   unsigned _irq;
 };
 
@@ -262,13 +272,18 @@ static Arm_vtimer_ppi __vtimer_irq(27); // virtual timer
 namespace {
 struct Local_irq_init
 {
-  Local_irq_init()
+  explicit Local_irq_init(Cpu_number cpu)
   {
-    __vgic_irq.alloc();
-    __vtimer_irq.alloc();
+    if (cpu >= Cpu::invalid())
+      return;
+
+    __vgic_irq.alloc(cpu);
+    __vtimer_irq.alloc(cpu);
   }
 };
-DEFINE_PER_CPU_LATE static Per_cpu<Local_irq_init> local_irqs;
+
+DEFINE_PER_CPU_LATE static Per_cpu<Local_irq_init>
+  local_irqs(Per_cpu_data::Cpu_num);
 }
 
 //-----------------------------------------------------------------------------
@@ -354,7 +369,13 @@ Thread::arch_init_vcpu_state(Vcpu_state *vcpu_state, bool ext)
 
   assert (check_for_current_cpu());
 
+  Vm_state::Vm_info *info
+    = reinterpret_cast<Vm_state::Vm_info *>((char *)vcpu_state + 0x200);
+
+  info->setup();
+
   Vm_state *v = vm_state(vcpu_state);
+
   v->hcr = 0;
   v->csselr = 0;
   v->sctlr = Cpu::Sctlr_el1_generic;
@@ -372,14 +393,18 @@ Thread::arch_init_vcpu_state(Vcpu_state *vcpu_state, bool ext)
   v->cntkctl = Host_cntkctl;
   v->cntvoff = 0;
 
-  v->gic.hcr = Gic_h::Hcr(0);
-  v->gic.apr = 0;
+  Gic_h_global::gic->setup_state(&v->gic);
   v->vmpidr = 1UL << 31; // ARMv8: RES1
+
+  // use the real MIDR as initial value
+  Mword m;
+  asm ("mrs %0, MIDR_EL1" : "=r"(m));
+  v->vpidr = m;
 
   if (current() == this)
     {
-      asm volatile ("msr SCTLR_EL1, %0" : : "r"(v->sctlr));
-      asm volatile ("msr CNTKCTL_EL1, %0" : : "r"(v->cntkctl));
+      asm volatile ("msr SCTLR_EL1, %0" : : "r"((Mword)v->sctlr));
+      asm volatile ("msr CNTKCTL_EL1, %0" : : "r"((Mword)v->cntkctl));
       asm volatile ("msr CNTVOFF_EL2, %0" : : "r"(v->cntvoff));
     }
 }

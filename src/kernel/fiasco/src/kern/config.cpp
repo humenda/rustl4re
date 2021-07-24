@@ -115,6 +115,12 @@ public:
   static bool esc_hack;
   static unsigned tbuf_entries;
   static unsigned num_ap_cpus asm("config_num_ap_cpus");
+
+  static constexpr Order page_order()
+  { return Order(PAGE_SHIFT); }
+
+  static constexpr Bytes page_size()
+  { return Bytes(PAGE_SIZE); }
 };
 
 #define GREETING_COLOR_ANSI_TITLE  "\033[1;32m"
@@ -211,6 +217,17 @@ INTERFACE [virtual_space_iface]:
 #define FIASCO_SPACE_VIRTUAL virtual
 
 //---------------------------------------------------------------------------
+INTERFACE [!virt_obj_space || ux]:
+
+#define FIASCO_VIRT_OBJ_SPACE_OVERRIDE
+
+//---------------------------------------------------------------------------
+INTERFACE [virt_obj_space && !ux]:
+
+#define FIASCO_VIRT_OBJ_SPACE_OVERRIDE override
+
+
+//---------------------------------------------------------------------------
 IMPLEMENTATION:
 
 #include <cstring>
@@ -240,6 +257,8 @@ KIP_KERNEL_FEATURE("fi_gr_cputime");
 //-----------------------------------------------------------------------------
 IMPLEMENTATION:
 
+#include <stdio.h>
+
 IMPLEMENT FIASCO_INIT
 void Config::init()
 {
@@ -251,13 +270,9 @@ void Config::init()
 #ifdef CONFIG_SERIAL
   if (    Koptions::o()->opt(Koptions::F_serial_esc)
       && !Koptions::o()->opt(Koptions::F_noserial)
-# ifdef CONFIG_KDB
-      &&  Koptions::o()->opt(Koptions::F_nokdb)
-# endif
       && !Koptions::o()->opt(Koptions::F_nojdb))
     {
       serial_esc = SERIAL_ESC_IRQ;
     }
 #endif
 }
-

@@ -1,12 +1,16 @@
 <map id="l4_error" name="l4_error">
-<area shape="rect" id="node2" href="$classL4Re_1_1Mem__alloc.html#a5efd62a11914794181a76c3864a8d154" title="Allocate anonymous memory. " alt="" coords="126,5,291,32"/>
-<area shape="rect" id="node3" href="$namespaceL4.html#aaf3caa50a8aaf94af516141d878b009f" title="dynamic_cast for capabilities. " alt="" coords="128,56,289,83"/>
-<area shape="rect" id="node4" href="$group__api__calls__fiasco.html#ga11d469f93c5befca8389362282c5cb74" title="Create new trace&#45;buffer entry with describing &lt;text&gt;. " alt="" coords="151,107,267,133"/>
-<area shape="rect" id="node5" href="$group__api__calls__fiasco.html#gac59d89f0e05763396f2fcda591ffe870" title="Create new trace&#45;buffer entry with describing &lt;text&gt; and three additional values. ..." alt="" coords="133,157,284,184"/>
-<area shape="rect" id="node6" href="$group__api__calls__fiasco.html#gacec61dde47b1cf788fcc51614bcc1a2f" title="Create new trace&#45;buffer entry with binary data. " alt="" coords="127,208,290,235"/>
-<area shape="rect" id="node7" href="$classL4Re_1_1Util_1_1Event__t.html#a6052908f83d35a7bb1ba9371cbfc9834" title="Initialise an event object. " alt="" coords="141,259,277,301"/>
-<area shape="rect" id="node8" href="$group__l4__vcon__api.html#ga899728ba23baf18f59f62142534e039c" title="Write data to this virtual console. " alt="" coords="147,325,271,352"/>
-<area shape="rect" id="node11" href="$classL4Re_1_1Util_1_1Event__buffer__consumer__t.html#a4ed22b41ce4c7e6b93efae878b1415ef" title="Continuously wait for events and process them. " alt="" coords="125,377,292,418"/>
-<area shape="rect" id="node9" href="$classL4_1_1Vcon.html#acb9a53b77487d644212030c27d642f1e" title="Write data to this virtual console. " alt="" coords="340,300,452,327"/>
-<area shape="rect" id="node10" href="$group__l4__vcon__api.html#ga9f083a69c2c51329da6778a3af0331bc" title="Write data to virtual console. " alt="" coords="341,351,451,377"/>
+<area shape="rect" id="node1" title="Return error code of a system call return message tag or the tag label." alt="" coords="443,265,515,292"/>
+<area shape="rect" id="node2" href="$classL4Re_1_1Mem__alloc.html#a44b301573ae859e8406400338cc8e924" title="Allocate anonymous memory." alt="" coords="221,5,393,32"/>
+<area shape="rect" id="node3" href="$classL4virtio_1_1Driver_1_1Device.html#a1c9b791b723e7e8ad2eae927094b487d" title="Register a triggerable to receive notifications from the device." alt="" coords="221,57,393,98"/>
+<area shape="rect" id="node4" href="$namespaceL4.html#a60bf71a466a8c641298d4d9404102f68" title="dynamic_cast for capabilities." alt="" coords="225,123,390,149"/>
+<area shape="rect" id="node5" href="$classL4virtio_1_1Driver_1_1Device.html#a4f8b3d73188c3b6664755b81b80e441c" title="Contacts the device and starts the initial handshake." alt="" coords="221,174,393,215"/>
+<area shape="rect" id="node7" href="$group__api__calls__fiasco.html#ga11d469f93c5befca8389362282c5cb74" title="Create new trace&#45;buffer entry with describing &lt;text&gt;." alt="" coords="247,240,367,267"/>
+<area shape="rect" id="node8" href="$group__api__calls__fiasco.html#gac59d89f0e05763396f2fcda591ffe870" title="Create new trace&#45;buffer entry with describing &lt;text&gt; and three additional values." alt="" coords="230,291,385,317"/>
+<area shape="rect" id="node9" href="$group__api__calls__fiasco.html#gacec61dde47b1cf788fcc51614bcc1a2f" title="Create new trace&#45;buffer entry with binary data." alt="" coords="223,341,391,368"/>
+<area shape="rect" id="node10" href="$classL4Re_1_1Util_1_1Event__t.html#a6052908f83d35a7bb1ba9371cbfc9834" title="Initialise an event object." alt="" coords="236,393,379,434"/>
+<area shape="rect" id="node11" href="$group__l4__vcon__api.html#ga899728ba23baf18f59f62142534e039c" title="Write data to this virtual console." alt="" coords="244,459,371,485"/>
+<area shape="rect" id="node14" href="$classL4Re_1_1Util_1_1Event__buffer__consumer__t.html#a4ed22b41ce4c7e6b93efae878b1415ef" title="Continuously wait for events and process them." alt="" coords="220,510,395,551"/>
+<area shape="rect" id="node6" href="$classL4virtio_1_1Driver_1_1Block__device.html#a688df51bdec4ba327a6c0b48a83a115a" title="Setup a connection to a device and set up shared memory." alt="" coords="5,174,172,215"/>
+<area shape="rect" id="node12" href="$group__l4__vcon__api.html#ga9f083a69c2c51329da6778a3af0331bc" title="Write data to virtual console." alt="" coords="33,433,145,460"/>
+<area shape="rect" id="node13" href="$classL4_1_1Vcon.html#a83407df2f5b674126d33505d73f5d34b" title="Write data to this virtual console." alt="" coords="29,484,148,511"/>
 </map>

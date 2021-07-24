@@ -22,10 +22,6 @@ public:
     Result = 2
   };
 
-  static unsigned char get_entry_status(Tb_log_table_entry const *e);
-  static void set_entry_status(Tb_log_table_entry const *e,
-                               unsigned char value);
-
 protected:
   static Tb_entry_union *_tbuf_act;	// current entry
   static Tb_entry_union *_tbuf_max;
@@ -33,8 +29,6 @@ protected:
   static Mword		_max_entries;	// maximum number of entries
   static Mword          _filter_enabled;// !=0 if filter is active
   static Mword		_number;	// current event number
-  static Mword		_count_mask1;
-  static Mword		_count_mask2;
   static Address        _size;		// size of memory area for tbuffer
   static Tracebuffer_status *_status;
   static Tb_entry_union *_buffer;
@@ -66,7 +60,6 @@ IMPLEMENTATION:
 #include "cpu_lock.h"
 #include "initcalls.h"
 #include "lock_guard.h"
-#include "mem_unit.h"
 #include "std_macros.h"
 
 // read only: initialized at boot
@@ -75,8 +68,6 @@ Tb_entry_union *Jdb_tbuf::_buffer;
 Address Jdb_tbuf::_size;
 Mword Jdb_tbuf::_max_entries;
 Tb_entry_union *Jdb_tbuf::_tbuf_max;
-Mword Jdb_tbuf::_count_mask1;
-Mword Jdb_tbuf::_count_mask2;
 
 // read mostly (only modified in JDB)
 Mword Jdb_tbuf::_filter_enabled;
@@ -122,8 +113,6 @@ Jdb_tbuf::new_entry()
 
     tb = _tbuf_act;
 
-    status()->current = (Address)tb;
-
     if (++_tbuf_act >= _tbuf_max)
       _tbuf_act = buffer();
 
@@ -148,28 +137,13 @@ Jdb_tbuf::new_entry()
   return static_cast<T*>(new_entry());
 }
 
-/** Commit tracebuffer entry. */
-PUBLIC static
+/** Commit tracebuffer entry.
+ * This function is executed when the entry is complete. At the moment it
+ * does nothing. */
+PUBLIC static inline
 void
 Jdb_tbuf::commit_entry()
-{
-  if (EXPECT_FALSE((_number & _count_mask2) == 0))
-    {
-      if (_number & _count_mask1)
-	status()->window[0].version++; // 64-bit value!
-      else
-	status()->window[1].version++; // 64-bit value!
-
-#if 0 // disbale Tbuf vIRQ for the time beeing (see bug #357)
-      // fire the virtual 'buffer full' irq
-      if (_observer)
-        {
-          auto guard = lock_guard(cpu_lock);
-	  _observer->notify();
-	}
-#endif
-    }
-}
+{}
 
 /** Return number of entries currently allocated in tracebuffer.
  * @return number of entries */
@@ -449,20 +423,4 @@ void
 Jdb_tbuf::disable_filter()
 {
   _filter_enabled = 0;
-}
-
-IMPLEMENT_DEFAULT
-unsigned char
-Jdb_tbuf::get_entry_status(Tb_log_table_entry const *e)
-{
-  return *(e->patch);
-}
-
-IMPLEMENT_DEFAULT
-void
-Jdb_tbuf::set_entry_status(Tb_log_table_entry const *e,
-                           unsigned char value)
-{
-  *(e->patch) = value;
-  Mem_unit::make_coherent_to_pou(e->patch);
 }

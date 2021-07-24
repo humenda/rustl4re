@@ -1,11 +1,10 @@
+/* SPDX-License-Identifier: GPL-2.0-only or License-Ref-kk-custom */
 /*
- * (c) 2014 Alexander Warg <alexander.warg@kernkonzept.com>
- *
- * This file is licensed under the terms of the GNU General Public License 2.
- * See file COPYING-GPL-2 for details.
+ * Copyright (C) 2014-2020 Kernkonzept GmbH.
+ * Author(s): Alexander Warg <alexander.warg@kernkonzept.com>
  */
 #include "debug.h"
-#include "server.h"
+#include "irq_server.h"
 
 #include <stdio.h>
 #include <l4/sys/compiler.h>

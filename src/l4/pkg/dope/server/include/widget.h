@@ -81,7 +81,7 @@ struct widget_methods {
 	void    (*set_evforward)(WIDGETARG *, int new_state);
 	WIDGET *(*get_parent)   (WIDGETARG *);
 	void    (*set_parent)   (WIDGETARG *, void *parent);
-	void   *(*get_context)  (WIDGETARG *);
+	long    (*get_context)  (WIDGETARG *);
 	void    (*set_context)  (WIDGETARG *, void *context);
 	WIDGET *(*get_next)     (WIDGETARG *);
 	void    (*set_next)     (WIDGETARG *, WIDGETARG *next);

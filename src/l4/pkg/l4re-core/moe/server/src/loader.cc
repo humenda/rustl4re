@@ -14,13 +14,12 @@
 #include "dataspace_anon.h"
 #include "dataspace_noncont.h"
 #include "debug.h"
-#include "exception.h"
 #include "app_task.h"
 #include "name_space.h"
 #include "dataspace_util.h"
 #include "region.h"
 
-#include <l4/cxx/auto_ptr>
+#include <l4/cxx/unique_ptr>
 #include <l4/cxx/iostream>
 #include <l4/cxx/l4iostream>
 #include <l4/cxx/exceptions>
@@ -59,7 +58,7 @@ static
 Moe::Dataspace *
 __alloc_app_stack(Allocator *a, Moe::Stack *_stack, unsigned long size)
 {
-  cxx::Auto_ptr<Moe::Dataspace> stack(a->alloc(size));
+  cxx::unique_ptr<Moe::Dataspace> stack(a->alloc(size));
 
   _stack->set_local_top(stack->address(size - L4_PAGESIZE).adr<char*>() + L4_PAGESIZE);
   return stack.release();
@@ -68,30 +67,13 @@ __alloc_app_stack(Allocator *a, Moe::Stack *_stack, unsigned long size)
 bool Loader::start(cxx::String const &init_prog, cxx::String const &cmdline)
 {
   Dbg info(Dbg::Info);
-  Dbg ldr(Dbg::Loader);
+  static auto *_init_task = Moe::Moe_alloc::allocator()->make_obj<App_task>();
 
   info.printf("Starting: %.*s %.*s\n",
               init_prog.len(), init_prog.start(), cmdline.len(), cmdline.start());
 
-  return exec(init_prog, cmdline);
+  return launch(_init_task, init_prog, cmdline);
 }
-
-
-class Ldr_task : public App_task
-{
-public:
-
-private:
-  l4_umword_t _entry, _stack_ptr;
-
-public:
-  Ldr_task()
-  : _entry(0), _stack_ptr(0)
-  {}
-
-  void set_entry_data(l4_umword_t entry, l4_umword_t stack_ptr)
-  { _stack_ptr = stack_ptr; _entry = entry; }
-};
 
 Moe_app_model::Dataspace
 Moe_app_model::alloc_ds(unsigned long size) const
@@ -133,11 +115,11 @@ Moe_app_model::open_file(char const *name)
 void
 Moe_app_model::prog_attach_ds(l4_addr_t addr, unsigned long size,
                               Const_dataspace ds, unsigned long offset,
-                              unsigned flags, char const *what)
+                              L4Re::Rm::Flags flags, char const *what)
 {
   void *x = _task->rm()->attach((void*)addr, size,
                                 Region_handler(ds, L4_INVALID_CAP,
-                                               offset, flags),
+                                               offset, flags.region_flags()),
                                 flags);
   if (x == L4_INVALID_PTR)
     chksys(-L4_ENOMEM, what);
@@ -145,7 +127,7 @@ Moe_app_model::prog_attach_ds(l4_addr_t addr, unsigned long size,
 
 int
 Moe_app_model::prog_reserve_area(l4_addr_t *start, unsigned long size,
-                                 unsigned flags, unsigned char align)
+                                 L4Re::Rm::Flags flags, unsigned char align)
 {
   l4_addr_t a = _task->rm()->attach_area(*start, size, flags, align);
   if (a == L4_INVALID_ADDR)
@@ -154,16 +136,6 @@ Moe_app_model::prog_reserve_area(l4_addr_t *start, unsigned long size,
   *start = a;
   return 0;
 }
-
-bool
-Loader::exec(cxx::String const &prog, cxx::String const &args)
-{
-  static auto *_init_task = Moe::Moe_alloc::allocator()->make_obj<Ldr_task>();
-
-  launch(_init_task, prog, args);
-  return 0;
-}
-
 
 void
 Moe_app_model::copy_ds(Dataspace dst, unsigned long dst_offs,

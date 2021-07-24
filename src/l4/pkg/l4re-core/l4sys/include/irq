@@ -37,6 +37,8 @@ namespace L4 {
  * Interface for sending an acknowledge message to an object.
  *
  * The object is usually an ICU or an IRQ.
+ *
+ * \see L4::Icu, L4::Irq
  */
 class Irq_eoi : public Kobject_0t<Irq_eoi, L4::PROTO_EMPTY>
 {
@@ -62,7 +64,7 @@ public:
    */
   l4_msgtag_t unmask(unsigned irqnum, l4_umword_t *label = 0,
                      l4_timeout_t to = L4_IPC_NEVER,
-                     l4_utcb_t *utcb = l4_utcb()) throw()
+                     l4_utcb_t *utcb = l4_utcb()) noexcept
   {
     return l4_icu_control_u(cap(), irqnum, L4_ICU_CTL_UNMASK, label, to, utcb);
   }
@@ -88,12 +90,15 @@ struct Triggerable : Kobject_t<Triggerable, Irq_eoi, L4_PROTO_IRQ>
    *       l4_ipc_error() to check for errors, **do not** use l4_error(),
    *       because l4_error() will always return an error.
    */
-  l4_msgtag_t trigger(l4_utcb_t *utcb = l4_utcb()) throw()
+  l4_msgtag_t trigger(l4_utcb_t *utcb = l4_utcb()) noexcept
   { return l4_irq_trigger_u(cap(), utcb); }
 };
 
 /**
  * C++ Irq interface.
+ *
+ * \note "IRQ" is short for "interrupt request". This is often used
+ * interchangeably for "interrupt"
  *
  * The Irq class provides access to abstract interrupts provided by the
  * microkernel. Interrupts may be
@@ -115,40 +120,13 @@ public:
   using Triggerable::unmask;
 
   /**
-   * Attach a thread to this interrupt.
-   *
-   * \param label   Identifier of the IRQ (*protected label* used for
-   *                messages)
-   * \param thread  Capability of the thread to attach the IRQ to.
-   * \utcb{utcb}
-   *
-   * \return Syscall return tag
-   *
-   * The *protected label* is stored in the kernel and sent to the attached
-   * thread with the IRQ-triggered notification. It allows the receiver thread
-   * to securely identify the IRQ.
-   *
-   * \deprecated Use bind_thread().
-   */
-  l4_msgtag_t attach(l4_umword_t label,
-                     Cap<Thread> const &thread = Cap<Thread>::Invalid,
-                     l4_utcb_t *utcb = l4_utcb()) throw()
-    L4_DEPRECATED("Use bind_thread(thread, label).")
-  {
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-    return l4_irq_attach_u(cap(), label, thread.cap(), utcb);
-#pragma GCC diagnostic pop
-  }
-
-  /**
    * Detach from this interrupt.
    *
    * \utcb{utcb}
    *
    * \return Syscall return tag
    */
-  l4_msgtag_t detach(l4_utcb_t *utcb = l4_utcb()) throw()
+  l4_msgtag_t detach(l4_utcb_t *utcb = l4_utcb()) noexcept
   { return l4_irq_detach_u(cap(), utcb); }
 
 
@@ -164,7 +142,7 @@ public:
    *       L4::Semaphore instead of L4::Irq.
    */
   l4_msgtag_t receive(l4_timeout_t timeout = L4_IPC_NEVER,
-                      l4_utcb_t *utcb = l4_utcb()) throw()
+                      l4_utcb_t *utcb = l4_utcb()) noexcept
   { return l4_irq_receive_u(cap(), timeout, utcb); }
 
   /**
@@ -177,7 +155,7 @@ public:
    * \return Syscall return tag
    */
   l4_msgtag_t wait(l4_umword_t *label, l4_timeout_t timeout = L4_IPC_NEVER,
-                   l4_utcb_t *utcb = l4_utcb()) throw()
+                   l4_utcb_t *utcb = l4_utcb()) noexcept
   { return unmask(-1, label, timeout, utcb); }
 
   /**
@@ -199,7 +177,7 @@ public:
    * \deprecated Use L4::Irq_eoi::unmask()
    *
    */
-  l4_msgtag_t unmask(l4_utcb_t *utcb = l4_utcb()) throw()
+  l4_msgtag_t unmask(l4_utcb_t *utcb = l4_utcb()) noexcept
   { return unmask(-1, 0, L4_IPC_NEVER, utcb); }
 };
 
@@ -232,7 +210,7 @@ struct Irq_mux : Kobject_t<Irq_mux, Triggerable, L4_PROTO_IRQ_MUX>
    * multiplexer.
    */
   l4_msgtag_t chain(Cap<Triggerable> const &slave,
-                    l4_utcb_t *utcb = l4_utcb()) throw()
+                    l4_utcb_t *utcb = l4_utcb()) noexcept
   { return l4_irq_mux_chain_u(cap(), slave.cap(), utcb); }
 };
 
@@ -240,11 +218,18 @@ struct Irq_mux : Kobject_t<Irq_mux, Triggerable, L4_PROTO_IRQ_MUX>
 /**
  * C++ Icu interface.
  *
- * To setup an IRQ line the following steps are required:
- * 1. set_mode() (optional if IRQ has a default mode)
- * 2. Irq::attach() to attach the IRQ capability to a thread
+ * \note "ICU" is short for "interrupt control unit".
+ *
+ * This class defines the interface for interrupt controllers. It defines
+ * functions for binding L4::Irq objects to interrupt lines, as well as
+ * functions for masking and unmasking of interrupts.
+ *
+ * To setup an interrupt line the following steps are required:
+ * 1. set_mode() (optional if interrupt has a default mode)
+ * 2. L4::Rcv_endpoint::bind_thread() to attach the interrupt capability to a
+ *    thread
  * 3. bind()
- * 4. unmask() to receive the first IRQ
+ * 4. unmask() to receive the first interrupt
  *
  * \includefile{l4/sys/icu}
  */
@@ -278,7 +263,8 @@ public:
   class Info : public l4_icu_info_t
   {
   public:
-    bool supports_msi() const { return features & F_msi; }
+    /// True, if the ICU has support for MSIs.
+    bool supports_msi() const noexcept { return features & F_msi; }
   };
 
   /**
@@ -297,11 +283,13 @@ public:
    *         ICU using L4::Icu::unmask.
    */
   l4_msgtag_t bind(unsigned irqnum, L4::Cap<Triggerable> irq,
-                   l4_utcb_t *utcb = l4_utcb()) throw()
+                   l4_utcb_t *utcb = l4_utcb()) noexcept
   { return l4_icu_bind_u(cap(), irqnum, irq.cap(), utcb); }
 
-  L4_RPC_NF_OP(L4_ICU_OP_BIND,
-               l4_msgtag_t, bind, (l4_umword_t irqnum, Ipc::Cap<Irq> irq));
+  L4_RPC_NF_OP(
+    L4_ICU_OP_BIND,
+    l4_msgtag_t, bind, (l4_umword_t irqnum, Ipc::Cap<Irq> irq)
+  );
 
   /**
    * Remove binding of an interrupt line from the interrupt controller object.
@@ -313,11 +301,13 @@ public:
    * \return Syscall return tag
    */
   l4_msgtag_t unbind(unsigned irqnum, L4::Cap<Triggerable> irq,
-                     l4_utcb_t *utcb = l4_utcb()) throw()
+                     l4_utcb_t *utcb = l4_utcb()) noexcept
   { return l4_icu_unbind_u(cap(), irqnum, irq.cap(), utcb); }
 
-  L4_RPC_NF_OP(L4_ICU_OP_UNBIND,
-               l4_msgtag_t, unbind, (l4_umword_t irqnum, Ipc::Cap<Irq> irq));
+  L4_RPC_NF_OP(
+    L4_ICU_OP_UNBIND,
+    l4_msgtag_t, unbind, (l4_umword_t irqnum, Ipc::Cap<Irq> irq)
+  );
 
   /**
    * Get information about the capabilities of the ICU.
@@ -327,7 +317,7 @@ public:
    *
    * \return Syscall return tag
    */
-  l4_msgtag_t info(l4_icu_info_t *info, l4_utcb_t *utcb = l4_utcb()) throw()
+  l4_msgtag_t info(l4_icu_info_t *info, l4_utcb_t *utcb = l4_utcb()) noexcept
   { return l4_icu_info_u(cap(), info, utcb); }
 
   struct _Info { l4_umword_t features, nr_irqs, nr_msis; };
@@ -353,7 +343,7 @@ public:
    * \internal
    */
   l4_msgtag_t control(unsigned irqnum, unsigned op, l4_umword_t *label,
-                      l4_timeout_t to, l4_utcb_t *utcb = l4_utcb()) throw()
+                      l4_timeout_t to, l4_utcb_t *utcb = l4_utcb()) noexcept
   { return l4_icu_control_u(cap(), irqnum, op, label, to, utcb); }
 
   /**
@@ -373,15 +363,21 @@ public:
   l4_msgtag_t mask(unsigned irqnum,
                    l4_umword_t *label = 0,
                    l4_timeout_t to = L4_IPC_NEVER,
-                   l4_utcb_t *utcb = l4_utcb()) throw()
+                   l4_utcb_t *utcb = l4_utcb()) noexcept
   { return l4_icu_mask_u(cap(), irqnum, label, to, utcb); }
 
-  L4_RPC_NF_OP(L4_ICU_OP_MASK, l4_msgtag_t, mask, (l4_umword_t irqnum),
-               L4::Ipc::Send_only);
+  L4_RPC_NF_OP(
+    L4_ICU_OP_MASK,
+    l4_msgtag_t, mask, (l4_umword_t irqnum),
+    L4::Ipc::Send_only
+  );
 
 
-  L4_RPC_NF_OP(L4_ICU_OP_UNMASK, l4_msgtag_t, unmask, (l4_umword_t irqnum),
-               L4::Ipc::Send_only);
+  L4_RPC_NF_OP(
+    L4_ICU_OP_UNMASK,
+    l4_msgtag_t, unmask, (l4_umword_t irqnum),
+    L4::Ipc::Send_only
+  );
 
   /**
    * Set interrupt mode.
@@ -393,11 +389,13 @@ public:
    * \return Syscall return tag
    */
   l4_msgtag_t set_mode(unsigned irqnum, l4_umword_t mode,
-                       l4_utcb_t *utcb = l4_utcb()) throw()
+                       l4_utcb_t *utcb = l4_utcb()) noexcept
   { return l4_icu_set_mode_u(cap(), irqnum, mode, utcb); }
 
-  L4_RPC_NF_OP(L4_ICU_OP_SET_MODE,
-               l4_msgtag_t, set_mode, (l4_umword_t irqnum, l4_umword_t mode));
+  L4_RPC_NF_OP(
+    L4_ICU_OP_SET_MODE,
+    l4_msgtag_t, set_mode, (l4_umword_t irqnum, l4_umword_t mode)
+  );
 
   typedef L4::Typeid::Rpcs_sys<
     bind_t, unbind_t, info_t, msi_info_t, unmask_t, mask_t, set_mode_t

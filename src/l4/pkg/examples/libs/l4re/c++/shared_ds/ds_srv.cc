@@ -156,7 +156,7 @@ static char *get_ds(L4::Cap<L4Re::Dataspace> *_ds)
    */
   char *_addr = 0;
   err =  L4Re::Env::env()->rm()->attach(&_addr, (*_ds)->size(),
-                                        L4Re::Rm::Search_addr,
+                                        L4Re::Rm::F::Search_addr | L4Re::Rm::F::RW,
                                         L4::Ipc::make_cap_rw(*_ds));
   if (err < 0)
     {

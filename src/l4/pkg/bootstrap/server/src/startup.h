@@ -12,7 +12,7 @@
 #define __STARTUP_H__
 
 #include <l4/sys/l4int.h>
-#include <l4/util/mb_info.h>
+#include <l4/util/l4mod.h>
 #include <l4/sys/compiler.h>
 
 #include "types.h"

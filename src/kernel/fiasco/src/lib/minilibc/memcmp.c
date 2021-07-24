@@ -1,4 +1,5 @@
 #include <stddef.h>
+#include <string.h>
 
 int memcmp(const void *dst, const void *src, size_t count) {
   register int r;
@@ -12,5 +13,3 @@ int memcmp(const void *dst, const void *src, size_t count) {
   }
   return 0;
 }
-
-int bcmp(const char *a,const char *b,size_t c)	__attribute__((weak,alias("memcmp")));

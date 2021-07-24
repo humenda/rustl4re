@@ -20,8 +20,27 @@ public:
 
     Type read() const
     {
+#ifdef __aarch64__
+      Type v;
+      switch (sizeof(Type))
+      {
+      case 1:
+        asm volatile("ldrb %w0, [%1]" : "=r" (v) : "r" (static_cast<REG const *>(this)->_r));
+        return v;
+      case 2:
+        asm volatile("ldrh %w0, [%1]" : "=r" (v) : "r" (static_cast<REG const *>(this)->_r));
+        return v;
+      case 4:
+        asm volatile("ldr %w0, [%1]" : "=r" (v) : "r" (static_cast<REG const *>(this)->_r));
+        return v;
+      case 8:
+        asm volatile("ldr %0, [%1]" : "=r" (v) : "r" (static_cast<REG const *>(this)->_r));
+        return v;
+      };
+#else
       return *reinterpret_cast<Type volatile *>
         (static_cast<REG const *>(this)->_r);
+#endif
     }
 
     operator Type () const { return read(); }
@@ -36,8 +55,26 @@ public:
 
     void write(Type val)
     {
+#ifdef __aarch64__
+      switch (sizeof(Type))
+      {
+      case 1:
+        asm volatile("strb %w0, [%1]" : : "r" (val), "r" (static_cast<REG const *>(this)->_r));
+        break;
+      case 2:
+        asm volatile("strh %w0, [%1]" : : "r" (val), "r" (static_cast<REG const *>(this)->_r));
+        break;
+      case 4:
+        asm volatile("str %w0, [%1]" : : "r" (val), "r" (static_cast<REG const *>(this)->_r));
+        break;
+      case 8:
+        asm volatile("str %0, [%1]" : : "r" (val), "r" (static_cast<REG const *>(this)->_r));
+        break;
+      };
+#else
       *reinterpret_cast<Type volatile *>
         (static_cast<REG *>(this)->_r) = val;
+#endif
     }
 
     void operator = (Type val) { write(val); }

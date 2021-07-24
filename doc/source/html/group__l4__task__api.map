@@ -1,3 +1,4 @@
 <map id="Task" name="Task">
-<area shape="rect" id="node1" href="$group__l4__kernel__object__api.html" title="API of kernel objects. " alt="" coords="5,5,120,32"/>
+<area shape="rect" id="node1" href="$group__l4__kernel__object__api.html" title="API of kernel objects." alt="" coords="5,5,121,31"/>
+<area shape="rect" id="node2" title="C interface of the Task kernel object." alt="" coords="169,5,220,31"/>
 </map>

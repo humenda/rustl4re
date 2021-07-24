@@ -50,10 +50,9 @@ Event_loop::Event_loop(L4::Cap<L4::Semaphore> irq, int prio)
     pthread_attr_setinheritsched(&a, PTHREAD_INHERIT_SCHED);
 
   if (pthread_create(&_pthread, &a, event_loop, this))
-    {
-      _irq = L4::Cap<void>::Invalid;
-      return;
-    }
+    _irq = L4::Cap<void>::Invalid;
+
+  pthread_attr_destroy(&a);
 }
 
 void

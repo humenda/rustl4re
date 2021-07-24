@@ -144,7 +144,9 @@ Loadbar::mfocus(int flag)
 void
 Kbyte_loadbar::_print_kbytes(int kbytes, char *dst, int dst_len)
 {
-  if (kbytes >= 10*1024)
+  if (kbytes > 10 * 1024 * 1024)
+    snprintf(dst, dst_len, "%d GByte", kbytes / 1024 / 1024);
+  else if (kbytes >= 10 * 1024)
     snprintf(dst, dst_len, "%d MByte", kbytes / 1024);
   else
     snprintf(dst, dst_len, "%d KByte", kbytes);

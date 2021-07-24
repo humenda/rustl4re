@@ -23,8 +23,9 @@ Revision History
 // Text output protocol
 //
 
-#define SIMPLE_TEXT_OUTPUT_PROTOCOL \
+#define EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL_GUID \
     { 0x387477c2, 0x69c7, 0x11d2, {0x8e, 0x39, 0x0, 0xa0, 0xc9, 0x69, 0x72, 0x3b} }
+#define SIMPLE_TEXT_OUTPUT_PROTOCOL EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL_GUID
 
 INTERFACE_DECL(_SIMPLE_TEXT_OUTPUT_INTERFACE);
 
@@ -149,7 +150,7 @@ typedef struct _SIMPLE_TEXT_OUTPUT_INTERFACE {
 
     // Current mode
     SIMPLE_TEXT_OUTPUT_MODE         *Mode;
-} SIMPLE_TEXT_OUTPUT_INTERFACE;
+} SIMPLE_TEXT_OUTPUT_INTERFACE, EFI_SIMPLE_TEXT_OUT_PROTOCOL;
 
 //
 // Define's for required EFI Unicode Box Draw character
@@ -231,8 +232,9 @@ typedef struct _SIMPLE_TEXT_OUTPUT_INTERFACE {
 // Text input protocol
 //
 
-#define SIMPLE_TEXT_INPUT_PROTOCOL  \
+#define EFI_SIMPLE_TEXT_INPUT_PROTOCOL_GUID \
     { 0x387477c1, 0x69c7, 0x11d2, {0x8e, 0x39, 0x0, 0xa0, 0xc9, 0x69, 0x72, 0x3b} }
+#define SIMPLE_TEXT_INPUT_PROTOCOL EFI_SIMPLE_TEXT_INPUT_PROTOCOL_GUID
 
 INTERFACE_DECL(_SIMPLE_INPUT_INTERFACE);
 
@@ -276,6 +278,8 @@ typedef struct {
 #define SCAN_F8                         0x0012
 #define SCAN_F9                         0x0013
 #define SCAN_F10                        0x0014
+#define SCAN_F11                        0x0015
+#define SCAN_F12                        0x0016
 #define SCAN_ESC                        0x0017
 
 typedef
@@ -296,7 +300,7 @@ typedef struct _SIMPLE_INPUT_INTERFACE {
     EFI_INPUT_RESET                     Reset;
     EFI_INPUT_READ_KEY                  ReadKeyStroke;
     EFI_EVENT                           WaitForKey;
-} SIMPLE_INPUT_INTERFACE;
+} SIMPLE_INPUT_INTERFACE, EFI_SIMPLE_TEXT_IN_PROTOCOL;
 
 #endif
 

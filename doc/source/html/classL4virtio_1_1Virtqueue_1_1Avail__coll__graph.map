@@ -1,3 +1,4 @@
 <map id="L4virtio::Virtqueue::Avail" name="L4virtio::Virtqueue::Avail">
-<area shape="rect" id="node2" href="$structL4virtio_1_1Virtqueue_1_1Avail_1_1Flags.html" title="Flags of the available ring. " alt="" coords="5,5,139,156"/>
+<area shape="rect" id="node1" title="Type of available ring, this is read&#45;only for the host." alt="" coords="5,219,148,325"/>
+<area shape="rect" id="node2" href="$structL4virtio_1_1Virtqueue_1_1Avail_1_1Flags.html" title="Flags of the available ring." alt="" coords="5,5,148,156"/>
 </map>

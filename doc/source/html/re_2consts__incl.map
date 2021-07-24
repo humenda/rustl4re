@@ -1,0 +1,32 @@
+<map id="l4/re/consts" name="l4/re/consts">
+<area shape="rect" id="node1" title="Constants." alt="" coords="1074,5,1171,32"/>
+<area shape="rect" id="node2" href="$capability.html" title="L4::Cap related definitions." alt="" coords="451,80,579,107"/>
+<area shape="rect" id="node3" href="$l4_2sys_2consts_8h.html" title="Common constants." alt="" coords="858,841,977,868"/>
+<area shape="rect" id="node26" href="$env_8h.html" title="Environment interface." alt="" coords="1192,535,1283,562"/>
+<area shape="rect" id="node7" href="$l4_2sys_2types_8h.html" title="Common L4 ABI Data Types." alt="" coords="459,767,571,793"/>
+<area shape="rect" id="node10" href="$kobject_source.html" title=" " alt="" coords="310,304,421,331"/>
+<area shape="rect" id="node20" href="$l4_2sys_2task_8h.html" title="Common task related definitions." alt="" coords="485,535,589,562"/>
+<area shape="rect" id="node21" href="$sys_2meta.html" title="Meta interface for getting dynamic type information about objects behind capabilities." alt="" coords="612,155,711,181"/>
+<area shape="rect" id="node4" href="$compiler_8h.html" title="L4 compiler related defines." alt="" coords="482,916,614,943"/>
+<area shape="rect" id="node6" href="$l4_2sys_2l4int_8h.html" title="Fixed sized integer types, generic version." alt="" coords="755,916,861,943"/>
+<area shape="rect" id="node5" title=" " alt="" coords="487,991,609,1017"/>
+<area shape="rect" id="node8" href="$____l4__fpage_8h_source.html" title=" " alt="" coords="357,841,504,868"/>
+<area shape="rect" id="node9" href="$____timeout_8h_source.html" title=" " alt="" coords="579,841,720,868"/>
+<area shape="rect" id="node11" href="$kernel__object_8h.html" title="Kernel object system calls." alt="" coords="238,453,359,480"/>
+<area shape="rect" id="node16" href="$____typeinfo_8h.html" title="Type information handling." alt="" coords="499,379,602,405"/>
+<area shape="rect" id="node12" href="$l4_2sys_2utcb_8h.html" title="UTCB definitions." alt="" coords="431,692,535,719"/>
+<area shape="rect" id="node13" href="$____kernel__object__impl_8h.html" title="Low&#45;level kernel debugger functions." alt="" coords="195,528,360,569"/>
+<area shape="rect" id="node14" href="$l4_2sys_2ipc_8h.html" title="Common IPC interface." alt="" coords="299,617,394,644"/>
+<area shape="rect" id="node15" href="$err_8h.html" title="Error codes." alt="" coords="667,692,760,719"/>
+<area shape="rect" id="node17" href="$types.html" title=" " alt="" coords="715,535,800,562"/>
+<area shape="rect" id="node18" href="$ipc__basics_source.html" title=" " alt="" coords="802,453,918,480"/>
+<area shape="rect" id="node19" href="$capability_8h_source.html" title=" " alt="" coords="496,453,619,480"/>
+<area shape="rect" id="node22" href="$ipc__iface.html" title="Interface Definition Language." alt="" coords="689,304,796,331"/>
+<area shape="rect" id="node24" href="$ipc__string_source.html" title=" " alt="" coords="793,229,905,256"/>
+<area shape="rect" id="node23" href="$ipc__types.html" title=" " alt="" coords="678,379,831,405"/>
+<area shape="rect" id="node25" href="$ipc__array_source.html" title=" " alt="" coords="849,304,932,331"/>
+<area shape="rect" id="node27" href="$sys_2kip_8h.html" title="Kernel Info Page access functions." alt="" coords="1211,617,1307,644"/>
+<area shape="rect" id="node30" href="$l4_2re_2consts_8h.html" title="Constants." alt="" coords="1027,767,1136,793"/>
+<area shape="rect" id="node28" title=" " alt="" coords="1262,692,1405,719"/>
+<area shape="rect" id="node29" href="$____kip-64bit_8h_source.html" title=" " alt="" coords="886,692,1034,719"/>
+</map>

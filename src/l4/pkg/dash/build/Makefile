@@ -2,7 +2,7 @@ PKGDIR          ?= ..
 L4DIR           ?= $(PKGDIR)/../..
 
 TARGET           = dash
-REQUIRES_LIBS    = libc_be_sig libc_support_misc libc_be_file_stdin
+REQUIRES_LIBS    = libc_be_sig libc_support_misc
 
 PRIVATE_INCDIR   = $(PKGDIR)/contrib/src $(SRC_DIR) $(L4DIR)
 DEFINES          = -DBSD=1 -DSHELL -DHAVE_CONFIG_H
@@ -16,6 +16,6 @@ SRC_C            = alias.c arith_yacc.c arith_yylex.c cd.c error.c eval.c \
 		   main.c memalloc.c miscbltin.c mystring.c options.c \
 		   parser.c redir.c show.c trap.c output.c bltin/printf.c \
 		   system.c bltin/test.c bltin/times.c var.c syntax.c \
-		   builtins.c nodes.c signames.c init.c
+		   builtins.c nodes.c signames.c init.c priv.c
 
 include $(L4DIR)/mk/prog.mk

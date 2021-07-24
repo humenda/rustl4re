@@ -294,7 +294,8 @@ PRIVATE static
 void
 Cpu::init_scu()
 {
-  scu.construct(Kmem::mmio_remap(Mem_layout::Mp_scu_phys_base));
+  scu.construct(Kmem::mmio_remap(Mem_layout::Mp_scu_phys_base,
+                                 Config::PAGE_SIZE));
 
   scu->reset();
   scu->enable(Scu::Bsp_enable_bits);
@@ -689,4 +690,15 @@ Cpu::print_infos() const
 {
   printf("Cache config: %s\n", Config::Cache_enabled ? "ON" : "OFF");
   id_print_infos();
+}
+
+// ------------------------------------------------------------------------
+IMPLEMENTATION [bit64]:
+
+IMPLEMENT_OVERRIDE inline
+bool
+Cpu::is_canonical_address(Address addr)
+{
+  // cf. ARMv8-A Address Translation
+  return addr >= 0xffff000000000000UL || addr <= 0x0000ffffffffffffUL;
 }

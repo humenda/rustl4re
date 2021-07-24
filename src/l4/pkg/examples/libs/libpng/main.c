@@ -29,7 +29,7 @@ int main(int argc, char **argv)
   if (!(vidmem = l4re_util_video_goos_fb_attach_buffer(&gfb)))
     return 46;
 
-  printf("size: %ld\n", l4re_ds_size(l4re_util_video_goos_fb_buffer(&gfb)));
+  printf("size: %lld\n", l4re_ds_size(l4re_util_video_goos_fb_buffer(&gfb)));
   printf("Vidmem attached to %p\n", vidmem);
 
   if (l4re_util_video_goos_fb_view_info(&gfb, &fbi))

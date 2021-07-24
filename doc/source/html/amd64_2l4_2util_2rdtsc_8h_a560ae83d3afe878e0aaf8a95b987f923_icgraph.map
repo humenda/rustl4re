@@ -1,0 +1,5 @@
+<map id="l4_rdtsc" name="l4_rdtsc">
+<area shape="rect" id="node1" title="Read current value of CPU&#45;internal time stamp counter." alt="" coords="183,31,256,57"/>
+<area shape="rect" id="node2" href="$amd64_2l4_2util_2rdtsc_8h.html#ad36e512741c07634ab67562ff7052543" title="Wait busy for a small amount of time." alt="" coords="5,5,135,32"/>
+<area shape="rect" id="node3" href="$amd64_2l4_2util_2rdtsc_8h.html#ab6a2848f2fb0249ac87b87053e34ebbe" title="Wait busy for a small amount of time." alt="" coords="5,56,135,83"/>
+</map>

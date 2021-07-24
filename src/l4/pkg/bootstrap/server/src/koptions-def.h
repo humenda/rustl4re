@@ -15,7 +15,6 @@ namespace L4_kernel_options
     F_noscreen          = 1 << 3,
     F_esc               = 1 << 4,
     F_nojdb             = 1 << 5,
-    F_nokdb             = 1 << 6,
     F_nohlt             = 1 << 7,
     F_apic              = 1 << 8,
     F_loadcnt           = 1 << 9,
@@ -72,6 +71,8 @@ namespace L4_kernel_options
     l4_uint32_t  kmemsize;         ///< Wanted kernel memory size in KiB
 
     Uart uart;                     ///< Kernel UART
+
+    l4_uint64_t  core_spin_addr;   ///< Boot address for secondary cores
 
     char         jdb_cmd[128];
     l4_uint32_t  tbuf_entries;

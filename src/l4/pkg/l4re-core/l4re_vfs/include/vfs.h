@@ -38,6 +38,7 @@
 #include <l4/sys/capability>
 #include <l4/re/cap_alloc>
 #include <l4/re/dataspace>
+#include <l4/cxx/pair>
 #include <l4/cxx/ref_ptr>
 
 namespace L4Re {
@@ -241,6 +242,12 @@ public:
                      cxx::Ref_ptr<File> *f) throw() = 0;
 
   virtual ssize_t getdents(char *buf, size_t sizebytes) throw() = 0;
+
+  virtual int fchmodat(const char *pathname,
+                       mode_t mode, int flags) throw() = 0;
+
+  virtual int utimensat(const char *pathname,
+                        const struct timespec times[2], int flags) throw() = 0;
 
   /**
    * \internal
@@ -778,6 +785,10 @@ private:
 public:
   explicit File_factory(int proto) : _proto(proto) {}
   explicit File_factory(char const *proto_name) : _proto_name(proto_name) {}
+  File_factory(int proto, char const *proto_name)
+  : _proto(proto), _proto_name(proto_name)
+  {}
+
   File_factory(File_factory const &) = delete;
   File_factory &operator = (File_factory const &) = delete;
 
@@ -794,7 +805,10 @@ template<typename IFACE, typename IMPL>
 class File_factory_t : public File_factory
 {
 public:
-  File_factory_t() : File_factory(IFACE::Protocol) {}
+  File_factory_t()
+  : File_factory(IFACE::Protocol, L4::kobject_typeid<IFACE>()->name())
+  {}
+
   cxx::Ref_ptr<File> create(L4::Cap<void> file)
   { return cxx::ref_ptr(new IMPL(L4::cap_cast<IFACE>(file))); }
 };
@@ -892,11 +906,16 @@ public:
 
   /**
    * \brief Set the file object referenced by the file descriptor \a fd.
-   * \param fd The file descriptor to set to \a f;
+   * \param fd The file descriptor to set to \a f.
    * \param f The file object to assign.
-   * \return A pointer to the file object that was previously assigned to fd.
+   * \return A pair of a pointer to the file object that was previously
+   *         assigned to fd (`first`) and a return value (`second`).
+   *         `second` contains `-#EBADF` if the passed file descriptor is
+   *         outside the valid range. `first` contains a Nil pointer in that
+   *         case. On success, `second` contains 0.
    */
-  virtual cxx::Ref_ptr<File> set_fd(int fd, cxx::Ref_ptr<File> const &f = cxx::Ref_ptr<>::Nil) throw() = 0;
+  virtual cxx::Pair<cxx::Ref_ptr<File>, int>
+    set_fd(int fd, cxx::Ref_ptr<File> const &f = cxx::Ref_ptr<>::Nil) throw() = 0;
 
   /**
    * \brief Free the file descriptor \a fd.

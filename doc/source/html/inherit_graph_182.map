@@ -1,3 +1,5 @@
 <map id="Graphical Class Hierarchy" name="Graphical Class Hierarchy">
-<area shape="rect" id="node1" href="$structl4__vcpu__regs__t.html" title="vCPU registers. " alt="" coords="5,5,124,32"/>
+<area shape="rect" id="node1" href="$classL4Re_1_1Event__buffer__t.html" title=" " alt="" coords="5,5,149,47"/>
+<area shape="rect" id="node2" href="$classL4Re_1_1Util_1_1Event__buffer__t.html" title="Event_buffer utility class." alt="" coords="197,5,372,47"/>
+<area shape="rect" id="node3" href="$classL4Re_1_1Util_1_1Event__buffer__consumer__t.html" title="An event buffer consumer." alt="" coords="420,5,615,47"/>
 </map>

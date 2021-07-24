@@ -1,3 +1,4 @@
 <map id="l4_mem_write" name="l4_mem_write">
-<area shape="rect" id="node2" href="$mem__op_8h.html#ae9743f19048c96229895f372ff0c14a7" title="Implementations. " alt="" coords="163,5,319,32"/>
+<area shape="rect" id="node1" title="Write user task memory from kernel privilege level." alt="" coords="5,5,120,32"/>
+<area shape="rect" id="node2" href="$mem__op_8h.html#ae9743f19048c96229895f372ff0c14a7" title="Implementations." alt="" coords="168,5,329,32"/>
 </map>

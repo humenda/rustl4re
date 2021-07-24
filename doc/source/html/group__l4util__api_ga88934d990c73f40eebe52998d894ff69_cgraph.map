@@ -1,0 +1,6 @@
+<map id="l4_usleep" name="l4_usleep">
+<area shape="rect" id="node1" title="Suspend thread for a period of us microseconds." alt="" coords="5,5,89,32"/>
+<area shape="rect" id="node2" href="$group__l4__ipc__api.html#gac3b4a3b13e77b799dc154c57a04cdd9b" title="Sleep for an amount of time." alt="" coords="137,5,240,32"/>
+<area shape="rect" id="node3" href="$group__l4__ipc__api.html#ga3a8617092651c67f9ef1670b53fce66c" title="Wait for a message from a specific source." alt="" coords="288,5,403,32"/>
+<area shape="rect" id="node4" href="$group__l4__ipc__api.html#ga0e7e5b18d784b1d3439ea6e5b4bea4e2" title="Generic L4 object invocation." alt="" coords="451,5,511,32"/>
+</map>

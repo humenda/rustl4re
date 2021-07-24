@@ -1,3 +1,4 @@
 <map id="L4virtio::Svr::Driver_mem_list_t::full" name="L4virtio::Svr::Driver_mem_list_t::full">
-<area shape="rect" id="node2" href="$classL4virtio_1_1Svr_1_1Device__t.html#ab906b4cc61026fd815a8056f07bef10e" title="Enable/disable the specified queue. " alt="" coords="192,5,389,47"/>
+<area shape="rect" id="node1" title=" " alt="" coords="201,5,349,47"/>
+<area shape="rect" id="node2" href="$classL4virtio_1_1Svr_1_1Driver__mem__list__t.html#a6749bd65e419d7f814dd4c27e0567f28" title="Add a new region to the list." alt="" coords="5,5,153,47"/>
 </map>

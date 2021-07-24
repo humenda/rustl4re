@@ -16,6 +16,7 @@
 #include "device_factory.h"
 #include "guest.h"
 #include "irq.h"
+#include "irq_dt.h"
 #include "mmio_device.h"
 
 static Dbg warn(Dbg::Mmio, Dbg::Warn, "uart_8250");
@@ -169,8 +170,8 @@ class Uart_8250_mmio
   };
 
 public:
-  Uart_8250_mmio(L4::Cap<L4::Vcon> con, l4_uint64_t regshift, Gic::Ic *ic,
-                 int irq)
+  Uart_8250_mmio(L4::Cap<L4::Vcon> con, l4_uint64_t regshift,
+                 cxx::Ref_ptr<Gic::Ic> const &ic, int irq)
   : _con(con), _regshift(regshift), _sink(ic, irq)
   {
     l4_vcon_attr_t attr;
@@ -359,7 +360,11 @@ struct F : Vdev::Factory
                                     Vdev::Dt_node const &node) override
   {
     Dbg(Dbg::Dev, Dbg::Info).printf("Create virtual 8250 console\n");
-    L4::Cap<L4::Vcon> cap = L4Re::Env::env()->log();
+
+    auto cap = Vdev::get_cap<L4::Vcon>(node, "l4vmm,8250cap",
+                                       L4Re::Env::env()->log());
+    if (!cap)
+      return nullptr;
 
     int regshift_size;
     fdt32_t const *regshift_prop = node.get_prop<fdt32_t>("reg-shift",
@@ -368,28 +373,19 @@ struct F : Vdev::Factory
     if (regshift_prop)
       regshift = node.get_prop_val(regshift_prop, regshift_size, true);
 
-    int cap_name_len;
-    char const *cap_name = node.get_prop<char>("l4vmm,8250cap", &cap_name_len);
-    if (cap_name)
-      {
-        cap = L4Re::Env::env()->get_cap<L4::Vcon>(cap_name, cap_name_len);
-        if (!cap)
-          {
-            warn.printf("'l4vmm,8250cap' property: capability %.*s is invalid.\n",
-                        cap_name_len, cap_name);
-            return nullptr;
-          }
-      }
 
-    cxx::Ref_ptr<Gic::Ic> ic = devs->get_or_create_ic_dev(node, false);
-    if (!ic)
+    Vdev::Irq_dt_iterator it(devs, node);
+
+    if (it.next(devs) < 0)
       return nullptr;
 
-    auto c = Vdev::make_device<Uart_8250_mmio>(cap, regshift,
-                                               ic.get(),
-                                               ic->dt_get_interrupt(node, 0));
+    if (!it.ic_is_virt())
+      L4Re::chksys(-L4_EINVAL, "Uart 8250 requires a virtual interrupt controller");
+
+
+    auto c = Vdev::make_device<Uart_8250_mmio>(cap, regshift, it.ic(), it.irq());
     c->register_obj(devs->vmm()->registry());
-    devs->vmm()->register_mmio_device(c, node);
+    devs->vmm()->register_mmio_device(c, Vmm::Region_type::Virtual, node);
     return c;
   }
 };
@@ -397,4 +393,5 @@ struct F : Vdev::Factory
 }
 
 static F f;
-static Vdev::Device_type t = { "uart,8250", nullptr, &f };
+static Vdev::Device_type t1 = { "uart,8250", nullptr, &f };
+static Vdev::Device_type t2 = { "ns16550a", nullptr, &f };

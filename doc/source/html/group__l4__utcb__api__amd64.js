@@ -42,6 +42,6 @@ var group__l4__utcb__api__amd64 =
       [ "trapno", "structl4__exc__regs__t.html#a03e43f336572220b23ee422854300fa8", null ],
       [ "ulr", "structl4__exc__regs__t.html#a72831d92dc761813b8e1fca11ec6799d", null ]
     ] ],
-    [ "l4_exc_regs_t", "group__l4__utcb__api__amd64.html#ga8c9d1c4e65e9d200ee77096b9ebeea0f", null ],
+    [ "l4_exc_regs_t", "group__l4__utcb__api__amd64.html#gaab4bad09a76b7810f882af3d563e9a3f", null ],
     [ "L4_utcb_consts_amd64", "group__l4__utcb__api__amd64.html#ga2cdc0b9ac36a408db0232684fa25009e", null ]
 ];

@@ -88,7 +88,8 @@ static l4_addr_t   v_page[1024*1024/(L4_PAGESIZE)];
 static l4_addr_t v_area;
 static l4_umword_t initialized;
 static L4::Cap<void> vbus;
-static l4vbus_device_handle_t root_bridge;
+static L4::Cap<L4Re::Dataspace> ds;
+static l4vbus_device_handle_t root_bridge = L4VBUS_NULL;
 
 static void
 warn(u32 addr, const char *func)
@@ -285,7 +286,6 @@ x86emu_int10_init(void)
   int error;
   l4_addr_t addr;
   l4_uint32_t idx;
-  L4::Cap<L4Re::Dataspace> ds;
 
   if (initialized)
     return 0;
@@ -302,7 +302,7 @@ x86emu_int10_init(void)
   err = l4vbus_get_device_by_hid(vbus.cap(), 0, &root_bridge, "PNP0A03", 0, 0);
   if (err < 0)
     {
-      printf("No PCI root bridge found\n");
+      printf("No PCI root bridge found: %d\n", err);
       L4Re::Util::cap_alloc.free(vbus);
       return -L4_ENOENT;
     }
@@ -317,8 +317,8 @@ x86emu_int10_init(void)
   /* Reserve region for physical memory 0x00000...0xfffff. Make sure that we
    * can unmap it using one single l4_fpage_unmap (alignment). */
   v_page[0] = 0;
-  if ((error = L4Re::Env::env()->rm()->reserve_area(&v_page[0], 1<<20,
-                                                    L4Re::Rm::Search_addr, 20)))
+  if ((error = L4Re::Env::env()->rm()->reserve_area(&v_page[0], 1 << 20,
+                                                    L4Re::Rm::F::Search_addr, 20)))
     {
       printf("Error %d reserving area for x86emu\n", error);
       return error;
@@ -326,7 +326,8 @@ x86emu_int10_init(void)
   v_area = v_page[0];
 
   /* Map physical page 0x00000 */
-  if (l4io_request_iomem_region(0, v_page[0], L4_PAGESIZE, L4IO_MEM_CACHED | L4IO_MEM_USE_RESERVED_AREA) < 0)
+  if (l4io_request_iomem_region(0, v_page[0], L4_PAGESIZE,
+                                L4IO_MEM_CACHED | L4IO_MEM_USE_RESERVED_AREA) < 0)
     {
       printf("Error %d allocating physical page 0 for x86emu\n", error);
       return error;
@@ -344,17 +345,17 @@ x86emu_int10_init(void)
 
   /* Map dummy as physical page 0x01000 */
   v_page[1] = v_page[0] + L4_PAGESIZE;
-  if ((error = L4Re::Env::env()->rm()->attach((void**)&v_page[1], L4_PAGESIZE,
-                                              L4Re::Rm::In_area, ds,
+  if ((error = L4Re::Env::env()->rm()->attach((void **)&v_page[1], L4_PAGESIZE,
+                                              L4Re::Rm::F::In_area | L4Re::Rm::F::RW, ds,
                                               0, L4_PAGESHIFT)))
     {
       printf("Error %d attaching page for x86emu\n", error);
       return error;
     }
 
-  for (idx=0x09F000/L4_PAGESIZE, addr=0x09F000;
-                                 addr<0x100000;
-       idx++,			 addr+=L4_PAGESIZE)
+  for (idx = 0x09F000 / L4_PAGESIZE, addr = 0x09F000;
+       addr < 0x100000;
+       idx++, addr += L4_PAGESIZE)
     v_page[idx] = v_page[0] + addr;
 
   if ((error = l4io_request_iomem_region(0x09F000, v_page[0x9f],
@@ -367,9 +368,9 @@ x86emu_int10_init(void)
     }
 
   /* int 10 ; ret */
-  *(l4_uint8_t*)(v_page[1]+0) = 0xcd;
-  *(l4_uint8_t*)(v_page[1]+1) = 0x10;
-  *(l4_uint8_t*)(v_page[1]+2) = 0xf4;
+  *(l4_uint8_t *)(v_page[1] + 0) = 0xcd;
+  *(l4_uint8_t *)(v_page[1] + 1) = 0x10;
+  *(l4_uint8_t *)(v_page[1] + 2) = 0xf4;
 
   initialized = 1;
 
@@ -414,10 +415,29 @@ x86emu_int10_done(void)
   return ret;
 }
 
-static l4_addr_t far_to_addr(l4_uint32_t farp)
+static int
+far_to_addr(l4_uint32_t farp, l4_addr_t *addr)
 {
-  l4_addr_t p = (farp & 0x0FFFF) + ((farp >> 12) & 0xFFFF0);
-  return (l4_addr_t)(v_page[p / L4_PAGESIZE] + (p % L4_PAGESIZE));
+  int error;
+
+  l4_addr_t p   = (farp & 0x0FFFF) + ((farp >> 12) & 0xFFFF0);
+  l4_addr_t idx = p / L4_PAGESIZE;
+
+  if (!v_page[idx])
+    {
+      v_page[idx] = v_page[0] + idx * L4_PAGESIZE;
+      error =
+        L4Re::Env::env()->rm()->attach((void **)&v_page[idx], L4_PAGESIZE,
+                                       L4Re::Rm::F::In_area | L4Re::Rm::F::RW,
+                                       ds, 0, L4_PAGESHIFT);
+      if (error)
+        {
+          printf("Error %d attaching page %li for x86emu\n", error, idx);
+          return error;
+        }
+    }
+  *addr = (l4_addr_t)(v_page[idx] + (p % L4_PAGESIZE));
+  return 0;
 }
 
 static void dump_mode(int mode, l4util_mb_vbe_mode_t *m)
@@ -451,7 +471,7 @@ l4util_mb_vbe_mode_t *get_mode_info(int mode)
   if (!exec_int10())
     return 0;
 
-  l4util_mb_vbe_mode_t *m = (l4util_mb_vbe_mode_t*)(v_page[1] + 0x800);
+  l4util_mb_vbe_mode_t *m = (l4util_mb_vbe_mode_t *)(v_page[1] + 0x800);
   if ((m->mode_attributes & 0x91) == 0x91)
     return m;
 
@@ -539,6 +559,7 @@ x86emu_int10_set_vbemode(int mode, l4util_mb_vbe_ctrl_t *ctrl_info,
 			 l4util_mb_vbe_mode_t *mode_info)
 {
   int error;
+  l4_addr_t addr;
 
   if ((error = x86emu_int10_init()))
     return error;
@@ -547,15 +568,18 @@ x86emu_int10_set_vbemode(int mode, l4util_mb_vbe_ctrl_t *ctrl_info,
 
   /* Get VESA BIOS controller information. */
   setup_int10_entry(VBE_get_info);
-  M.x86.R_EDI  = 0x100;		/* ES:DI pointer to at least 512 bytes */
+  M.x86.R_EDI = 0x100;		/* ES:DI pointer to at least 512 bytes */
   if (!exec_int10())
     {
       printf("VBE BIOS not present.\n");
       return -L4_EINVAL;
     }
 
-  *ctrl_info = *(l4util_mb_vbe_ctrl_t*)(v_page[1] + 0x100);
-  const char *oem_string = (const char *)far_to_addr(ctrl_info->oem_string);
+  *ctrl_info = *(l4util_mb_vbe_ctrl_t *)(v_page[1] + 0x100);
+
+  if ((error = far_to_addr(ctrl_info->oem_string, &addr)))
+    return error;
+  const char *oem_string = (const char *)(addr);
   printf("Found VESA BIOS version %d.%d\n"
          "OEM %s\n",
          (int)(ctrl_info->version >> 8),
@@ -575,8 +599,29 @@ x86emu_int10_set_vbemode(int mode, l4util_mb_vbe_ctrl_t *ctrl_info,
       int res;
       unsigned pref_x = 0, pref_y = 0;
 
+      l4_uint32_t vmp = ctrl_info->video_mode;
+      for (;;)
+        {
+          if ((error = far_to_addr(vmp, &addr)))
+            return error;
+
+          l4_uint16_t *mode_entry = (l4_uint16_t *)addr;
+          if (*mode_entry == 0xffff)
+            break;
+
+          vmp += sizeof(l4_uint16_t);
+        }
+
+      l4_uint16_t *vid_modes = (l4_uint16_t *)malloc(vmp - ctrl_info->video_mode);
+
+      if ((error = far_to_addr(ctrl_info->video_mode, &addr)))
+        return error;
+      l4_uint16_t *mode_entry = (l4_uint16_t *)addr;
+      unsigned num_modes = 0;
+      for (; *mode_entry != 0xffff; ++mode_entry)
+        vid_modes[num_modes++] = *mode_entry;
+
       printf("Scanning for 'best' possible mode:\n");
-      l4_uint16_t *mode_list = (l4_uint16_t *)far_to_addr(ctrl_info->video_mode);
 
       if ((res = x86emu_int10_read_ddc(&pref_x, &pref_y)) < 0)
         printf("EDID not available (%d), finding best possible mode ...\n", res);
@@ -584,13 +629,13 @@ x86emu_int10_set_vbemode(int mode, l4util_mb_vbe_ctrl_t *ctrl_info,
       l4util_mb_vbe_mode_t best_mode;
       best_mode.x_resolution = 0;
 
-      for (; *mode_list != 0xffff; ++mode_list)
+      for (unsigned idx = 0; idx < num_modes; ++idx)
         {
-          l4util_mb_vbe_mode_t *m = get_mode_info(*mode_list);
+          l4util_mb_vbe_mode_t *m = get_mode_info(vid_modes[idx]);
           if (!m)
             continue;
 
-          dump_mode(*mode_list, m);
+          dump_mode(vid_modes[idx], m);
 
           if (pref_x > 0)
             {
@@ -598,22 +643,25 @@ x86emu_int10_set_vbemode(int mode, l4util_mb_vbe_ctrl_t *ctrl_info,
                   && is_better_than(&best_mode, m))
                 {
                   best_mode = *m;
-                  mode = *mode_list;
+                  mode = vid_modes[idx];
                 }
             }
           else if (m->x_resolution > max_val && m->bits_per_pixel == 16)
             {
               max_val = m->x_resolution;
-              mode = *mode_list;
+              mode = vid_modes[idx];
               best_mode = *m;
             }
         }
+
+      free(vid_modes);
+
       if (mode == ~0)
         {
           printf("Could not find suitable mode\n");
           return -L4_EINVAL;
         }
-      printf("Choosen mode:\n");
+      printf("Chosen mode:\n");
       dump_mode(mode, get_mode_info(mode));
       printf("To force a specific setting use a '-m <mode>' option.\n");
       *mode_info = best_mode;
@@ -625,10 +673,18 @@ x86emu_int10_set_vbemode(int mode, l4util_mb_vbe_ctrl_t *ctrl_info,
         {
           printf("Mode %x not supported\n", mode);
           printf("List of supported graphics modes:\n");
-          l4_uint16_t *mode_list = (l4_uint16_t *)far_to_addr(ctrl_info->video_mode);
-          for (; *mode_list != 0xffff; ++mode_list)
-            dump_mode(*mode_list, get_mode_info(*mode_list));
+          l4_uint32_t video_mode_ptr = ctrl_info->video_mode;
+          for (;;)
+            {
+              if ((error = far_to_addr(video_mode_ptr, &addr)))
+                return error;
 
+              l4_uint16_t *mode_entry = (l4_uint16_t *)(addr);
+              if (*mode_entry == 0xffff)
+                break;
+              video_mode_ptr += sizeof(l4_uint16_t);
+              dump_mode(*mode_entry, get_mode_info(*mode_entry));
+            }
           return -L4_EINVAL;
         }
       *mode_info = *mi;
@@ -637,9 +693,9 @@ x86emu_int10_set_vbemode(int mode, l4util_mb_vbe_ctrl_t *ctrl_info,
   /* Switch mode. */
   setup_int10_entry(VBE_set_mode);
   M.x86.R_EBX  = mode & 0xf7ff;	/* VESA mode; use current refresh rate */
-  M.x86.R_EBX |= (1<<14);	/* use flat buffer model */
+  M.x86.R_EBX |= 1 << 14;	/* use flat buffer model */
   if (0)
-    M.x86.R_EBX |= (1<<15);	/* no screen clearing */
+    M.x86.R_EBX |= 1 << 15;	/* no screen clearing */
   X86EMU_exec();
   // error check missing ?
   printf("VBE mode 0x%x successfully set.\n", mode);

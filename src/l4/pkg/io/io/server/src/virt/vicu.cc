@@ -74,25 +74,21 @@ Sw_icu::op_msi_info(L4::Icu::Rights, l4_umword_t irqnum, l4_uint64_t source,
   if (!msi)
     return -L4_EINVAL;
 
+  Io_irq_pin::Msi_src *src;
+
+  // interpret source as the device handle and use that to lookup the device
+  Device::Msi_src_info si = source;
+
   d_printf(DBG_ALL, "%s: irqnum=%lx: source=0x%05x\n",
            __func__, irqnum, (unsigned)source);
 
-  Device::Msi_src_info si = source;
+  src = get_root()->find_msi_src(si);
 
-  if (!si.svt())
-    {
-      d_printf(DBG_WARN,
-               "warning: MSI %lx (bus: %s) without source ID will be blocked\n",
-               irqnum & ~L4::Icu::F_msi, get_root()->name());
-      return -L4_ERANGE;
-    }
-
-  Io_irq_pin::Msi_src *src = get_root()->find_msi_src(si);
   if (!src)
     {
       d_printf(DBG_WARN,
-               "warning: MSI source 0x%05x not found on bus %s\n",
-               si.v, get_root()->name());
+               "warning: MSI source for 0x%llx not found on bus %s\n",
+               source, get_root()->name());
       return -L4_ENODEV;
     }
 
@@ -170,8 +166,19 @@ Sw_icu::set_mode(unsigned irqn, l4_umword_t mode)
 int
 Sw_icu::unmask_irq(unsigned irqn)
 {
-  Irq_set::Iterator i = _irqs.find(irqn);
-  if (i == _irqs.end())
+  Irq_set *interrupts;
+
+  if (irqn & L4::Icu::F_msi)
+    {
+      interrupts = &_msis;
+      irqn &= ~L4::Icu::F_msi;
+    }
+  else
+    interrupts = &_irqs;
+
+  Irq_set::Iterator i = interrupts->find(irqn);
+
+  if (i == interrupts->end())
     return -L4_ENOENT;
 
   if (!i->unmask_via_icu())
@@ -290,7 +297,10 @@ Sw_icu::Sw_irq_pin::allocate_master_irq()
   assert (_master->shared());
   Ref_cap<L4::Irq_mux>::Cap lirq = chkcap(L4Re::Util::cap_alloc.alloc<L4::Irq_mux>(),
       "allocating IRQ capability");
-  // printf("IRQ mode = %x -> %x\n", type(), l4_type());
+
+  if (0)
+    printf("IRQ mode = %x -> %x\n", type(), l4_type());
+
   chksys(L4Re::Env::env()->factory()->create(lirq.get()), "allocating IRQ");
   chksys(_master->bind(lirq, l4_type()), "binding IRQ");
   _master->set_chained(true);
@@ -397,7 +407,7 @@ Sw_icu::Sw_irq_pin::_unbind(bool deleted)
     }
 
   _irq = L4::Cap<L4::Irq>::Invalid;
-  _state &= S_irq_type_mask;
+  _state &= S_user_mask;
   return err;
 }
 

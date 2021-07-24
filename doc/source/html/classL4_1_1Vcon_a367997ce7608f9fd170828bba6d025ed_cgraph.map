@@ -1,0 +1,5 @@
+<map id="L4::Vcon::get_attr" name="L4::Vcon::get_attr">
+<area shape="rect" id="node1" title="Get attributes of this virtual console." alt="" coords="5,31,141,57"/>
+<area shape="rect" id="node2" href="$classL4_1_1Kobject.html#a4f2117ae76762f4084e6a1adb915863c" title="Return capability selector." alt="" coords="200,5,324,32"/>
+<area shape="rect" id="node3" href="$group__l4__vcon__api.html#gae9c105658ebcbc5d1a86e0672f0a5465" title="Get attributes of this virtual console." alt="" coords="189,56,335,83"/>
+</map>

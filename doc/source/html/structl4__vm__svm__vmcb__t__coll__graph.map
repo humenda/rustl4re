@@ -1,5 +1,6 @@
 <map id="l4_vm_svm_vmcb_t" name="l4_vm_svm_vmcb_t">
-<area shape="rect" id="node2" href="$structl4__vm__svm__vmcb__control__area.html" title="VMCB structure for SVM VMs. " alt="" coords="5,358,225,582"/>
-<area shape="rect" id="node3" href="$structl4__vm__svm__vmcb__state__save__area.html" title="State save area structure for SVM VMs. " alt="" coords="250,351,421,589"/>
-<area shape="rect" id="node4" href="$structl4__vm__svm__vmcb__state__save__area__seg.html" title="State save area segment selector struct. " alt="" coords="250,5,421,141"/>
+<area shape="rect" id="node1" title="Control structure for SVM VMs." alt="" coords="131,652,283,729"/>
+<area shape="rect" id="node2" href="$structl4__vm__svm__vmcb__control__area.html" title="VMCB structure for SVM VMs." alt="" coords="5,358,233,582"/>
+<area shape="rect" id="node3" href="$structl4__vm__svm__vmcb__state__save__area.html" title="State save area structure for SVM VMs." alt="" coords="257,351,437,589"/>
+<area shape="rect" id="node4" href="$structl4__vm__svm__vmcb__state__save__area__seg.html" title="State save area segment selector struct." alt="" coords="257,5,437,141"/>
 </map>

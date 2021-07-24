@@ -95,7 +95,7 @@ STATIC UNICODE_TO_CHAR UnicodeToPcAnsiOrAscii[] = {
     */      
     { ARROW_DOWN,                         0x19, L'v'},
     
-    { 0x0000, 0x00 }
+    { 0x0000, 0x00, L'\0' }
 };
 
 

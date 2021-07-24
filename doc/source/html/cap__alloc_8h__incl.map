@@ -1,8 +1,10 @@
 <map id="l4/re/c/util/cap_alloc.h" name="l4/re/c/util/cap_alloc.h">
-<area shape="rect" id="node2" href="$l4_2sys_2types_8h.html" title="Common L4 ABI Data Types. " alt="" coords="261,80,368,107"/>
-<area shape="rect" id="node3" href="$l4_2sys_2l4int_8h.html" title="Fixed sized integer types, generic version. " alt="" coords="349,229,448,256"/>
-<area shape="rect" id="node4" href="$compiler_8h.html" title="L4 compiler related defines. " alt="" coords="18,229,144,256"/>
-<area shape="rect" id="node6" href="$l4_2sys_2consts_8h.html" title="Common constants. " alt="" coords="24,155,138,181"/>
-<area shape="rect" id="node7" href="$____l4__fpage_8h_source.html" title="l4/sys/__l4_fpage.h" alt="" coords="162,155,306,181"/>
-<area shape="rect" id="node8" href="$____timeout_8h_source.html" title="l4/sys/__timeout.h" alt="" coords="331,155,466,181"/>
+<area shape="rect" id="node1" title="Capability allocator C interface." alt="" coords="327,5,491,32"/>
+<area shape="rect" id="node2" href="$l4_2sys_2types_8h.html" title="Common L4 ABI Data Types." alt="" coords="242,80,354,107"/>
+<area shape="rect" id="node5" title=" " alt="" coords="450,304,573,331"/>
+<area shape="rect" id="node3" href="$l4_2sys_2l4int_8h.html" title="Fixed sized integer types, generic version." alt="" coords="42,229,147,256"/>
+<area shape="rect" id="node4" href="$compiler_8h.html" title="L4 compiler related defines." alt="" coords="335,229,467,256"/>
+<area shape="rect" id="node6" href="$l4_2sys_2consts_8h.html" title="Common constants." alt="" coords="190,155,308,181"/>
+<area shape="rect" id="node7" href="$____l4__fpage_8h_source.html" title=" " alt="" coords="384,155,530,181"/>
+<area shape="rect" id="node8" href="$____timeout_8h_source.html" title=" " alt="" coords="24,155,165,181"/>
 </map>

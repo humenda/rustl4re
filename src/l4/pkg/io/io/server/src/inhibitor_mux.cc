@@ -26,7 +26,7 @@ void
 Inhibitor_provider::inhibitor_acquire(l4_umword_t id, char const *reason)
 {
   if (id >= L4VBUS_INHIBITOR_MAX)
-    throw -L4_ERANGE;
+    throw -L4_ENODEV;
 
   if (_inhibitor_acquired[id])
     return; // already acquired, just ignore
@@ -48,7 +48,7 @@ void
 Inhibitor_provider::inhibitor_release(l4_umword_t id)
 {
   if (id >= L4VBUS_INHIBITOR_MAX)
-    throw -L4_ERANGE;
+    throw -L4_ENODEV;
 
   if (!_inhibitor_acquired[id])
     return; // not acquired, just ignore
@@ -69,7 +69,7 @@ void
 Inhibitor_mux::inhibitor_acquire(l4_umword_t id)
 {
   if (id >= L4VBUS_INHIBITOR_MAX)
-    throw -L4_ERANGE;
+    throw -L4_ENODEV;
 
   ++_inhibitors_acquired[id];
 }
@@ -86,7 +86,7 @@ void
 Inhibitor_mux::inhibitor_release(l4_umword_t id)
 {
   if (id >= L4VBUS_INHIBITOR_MAX)
-    throw -L4_ERANGE;
+    throw -L4_ENODEV;
 
   if (!--_inhibitors_acquired[id])
     all_inhibitors_free(id);

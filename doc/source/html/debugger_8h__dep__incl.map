@@ -1,3 +1,4 @@
 <map id="l4/sys/debugger.h" name="l4/sys/debugger.h">
-<area shape="rect" id="node2" href="$debugger.html" title="The debugger interface specifies common debugging related definitions. " alt="" coords="11,80,132,107"/>
+<area shape="rect" id="node1" title="Debugger related definitions." alt="" coords="5,5,141,32"/>
+<area shape="rect" id="node2" href="$debugger.html" title="The debugger interface specifies common debugging related definitions." alt="" coords="11,80,136,107"/>
 </map>

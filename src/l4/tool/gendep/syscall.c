@@ -57,13 +57,13 @@ int OPEN(const char *fn, int flags, ...)
   int rv ;
   va_list p;
   va_start (p,flags);
-    
+
   if(VERBOSE) printf("open(%s) called\n", fn);
   rv = real_open (fn, flags, va_arg (p, int));
   if (rv >=0)
     gendep__register_open (fn, flags);
 
-  return rv;    
+  return rv;
 }
 
 /* ----------------------------------------------------------------------- */
@@ -71,7 +71,7 @@ typedef int(*open64_type)(const char*, int flag, int mode);
 
 static int real_open64(const char*path, int flag, int mode){
   static open64_type f_open64;
-  
+
   if(VERBOSE) printf("real_open64(%s)\n", path);
   if(f_open64==0){
     *(void**)(&f_open64) = dlsym(RTLD_NEXT, "open64");
@@ -84,13 +84,15 @@ static int real_open64(const char*path, int flag, int mode){
   return f_open64(path, flag, mode);
 }
 
-int OPEN64(const char*path, int flag, int mode){
+int OPEN64(const char*path, int flags, ...){
   int f;
+  va_list p;
+  va_start (p,flags);
 
   if(VERBOSE) printf("open64(%s)\n", path);
-  f = real_open64(path, flag, mode);
+  f = real_open64(path, flags, va_arg (p, int));
   if(f>=0){
-    gendep__register_open(path, flag);
+    gendep__register_open(path, flags);
   }
   return f;
 }
@@ -100,7 +102,7 @@ typedef FILE* (*fopen_type)(const char*, const char*);
 
 static FILE* real_fopen(const char*path, const char*mode){
   static fopen_type f_fopen;
-  
+
   if(VERBOSE) printf("real_fopen(%s)\n", path);
   if(f_fopen==0){
     *(void**)(&f_fopen) = dlsym(RTLD_NEXT, "fopen");
@@ -135,7 +137,7 @@ typedef FILE* (*fopen64_type)(const char*, const char*);
 
 static FILE* real_fopen64(const char*path, const char*mode){
   static fopen64_type f_fopen64;
-  
+
   if(VERBOSE) printf("real_fopen64(%s)\n", path);
   if(f_fopen64==0){
     *(void**)(&f_fopen64) = dlsym(RTLD_NEXT, "fopen64");
@@ -175,13 +177,13 @@ static int real_unlink (const char *fn)
 int UNLINK(const char *fn)
 {
   int rv ;
-    
+
   if(VERBOSE) printf("unlink(%s)\n", fn);
   rv = real_unlink (fn);
   if (rv >=0)
     gendep__register_unlink (fn);
 
-  return rv;    
+  return rv;
 }
 
 /* ----------------------------------------------------------------------- */

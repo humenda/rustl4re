@@ -1,9 +1,11 @@
 INTERFACE:
 
 #include <cxx/function>
+#include <cxx/type_traits>
 
 #include "l4_types.h"
 #include "cpu_mask.h"
+#include "jdb_types.h"
 #include "jdb_core.h"
 #include "jdb_handler_queue.h"
 #include "mem.h"
@@ -71,6 +73,9 @@ public:
   static Cpu_number current_cpu;
   static Per_cpu<Remote_func> remote_func;
 
+  static void write_tsc_s(String_buffer *buf, Signed64 tsc, bool sign);
+  static void write_tsc(String_buffer *buf, Signed64 tsc, bool sign);
+
   static int FIASCO_FASTCALL enter_jdb(Jdb_entry_frame *e, Cpu_number cpu);
   static void cursor_end_of_screen();
   static void cursor_home();
@@ -92,7 +97,6 @@ private:
   Jdb(const Jdb&);
 
   static char hide_statline;
-  static char last_cmd;
   static char next_cmd;
   static Per_cpu<String_buf<81> > error_buffer;
   static bool was_input_error;
@@ -161,7 +165,6 @@ Jdb_handler_queue Jdb::jdb_leave;
 
 DEFINE_PER_CPU Per_cpu<String_buf<81> > Jdb::error_buffer;
 char Jdb::next_cmd;			// next global command to execute
-char Jdb::last_cmd;
 
 char Jdb::hide_statline;		// show status line on enter_kdebugger
 DEFINE_PER_CPU Per_cpu<Jdb_entry_frame*> Jdb::entry_frame;
@@ -176,7 +179,7 @@ const char *Jdb::toplevel_cmds = "j_";
 
 // a short command must be included in this list to be enabled for non-
 // interactive execution
-const char *Jdb::non_interactive_cmds = "bEIJLMNOPSU^Z";
+const char *Jdb::non_interactive_cmds = "bEIJLMNOPSU^Z*";
 
 DEFINE_PER_CPU Per_cpu<bool> Jdb::running;	// JDB is already running
 bool Jdb::never_break;		// never enter JDB
@@ -237,11 +240,6 @@ PUBLIC static inline
 void
 Jdb::set_next_cmd(char cmd)
 { next_cmd = cmd; }
-
-PUBLIC static inline
-int
-Jdb::was_last_cmd()
-{ return last_cmd; }
 
 PUBLIC static inline
 int
@@ -381,46 +379,65 @@ Jdb::push_cons()
 // non-interactive commands here (e.g. we don't allow d, t, l, u commands)
 PRIVATE static
 int
-Jdb::execute_command_ni(Space *task, char const *str, int len = 1000)
+Jdb::execute_command_ni(char const *str, int len)
 {
-  char tmp = 0;
-  for (; len && peek(str, task, tmp) && tmp; ++str, --len)
-    if ((unsigned char)tmp != 0xff)
-      push_cons()->push(tmp);
+  for (; len && *str; ++str, --len)
+    push_cons()->push(*str);
 
-  if ((unsigned char)tmp != 0xff)
-    push_cons()->push('_'); // terminating return
+  push_cons()->push('_'); // terminating return
 
-
-  // prevent output of sequences
-  Kconsole::console()->change_state(0, 0, ~Console::OUTENABLED, 0);
-
+  bool leave = true;
   for (;;)
     {
-      int c = getchar();
+      // Prevent output of sequences. Do this inside the loop because some
+      // commands do Console::start_exclusive() + Console::end_exclusive().
+      Kconsole::console()->change_state(0, 0, ~Console::OUTENABLED, 0);
 
-      was_input_error = true;
-      if (0 != strchr(non_interactive_cmds, c))
-	{
-	  char _cmd[] = {(char)c, 0};
-	  Jdb_core::Cmd cmd = Jdb_core::has_cmd(_cmd);
+      if (short_mode)
+        {
+          int c = getchar();
+          if (c == KEY_RETURN || c == KEY_RETURN_2 || c == ' ')
+            break;
 
-	  if (cmd.cmd)
-	    {
-	      if (Jdb_core::exec_cmd (cmd, 0) != 3)
-                was_input_error = false;
-	    }
-	}
+          was_input_error = true;
+          if (0 != strchr(non_interactive_cmds, c))
+            {
+              char _cmd[] = {(char)c, 0};
+              Jdb_core::Cmd cmd = Jdb_core::has_cmd(_cmd);
 
-      if (c == KEY_RETURN || c == KEY_RETURN_2 || c == ' ' || was_input_error)
-	{
-	  push_cons()->flush();
-	  // re-enable all consoles but GZIP
-	  Kconsole::console()->change_state(0, Console::GZIP,
-					    ~0U, Console::OUTENABLED);
-	  return c == KEY_RETURN || c == KEY_RETURN_2 || c == ' ';
-	}
+              if (cmd.cmd)
+                {
+                  if (Jdb_core::exec_cmd (cmd, 0) != 3)
+                    was_input_error = false;
+                }
+            }
+
+          if (was_input_error)
+            {
+              leave = false;
+              break;
+            }
+        }
+      else
+        {
+          Jdb_core::Cmd cmd(0, 0);
+          char const *args;
+          input_long_mode(&cmd, &args);
+          if (!cmd.cmd)
+            break;
+
+          if (Jdb_core::exec_cmd(cmd, args) == 3)
+            {
+              leave = false;
+              break;
+            }
+        }
     }
+
+  push_cons()->flush();
+  // re-enable all consoles but GZIP
+  Kconsole::console()->change_state(0, Console::GZIP, ~0UL, Console::OUTENABLED);
+  return leave;
 }
 
 PRIVATE static
@@ -530,6 +547,7 @@ Jdb::input_long_mode(Jdb::Cmd *cmd, char const **args)
       switch (c)
 	{
 	case KEY_BACKSPACE:
+	case KEY_BACKSPACE_2:
 	  if (buf.len() > 0)
 	    {
 	      cursor(Cursor_left);
@@ -615,16 +633,14 @@ Jdb::execute_command()
 
   if (cmd.cmd)
     {
-      int ret = Jdb_core::exec_cmd( cmd, args );
+      int ret = Jdb_core::exec_cmd(cmd, args);
 
       if (!ret)
 	hide_statline = false;
 
-      last_cmd = cmd_key;
       return ret;
     }
 
-  last_cmd = 0;
   return 1;
 }
 
@@ -790,13 +806,9 @@ Jdb::write_ll_ns(String_buffer *buf, Signed64 ns, bool sign)
       return;
     }
 
-  Console* gzip = Kconsole::console()->find_console(Console::GZIP);
   Mword _us = uns / 1000UL;
   Mword _ns = uns % 1000UL;
-  buf->printf("%3lu.%03lu %c ", _us, _ns,
-           gzip && gzip->state() & Console::OUTENABLED
-             ? '\265' 
-             : Config::char_micro);
+  buf->printf("%3lu.%03lu u ", _us, _ns);
 }
 
 PUBLIC static
@@ -807,11 +819,11 @@ Jdb::write_ll_hex(String_buffer *buf, Signed64 x, bool sign)
   Unsigned64 xu = (x < 0) ? -x : x;
 
   if (sign)
-    buf->printf("%s%03lx" L4_PTR_FMT,
+    buf->printf("%s%03lx%08x",
                 (x < 0) ? "-" : (x == 0) ? " " : "+",
-                (Mword)((xu >> 32) & 0xfff), (Mword)xu);
+                (Mword)((xu >> 32) & 0xfff), (unsigned)xu);
   else
-    buf->printf("%04lx" L4_PTR_FMT, (Mword)((xu >> 32) & 0xffff), (Mword)xu);
+    buf->printf("%04lx%08x", (Mword)((xu >> 32) & 0xffff), (unsigned)xu);
 }
 
 PUBLIC static
@@ -857,6 +869,34 @@ Jdb::cpu_mask_print(Cpu_mask &m)
     }
 }
 
+IMPLEMENT_DEFAULT
+void
+Jdb::write_tsc_s(String_buffer *buf, Signed64 tsc, bool sign)
+{
+  Unsigned64 uns = Cpu::boot_cpu()->tsc_to_ns(tsc < 0 ? -tsc : tsc);
+
+  if (tsc < 0)
+    uns = -uns;
+
+  if (sign)
+    buf->printf("%c", (tsc < 0) ? '-' : (tsc == 0) ? ' ' : '+');
+
+  Mword _s  = uns / 1000000000;
+  Mword _us = (uns / 1000) - 1000000 * _s;
+  buf->printf("%3lu.%06lu s ", _s, _us);
+  return;
+}
+
+IMPLEMENT_DEFAULT
+void
+Jdb::write_tsc(String_buffer *buf, Signed64 tsc, bool sign)
+{
+  Unsigned64 ns = Cpu::boot_cpu()->tsc_to_ns(tsc < 0 ? -tsc : tsc);
+  if (tsc < 0)
+    ns = -ns;
+  write_ll_ns(buf, ns, sign);
+}
+
 PUBLIC static inline
 Thread*
 Jdb::get_current_active()
@@ -874,139 +914,99 @@ Jdb::get_entry_frame(Cpu_number cpu)
 /// handling of standard cursor keys (Up/Down/PgUp/PgDn)
 PUBLIC static
 int
-Jdb::std_cursor_key(int c, Mword cols, Mword lines, Mword max_absy, Mword *absy,
-                    Mword *addy, Mword *addx, bool *redraw)
+Jdb::std_cursor_key(int c, Mword cols, Mword lines,
+                    Mword max_absy, Mword max_pos,
+                    Mword *absy, Mword *addy, Mword *addx, bool *redraw)
 {
+  Mword old_absy = *absy;
+  Mword old_pos  = (*absy + *addy) * cols + (addx ? *addx : 0);
+  if (!max_pos)
+    max_pos = (max_absy + lines-1) * cols-1;
   switch (c)
     {
     case KEY_CURSOR_LEFT:
     case 'h':
-      if (addx)
-	{
-	  if (*addx > 0)
-	    (*addx)--;
-	  else if (*addy > 0)
-	    {
-	      (*addy)--;
-	      *addx = cols - 1;
-	    }
-	  else if (*absy > 0)
-	    {
-	      (*absy)--;
-	      *addx = cols - 1;
-	      *redraw = true;
-	    }
-	}
-      else
-	return 0;
+      if (!addx)
+        return 0;
+      if (*addx > 0)
+        (*addx)--;
+      else if (*addy > 0)
+        (*addy)--, *addx = cols-1;
+      else if (*absy > 0)
+        (*absy)--, *addx = cols-1;
       break;
     case KEY_CURSOR_RIGHT:
     case 'l':
-      if (addx)
-	{   
-	  if (*addx < cols - 1)
-	    (*addx)++;
-	  else if (*addy < lines - 1)
-	    {
-	      (*addy)++; 
-	      *addx = 0;
-	    }
-	  else if (*absy < max_absy)
-	    {
-	      (*absy)++;
-	      *addx = 0;
-	      *redraw = true;
-	    }
-	}
-      else
-	return 0;
+      if (!addx)
+        return 0;
+      if (*addx < cols-1 && old_pos+1 <= max_pos)
+        (*addx)++;
+      else if (*addy < lines-1)
+        (*addy)++, *addx = 0;
+      else if (*absy < max_absy)
+        (*absy)++, *addx = 0;
       break;
     case KEY_CURSOR_UP:
     case 'k':
       if (*addy > 0)
-	(*addy)--;
+        (*addy)--;
       else if (*absy > 0)
-	{
-	  (*absy)--;
-	  *redraw = true;
-	}
+        (*absy)--;
       break;
     case KEY_CURSOR_DOWN:
     case 'j':
-      if (*addy < lines-1)
-	(*addy)++;
+      if (*addy < lines-1 && old_pos + cols <= max_pos)
+        (*addy)++;
+      else if (*absy < max_absy && old_pos + cols <= max_pos)
+        (*absy)++;
       else if (*absy < max_absy)
-	{
-	  (*absy)++;
-	  *redraw = true;
-	}
+        (*absy)++, (*addy)--;
       break;
     case KEY_CURSOR_HOME:
     case 'H':
-      *addy = 0;
       if (addx)
-	*addx = 0;
-      if (*absy > 0)
-	{
-	  *absy = 0;
-	  *redraw = true;
-	}
+        *addx = 0;
+      *absy = 0;
+      *addy = 0;
       break;
     case KEY_CURSOR_END:
     case 'L':
-      *addy = lines-1;
       if (addx)
-	*addx = cols - 1;
-      if (*absy < max_absy)
-	{
-	  *absy = max_absy;
-	  *redraw = true;
-	}
+        *addx = max_pos % cols;
+      *absy = max_absy;
+      *addy = lines-1;
       break;
     case KEY_PAGE_UP:
     case 'K':
       if (*absy >= lines)
-	{
-	  *absy -= lines;
-	  *redraw = true;
-	}
-      else
-	{
-	  if (*absy > 0)
-	    {
-	      *absy = 0;
-	      *redraw = true;
-	    }
-	  else if (*addy > 0)
-	    *addy = 0;
-	  else if (addx)
-	    *addx = 0;
-	}
+        *absy -= lines;
+      else if (*absy > 0)
+        *absy = 0;
+      else if (*addy > 0)
+        *addy = 0;
+      else if (addx)
+        *addx = 0;
       break;
     case KEY_PAGE_DOWN:
     case 'J':
-      if (*absy+lines-1 < max_absy)
-	{
-	  *absy += lines;
-	  *redraw = true;
-	}
-      else
-	{
-	  if (*absy < max_absy)
-	    {
-	      *absy = max_absy;
-	      *redraw = true;
-	    }
-	  else if (*addy < lines-1)
-      	    *addy = lines-1;
-	  else if (addx)
-	    *addx = cols - 1;
-	}
+      if (*absy+lines-1 < max_absy && old_pos + lines * cols <= max_pos)
+        *absy += lines;
+      else if (*absy < max_absy)
+        *absy = max_absy;
+      else if (*addy < lines-1 && old_pos + (lines-1 - *addy) * cols <= max_pos)
+        *addy = lines-1;
+      else if (*addy < lines - 2)
+        *addy = lines-2;
+      else if (addx && old_pos + cols - 1 <= max_pos)
+        *addx = cols - 1;
+      else if (addx && *addy == lines - 1)
+        *addx = max_pos % cols;
       break;
     default:
       return 0;
     }
 
+  *redraw = *absy != old_absy;
   return 1;
 }
 
@@ -1026,15 +1026,40 @@ Jdb::get_task(Cpu_number cpu)
 //
 
 PUBLIC static
+int
+Jdb::peek_task(Jdb_address addr, void *value, int width)
+{
+  unsigned char const *mem = access_mem_task(addr, false);
+  if (!mem)
+    return -1;
+
+  memcpy(value, mem, width);
+  return 0;
+}
+
+PUBLIC static
+int
+Jdb::poke_task(Jdb_address addr, void const *value, int width)
+{
+  unsigned char *mem = access_mem_task(addr, true);
+  if (!mem)
+    return -1;
+
+  memcpy(mem, value, width);
+  Mem_unit::make_coherent_to_pou(mem);
+  return 0;
+}
+
+PUBLIC static
 template< typename T >
 bool
-Jdb::peek(T const *addr, Space *task, T &value)
+Jdb::peek(Jdb_addr<T> addr, typename cxx::remove_const<T>::type &value)
 {
   // use an Mword here instead of T as some implementations of peek_task use
   // an Mword in their operation which is potentially bigger than T
   // XXX: should be fixed
   Mword tmp;
-  bool ret = peek_task((Address)addr, task, &tmp, sizeof(T)) == 0;
+  bool ret = peek_task(addr, &tmp, sizeof(T)) == 0;
   value = tmp;
   return ret;
 }
@@ -1042,8 +1067,8 @@ Jdb::peek(T const *addr, Space *task, T &value)
 PUBLIC static
 template< typename T >
 bool
-Jdb::poke(T *addr, Space *task, T const &value)
-{ return poke_task((Address)addr, task, &value, sizeof(T)) == 0; }
+Jdb::poke(Jdb_addr<T> addr, T const &value)
+{ return poke_task(addr, &value, sizeof(T)) == 0; }
 
 
 class Jdb_base_cmds : public Jdb_module
@@ -1056,7 +1081,7 @@ static Jdb_base_cmds jdb_base_cmds INIT_PRIORITY(JDB_MODULE_INIT_PRIO);
 
 PUBLIC
 Jdb_module::Action_code
-Jdb_base_cmds::action (int cmd, void *&, char const *&, int &)
+Jdb_base_cmds::action (int cmd, void *&, char const *&, int &) override
 {
   if (cmd!=0)
     return NOTHING;
@@ -1070,14 +1095,14 @@ Jdb_base_cmds::action (int cmd, void *&, char const *&, int &)
 
 PUBLIC
 int
-Jdb_base_cmds::num_cmds() const
+Jdb_base_cmds::num_cmds() const override
 { 
   return 1;
 }
 
 PUBLIC
 Jdb_module::Cmd const *
-Jdb_base_cmds::cmds() const
+Jdb_base_cmds::cmds() const override
 {
   static Cmd cs[] =
     { { 0, "*", "mode", "", "*|mode\tswitch long and short command mode",
@@ -1115,6 +1140,7 @@ IMPLEMENTATION:
 
 #include "ipi.h"
 #include "logdefs.h"
+#include "task.h"
 
 char Jdb::esc_iret[]     = "\033[36;1m";
 char Jdb::esc_bt[]       = "\033[31m";
@@ -1180,7 +1206,7 @@ Jdb::enter_jdb(Jdb_entry_frame *e, Cpu_number cpu)
     }
 
   Jdb::current_cpu = cpu;
-  // check for int $3 user debugging interface
+  // check for kdb_ke debugging interface; only used from kernel context
   if (foreach_cpu(&handle_user_request, true))
     {
       close_debug_console(cpu);
@@ -1271,6 +1297,19 @@ Jdb::enter_jdb(Jdb_entry_frame *e, Cpu_number cpu)
   return 0;
 }
 
+PUBLIC static
+const char *
+Jdb::addr_space_to_str(Jdb_address addr, char *str, size_t len)
+{
+  if (addr.is_kmem())
+    return "kernel";
+  if (addr.is_phys())
+    return "physical";
+  snprintf(str, len, "task D:%lx",
+           static_cast<Task*>(addr.space())->dbg_info()->dbg_id());
+  return str;
+}
+
 
 //--------------------------------------------------------------------------
 IMPLEMENTATION [!mp]:
@@ -1309,6 +1348,10 @@ EXTENSION class Jdb
   static void (*_remote_work_ipi_func)(Cpu_number, void *);
   static void *_remote_work_ipi_func_data;
   static unsigned long _remote_work_ipi_done;
+  // non-boot CPUs halting in JDB
+  static void other_cpu_halt_in_jdb();
+  // wakeup non-boot CPUs from halting
+  static void wakeup_other_cpus_from_jdb(Cpu_number);
 };
 
 //--------------------------------------------------------------------------
@@ -1428,7 +1471,7 @@ Jdb::stop_all_cpus(Cpu_number current_cpu)
 	{
 	  Mem::mp_mb();
           remote_func.cpu(current_cpu).monitor_exec(current_cpu);
-	  Proc::pause();
+	  other_cpu_halt_in_jdb();
 	}
 
       // This CPU defacto left JDB
@@ -1466,8 +1509,9 @@ Jdb::leave_wait_for_others()
 	  if (cpu_in_jdb(c))
 	    {
 	      // notify other CPU
+              wakeup_other_cpus_from_jdb(c);
               Jdb::remote_func.cpu(c).reset_mp_safe();
-//	      printf("JDB: wait for CPU[%2u] to leave\n", c);
+//	      printf("JDB: wait for CPU[%2u] to leave\n", cxx::int_value<Cpu_number>(c));
 	      all_there = false;
 	    }
 	}
@@ -1537,3 +1581,15 @@ Jdb::remote_work_ipi(Cpu_number this_cpu, Cpu_number to_cpu,
 
   return true;
 }
+
+IMPLEMENT_DEFAULT
+void
+Jdb::other_cpu_halt_in_jdb()
+{
+  Proc::pause();
+}
+
+IMPLEMENT_DEFAULT
+void
+Jdb::wakeup_other_cpus_from_jdb(Cpu_number)
+{}

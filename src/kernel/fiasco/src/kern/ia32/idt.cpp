@@ -55,7 +55,7 @@ Idt::set_writable(bool writable)
   else
     e.del_attribs(Pt_entry::Writable); // Make read-only
 
-  Mem_unit::tlb_flush (_idt);
+  Mem_unit::tlb_flush_kernel(_idt);
 }
 
 PUBLIC static FIASCO_INIT
@@ -83,12 +83,12 @@ Idt::init()
 {
   assert (_idt_max * sizeof(Idt_entry) <= Config::PAGE_SIZE && "IDT too large");
   auto alloc = Kmem_alloc::allocator();
-  Idt_entry *idt = (Idt_entry *)alloc->unaligned_alloc(Config::PAGE_SIZE);
+  Idt_entry *idt = (Idt_entry *)alloc->alloc(Config::page_size());
   if (!idt)
     panic("IDT allocation failure: %d", __LINE__);
 
   _idt_pa = Mem_layout::pmem_to_phys(idt);
-  memset(idt, 0, Config::PAGE_SIZE);
+  memset((void*)idt, 0, Config::PAGE_SIZE);
 
   Vmem_alloc::page_map((void *)_idt, 0, Vmem_alloc::NO_ZERO_FILL, _idt_pa);
 

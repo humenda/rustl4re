@@ -1,4 +1,4 @@
 <map id="L4::Ipc::Istream::get" name="L4::Ipc::Istream::get">
-<area shape="rect" id="node2" href="$ipc__stream.html#a4a9b955c1207f1d1e71fd57fac767072" title="Extract one element of type T from the stream s. " alt="" coords="215,5,307,32"/>
-<area shape="rect" id="node3" href="$classL4_1_1Ipc_1_1Iostream.html#a1015a0966b9faef7e344530b1eb6e13a" title="Reset the stream to its initial state. " alt="" coords="196,57,327,98"/>
+<area shape="rect" id="node1" title="Copy out an array of type T with size elements." alt="" coords="152,5,303,32"/>
+<area shape="rect" id="node2" href="$ipc__stream.html#a4a9b955c1207f1d1e71fd57fac767072" title="Extract one element of type T from the stream s." alt="" coords="5,5,104,32"/>
 </map>

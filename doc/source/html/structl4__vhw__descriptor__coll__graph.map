@@ -1,3 +1,4 @@
 <map id="l4_vhw_descriptor" name="l4_vhw_descriptor">
-<area shape="rect" id="node2" href="$structl4__vhw__entry.html" title="Description of a device. " alt="" coords="17,5,131,156"/>
+<area shape="rect" id="node1" title="Virtual hardware devices description." alt="" coords="5,219,145,355"/>
+<area shape="rect" id="node2" href="$structl4__vhw__entry.html" title="Description of a device." alt="" coords="16,5,135,156"/>
 </map>

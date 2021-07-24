@@ -1,0 +1,7 @@
+<map id="L4virtio::Svr::Device_t::handle_mem_cmd_write" name="L4virtio::Svr::Device_t::handle_mem_cmd_write">
+<area shape="rect" id="node1" title="Check for a value in the cmd register and handle a write." alt="" coords="5,71,208,112"/>
+<area shape="rect" id="node2" href="$classL4virtio_1_1Svr_1_1Dev__config.html#a64313e8e41c209f12bd104442751753d" title="Get the value from the cmd register." alt="" coords="265,5,400,47"/>
+<area shape="rect" id="node4" href="$classL4virtio_1_1Svr_1_1Device__t.html#acd473f71ee4f34883a6da43b5eb27106" title="callback for client queue&#45;config request" alt="" coords="256,71,409,112"/>
+<area shape="rect" id="node5" href="$classL4virtio_1_1Svr_1_1Dev__config.html#a988f5859320f66b6479d338c5b15660f" title="Reset the cmd register after execution of a command." alt="" coords="261,136,405,177"/>
+<area shape="rect" id="node3" href="$classL4virtio_1_1Svr_1_1Dev__config.html#a28c17f0bffa127dd6767dba771ee29f4" title="Get a read&#45;only pointer to the config header." alt="" coords="457,71,592,112"/>
+</map>

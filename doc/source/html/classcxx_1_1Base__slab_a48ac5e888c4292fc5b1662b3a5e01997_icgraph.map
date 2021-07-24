@@ -1,0 +1,5 @@
+<map id="cxx::Base_slab::alloc" name="cxx::Base_slab::alloc">
+<area shape="rect" id="node1" title="Allocate a new object." alt="" coords="216,35,375,61"/>
+<area shape="rect" id="node2" href="$classcxx_1_1Slab.html#a18f3fa63befc64e1f89b4c566069ed60" title="Allocate an object of type Type." alt="" coords="27,5,147,32"/>
+<area shape="rect" id="node3" href="$classcxx_1_1Base__slab__static.html#ac14d1b49aa4cae0545c3965f63bb9892" title="Allocate an object." alt="" coords="5,57,168,98"/>
+</map>

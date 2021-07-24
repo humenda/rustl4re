@@ -5,10 +5,7 @@ INTERFACE:
 class Trap_state : public Entry_frame
 {
 public:
-  typedef int (*Handler)(Mword cause, Trap_state *);
-
-  // no exception traps to the kernel debugger on mips
-  bool is_debug_exception() const { return false; }
+  typedef int (*Handler)(Trap_state*, Cpu_number cpu);
 
   // generally MIPS encodes the error code and trapno into the cause
   // register, so we return status ess error code however

@@ -25,7 +25,7 @@ func_smap_call(L4::Cap<void> const &server)
   int err;
 
   if ((err = L4Re::Env::env()->rm()->reserve_area(&addr, L4_PAGESIZE,
-                                                  L4Re::Rm::Search_addr)))
+                                                  L4Re::Rm::F::Search_addr)))
     {
       printf("The reservation of one page within our virtual memory failed with %d\n", err);
       return 1;

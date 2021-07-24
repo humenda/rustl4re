@@ -42,7 +42,7 @@ var group__l4__utcb__api__x86 =
       [ "trapno", "structl4__exc__regs__t.html#a03e43f336572220b23ee422854300fa8", null ],
       [ "ulr", "structl4__exc__regs__t.html#a72831d92dc761813b8e1fca11ec6799d", null ]
     ] ],
-    [ "l4_exc_regs_t", "group__l4__utcb__api__x86.html#ga8c9d1c4e65e9d200ee77096b9ebeea0f", null ],
+    [ "l4_exc_regs_t", "group__l4__utcb__api__x86.html#gaab4bad09a76b7810f882af3d563e9a3f", null ],
     [ "L4_utcb_consts_x86", "group__l4__utcb__api__x86.html#gac03d87ea12ff53e0a7037eb3f9408af8", [
       [ "L4_UTCB_EXCEPTION_REGS_SIZE", "group__l4__utcb__api__x86.html#ggac03d87ea12ff53e0a7037eb3f9408af8aa5516052180335a4ae8ecb83bade036a", null ],
       [ "L4_UTCB_GENERIC_DATA_SIZE", "group__l4__utcb__api__x86.html#ggac03d87ea12ff53e0a7037eb3f9408af8abc15992493ad991b1854c23002fbbe16", null ],

@@ -11,6 +11,8 @@ static char          gz_out_buffer[45];
 static unsigned long gz_crc = 0;
 static int           gz_magic[2] = {0x1f, 0x8b};
 static void          (*raw_write)(const char *s, size_t len);
+void*                gzip_calloc(unsigned elem, unsigned size);
+void                 gzip_free(void *ptr);
 
 /* ENC is the basic 1 character encoding function to make a char printing */
 #define	ENC(c) ((c) ? ((c) & 077) + ' ': '`')
@@ -25,9 +27,9 @@ raw_putchar(int c)
 static void
 uu_open(const char *name)
 {
-  raw_write("\nbegin 644 ", 11);
+  raw_write("\r\nbegin 644 ", 12);
   raw_write(name, strlen(name));
-  raw_write("\n", 1);
+  raw_write("\r\n", 2);
 }
 
 static void
@@ -36,7 +38,7 @@ uu_close(void)
   char ch = ENC('\0');
 
   raw_putchar(ch);
-  raw_write("\nend\n", 5);
+  raw_write("\r\nend\r\n", 7);
 }
 
 static void
@@ -78,7 +80,7 @@ uu_write(const char *in, int len)
 	  ch = ENC(ch);
 	  raw_putchar(ch);
 	}
-      raw_putchar('\n');
+      raw_write("\r\n", 2);
     }
 }
 

@@ -6,12 +6,15 @@
 #include <stdio.h>
 #include <string.h>
 
+#include <l4/sys/factory.h>
 #include <l4/drivers/lcd.h>
 #include <l4/io/io.h>
 #include <l4/re/c/dataspace.h>
+#include <l4/re/c/dma_space.h>
 #include <l4/re/c/mem_alloc.h>
 #include <l4/re/c/namespace.h>
 #include <l4/re/c/rm.h>
+#include <l4/re/protocols.h>
 #include <l4/re/c/util/cap_alloc.h>
 #include <l4/util/util.h>
 #include <l4/vbus/vbus.h>
@@ -59,7 +62,7 @@ static unsigned int fbmem_size(void)
 
 static l4_addr_t omap_dss_virt_base;
 static void *fb_vaddr;
-static l4_addr_t fb_paddr;
+static l4re_dma_space_dma_addr_t fb_paddr;
 static l4_cap_idx_t vbus = L4_INVALID_CAP;
 static l4vbus_device_handle_t i2c_handle;
 static l4vbus_device_handle_t gpio_handle;
@@ -432,7 +435,7 @@ int clcd_init(void)
 static void setup_memory(void)
 {
   int ret;
-
+  l4re_dma_space_t dma;
   l4_size_t phys_size;
 
   if (fb_vaddr)
@@ -458,7 +461,7 @@ static void setup_memory(void)
 
   fb_vaddr = 0;
   if (l4re_rm_attach(&fb_vaddr, fbmem_size(),
-                     L4RE_RM_SEARCH_ADDR | L4RE_RM_EAGER_MAP,
+                     L4RE_RM_F_SEARCH_ADDR | L4RE_RM_F_EAGER_MAP | L4RE_RM_F_RW,
                      mem, 0, L4_PAGESHIFT))
     {
       printf("[LCD] Error: Could not attach memory\n");
@@ -469,13 +472,31 @@ static void setup_memory(void)
          fb_vaddr, fbmem_size());
 
   // get physical address
-  if (l4re_ds_phys(mem, 0, &fb_paddr, &phys_size)
+  dma = l4re_util_cap_alloc();
+  if (l4_is_invalid_cap(dma))
+    {
+      printf("error: failed to allocate DMA space capability.\n");
+      return;
+    }
+
+  if (l4_error(l4_factory_create(l4re_global_env->mem_alloc,
+                                 L4RE_PROTO_DMA_SPACE, dma)))
+    {
+      printf("error: failed to create DMA space\n");
+      return;
+    }
+
+  phys_size = fbmem_size();
+
+  // get physical address
+  if (l4re_dma_space_map(dma, mem | L4_CAP_FPAGE_RW, 0, &phys_size, 0,
+                         L4RE_DMA_SPACE_BIDIRECTIONAL, &fb_paddr)
       || phys_size != fbmem_size())
     {
       printf("[LCD] Error: Could not get physical address\n");
       return;
     }
-  printf("[LCD] Info: Physical video memory is at %p\n", (void *)fb_paddr);
+  printf("[LCD] Info: Physical video memory is at %llx\n", fb_paddr);
 }
 
 

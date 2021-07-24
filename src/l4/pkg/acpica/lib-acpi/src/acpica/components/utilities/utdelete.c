@@ -8,7 +8,7 @@
  *
  * 1. Copyright Notice
  *
- * Some or all of this work - Copyright (c) 1999 - 2017, Intel Corp.
+ * Some or all of this work - Copyright (c) 1999 - 2019, Intel Corp.
  * All rights reserved.
  *
  * 2. License
@@ -110,6 +110,42 @@
  * United States government or any agency thereof requires an export license,
  * other governmental approval, or letter of assurance, without first obtaining
  * such license, approval or letter.
+ *
+ *****************************************************************************
+ *
+ * Alternatively, you may choose to be licensed under the terms of the
+ * following license:
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions, and the following disclaimer,
+ *    without modification.
+ * 2. Redistributions in binary form must reproduce at minimum a disclaimer
+ *    substantially similar to the "NO WARRANTY" disclaimer below
+ *    ("Disclaimer") and any redistribution must be conditioned upon
+ *    including a substantially similar Disclaimer requirement for further
+ *    binary redistribution.
+ * 3. Neither the names of the above-listed copyright holders nor the names
+ *    of any contributors may be used to endorse or promote products derived
+ *    from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+ * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * Alternatively, you may choose to be licensed under the terms of the
+ * GNU General Public License ("GPL") version 2 as published by the Free
+ * Software Foundation.
  *
  *****************************************************************************/
 
@@ -376,6 +412,11 @@ AcpiUtDeleteInternalObj (
 
             AcpiUtDeleteObjectDesc (SecondDesc);
         }
+        if (Object->Field.InternalPccBuffer)
+        {
+            ACPI_FREE(Object->Field.InternalPccBuffer);
+        }
+
         break;
 
     case ACPI_TYPE_BUFFER_FIELD:
@@ -418,8 +459,8 @@ AcpiUtDeleteInternalObj (
 
     /* Now the object can be safely deleted */
 
-    ACPI_DEBUG_PRINT ((ACPI_DB_ALLOCATIONS, "Deleting Object %p [%s]\n",
-        Object, AcpiUtGetObjectTypeName (Object)));
+    ACPI_DEBUG_PRINT_RAW ((ACPI_DB_ALLOCATIONS, "%s: Deleting Object %p [%s]\n",
+        ACPI_GET_FUNCTION_NAME, Object, AcpiUtGetObjectTypeName (Object)));
 
     AcpiUtDeleteObjectDesc (Object);
     return_VOID;
@@ -484,6 +525,7 @@ AcpiUtUpdateRefCount (
     UINT16                  OriginalCount;
     UINT16                  NewCount = 0;
     ACPI_CPU_FLAGS          LockFlags;
+    char                    *Message;
 
 
     ACPI_FUNCTION_NAME (UtUpdateRefCount);
@@ -524,6 +566,7 @@ AcpiUtUpdateRefCount (
             "Obj %p Type %.2X [%s] Refs %.2X [Incremented]\n",
             Object, Object->Common.Type,
             AcpiUtGetObjectTypeName (Object), NewCount));
+        Message = "Incremement";
         break;
 
     case REF_DECREMENT:
@@ -545,9 +588,9 @@ AcpiUtUpdateRefCount (
                 Object));
         }
 
-        ACPI_DEBUG_PRINT ((ACPI_DB_ALLOCATIONS,
-            "Obj %p Type %.2X Refs %.2X [Decremented]\n",
-            Object, Object->Common.Type, NewCount));
+        ACPI_DEBUG_PRINT_RAW ((ACPI_DB_ALLOCATIONS,
+            "%s: Obj %p Type %.2X Refs %.2X [Decremented]\n",
+            ACPI_GET_FUNCTION_NAME, Object, Object->Common.Type, NewCount));
 
         /* Actually delete the object on a reference count of zero */
 
@@ -555,6 +598,7 @@ AcpiUtUpdateRefCount (
         {
             AcpiUtDeleteInternalObj (Object);
         }
+        Message = "Decrement";
         break;
 
     default:
@@ -572,8 +616,8 @@ AcpiUtUpdateRefCount (
     if (NewCount > ACPI_MAX_REFERENCE_COUNT)
     {
         ACPI_WARNING ((AE_INFO,
-            "Large Reference Count (0x%X) in object %p, Type=0x%.2X",
-            NewCount, Object, Object->Common.Type));
+            "Large Reference Count (0x%X) in object %p, Type=0x%.2X Operation=%s",
+            NewCount, Object, Object->Common.Type, Message));
     }
 }
 
@@ -870,9 +914,9 @@ AcpiUtRemoveReference (
         return;
     }
 
-    ACPI_DEBUG_PRINT ((ACPI_DB_ALLOCATIONS,
-        "Obj %p Current Refs=%X [To Be Decremented]\n",
-        Object, Object->Common.ReferenceCount));
+    ACPI_DEBUG_PRINT_RAW ((ACPI_DB_ALLOCATIONS,
+        "%s: Obj %p Current Refs=%X [To Be Decremented]\n",
+        ACPI_GET_FUNCTION_NAME, Object, Object->Common.ReferenceCount));
 
     /*
      * Decrement the reference count, and only actually delete the object

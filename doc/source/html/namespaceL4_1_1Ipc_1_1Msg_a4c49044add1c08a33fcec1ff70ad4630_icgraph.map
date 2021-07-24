@@ -1,0 +1,4 @@
+<map id="L4::Ipc::Msg::align_to" name="L4::Ipc::Msg::align_to">
+<area shape="rect" id="node1" title="Pad bytes to the given alignment align (in bytes)" alt="" coords="212,5,371,32"/>
+<area shape="rect" id="node2" href="$namespaceL4_1_1Ipc_1_1Msg.html#a306a7701423a2aa40d0702efaa31c8ca" title="Pad bytes to the alignment of the type T." alt="" coords="5,5,164,32"/>
+</map>

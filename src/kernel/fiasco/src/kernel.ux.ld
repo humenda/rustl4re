@@ -24,9 +24,10 @@ SECTIONS {
     _kernel_image_start = .;
     KEEP (*(.init))
   }
-  
+
   .text : {
     *(.text .stub .text.* .gnu.linkonce.t.*)
+    *(.fixup .fixup.*)
   } = 0x90
 
   PROVIDE (_ecode = .);
@@ -40,6 +41,9 @@ SECTIONS {
     /* Discarding the build-id section will yield to an error from the
      * linker so just put it here */
     *(.note.gnu.build-id)
+    PROVIDE(__exc_table_start = .);
+    KEEP(*(__exc_table __exc_table.*))
+    PROVIDE(__exc_table_end = .);
   }
 
   .preinit_array : {
@@ -48,7 +52,7 @@ SECTIONS {
     PROVIDE (__preinit_array_end = .);
   }
 
-  /* 
+  /*
   .init_array : {
     PROVIDE (__init_array_start = .);
     KEEP (*(SORT (.init_array.*)))
@@ -67,7 +71,7 @@ SECTIONS {
   PROVIDE (_etext = .);
 
   . = ALIGN(4K);
-  .kip : { 
+  .kip : {
     *(.kernel_info_page)
     _initkip_start = .;
     KEEP(*(.initkip.version))

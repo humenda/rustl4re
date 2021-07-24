@@ -41,15 +41,15 @@ public:
    * Implementation of L4Re::Rm::_attach
    */
   long op_attach(L4Re::Rm::Rights, l4_addr_t &_start,
-                 unsigned long size, unsigned long flags,
-                 L4::Ipc::Snd_fpage ds_cap, l4_addr_t offs,
+                 unsigned long size, Rm::Flags flags,
+                 L4::Ipc::Snd_fpage ds_cap, L4Re::Rm::Offset offs,
                  unsigned char align, l4_cap_idx_t client_cap_idx)
   {
     typename DERIVED::Dataspace ds;
 
-    if (!(flags & Rm::Reserved))
+    if (!(flags & Rm::F::Reserved))
       {
-        if (long r = rm()->validate_ds(static_cast<DERIVED*>(this)->server_iface(), ds_cap, flags, &ds))
+        if (long r = rm()->validate_ds(static_cast<DERIVED*>(this)->server_iface(), ds_cap, flags.region_flags(), &ds))
           return r;
       }
 
@@ -59,8 +59,8 @@ public:
     if (size < L4_PAGESIZE)
       return -L4_EINVAL;
 
-    unsigned r_flags = flags & Rm::Region_flags;
-    unsigned a_flags = flags & Rm::Attach_flags;
+    Rm::Region_flags r_flags = flags.region_flags();
+    Rm::Attach_flags a_flags = flags.attach_flags();
 
     start = l4_addr_t(rm()->attach((void*)start, size,
                                    typename DERIVED::Region_handler(ds, client_cap_idx, offs, r_flags),
@@ -88,13 +88,13 @@ public:
    * Implementation of L4Re::Rm::_find
    */
   long op_find(L4Re::Rm::Rights, l4_addr_t &addr, unsigned long &size,
-               unsigned &flags, l4_addr_t &offset,
+               L4Re::Rm::Flags &flags, L4Re::Rm::Offset &offset,
                L4::Cap<L4Re::Dataspace> &m)
   {
     if (!DERIVED::Have_find)
       return -L4_EPERM;
 
-    unsigned flag_area = 0;
+    Rm::Flags flag_area { 0 };
 
     typename DERIVED::Node r = rm()->find(Region(addr, addr + size -1));
     if (!r)
@@ -102,7 +102,7 @@ public:
         r = rm()->area_find(Region(addr, addr + size - 1));
         if (!r)
           return -L4_ENOENT;
-        flag_area = Rm::In_area;
+        flag_area = Rm::F::In_area;
       }
 
     addr = r->first.start();
@@ -141,7 +141,7 @@ public:
    * Implementation of L4Re::Rm::_reserve_area
    */
   long op_reserve_area(L4Re::Rm::Rights, l4_addr_t &start, unsigned long size,
-                       unsigned flags, unsigned char align)
+                       L4Re::Rm::Flags flags, unsigned char align)
   {
     start = rm()->attach_area(start, size, flags, align);
     if (start == L4_INVALID_ADDR)
@@ -157,12 +157,11 @@ public:
   {
     typename DERIVED::Node r;
     unsigned num = 0;
-    while ((r = rm()->lower_bound(Region(addr, addr +1))))
+    while ((r = rm()->lower_bound(Region(addr))))
       {
         Rm::Region &x = regions.value[num];
         x.start  = r->first.start();
         x.end    = r->first.end();
-        x.offset = r->second.offset();
 
         if (++num >= regions.max)
           break;
@@ -182,7 +181,7 @@ public:
   {
     typename DERIVED::Node r;
     unsigned num = 0;
-    while ((r = rm()->lower_bound_area(Region(addr, addr +1))))
+    while ((r = rm()->lower_bound_area(Region(addr))))
       {
         Rm::Area &x = areas.value[num];
         x.start  = r->first.start();
@@ -200,68 +199,68 @@ public:
   }
 
 private:
-  static void pager_set_result(L4::Ipc::Opt<l4_mword_t> *,
-                               L4::Ipc::Opt<L4::Ipc::Snd_fpage> *fp,
+  static void pager_set_result(L4::Ipc::Opt<L4::Ipc::Snd_fpage> *fp,
                                L4::Ipc::Snd_fpage const &f)
   { *fp = f;  }
 
-  static void pager_set_result(L4::Ipc::Opt<l4_mword_t> *result,
-                               L4::Ipc::Opt<L4::Ipc::Snd_fpage> *, ...)
-  { *result = 0;  }
+  static void pager_set_result(L4::Ipc::Opt<L4::Ipc::Snd_fpage> *, ...)
+  {}
 public:
 
   /**
    * Pager API
    */
   long op_io_page_fault(L4::Io_pager::Rights, l4_fpage_t, l4_umword_t,
-                        L4::Ipc::Opt<l4_mword_t> &result,
                         L4::Ipc::Opt<L4::Ipc::Snd_fpage> &)
   {
     // generate exception
-    result = ~0;
-    return L4_EOK;
+    return -L4_ENOMEM;
   }
 
   long op_page_fault(L4::Pager::Rights, l4_umword_t addr, l4_umword_t pc,
-                     L4::Ipc::Opt<l4_mword_t> &result,
                      L4::Ipc::Opt<L4::Ipc::Snd_fpage> &fp)
   {
     Dbg(Dbg::Server).printf("page fault: %lx pc=%lx\n", addr, pc);
 
-    unsigned writable = addr & 2;
-    addr = addr & ~7UL;
+    bool need_w = addr & 2;
+    bool need_x = addr & 4;
 
     typename DERIVED::Node n = rm()->find(addr);
 
     if (!n || !n->second.memory())
       {
         Dbg(Dbg::Warn, "rm").printf("unhandled %s page fault at 0x%lx pc=0x%lx\n",
-                                    writable ? "write" : "read", addr, pc);
+                                    need_w ? "write" : "read", addr, pc);
         // generate exception
-        result = ~0;
-        return L4_EOK;
+        return -L4_ENOMEM;
       }
 
-    if (n->second.is_ro() && writable)
+    if (!(n->second.flags() & L4Re::Rm::F::W) && need_w)
       {
         Dbg(Dbg::Warn, "rm").printf("write page fault in readonly region at 0x%lx pc=0x%lx\n",
                                     addr, pc);
         // generate exception
-        result = ~0;
-        return L4_EOK;
+        return -L4_EACCESS;
+      }
+
+    if (!(n->second.flags() & L4Re::Rm::F::X) && need_x)
+      {
+        Dbg(Dbg::Warn, "rm").printf("instruction page fault in non-exec region at 0x%lx pc=0x%lx\n",
+                                    addr, pc);
+        // generate exception
+        return -L4_EACCESS;
       }
 
     typename DERIVED::Region_handler::Ops::Map_result map_res;
-    if (int err = n->second.map(addr, n->first, writable, &map_res))
+    if (int err = n->second.map(addr, n->first, need_w, &map_res))
       {
         Dbg(Dbg::Warn, "rm").printf("mapping for page fault failed with error %d at 0x%lx pc=0x%lx\n",
                                     err, addr, pc);
         // generate exception
-        result = ~0;
-        return L4_EOK;
+        return -L4_ENOMEM;
       }
 
-    pager_set_result(&result, &fp, map_res);
+    pager_set_result(&fp, map_res);
     return L4_EOK;
   }
 };

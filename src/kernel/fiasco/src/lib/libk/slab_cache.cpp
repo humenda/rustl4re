@@ -321,12 +321,6 @@ Slab_cache::free(void *cache_entry) // return initialized member to cache
 	  else
 	    to_free = s;
 	}
-      else
-	{
-	  // We weren't either full or empty; we already had free
-	  // elements.  This changes nothing in the queue, and there
-	  // already must have been a _first_available_slab.
-	}
     }
 
   if (to_free)
@@ -360,7 +354,7 @@ Slab_cache::reap()		// request that cache returns memory to system
 	  s = _empty.front();
 	  // nothing to free
 	  if (!s)
-	    return 0;
+	    break;
 
 	  cxx::H_list<Slab>::remove(s);
 	}

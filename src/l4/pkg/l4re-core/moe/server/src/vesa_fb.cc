@@ -40,24 +40,22 @@ private:
   unsigned long map_size;
 
 public:
-  Vesa_fb(l4util_mb_info_t *mbi);
+  Vesa_fb(l4util_l4mod_info *mbi);
   virtual ~Vesa_fb() {}
 };
 
 void
-init_vesa_fb(l4util_mb_info_t *mbi)
+init_vesa_fb(l4util_l4mod_info *mbi)
 {
   static Vesa_fb video(mbi);
   (void)video;
 }
 
-Vesa_fb::Vesa_fb(l4util_mb_info_t *mbi)
+Vesa_fb::Vesa_fb(l4util_l4mod_info *mbi)
 {
-  if (!(mbi->flags & L4UTIL_MB_VIDEO_INFO))
-    return;
   vbe = (l4util_mb_vbe_ctrl_t*)(unsigned long)mbi->vbe_ctrl_info;
   vbi = (l4util_mb_vbe_mode_t*)(unsigned long)mbi->vbe_mode_info;
-  if (!vbe || !vbi)
+  if (!vbe && !vbi)
     return;
 
   base_offset = vbi->phys_base & (L4_SUPERPAGESIZE - 1);
@@ -76,7 +74,7 @@ Vesa_fb::Vesa_fb(l4util_mb_info_t *mbi)
       return;
     }
 
-  switch (l4sigma0_map_iomem(Sigma0_cap, paddr, vaddr, map_size, 1)) 
+  switch (l4sigma0_map_iomem(Sigma0_cap, paddr, vaddr, map_size, 1))
     {
     case -2:
       L4::cerr << "IPC error mapping video memory\n";
@@ -88,7 +86,8 @@ Vesa_fb::Vesa_fb(l4util_mb_info_t *mbi)
       break;
     }
 
-  Moe::Dataspace_static *fb = new Moe::Dataspace_static((void*)vaddr, map_size, Moe::Dataspace_static::Writable | L4Re::Dataspace::Map_bufferable);
+  Moe::Dataspace_static *fb = new Moe::Dataspace_static((void*)vaddr, map_size,
+                                                        L4Re::Dataspace::F::RW | L4Re::Dataspace::F::Bufferable);
 
   _screen_info.width = vbi->x_resolution;
   _screen_info.height = vbi->y_resolution;

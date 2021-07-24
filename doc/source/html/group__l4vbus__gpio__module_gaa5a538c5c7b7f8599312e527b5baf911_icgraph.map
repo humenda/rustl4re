@@ -1,3 +1,4 @@
 <map id="l4vbus_gpio_config_get" name="l4vbus_gpio_config_get">
-<area shape="rect" id="node2" href="$classL4vbus_1_1Gpio__pin.html#a54ee77ed07f1803a783c14e0da349311" title="Read hardware specific configuration. " alt="" coords="224,5,425,32"/>
+<area shape="rect" id="node1" title="Read hardware specific configuration." alt="" coords="261,5,436,32"/>
+<area shape="rect" id="node2" href="$classL4vbus_1_1Gpio__pin.html#a54ee77ed07f1803a783c14e0da349311" title="Read hardware specific configuration." alt="" coords="5,5,213,32"/>
 </map>

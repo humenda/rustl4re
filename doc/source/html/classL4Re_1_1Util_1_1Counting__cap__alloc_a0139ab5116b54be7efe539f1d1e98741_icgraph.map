@@ -1,0 +1,4 @@
+<map id="L4Re::Util::Counting_cap_alloc::take" name="L4Re::Util::Counting_cap_alloc::take">
+<area shape="rect" id="node1" title="Increase the reference counter for the capability." alt="" coords="228,5,379,47"/>
+<area shape="rect" id="node2" href="$classL4Re_1_1Util_1_1Smart__count__cap.html#a5886f75acada6cddee1b8c3192476b93" title="Copy operation for L4::Smart_cap (increment ref count)." alt="" coords="5,5,180,47"/>
+</map>

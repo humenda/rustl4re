@@ -149,7 +149,7 @@ Device::get_child_dev_adr(l4_uint32_t adr, bool create)
     return 0;
 
   Device *c = new Device(adr);
-  _dt.add_child(c, this);
+  add_child(c);
   return c;
 }
 
@@ -164,7 +164,7 @@ Device::get_child_dev_uid(l4_umword_t uid, l4_uint32_t adr, bool create)
     return 0;
 
   Device *c = new Device(uid, adr);
-  _dt.add_child(c, this);
+  add_child(c);
   return c;
 }
 
@@ -195,7 +195,7 @@ void
 Device::dump(int indent) const
 {
   printf("%*.s%s: %s%s\n", indent, " ", name(),
-         hid() ? "hid=" : "", hid() ? hid() : "");
+         hid() && hid()[0] ? "hid=" : "", hid() ? hid() : "");
 
   if (!_cid.empty())
     {
@@ -217,7 +217,7 @@ Device::dump(int indent) const
 
       if (!_clients.empty())
         {
-          printf("%*.s  Clients: ===== start ==== \n", indent, " ");
+          printf("%*.s  Clients: ===== start ====\n", indent, " ");
           for (auto i = _clients.begin(); i != _clients.end(); ++i)
             (*i)->dump(indent + 4);
           printf("%*.s  Clients: ===== end ====\n", indent, " ");

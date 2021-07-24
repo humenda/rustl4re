@@ -5,14 +5,7 @@
 #include <efi.h>
 #include <efilib.h>
 
-#ifdef __x86_64__
-#include <x86_64/pe.h>
-#include <x86_64/efibind.h>
-#endif
-
 #if 0
-	asm volatile("out %0,%1" : : "a" ((uint8_t)a), "dN" (0x80));
-
 extern void dump_stack(void);
 asm(	".globl	dump_stack\n"
 	"dump_stack:\n"
@@ -331,13 +324,9 @@ efi_main (EFI_HANDLE *image, EFI_SYSTEM_TABLE *systab)
 	InitializeLib(image, systab);
 	PoolAllocationType = 2; /* klooj */
 
-#ifndef __x86_64__
-	uefi_call_wrapper(systab->ConOut->OutputString, 2, systab->ConOut,
-		L"This test is only valid on x86_64\n");
-	return EFI_UNSUPPORTED;
-#endif
-
+#ifdef __x86_64__
 	__asm__ volatile("out %0,%1" : : "a" ((uint8_t)0x14), "dN" (0x80));
+#endif
 
 	Print(L"Hello\r\n");
 	rc = test_failure();

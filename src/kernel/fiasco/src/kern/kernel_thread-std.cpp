@@ -6,6 +6,7 @@ IMPLEMENTATION:
 #include "initcalls.h"
 #include "ipc_gate.h"
 #include "irq.h"
+#include "kip.h"
 #include "koptions.h"
 #include "map_util.h"
 #include "mem_layout.h"
@@ -39,7 +40,7 @@ Kernel_thread::init_workload()
 	;
       *d = '\0';
 
-      kdb_ke_sequence(ctrl);
+      kdb_ke_sequence(ctrl, d - ctrl);
     }
 
   // kernel debugger rendezvous
@@ -93,7 +94,7 @@ Kernel_thread::init_workload()
 
   assert_opt (boot_task);
   check(boot_task->alloc_ku_mem(L4_fpage::mem(Mem_layout::Utcb_addr,
-                                              Config::PAGE_SHIFT+2))
+                                              Config::PAGE_SHIFT))
         >= 0);
 
   // prevent deletion of this thing

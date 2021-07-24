@@ -1,6 +1,11 @@
 <map id="cxx::Bitfield::val" name="cxx::Bitfield::val">
-<area shape="rect" id="node2" href="$classcxx_1_1Bitfield.html#a50d93d103f4b31798399bc349cb4d210" title="Get the bits out of val. " alt="" coords="171,5,288,32"/>
-<area shape="rect" id="node3" href="$classcxx_1_1Bitfield.html#a0ecb232dbd24976e50f5a6674b504517" title="Set the bits corresponding to val. " alt="" coords="171,56,287,83"/>
-<area shape="rect" id="node4" href="$classcxx_1_1Bitfield.html#ae6e85dede315b549dfec835d92525948" title="Set the bits corresponding to val. " alt="" coords="168,107,291,149"/>
-<area shape="rect" id="node5" href="$classcxx_1_1Bitfield.html#ae9c4c45aeb034031a6d5cd5484e571bb" title="Set the bits corresponding to val. " alt="" coords="339,107,455,149"/>
+<area shape="rect" id="node1" title="Get the shifted bits for val." alt="" coords="356,240,483,267"/>
+<area shape="rect" id="node2" href="$classcxx_1_1Bitfield.html#a50d93d103f4b31798399bc349cb4d210" title="Get the bits out of val." alt="" coords="180,5,308,32"/>
+<area shape="rect" id="node3" href="$classcxx_1_1Bitfield.html#af5f6db1f81c5ac0eb7093d8fd61310d9" title="Get the bits in place out of val." alt="" coords="180,57,308,98"/>
+<area shape="rect" id="node4" href="$classcxx_1_1Bitfield.html#a0ecb232dbd24976e50f5a6674b504517" title="Set the bits corresponding to val." alt="" coords="5,167,132,193"/>
+<area shape="rect" id="node5" href="$classcxx_1_1Bitfield.html#a68f3092e1839bc709beb3611c2f5cb31" title="Set the bits corresponding to val." alt="" coords="181,174,307,215"/>
+<area shape="rect" id="node6" href="$classcxx_1_1Bitfield.html#ae9c4c45aeb034031a6d5cd5484e571bb" title="Set the bits corresponding to val." alt="" coords="5,247,132,289"/>
+<area shape="rect" id="node7" href="$classcxx_1_1Bitfield.html#ae6e85dede315b549dfec835d92525948" title="Set the bits corresponding to val." alt="" coords="181,291,307,333"/>
+<area shape="rect" id="node8" href="$classcxx_1_1Bitfield.html#a8180660e03ca6acf85047dba64bb77a3" title="Get the shifted bits for val." alt="" coords="181,357,307,398"/>
+<area shape="rect" id="node9" href="$classcxx_1_1Bitfield.html#aabe77366dc22247455497f4a925ea3ef" title="Get the shifted bits for val." alt="" coords="181,422,307,463"/>
 </map>

@@ -39,19 +39,16 @@
 #ifndef LIBBSD_LIBUTIL_H
 #define LIBBSD_LIBUTIL_H
 
-#include <features.h>
+#ifdef LIBBSD_OVERLAY
 #include <sys/cdefs.h>
+#else
+#include <bsd/sys/cdefs.h>
+#endif
 #include <sys/types.h>
 #include <stdint.h>
 #include <stdio.h>
 
-/* for pidfile.c */
-struct pidfh {
-	int	pf_fd;
-	char	*pf_path;
-	dev_t	pf_dev;
-	ino_t	pf_ino;
-};
+struct pidfh;
 
 __BEGIN_DECLS
 int humanize_number(char *buf, size_t len, int64_t bytes,
@@ -59,8 +56,10 @@ int humanize_number(char *buf, size_t len, int64_t bytes,
 int expand_number(const char *_buf, uint64_t *_num);
 
 int flopen(const char *_path, int _flags, ...);
+int flopenat(int dirfd, const char *path, int flags, ...);
 
 struct pidfh *pidfile_open(const char *path, mode_t mode, pid_t *pidptr);
+int pidfile_fileno(const struct pidfh *pfh);
 int pidfile_write(struct pidfh *pfh);
 int pidfile_close(struct pidfh *pfh);
 int pidfile_remove(struct pidfh *pfh);
@@ -68,14 +67,16 @@ int pidfile_remove(struct pidfh *pfh);
 char   *fparseln(FILE *, size_t *, size_t *, const char[3], int);
 __END_DECLS
 
-/* humanize_number(3) */
-#define HN_DECIMAL              0x01
-#define HN_NOSPACE              0x02
-#define HN_B                    0x04
-#define HN_DIVISOR_1000         0x08
+/* Values for humanize_number(3)'s flags parameter. */
+#define HN_DECIMAL		0x01
+#define HN_NOSPACE		0x02
+#define HN_B			0x04
+#define HN_DIVISOR_1000		0x08
+#define HN_IEC_PREFIXES		0x10
 
-#define HN_GETSCALE             0x10
-#define HN_AUTOSCALE            0x20
+/* Values for humanize_number(3)'s scale parameter. */
+#define HN_GETSCALE		0x10
+#define HN_AUTOSCALE		0x20
 
 /*
  * fparseln() specific operation flags.

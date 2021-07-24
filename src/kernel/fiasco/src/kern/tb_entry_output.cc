@@ -4,7 +4,6 @@
 #include <cstring>
 
 #include "config.h"
-#include "jdb_symbol.h"
 #include "jdb_tbuf_output.h"
 #include "jdb_util.h"
 #include "kobject_dbg.h"
@@ -30,7 +29,7 @@ format_timeout(String_buffer *buf, Mword us)
   else if (us >= 1000)		// 1ms
     buf->printf("%lu.%lum", us/1000, (us%1000)/100);
   else
-    buf->printf("%lu%c", us, Config::char_micro);
+    buf->printf("%luu", us);
 }
 
 template< typename T >
@@ -54,15 +53,16 @@ get_ipc_type(T e)
 }
 
 static char const * const __tag_interpreter_strings_l4re[] = {
-    "ds", // 0
+    "ds", // 0x4000
     "name",
     "parent",
     "goos",
     "ma",
-    "rm", // 5
+    "rm", // 0x4005
     "ev",
     "inh",
     "dmaspc",
+    "mmiospc",
   };
 static char const * const __tag_interpreter_strings_fiasco[] = {
     "Kirq",      // -1
@@ -88,15 +88,16 @@ static char const * const __tag_interpreter_strings_fiasco[] = {
     "Kmeta",
     "Kiommu",
     "Kdbg",
+    "Ksmc",
   };
 
 static
 char const *
 tag_to_string(L4_msg_tag const &tag)
 {
-  if (0x4000 <= tag.proto() && tag.proto() <= 0x4008)
+  if (0x4000 <= tag.proto() && tag.proto() <= 0x4009)
     return __tag_interpreter_strings_l4re[tag.proto() - 0x4000];
-  if (-23L <= tag.proto() && tag.proto() <= -1)
+  if (-24L <= tag.proto() && tag.proto() <= -1)
     return __tag_interpreter_strings_fiasco[-tag.proto() - 1];
   return 0;
 }
@@ -115,34 +116,35 @@ class Tb_entry_ipc_fmt : public Tb_entry_formatter
 {
 public:
   Tb_entry_ipc_fmt() {}
-  void print(String_buffer *, Tb_entry const *) const {}
-  Group_order has_partner(Tb_entry const *) const
+  void print(String_buffer *, Tb_entry const *) const override {}
+  Group_order has_partner(Tb_entry const *) const override
   { return Tb_entry::Group_order::first(); }
-  Group_order is_pair(Tb_entry const *e, Tb_entry const *n) const
+  Group_order is_pair(Tb_entry const *e, Tb_entry const *n) const override
   {
     if (static_cast<Tb_entry_ipc_res const *>(n)->pair_event() == e->number())
       return Group_order::last();
     else
       return Group_order::none();
   }
-  Mword partner(Tb_entry const *) const { return 0; }
+  Mword partner(Tb_entry const *) const override { return 0; }
 };
 
 class Tb_entry_ipc_res_fmt : public Tb_entry_formatter
 {
 public:
   Tb_entry_ipc_res_fmt() {}
-  void print(String_buffer *, Tb_entry const *) const {}
-  Group_order has_partner(Tb_entry const *) const
+  void print(String_buffer *, Tb_entry const *) const override {}
+  Group_order has_partner(Tb_entry const *) const override
   { return Tb_entry::Group_order::last(); }
-  Group_order is_pair(Tb_entry const *e, Tb_entry const *n) const
+  Group_order is_pair(Tb_entry const *e, Tb_entry const *n) const override
   {
     if (static_cast<Tb_entry_ipc_res const *>(e)->pair_event() == n->number())
       return Group_order::first();
     else
       return Group_order::none();
   }
-  Mword partner(Tb_entry const *e) const { return static_cast<Tb_entry_ipc_res const *>(e)->pair_event(); }
+  Mword partner(Tb_entry const *e) const override
+  { return static_cast<Tb_entry_ipc_res const *>(e)->pair_event(); }
 };
 
 

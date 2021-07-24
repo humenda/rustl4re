@@ -34,8 +34,8 @@ kernel_main(void)
   cpu.print_infos();
 
   printf ("\nFreeing init code/data: %lu bytes (%lu pages)\n\n",
-          (Address)(&Mem_layout::initcall_end - &Mem_layout::initcall_start),
-          ((Address)(&Mem_layout::initcall_end - &Mem_layout::initcall_start)
+          (Address)(Mem_layout::initcall_end - Mem_layout::initcall_start),
+          ((Address)(Mem_layout::initcall_end - Mem_layout::initcall_start)
           >> Config::PAGE_SHIFT));
 
   // Perform architecture specific initialization
@@ -44,7 +44,7 @@ kernel_main(void)
   // create kernel thread
   static Kernel_thread *kernel = new (Ram_quota::root) Kernel_thread(Ram_quota::root);
   Task *const ktask = Kernel_task::kernel_task();
-  check(kernel->bind(ktask, User<Utcb>::Ptr(0)));
+  kernel->kbind(ktask);
 
   // switch to stack of kernel thread and bootstrap the kernel
   asm volatile

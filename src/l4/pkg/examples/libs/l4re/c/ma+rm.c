@@ -52,7 +52,7 @@ static int allocate_mem(unsigned long size_in_bytes, unsigned long flags,
   /* Make the dataspace visible in our address space */
   *virt_addr = 0;
   if ((r = l4re_rm_attach(virt_addr, size_in_bytes,
-                          L4RE_RM_SEARCH_ADDR, ds, 0,
+                          L4RE_RM_F_SEARCH_ADDR | L4RE_RM_F_RWX, ds, 0,
                           flags & L4RE_MA_SUPER_PAGES
                              ? L4_SUPERPAGESHIFT : L4_PAGESHIFT)))
     {

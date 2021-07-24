@@ -1,0 +1,6 @@
+<map id="l4_kip_clock" name="l4_kip_clock">
+<area shape="rect" id="node1" title="Return clock value from the KIP." alt="" coords="505,42,608,69"/>
+<area shape="rect" id="node2" href="$classL4_1_1Poll__timeout__kipclock.html#a5a981174ea6408e39c3a80b8cdb92831" title="(Re&#45;)Set relative timeout in microseconds" alt="" coords="241,13,457,39"/>
+<area shape="rect" id="node4" href="$classL4_1_1Poll__timeout__kipclock.html#a5901a2c8eefa9640939fd91cb57e4bf2" title="Test whether timeout has expired." alt="" coords="255,64,443,105"/>
+<area shape="rect" id="node3" href="$classL4_1_1Poll__timeout__kipclock.html#a0b0d86579969353be5308ef67c875576" title="Initialise relative timeout in microseconds." alt="" coords="5,5,193,47"/>
+</map>

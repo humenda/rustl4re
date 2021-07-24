@@ -1,8 +1,6 @@
 <map id="L4Re::chkcap" name="L4Re::chkcap">
-<area shape="rect" id="node2" href="$classL4virtio_1_1Svr_1_1Dev__config.html#a663b81f49e6ce03f9b7e136d6646bf89" title="Setup/Create a L4&#45;Virtio config data space. " alt="" coords="160,93,305,134"/>
-<area shape="rect" id="node6" href="$classL4virtio_1_1Svr_1_1Device__t.html#a460f5dc2b32e33a616eb822ffd2f88f0" title="Check for a value in the cmd register and handle a write. " alt="" coords="537,152,697,208"/>
-<area shape="rect" id="node7" href="$classL4virtio_1_1Svr_1_1Block__dev.html#a9a96e928470518780132b45397e8ad35" title="Attach device to an object registry. " alt="" coords="165,217,300,258"/>
-<area shape="rect" id="node3" href="$classL4virtio_1_1Svr_1_1Dev__config.html#aeada3571131b79907af95caa9b719663" title="Get data&#45;space capability for the shared config data space. " alt="" coords="353,89,480,130"/>
-<area shape="rect" id="node4" href="$classL4virtio_1_1Svr_1_1Driver__mem__list__t.html#a6749bd65e419d7f814dd4c27e0567f28" title="Add a new region to the list. " alt="" coords="536,5,699,61"/>
-<area shape="rect" id="node5" href="$classL4virtio_1_1Svr_1_1Device__t.html#a3fa20bf911056f0d03c8274982b1e167" title="Get the memory region list used for this device. " alt="" coords="528,86,707,127"/>
+<area shape="rect" id="node1" title="Check for valid capability or raise C++ exception." alt="" coords="440,78,548,105"/>
+<area shape="rect" id="node2" href="$classL4virtio_1_1Svr_1_1Dev__config.html#a663b81f49e6ce03f9b7e136d6646bf89" title="Create a L4&#45;Virtio config data space." alt="" coords="232,5,380,47"/>
+<area shape="rect" id="node3" href="$classL4virtio_1_1Driver_1_1Device.html#a4f8b3d73188c3b6664755b81b80e441c" title="Contacts the device and starts the initial handshake." alt="" coords="220,71,392,112"/>
+<area shape="rect" id="node4" href="$classL4virtio_1_1Driver_1_1Block__device.html#a688df51bdec4ba327a6c0b48a83a115a" title="Setup a connection to a device and set up shared memory." alt="" coords="5,100,172,141"/>
 </map>

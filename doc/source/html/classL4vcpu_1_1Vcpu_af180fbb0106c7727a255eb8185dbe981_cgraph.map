@@ -1,6 +1,7 @@
 <map id="L4vcpu::Vcpu::irq_restore" name="L4vcpu::Vcpu::irq_restore">
-<area shape="rect" id="node2" href="$group__api__libvcpu.html#ga68cccc12b6542f9413afb281d8bdffcc" title="Restore a previously saved IRQ/event state. " alt="" coords="232,31,371,57"/>
-<area shape="rect" id="node3" href="$group__api__libvcpu.html#gac8dd177f5382328e3922754cc9d36b28" title="Disable a vCPU for event delivery. " alt="" coords="419,5,557,32"/>
-<area shape="rect" id="node5" href="$group__api__libvcpu.html#ga58a61ec0b02bed0a03f708e1594cf8a5" title="Enable a vCPU for event delivery. " alt="" coords="420,56,556,83"/>
-<area shape="rect" id="node4" href="$group__l4sys__defines.html#ga4accdcabe8bddb4964f8986855e7c728" title="Memory barrier. " alt="" coords="605,31,688,57"/>
+<area shape="rect" id="node1" title="Restore a previously saved IRQ/event state." alt="" coords="5,31,192,57"/>
+<area shape="rect" id="node2" href="$group__api__libvcpu.html#ga68cccc12b6542f9413afb281d8bdffcc" title="Restore a previously saved IRQ/event state." alt="" coords="240,31,383,57"/>
+<area shape="rect" id="node3" href="$group__api__libvcpu.html#gac8dd177f5382328e3922754cc9d36b28" title="Disable a vCPU for event delivery." alt="" coords="431,5,573,32"/>
+<area shape="rect" id="node5" href="$group__api__libvcpu.html#ga58a61ec0b02bed0a03f708e1594cf8a5" title="Enable a vCPU for event delivery." alt="" coords="432,56,572,83"/>
+<area shape="rect" id="node4" href="$compiler_8h.html#a4accdcabe8bddb4964f8986855e7c728" title="Memory barrier." alt="" coords="621,31,705,57"/>
 </map>

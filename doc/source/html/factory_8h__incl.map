@@ -1,11 +1,13 @@
 <map id="l4/sys/factory.h" name="l4/sys/factory.h">
-<area shape="rect" id="node2" href="$compiler_8h.html" title="L4 compiler related defines. " alt="" coords="542,379,669,405"/>
-<area shape="rect" id="node4" href="$l4_2sys_2types_8h.html" title="Common L4 ABI Data Types. " alt="" coords="390,229,496,256"/>
-<area shape="rect" id="node9" href="$l4_2sys_2utcb_8h.html" title="UTCB definitions. " alt="" coords="474,155,572,181"/>
-<area shape="rect" id="node10" href="$l4_2sys_2ipc_8h.html" title="Common IPC interface. " alt="" coords="563,80,654,107"/>
-<area shape="rect" id="node5" href="$l4_2sys_2l4int_8h.html" title="Fixed sized integer types, generic version. " alt="" coords="95,379,194,405"/>
-<area shape="rect" id="node6" href="$l4_2sys_2consts_8h.html" title="Common constants. " alt="" coords="235,304,350,331"/>
-<area shape="rect" id="node7" href="$____l4__fpage_8h_source.html" title="l4/sys/__l4_fpage.h" alt="" coords="374,304,518,331"/>
-<area shape="rect" id="node8" href="$____timeout_8h_source.html" title="l4/sys/__timeout.h" alt="" coords="25,304,160,331"/>
-<area shape="rect" id="node11" href="$err_8h.html" title="Error codes. " alt="" coords="615,229,706,256"/>
+<area shape="rect" id="node1" title="Common factory related definitions." alt="" coords="438,5,558,32"/>
+<area shape="rect" id="node2" href="$compiler_8h.html" title="L4 compiler related defines." alt="" coords="463,379,595,405"/>
+<area shape="rect" id="node4" href="$l4_2sys_2types_8h.html" title="Common L4 ABI Data Types." alt="" coords="307,229,419,256"/>
+<area shape="rect" id="node9" href="$l4_2sys_2utcb_8h.html" title="UTCB definitions." alt="" coords="401,155,505,181"/>
+<area shape="rect" id="node10" href="$l4_2sys_2ipc_8h.html" title="Common IPC interface." alt="" coords="493,80,588,107"/>
+<area shape="rect" id="node3" title=" " alt="" coords="467,453,590,480"/>
+<area shape="rect" id="node5" href="$l4_2sys_2l4int_8h.html" title="Fixed sized integer types, generic version." alt="" coords="5,379,111,405"/>
+<area shape="rect" id="node6" href="$l4_2sys_2consts_8h.html" title="Common constants." alt="" coords="207,304,325,331"/>
+<area shape="rect" id="node7" href="$____l4__fpage_8h_source.html" title=" " alt="" coords="401,304,547,331"/>
+<area shape="rect" id="node8" href="$____timeout_8h_source.html" title=" " alt="" coords="41,304,182,331"/>
+<area shape="rect" id="node11" href="$err_8h.html" title="Error codes." alt="" coords="589,229,682,256"/>
 </map>

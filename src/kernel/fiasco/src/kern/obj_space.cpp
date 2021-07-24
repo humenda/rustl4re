@@ -87,7 +87,7 @@ public:
   Capability lookup(Cap_index virt);
 
   FIASCO_SPACE_VIRTUAL
-  V_pfn obj_map_max_address() const;
+  V_pfn obj_map_max_address() const FIASCO_VIRT_OBJ_SPACE_OVERRIDE;
 
   FIASCO_SPACE_VIRTUAL
   void caps_free();
@@ -118,13 +118,13 @@ PUBLIC template< typename SPACE >
 static inline
 Mword
 Generic_obj_space<SPACE>::xlate_flush(L4_fpage::Rights rights)
-{ return L4_fpage::Rights::val(rights); }
+{ return cxx::int_value<L4_fpage::Rights>(rights); }
 
 PUBLIC template< typename SPACE >
 static inline
 bool
 Generic_obj_space<SPACE>::is_full_flush(L4_fpage::Rights rights)
-{ return (bool)(rights & L4_fpage::Rights::R()); }
+{ return (bool)(rights & L4_fpage::Rights::CR()); }
 
 PUBLIC template< typename SPACE >
 static inline

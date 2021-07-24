@@ -7,7 +7,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#define MAX_NAME_SIZE 89
+#define MAX_NAME_SIZE 130
 
 static void
 pq(FILE *f, const char *c)
@@ -42,6 +42,10 @@ main(void)
 	clsf = fopen("classlist.h", "w");
 	if (!devf || !clsf) {
 		fprintf(stderr, "Cannot create output file!\n");
+		if (devf)
+			fclose(devf);
+		if (clsf)
+			fclose(clsf);
 		return 1;
 	}
 
@@ -105,7 +109,9 @@ main(void)
 			strcpy(vend, line);
 			vendor_len = strlen(c);
 			if (vendor_len + 24 > MAX_NAME_SIZE) {
-				fprintf(stderr, "Line %d: Vendor name too long\n", lino);
+				fprintf(stderr, "Line %d: Vendor name too long (%d)\n", lino, vendor_len + 24);
+				fclose(devf);
+				fclose(clsf);
 				return 1;
 			}
 			fprintf(devf, "VENDOR(%s,\"", vend);
@@ -115,6 +121,8 @@ main(void)
 		} else {
 		err:
 			fprintf(stderr, "Line %d: Syntax error in mode %d: %s\n", lino, mode, line);
+			fclose(devf);
+			fclose(clsf);
 			return 1;
 		}
 	}

@@ -42,7 +42,7 @@ static void map_without_superpage()
 	printf("alloc: %ld\n", r);
 
 	l4_addr_t start = 0;
-	r = L4Re::Env::env()->rm()->attach(&start, size, L4Re::Rm::Search_addr,
+	r = L4Re::Env::env()->rm()->attach(&start, size, L4Re::Rm::F::Search_addr | L4Re::Rm::F::RW,
 	                                   dscap, 0, 22);
 	printf("attach: %ld addr %lx\n", r, start);
 
@@ -61,7 +61,7 @@ static void map_with_superpage()
 	printf("alloc: %ld\n", r);
 
 	l4_addr_t start = 0;
-	r = L4Re::Env::env()->rm()->attach(&start, size, L4Re::Rm::Search_addr,
+	r = L4Re::Env::env()->rm()->attach(&start, size, L4Re::Rm::F::Search_addr | L4Re::Rm::F::RW,
 	                                   dscap, 0, 22);
 	printf("attach: %ld addr %lx\n", r, start);
 

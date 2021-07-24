@@ -1,10 +1,10 @@
 local L4 = require "L4";
 
-local l = L4.Loader.new({factory = L4.Env.factory, mem = L4.Env.user_factory});
+local l = L4.Loader.new({mem = L4.Env.user_factory});
 loader = l;
 
 function new_sched(prio, cpus)
-  return l.sched_fab:create(L4.Proto.Scheduler, prio + 10, prio, cpus);
+  return  L4.Env.user_factory:create(L4.Proto.Scheduler, prio + 10, prio, cpus);
 end
 
 function start_io(busses, opts)
@@ -48,7 +48,7 @@ function start_virtio_switch(ports, prio, cpus)
   svr = l:start(opts, "rom/l4vio_net_p2p");
 
   for k, v in pairs(ports) do
-    ports[k] = L4.cast(L4.Proto.Factory, switch):create(0, 4);
+    ports[k] = L4.cast(L4.Proto.Factory, switch):create(0, "ds-max=4");
   end
 
   return svr;
@@ -108,10 +108,6 @@ function start_vm(options)
                                       mem_flags, align):m("rws");
   };
 
-  if options.mon ~= false then
-    caps["mon"] = l.log_fab:create(L4.Proto.Log, "mon" .. nr, "g");
-  end
-
   if options.jdb then
     caps["jdb"] = L4.Env.jdb
   end
@@ -122,12 +118,36 @@ function start_vm(options)
     end
   end
 
+  if options.ext_caps then
+    for k, v in pairs(options.ext_caps) do
+      caps[k] = v
+    end
+  end
+
   local opts = {
-    log  = l.log_fab:create(L4.Proto.Log, "vm" .. nr, "w", keyb_shortcut);
+    log  = options.log or l.log_fab:create(L4.Proto.Log, "vm" .. nr, "w",
+                                           keyb_shortcut);
     caps = caps;
   };
 
   set_sched(opts, prio, cpus);
+
+  if type(options.mon) == 'string' then
+    -- assume 'mon' is the name of a server binary which implements the uvmm
+    -- CLI interface
+    mon = l:new_channel()
+
+    l:start({
+      scheduler = opts.scheduler;
+      log = l.log_fab:create(L4.Proto.Log, "mon" .. nr),
+      caps = { mon = mon:svr() }
+    }, "rom/" .. options.mon)
+
+    caps["mon"] = mon
+  elseif options.mon ~= false then
+    caps["mon"] = l.log_fab:create(L4.Proto.Log, "mon" .. nr, "g");
+  end
+
   return l:startv(opts, "rom/uvmm", table.unpack(cmdline));
 end
 

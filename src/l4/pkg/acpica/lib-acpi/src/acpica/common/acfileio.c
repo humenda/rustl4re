@@ -8,7 +8,7 @@
  *
  * 1. Copyright Notice
  *
- * Some or all of this work - Copyright (c) 1999 - 2017, Intel Corp.
+ * Some or all of this work - Copyright (c) 1999 - 2019, Intel Corp.
  * All rights reserved.
  *
  * 2. License
@@ -111,6 +111,42 @@
  * other governmental approval, or letter of assurance, without first obtaining
  * such license, approval or letter.
  *
+ *****************************************************************************
+ *
+ * Alternatively, you may choose to be licensed under the terms of the
+ * following license:
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions, and the following disclaimer,
+ *    without modification.
+ * 2. Redistributions in binary form must reproduce at minimum a disclaimer
+ *    substantially similar to the "NO WARRANTY" disclaimer below
+ *    ("Disclaimer") and any redistribution must be conditioned upon
+ *    including a substantially similar Disclaimer requirement for further
+ *    binary redistribution.
+ * 3. Neither the names of the above-listed copyright holders nor the names
+ *    of any contributors may be used to endorse or promote products derived
+ *    from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+ * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * Alternatively, you may choose to be licensed under the terms of the
+ * GNU General Public License ("GPL") version 2 as published by the Free
+ * Software Foundation.
+ *
  *****************************************************************************/
 
 #include "acpi.h"
@@ -135,6 +171,36 @@ AcGetOneTableFromFile (
 static ACPI_STATUS
 AcCheckTextModeCorruption (
     ACPI_TABLE_HEADER       *Table);
+
+
+/*******************************************************************************
+ *
+ * FUNCTION:    AcDeleteTableList
+ *
+ * PARAMETERS:  ListHead            - List to delete
+ *
+ * RETURN:      Status
+ *
+ * DESCRIPTION: Delete a list of tables. This is useful for removing memory
+ *              allocated by AcGetAllTablesFromFile
+ *
+ ******************************************************************************/
+
+void
+AcDeleteTableList (
+    ACPI_NEW_TABLE_DESC     *ListHead)
+{
+    ACPI_NEW_TABLE_DESC     *Current = ListHead;
+    ACPI_NEW_TABLE_DESC     *Previous = Current;
+
+
+    while (Current)
+    {
+        Current = Current->Next;
+        AcpiOsFree (Previous);
+        Previous = Current;
+    }
+}
 
 
 /*******************************************************************************
@@ -335,16 +401,16 @@ AcGetOneTableFromFile (
         return (AE_CTRL_TERMINATE);
     }
 
-    /* Validate the table signature/header (limited ASCII chars) */
-
-    Status = AcValidateTableHeader (File, TableOffset);
-    if (ACPI_FAILURE (Status))
-    {
-        return (Status);
-    }
-
     if (GetOnlyAmlTables)
     {
+        /* Validate the table signature/header (limited ASCII chars) */
+
+        Status = AcValidateTableHeader (File, TableOffset);
+        if (ACPI_FAILURE (Status))
+        {
+            return (Status);
+        }
+
         /*
          * Table must be an AML table (DSDT/SSDT).
          * Used for iASL -e option only.
@@ -372,7 +438,12 @@ AcGetOneTableFromFile (
     fseek (File, TableOffset, SEEK_SET);
 
     Count = fread (Table, 1, TableHeader.Length, File);
-    if (Count != (INT32) TableHeader.Length)
+
+    /*
+     * Checks for data table headers happen later in the execution. Only verify
+     * for Aml tables at this point in the code.
+     */
+    if (GetOnlyAmlTables && Count != (INT32) TableHeader.Length)
     {
         Status = AE_ERROR;
         goto ErrorExit;
@@ -495,8 +566,6 @@ AcValidateTableHeader (
 
     if (!AcpiUtValidNameseg (TableHeader.Signature))
     {
-        fprintf (stderr, "Invalid table signature: 0x%8.8X\n",
-            *ACPI_CAST_PTR (UINT32, TableHeader.Signature));
         return (AE_BAD_SIGNATURE);
     }
 
@@ -516,7 +585,7 @@ AcValidateTableHeader (
      * These fields must be ASCII: OemId, OemTableId, AslCompilerId.
      * We allow a NULL terminator in OemId and OemTableId.
      */
-    for (i = 0; i < ACPI_NAME_SIZE; i++)
+    for (i = 0; i < ACPI_NAMESEG_SIZE; i++)
     {
         if (!ACPI_IS_ASCII ((UINT8) TableHeader.AslCompilerId[i]))
         {

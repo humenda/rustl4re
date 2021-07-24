@@ -144,7 +144,7 @@ my %funcs = (
     my $ctxt = shift;
     my $cmd = join(' ', @_);
     print $errout "$cmd\n" if $trace_exec;
-    exec($cmd) or die("could not execute '$cmd'");
+    exec($cmd) or die("$0: could not execute '$cmd'");
     return '';
   },
 
@@ -485,7 +485,7 @@ sub replace_var
   print $errout "lookup var: '$var'\n" if $debug;
   return $loc->{__vars__}{$var} if defined $loc->{__vars__}{$var};
   return '' if $var eq '';
-  ::warn("use of undefined varaible: '$var'\n") unless $may_be_undef;
+  ::warn("use of undefined variable: '$var'\n") unless $may_be_undef;
   return 0 if $may_be_undef;
   return;
 }
@@ -793,7 +793,7 @@ sub read_pc_file
 
 sub list_all
 {
-  opendir(L, $libdir) || die "error: could not open directory: '$libdir': $!";
+  opendir(L, $libdir) || die "$0: error: could not open directory: '$libdir': $!";
 
   foreach my $file (readdir(L)) {
     next if -d $file;
@@ -923,7 +923,7 @@ while (@ARGV) {
   } elsif ($o eq '--trace-pc-files') {
     $trace_pc_files = 1;
   } elsif ($o =~ /^-/) {
-    die "error: unknown option '$o'\n";
+    die "$0: error: unknown option '$o'\n";
   } else {
     push @non_pc_args, $o;
   }

@@ -31,9 +31,13 @@
  * virtual bus. After obtaining a device handle for a specific device the
  * client can enumerate its resources.
  *
- * \includefile{l4/vbus/vbus}
- *
  * Refer to \ref l4vbus_module for the C API.
+ *
+ * \includefile{l4/vbus/vbus}
+ */
+
+/**
+ * \copydoc api_l4re_vbus
  */
 namespace L4vbus {
 
@@ -93,7 +97,7 @@ public:
 
 
   /**
-   * Find a device by the human interface identifier (HID).
+   * Find a device by the hardware interface identifier (HID).
    *
    * This function searches the vbus for a device with the given HID and
    * returns a handle to the first matching device. The HID usually conforms to
@@ -115,7 +119,7 @@ public:
    * \param          depth    Maximum depth for the recursive lookup
    * \param[out]     devinfo  Device information structure (might be NULL)
    *
-   * \retval >= 0        A device with the given HID was found.
+   * \retval >=0         A device with the given HID was found.
    * \retval -L4_ENOENT  No device with the given HID could be found on
    *                     the vbus.
    * \retval -L4_EINVAL  Invalid or no HID provided.
@@ -133,12 +137,13 @@ public:
   /**
    * Find next child following `child`.
    *
-   * \param[in, out] child    Handle of the device that precedes the device
-   *                          that shall be found. To start from the beginning
-   *                          `child` must be initialized using the default
-   *                          (#L4VBUS_NULL).
-   * \param      depth        Depth to look for
-   * \param[out] devinfo      device information (might be NULL)
+   * \param[in, out]  child   Handle of the device that precedes the device
+   *                          that shall be returned. To start from the
+   *                          beginning, `child` must be initialized with
+   *                          #L4VBUS_NULL. If a device is found, its handle is
+   *                          returned through this parameter.
+   * \param          depth    Depth to look for
+   * \param[out]     devinfo  Device information (might be NULL)
    *
    * \return 0 on success, else failure
    */
@@ -154,8 +159,7 @@ public:
    * Obtain detailed information about a Vbus device.
    *
    * \param[out] devinfo  Information structure which contains details about
-   *                      the device. The pointer might be NULL after a
-   *                      successfull call.
+   *                      the device. The pointer might be NULL.
    *
    * \retval 0           Success.
    * \retval -L4_ENODEV  No device with the given device handle `dev` could be
@@ -234,6 +238,19 @@ protected:
 class Icu : public Device
 {
 public:
+  /** Flags that can be used with the ICU on a vbus device */
+  enum Src_types
+  {
+    /**
+     * Flag to denote that the value should be interpreted as a device handle.
+     *
+     * This flag may be used in the `source` parameter in L4::Icu::msi_info()
+     * to denote that the ICU should interpret the source ID as a device
+     * handle.
+     */
+    Src_dev_handle = L4VBUS_ICU_SRC_DEV_HANDLE
+  };
+
   /**
    * Request the L4::Icu capability for this Vbus ICU.
    */
@@ -255,24 +272,64 @@ class Vbus : public L4::Kobject_3t<Vbus, L4Re::Dataspace, L4Re::Inhibitor, L4Re:
 public:
 
   /**
+   * Request the given IO port resource from the bus.
+   *
+   * \param[in] res  The IO port resource to be requested from the bus.
+   *
+   * \retval 0           Success.
+   * \retval -L4_EINVAL  Resource is not an IO port resource.
+   * \retval -L4_ENOENT  No matching IO port resource found.
+   */
+  int request_ioport(l4vbus_resource_t *res) const
+  {
+    return l4vbus_request_ioport(cap(), res);
+  }
+
+  /**
    * Request the given resource from the bus.
-   * \param res The resource that shall be requested from the bus.
-   * \param flags The flags for the request.
+   *
+   * \param[in] res    The resource to be requested from the bus.
+   * \param     flags  Ignored.
+   *
+   * \return 0 on success, else failure.
+   *
+   * \deprecated This function is deprecated since Q3 2019.
+   *             Use request_ioport() instead.
+   */
+  int
+  L4_DEPRECATED("use L4Vbus::Vbus::request_ioport")
+  request_resource(l4vbus_resource_t *res, int /*flags*/ = 0) const
+  {
+    return l4vbus_request_ioport(cap(), res);
+  }
+
+  /**
+   * Release the given IO port resource from the bus.
+   *
+   * \param[in] res  The IO port resource to be released from the bus.
+   *
    * \return >=0 on success, <0 on error.
    */
-  int request_resource(l4vbus_resource_t *res, int flags = 0) const
+  int release_ioport(l4vbus_resource_t *res) const
   {
-    return l4vbus_request_resource(cap(), res, flags);
+    return l4vbus_release_ioport(cap(), res);
   }
 
   /**
    * Release the given resource from the bus.
-   * \param res The resource that shall be requested from the bus.
+   *
+   * \param[in] res  The resource to be released from the bus.
+   *
    * \return >=0 on success, <0 on error.
+   *
+   * \deprecated This function is deprecated since Q3 2019.
+   *             Use release_ioport() instead.
    */
-  int release_resource(l4vbus_resource_t *res) const
+  int
+  L4_DEPRECATED("use L4Vbus::Vbus::release_ioport")
+  release_resource(l4vbus_resource_t *res) const
   {
-    return l4vbus_release_resource(cap(), res);
+    return l4vbus_release_ioport(cap(), res);
   }
 
   /**

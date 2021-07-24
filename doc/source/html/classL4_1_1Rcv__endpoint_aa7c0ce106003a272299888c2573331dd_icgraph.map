@@ -1,3 +1,4 @@
 <map id="L4::Rcv_endpoint::bind_thread" name="L4::Rcv_endpoint::bind_thread">
-<area shape="rect" id="node2" href="$classL4Re_1_1Util_1_1Event__buffer__consumer__t.html#a4ed22b41ce4c7e6b93efae878b1415ef" title="Continuously wait for events and process them. " alt="" coords="216,5,383,47"/>
+<area shape="rect" id="node1" title="Bind a thread to an IPC receive endpoint." alt="" coords="228,5,397,47"/>
+<area shape="rect" id="node2" href="$classL4Re_1_1Util_1_1Event__buffer__consumer__t.html#a4ed22b41ce4c7e6b93efae878b1415ef" title="Continuously wait for events and process them." alt="" coords="5,5,180,47"/>
 </map>

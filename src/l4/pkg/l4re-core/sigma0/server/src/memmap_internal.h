@@ -23,13 +23,13 @@ struct Answer
 {
 private:
   void snd_base(unsigned long base)
-  { l4_utcb_mr_u(utcb)->mr[0] = (base & (~0UL << 10)) | 8; }
+  { l4_utcb_mr_u(utcb)->mr[0] = (base & L4_FPAGE_CONTROL_MASK) | L4_ITEM_MAP; }
 
 public:
   l4_utcb_t *utcb;
   l4_msgtag_t tag;
 
-  Answer(l4_utcb_t *utcb) : utcb(utcb), tag(l4_msgtag(0,0,0,0)) {}
+  Answer(l4_utcb_t *utcb) : utcb(utcb), tag(l4_msgtag(0, 0, 0, 0)) {}
 
   void error(int err) { tag = l4_msgtag(-err, 0, 0, 0); }
 
@@ -56,8 +56,4 @@ public:
 
   bool failed() const
   { return tag.label() < 0; }
-
-  void do_grant()
-  { l4_utcb_mr_u(utcb)->mr[0] |= 2; }
 };
-

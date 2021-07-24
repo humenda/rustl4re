@@ -1,0 +1,8 @@
+<map id="L4virtio::Device" name="L4virtio::Device">
+<area shape="rect" id="node1" title="IPC interface for virtio over L4 IPC." alt="" coords="149,817,309,983"/>
+<area shape="rect" id="node2" href="$classL4_1_1Kobject__t.html" title=" " alt="" coords="110,647,349,768"/>
+<area shape="rect" id="node3" href="$classL4_1_1Icu.html" title="C++ Icu interface." alt="" coords="118,432,229,597"/>
+<area shape="rect" id="node4" href="$classL4_1_1Kobject__t.html" title=" " alt="" coords="5,204,221,325"/>
+<area shape="rect" id="node5" href="$classL4_1_1Irq__eoi.html" title="Interface for sending an acknowledge message to an object." alt="" coords="20,20,119,97"/>
+<area shape="rect" id="node6" href="$classL4_1_1Kobject__t.html" title="Helper class to create an L4Re interface class that is derived from a single base class." alt="" coords="163,5,371,112"/>
+</map>

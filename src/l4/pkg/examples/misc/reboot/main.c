@@ -1,3 +1,9 @@
+/* SPDX-License-Identifier: GPL-2.0-only or License-Ref-kk-custom */
+/*
+ * Copyright (C) 2020 Kernkonzept GmbH.
+ * Author(s): Sarah Hoffmann <sarah.hoffmann@kernkonzept.com>
+ *
+ */
 /*
  * \brief   Just reboot
  * \date    2006-03
@@ -13,10 +19,15 @@
  * Please see the COPYING-GPL-2 file for details.
  */
 
-#include <l4/util/reboot.h>
+#include <l4/re/env.h>
+#include <l4/sys/platform_control.h>
 
 int main(void)
 {
-  l4util_reboot();
+  l4_cap_idx_t pfc = l4re_env_get_cap("pfc");
+
+  if (l4_is_valid_cap(pfc))
+    l4_platform_ctl_system_shutdown(pfc, 1);
+
   return 0;
 }

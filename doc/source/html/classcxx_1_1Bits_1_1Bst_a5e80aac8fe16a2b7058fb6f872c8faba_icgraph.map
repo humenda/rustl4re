@@ -1,3 +1,4 @@
 <map id="cxx::Bits::Bst::rbegin" name="cxx::Bits::Bst::rbegin">
-<area shape="rect" id="node2" href="$classcxx_1_1Bits_1_1Base__avl__set.html#a31fe31b50edc0e82f462b6a905011d86" title="Get the constant backward iterator for the last element in the set. " alt="" coords="196,5,419,105"/>
+<area shape="rect" id="node1" title="Get the constant backward iterator for the last element in the set." alt="" coords="199,13,355,39"/>
+<area shape="rect" id="node2" href="$classcxx_1_1Bits_1_1Base__avl__set.html#a31fe31b50edc0e82f462b6a905011d86" title="Get the constant backward iterator for the last element in the set." alt="" coords="5,5,151,47"/>
 </map>

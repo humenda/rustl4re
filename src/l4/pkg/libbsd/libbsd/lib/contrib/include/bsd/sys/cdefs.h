@@ -30,6 +30,13 @@
 #ifndef __has_include_next
 #define __has_include_next(x) 1
 #endif
+#ifndef __has_attribute
+#define __has_attribute(x) 0
+#endif
+/* Clang expands this to 1 if an identifier is *not* reserved. */
+#ifndef __is_identifier
+#define __is_identifier(x) 1
+#endif
 
 #ifdef LIBBSD_OVERLAY
 /*
@@ -59,6 +66,14 @@
 #endif
 
 /*
+ * On non-glibc based systems, we cannot unconditionally use the
+ * __GLIBC_PREREQ macro as it gets expanded before evaluation.
+ */
+#ifndef __GLIBC_PREREQ
+#define __GLIBC_PREREQ(maj, min) 0
+#endif
+
+/*
  * Some kFreeBSD headers expect those macros to be set for sanity checks.
  */
 #ifndef _SYS_CDEFS_H_
@@ -68,22 +83,31 @@
 #define _SYS_CDEFS_H
 #endif
 
+#define LIBBSD_CONCAT(x, y)	x ## y
+#define LIBBSD_STRING(x)	#x
+
 #ifdef __GNUC__
 #define LIBBSD_GCC_VERSION (__GNUC__ << 8 | __GNUC_MINOR__)
 #else
 #define LIBBSD_GCC_VERSION 0
 #endif
 
-#if LIBBSD_GCC_VERSION >= 0x0405
-#define LIBBSD_DEPRECATED(x) __attribute__((deprecated(x)))
+#if LIBBSD_GCC_VERSION >= 0x0405 || __has_attribute(__deprecated__)
+#define LIBBSD_DEPRECATED(x) __attribute__((__deprecated__(x)))
 #elif LIBBSD_GCC_VERSION >= 0x0301
-#define LIBBSD_DEPRECATED(x) __attribute__((deprecated))
+#define LIBBSD_DEPRECATED(x) __attribute__((__deprecated__))
 #else
 #define LIBBSD_DEPRECATED(x)
 #endif
 
+#if LIBBSD_GCC_VERSION >= 0x0200 || defined(__clang__)
+#define LIBBSD_REDIRECT(name, proto, alias) name proto __asm__(LIBBSD_ASMNAME(#alias))
+#endif
+#define LIBBSD_ASMNAME(cname) LIBBSD_ASMNAME_PREFIX(__USER_LABEL_PREFIX__, cname)
+#define LIBBSD_ASMNAME_PREFIX(prefix, cname) LIBBSD_STRING(prefix) cname
+
 #ifndef __dead2
-# if LIBBSD_GCC_VERSION >= 0x0207
+# if LIBBSD_GCC_VERSION >= 0x0207 || __has_attribute(__noreturn__)
 #  define __dead2 __attribute__((__noreturn__))
 # else
 #  define __dead2
@@ -91,7 +115,7 @@
 #endif
 
 #ifndef __pure2
-# if LIBBSD_GCC_VERSION >= 0x0207
+# if LIBBSD_GCC_VERSION >= 0x0207 || __has_attribute(__const__)
 #  define __pure2 __attribute__((__const__))
 # else
 #  define __pure2
@@ -99,7 +123,7 @@
 #endif
 
 #ifndef __packed
-# if LIBBSD_GCC_VERSION >= 0x0207
+# if LIBBSD_GCC_VERSION >= 0x0207 || __has_attribute(__packed__)
 #  define __packed __attribute__((__packed__))
 # else
 #  define __packed
@@ -107,7 +131,7 @@
 #endif
 
 #ifndef __aligned
-# if LIBBSD_GCC_VERSION >= 0x0207
+# if LIBBSD_GCC_VERSION >= 0x0207 || __has_attribute(__aligned__)
 #  define __aligned(x) __attribute__((__aligned__(x)))
 # else
 #  define __aligned(x)
@@ -120,7 +144,7 @@
 #if 0
 #ifndef __unused
 # if LIBBSD_GCC_VERSION >= 0x0300
-#  define __unused __attribute__((unused))
+#  define __unused __attribute__((__unused__))
 # else
 #  define __unused
 # endif
@@ -128,15 +152,15 @@
 #endif
 
 #ifndef __printflike
-# if LIBBSD_GCC_VERSION >= 0x0300
-#  define __printflike(x, y) __attribute((format(printf, (x), (y))))
+# if LIBBSD_GCC_VERSION >= 0x0300 || __has_attribute(__format__)
+#  define __printflike(x, y) __attribute((__format__(__printf__, (x), (y))))
 # else
 #  define __printflike(x, y)
 # endif
 #endif
 
 #ifndef __nonnull
-# if LIBBSD_GCC_VERSION >= 0x0302
+# if LIBBSD_GCC_VERSION >= 0x0302 || __has_attribute(__nonnull__)
 #  define __nonnull(x) __attribute__((__nonnull__(x)))
 # else
 #  define __nonnull(x)
@@ -148,11 +172,17 @@
 #endif
 
 /*
+ * Return the number of elements in a statically-allocated array,
+ * __x.
+ */
+#define	__arraycount(__x)	(sizeof(__x) / sizeof(__x[0]))
+
+/*
  * We define this here since <stddef.h>, <sys/queue.h>, and <sys/types.h>
  * require it.
  */
 #ifndef __offsetof
-# if LIBBSD_GCC_VERSION >= 0x0401
+# if LIBBSD_GCC_VERSION >= 0x0401 || !__is_identifier(__builtin_offsetof)
 #  define __offsetof(type, field)	__builtin_offsetof(type, field)
 # else
 #  ifndef __cplusplus
@@ -177,9 +207,9 @@
  * compatible with member m.
  */
 #ifndef __containerof
-# if LIBBSD_GCC_VERSION >= 0x0301
+# if LIBBSD_GCC_VERSION >= 0x0301 || !__is_identifier(__typeof__)
 #  define __containerof(x, s, m) ({ \
-	const volatile __typeof(((s *)0)->m) *__x = (x); \
+	const volatile __typeof__(((s *)0)->m) *__x = (x); \
 	__DEQUALIFY(s *, (const volatile char *)__x - __offsetof(s, m)); \
 })
 # else

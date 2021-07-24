@@ -11,14 +11,13 @@
 #ifndef INIT_KIP_H__
 #define INIT_KIP_H__
 
-#include <l4/util/mb_info.h>
 #include "startup.h"
 #include "init_kip-arch.h"
 
 #ifdef __cplusplus
 class Region_list;
 
-void init_kip_f(void *_l4i, boot_info_t *bi, l4util_mb_info_t *mbi,
+void init_kip_f(void *_l4i, boot_info_t *bi, l4util_l4mod_info *mbi,
                 Region_list *ram, Region_list *regions);
 #endif
 

@@ -1,7 +1,8 @@
 <map id="L4::Kobject_2t&lt; Derived, Base1, Base2, PROTO, S_DEMAND &gt;" name="L4::Kobject_2t&lt; Derived, Base1, Base2, PROTO, S_DEMAND &gt;">
-<area shape="rect" id="node2" href="$classL4_1_1Kobject__2t.html" title="{L4::Kobject_2t\&lt; Irq,\l Triggerable, Rcv_endpoint,\l L4_PROTO_IRQ_SENDER \&gt;\n||+ operator Kobject const &amp;()\l+ dec_refcnt()\l# cap()\l# c()\l# __check_protocols__()\l}" alt="" coords="5,270,216,435"/>
-<area shape="rect" id="node4" href="$classL4_1_1Kobject__2t.html" title="{L4::Kobject_2t\&lt; Console,\l Video::Goos, Event, L4\l::PROTO_EMPTY \&gt;\n||+ operator Kobject const &amp;()\l+ dec_refcnt()\l# cap()\l# c()\l# __check_protocols__()\l}" alt="" coords="241,270,442,435"/>
-<area shape="rect" id="node6" href="$classL4_1_1Kobject__2t.html" title="{L4::Kobject_2t\&lt; Debug\l_obj_t\&lt; BASE \&gt;, BASE,\l Debug_obj, L4::PROTO\l_EMPTY \&gt;\n||+ operator Kobject const &amp;()\l+ dec_refcnt()\l# cap()\l# c()\l# __check_protocols__()\l}" alt="" coords="466,263,667,443"/>
-<area shape="rect" id="node3" href="$classL4_1_1Irq.html" title="C++ Irq interface. " alt="" coords="64,492,157,628"/>
-<area shape="rect" id="node5" href="$classL4Re_1_1Console.html" title="Console class. " alt="" coords="284,521,399,599"/>
+<area shape="rect" id="node1" title="Helper class to create an L4Re interface class that is derived from two base classes (see L4::Kobject..." alt="" coords="236,5,443,171"/>
+<area shape="rect" id="node2" href="$classL4_1_1Kobject__2t.html" title=" " alt="" coords="5,270,212,435"/>
+<area shape="rect" id="node4" href="$classL4_1_1Kobject__2t.html" title=" " alt="" coords="236,263,443,443"/>
+<area shape="rect" id="node5" href="$classL4_1_1Kobject__2t.html" title=" " alt="" coords="467,270,673,435"/>
+<area shape="rect" id="node3" href="$classL4_1_1Irq.html" title="C++ Irq interface." alt="" coords="59,492,158,613"/>
+<area shape="rect" id="node6" href="$classL4Re_1_1Console.html" title="Console class." alt="" coords="513,514,627,591"/>
 </map>

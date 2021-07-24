@@ -8,7 +8,7 @@
  *
  * 1. Copyright Notice
  *
- * Some or all of this work - Copyright (c) 1999 - 2017, Intel Corp.
+ * Some or all of this work - Copyright (c) 1999 - 2019, Intel Corp.
  * All rights reserved.
  *
  * 2. License
@@ -110,6 +110,42 @@
  * United States government or any agency thereof requires an export license,
  * other governmental approval, or letter of assurance, without first obtaining
  * such license, approval or letter.
+ *
+ *****************************************************************************
+ *
+ * Alternatively, you may choose to be licensed under the terms of the
+ * following license:
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions, and the following disclaimer,
+ *    without modification.
+ * 2. Redistributions in binary form must reproduce at minimum a disclaimer
+ *    substantially similar to the "NO WARRANTY" disclaimer below
+ *    ("Disclaimer") and any redistribution must be conditioned upon
+ *    including a substantially similar Disclaimer requirement for further
+ *    binary redistribution.
+ * 3. Neither the names of the above-listed copyright holders nor the names
+ *    of any contributors may be used to endorse or promote products derived
+ *    from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+ * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * Alternatively, you may choose to be licensed under the terms of the
+ * GNU General Public License ("GPL") version 2 as published by the Free
+ * Software Foundation.
  *
  *****************************************************************************/
 
@@ -399,13 +435,13 @@ AnCheckMethodReturnValue (
     /* Examine the parent op of this method */
 
     OwningOp = Node->Op;
-    if (OwningOp->Asl.CompileFlags & NODE_METHOD_NO_RETVAL)
+    if (OwningOp->Asl.CompileFlags & OP_METHOD_NO_RETVAL)
     {
         /* Method NEVER returns a value */
 
         AslError (ASL_ERROR, ASL_MSG_NO_RETVAL, Op, Op->Asl.ExternalName);
     }
-    else if (OwningOp->Asl.CompileFlags & NODE_METHOD_SOME_NO_RETVAL)
+    else if (OwningOp->Asl.CompileFlags & OP_METHOD_SOME_NO_RETVAL)
     {
         /* Method SOMETIMES returns a value, SOMETIMES not */
 
@@ -416,8 +452,8 @@ AnCheckMethodReturnValue (
     {
         /* Method returns a value, but the type is wrong */
 
-        AnFormatBtype (StringBuffer, ThisNodeBtype);
-        AnFormatBtype (StringBuffer2, RequiredBtypes);
+        AnFormatBtype (AslGbl_StringBuffer, ThisNodeBtype);
+        AnFormatBtype (AslGbl_StringBuffer2, RequiredBtypes);
 
         /*
          * The case where the method does not return any value at all
@@ -427,11 +463,11 @@ AnCheckMethodReturnValue (
          */
         if (ThisNodeBtype != 0)
         {
-            sprintf (MsgBuffer,
+            sprintf (AslGbl_MsgBuffer,
                 "Method returns [%s], %s operator requires [%s]",
-                StringBuffer, OpInfo->Name, StringBuffer2);
+                AslGbl_StringBuffer, OpInfo->Name, AslGbl_StringBuffer2);
 
-            AslError (ASL_ERROR, ASL_MSG_INVALID_TYPE, ArgOp, MsgBuffer);
+            AslError (ASL_ERROR, ASL_MSG_INVALID_TYPE, ArgOp, AslGbl_MsgBuffer);
         }
     }
 }
@@ -527,14 +563,14 @@ ApCheckForGpeNameConflict (
 {
     ACPI_PARSE_OBJECT       *NextOp;
     UINT32                  GpeNumber;
-    char                    Name[ACPI_NAME_SIZE + 1];
-    char                    Target[ACPI_NAME_SIZE];
+    char                    Name[ACPI_NAMESEG_SIZE + 1];
+    char                    Target[ACPI_NAMESEG_SIZE];
 
 
     /* Need a null-terminated string version of NameSeg */
 
     ACPI_MOVE_32_TO_32 (Name, &Op->Asl.NameSeg);
-    Name[ACPI_NAME_SIZE] = 0;
+    Name[ACPI_NAMESEG_SIZE] = 0;
 
     /*
      * For a GPE method:
@@ -586,7 +622,7 @@ ApCheckForGpeNameConflict (
         if ((NextOp->Asl.ParseOpcode == PARSEOP_METHOD) ||
             (NextOp->Asl.ParseOpcode == PARSEOP_NAME))
         {
-            if (ACPI_COMPARE_NAME (Target, NextOp->Asl.NameSeg))
+            if (ACPI_COMPARE_NAMESEG (Target, NextOp->Asl.NameSeg))
             {
                 /* Found both _Exy and _Lxy in the same scope, error */
 
@@ -630,7 +666,7 @@ ApCheckRegMethod (
 
     /* We are only interested in _REG methods */
 
-    if (!ACPI_COMPARE_NAME (METHOD_NAME__REG, &Op->Asl.NameSeg))
+    if (!ACPI_COMPARE_NAMESEG (METHOD_NAME__REG, &Op->Asl.NameSeg))
     {
         return;
     }
@@ -736,7 +772,7 @@ ApDeviceSubtreeWalk (
 
         /* These are what we are looking for */
 
-        if (ACPI_COMPARE_NAME (Name, Op->Asl.NameSeg))
+        if (ACPI_COMPARE_NAMESEG (Name, Op->Asl.NameSeg))
         {
             return (AE_CTRL_TRUE);
         }
@@ -795,7 +831,7 @@ ApFindNameInScope (
         if ((Next->Asl.ParseOpcode == PARSEOP_METHOD) ||
             (Next->Asl.ParseOpcode == PARSEOP_NAME))
         {
-            if (ACPI_COMPARE_NAME (Name, Next->Asl.NameSeg))
+            if (ACPI_COMPARE_NAMESEG (Name, Next->Asl.NameSeg))
             {
                 return (TRUE);
             }

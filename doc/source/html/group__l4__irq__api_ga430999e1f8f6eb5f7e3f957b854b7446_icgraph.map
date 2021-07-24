@@ -1,5 +1,6 @@
 <map id="l4_irq_receive_u" name="l4_irq_receive_u">
-<area shape="rect" id="node2" href="$group__l4__irq__api.html#ga997f18b89d6235214d2f9c381ed6c6a5" title="Unmask and wait for specified IRQ. " alt="" coords="181,13,292,39"/>
-<area shape="rect" id="node4" href="$classL4_1_1Irq.html#a2b5cd8b070f23c8331dfac7903062ea5" title="Unmask and wait for this IRQ. " alt="" coords="180,63,293,90"/>
-<area shape="rect" id="node3" href="$classL4Re_1_1Util_1_1Event__buffer__consumer__t.html#a4ed22b41ce4c7e6b93efae878b1415ef" title="Continuously wait for events and process them. " alt="" coords="341,5,508,47"/>
+<area shape="rect" id="node1" title="Unmask and wait for this IRQ." alt="" coords="395,38,523,65"/>
+<area shape="rect" id="node2" href="$group__l4__irq__api.html#ga997f18b89d6235214d2f9c381ed6c6a5" title="Unmask and wait for specified IRQ." alt="" coords="231,13,344,39"/>
+<area shape="rect" id="node4" href="$classL4_1_1Irq.html#ad6e4134fba0e3d985f4ef988a524fa6d" title="Unmask and wait for this IRQ." alt="" coords="228,63,347,90"/>
+<area shape="rect" id="node3" href="$classL4Re_1_1Util_1_1Event__buffer__consumer__t.html#a4ed22b41ce4c7e6b93efae878b1415ef" title="Continuously wait for events and process them." alt="" coords="5,5,180,47"/>
 </map>

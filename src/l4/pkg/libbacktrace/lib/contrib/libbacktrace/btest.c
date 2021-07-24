@@ -1,5 +1,5 @@
 /* btest.c -- Test for libbacktrace library
-   Copyright (C) 2012-2018 Free Software Foundation, Inc.
+   Copyright (C) 2012-2021 Free Software Foundation, Inc.
    Written by Ian Lance Taylor, Google.
 
 Redistribution and use in source and binary forms, with or without
@@ -37,6 +37,7 @@ POSSIBILITY OF SUCH DAMAGE.  */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 #include "filenames.h"
 
@@ -47,9 +48,9 @@ POSSIBILITY OF SUCH DAMAGE.  */
 
 /* Test the backtrace function with non-inlined functions.  */
 
-static int test1 (void) __attribute__ ((noinline, unused));
-static int f2 (int) __attribute__ ((noinline));
-static int f3 (int, int) __attribute__ ((noinline));
+static int test1 (void) __attribute__ ((noinline, noclone, unused));
+static int f2 (int) __attribute__ ((noinline, noclone));
+static int f3 (int, int) __attribute__ ((noinline, noclone));
 
 static int
 test1 (void)
@@ -161,9 +162,9 @@ f13 (int f1line, int f2line)
 
 /* Test the backtrace_simple function with non-inlined functions.  */
 
-static int test3 (void) __attribute__ ((noinline, unused));
-static int f22 (int) __attribute__ ((noinline));
-static int f23 (int, int) __attribute__ ((noinline));
+static int test3 (void) __attribute__ ((noinline, noclone, unused));
+static int f22 (int) __attribute__ ((noinline, noclone));
+static int f23 (int, int) __attribute__ ((noinline, noclone));
 
 static int
 test3 (void)
@@ -422,7 +423,8 @@ test5 (void)
 	  fprintf (stderr, "test5: NULL syminfo name\n");
 	  symdata.failed = 1;
 	}
-      else if (strcmp (symdata.name, "global") != 0)
+      else if (!(strncmp (symdata.name, "global", 6) == 0
+		 && (symdata.name[6] == '\0'|| symdata.name[6] == '.')))
 	{
 	  fprintf (stderr,
 		   "test5: unexpected syminfo name got %s expected %s\n",
@@ -456,6 +458,25 @@ test5 (void)
   return failures;
 }
 
+/* Check that are no files left open.  */
+
+static void
+check_open_files (void)
+{
+  int i;
+
+  for (i = 3; i < 10; i++)
+    {
+      if (close (i) == 0)
+	{
+	  fprintf (stderr,
+		   "ERROR: descriptor %d still open after tests complete\n",
+		   i);
+	  ++failures;
+	}
+    }
+}
+
 /* Run all the tests.  */
 
 int
@@ -473,6 +494,8 @@ main (int argc ATTRIBUTE_UNUSED, char **argv)
   test5 ();
 #endif
 #endif
+
+  check_open_files ();
 
   exit (failures ? EXIT_FAILURE : EXIT_SUCCESS);
 }

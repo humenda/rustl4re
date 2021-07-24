@@ -8,7 +8,7 @@
  *
  * 1. Copyright Notice
  *
- * Some or all of this work - Copyright (c) 1999 - 2017, Intel Corp.
+ * Some or all of this work - Copyright (c) 1999 - 2019, Intel Corp.
  * All rights reserved.
  *
  * 2. License
@@ -110,6 +110,42 @@
  * United States government or any agency thereof requires an export license,
  * other governmental approval, or letter of assurance, without first obtaining
  * such license, approval or letter.
+ *
+ *****************************************************************************
+ *
+ * Alternatively, you may choose to be licensed under the terms of the
+ * following license:
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions, and the following disclaimer,
+ *    without modification.
+ * 2. Redistributions in binary form must reproduce at minimum a disclaimer
+ *    substantially similar to the "NO WARRANTY" disclaimer below
+ *    ("Disclaimer") and any redistribution must be conditioned upon
+ *    including a substantially similar Disclaimer requirement for further
+ *    binary redistribution.
+ * 3. Neither the names of the above-listed copyright holders nor the names
+ *    of any contributors may be used to endorse or promote products derived
+ *    from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+ * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * Alternatively, you may choose to be licensed under the terms of the
+ * GNU General Public License ("GPL") version 2 as published by the Free
+ * Software Foundation.
  *
  *****************************************************************************/
 
@@ -221,9 +257,9 @@ AcpiTbCheckDsdtHeader (
  *
  * FUNCTION:    AcpiTbCopyDsdt
  *
- * PARAMETERS:  TableDesc           - Installed table to copy
+ * PARAMETERS:  TableIndex          - Index of installed table to copy
  *
- * RETURN:      None
+ * RETURN:      The copied DSDT
  *
  * DESCRIPTION: Implements a subsystem option to copy the DSDT to local memory.
  *              Some very bad BIOSs are known to either corrupt the DSDT or
@@ -332,7 +368,7 @@ AcpiTbGetRootTableEntry (
  *
  * FUNCTION:    AcpiTbParseRootTable
  *
- * PARAMETERS:  Rsdp                    - Pointer to the RSDP
+ * PARAMETERS:  RsdpAddress         - Pointer to the RSDP
  *
  * RETURN:      Status
  *
@@ -467,7 +503,7 @@ AcpiTbParseRootTable (
             ACPI_TABLE_ORIGIN_INTERNAL_PHYSICAL, FALSE, TRUE, &TableIndex);
 
         if (ACPI_SUCCESS (Status) &&
-            ACPI_COMPARE_NAME (
+            ACPI_COMPARE_NAMESEG (
                 &AcpiGbl_RootTableList.Tables[TableIndex].Signature,
                 ACPI_SIG_FADT))
         {
@@ -523,14 +559,19 @@ AcpiTbGetTable (
         }
     }
 
-    TableDesc->ValidationCount++;
-    if (TableDesc->ValidationCount == 0)
+    if (TableDesc->ValidationCount < ACPI_MAX_TABLE_VALIDATIONS)
     {
-        ACPI_ERROR ((AE_INFO,
-            "Table %p, Validation count is zero after increment\n",
-            TableDesc));
-        TableDesc->ValidationCount--;
-        return_ACPI_STATUS (AE_LIMIT);
+        TableDesc->ValidationCount++;
+
+        /*
+         * Detect ValidationCount overflows to ensure that the warning
+         * message will only be printed once.
+         */
+        if (TableDesc->ValidationCount >= ACPI_MAX_TABLE_VALIDATIONS)
+        {
+            ACPI_WARNING((AE_INFO,
+                "Table %p, Validation count overflows\n", TableDesc));
+        }
     }
 
     *OutTable = TableDesc->Pointer;
@@ -561,14 +602,21 @@ AcpiTbPutTable (
     ACPI_FUNCTION_TRACE (AcpiTbPutTable);
 
 
-    if (TableDesc->ValidationCount == 0)
+    if (TableDesc->ValidationCount < ACPI_MAX_TABLE_VALIDATIONS)
     {
-        ACPI_WARNING ((AE_INFO,
-            "Table %p, Validation count is zero before decrement\n",
-            TableDesc));
-        return_VOID;
+        TableDesc->ValidationCount--;
+
+        /*
+         * Detect ValidationCount underflows to ensure that the warning
+         * message will only be printed once.
+         */
+        if (TableDesc->ValidationCount >= ACPI_MAX_TABLE_VALIDATIONS)
+        {
+            ACPI_WARNING ((AE_INFO,
+                "Table %p, Validation count underflows\n", TableDesc));
+            return_VOID;
+        }
     }
-    TableDesc->ValidationCount--;
 
     if (TableDesc->ValidationCount == 0)
     {

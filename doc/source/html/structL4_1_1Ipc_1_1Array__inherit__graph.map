@@ -1,4 +1,6 @@
 <map id="L4::Ipc::Array&lt; ELEM_TYPE, LEN_TYPE &gt;" name="L4::Ipc::Array&lt; ELEM_TYPE, LEN_TYPE &gt;">
-<area shape="rect" id="node3" href="$structL4_1_1Ipc_1_1Array.html" title="{L4::Ipc::Array\&lt; CHAR,\l LEN \&gt;\n||+ Array()\l+ Array()\l+ Array()\l}" alt="" coords="30,375,187,496"/>
-<area shape="rect" id="node2" href="$structL4_1_1Ipc_1_1Array__ref.html" title="Array reference data type for arrays located in the message. " alt="" coords="5,5,212,141"/>
+<area shape="rect" id="node1" title="Array data type for dynamically sized arrays in RPCs." alt="" coords="26,419,183,540"/>
+<area shape="rect" id="node4" href="$structL4_1_1Ipc_1_1Array.html" title=" " alt="" coords="17,617,192,739"/>
+<area shape="rect" id="node2" href="$structL4_1_1Ipc_1_1Array__ref.html" title=" " alt="" coords="14,219,195,369"/>
+<area shape="rect" id="node3" href="$structL4_1_1Ipc_1_1Array__ref.html" title="Array reference data type for arrays located in the message." alt="" coords="5,5,204,141"/>
 </map>

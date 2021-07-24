@@ -1,6 +1,7 @@
 <map id="cxx::H_list_item_t&lt; ELEM_TYPE &gt;" name="cxx::H_list_item_t&lt; ELEM_TYPE &gt;">
-<area shape="rect" id="node2" href="$classL4_1_1Ipc__svr_1_1Timeout.html" title="Callback interface for Timeout_queue. " alt="" coords="5,175,152,311"/>
-<area shape="rect" id="node3" href="$classcxx_1_1H__list__item__t.html" title="{cxx::H_list_item_t\l\&lt; Weak_ref_base \&gt;\n||+ H_list_item_t()\l+ ~H_list_item_t()\l}" alt="" coords="177,189,322,296"/>
-<area shape="rect" id="node4" href="$classcxx_1_1Weak__ref__base.html" title="Generic (base) weak reference to some object. " alt="" coords="175,360,323,467"/>
-<area shape="rect" id="node5" href="$classcxx_1_1Weak__ref.html" title="Typed weak reference to an object of type T. " alt="" coords="178,516,321,711"/>
+<area shape="rect" id="node1" title="Basic element type for a double&#45;linked H_list." alt="" coords="65,5,209,112"/>
+<area shape="rect" id="node2" href="$classL4_1_1Ipc__svr_1_1Timeout.html" title="Callback interface for Timeout_queue." alt="" coords="5,175,159,311"/>
+<area shape="rect" id="node3" href="$classcxx_1_1H__list__item__t.html" title=" " alt="" coords="183,189,333,296"/>
+<area shape="rect" id="node4" href="$classcxx_1_1Weak__ref__base.html" title="Generic (base) weak reference to some object." alt="" coords="182,360,334,467"/>
+<area shape="rect" id="node5" href="$classcxx_1_1Weak__ref.html" title="Typed weak reference to an object of type T." alt="" coords="182,516,334,711"/>
 </map>

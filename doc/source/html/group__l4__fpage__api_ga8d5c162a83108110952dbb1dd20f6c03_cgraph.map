@@ -1,3 +1,5 @@
 <map id="l4_fpage_contains" name="l4_fpage_contains">
-<area shape="rect" id="node2" href="$group__l4__fpage__api.html#ga87c7b03e1b72e9cfed3ad4b31a0c58ba" title="Return the memory address from the memory flex page. " alt="" coords="192,5,336,32"/>
+<area shape="rect" id="node1" title="Test whether a given range is completely within an fpage." alt="" coords="5,31,145,57"/>
+<area shape="rect" id="node2" href="$group__l4__fpage__api.html#ga87c7b03e1b72e9cfed3ad4b31a0c58ba" title="Return the memory address from the memory flex page." alt="" coords="193,5,341,32"/>
+<area shape="rect" id="node3" href="$group__l4__fpage__api.html#ga905f25ce8cd4e02fb988702dc85e18e0" title="Return size from a flex page." alt="" coords="212,56,323,83"/>
 </map>

@@ -1,3 +1,4 @@
 <map id="l4vbus_gpio_config_pull" name="l4vbus_gpio_config_pull">
-<area shape="rect" id="node2" href="$classL4vbus_1_1Gpio__pin.html#a93461ca18d84a88dc78364a129ee6168" title="Generic function to set pull up/down mode. " alt="" coords="224,5,427,32"/>
+<area shape="rect" id="node1" title="Generic function to set pull up/down mode." alt="" coords="264,5,441,32"/>
+<area shape="rect" id="node2" href="$classL4vbus_1_1Gpio__pin.html#a93461ca18d84a88dc78364a129ee6168" title="Generic function to set pull up/down mode." alt="" coords="5,5,216,32"/>
 </map>

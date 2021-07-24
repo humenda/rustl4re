@@ -40,9 +40,6 @@ static inline
 Unsigned32 Timer::frequency()
 { return Gtimer::frequency(); }
 
-PUBLIC static void Timer::configure(const Cpu_number &)
-{ /* Remove me -- need reinit function */ }
-
 IMPLEMENT
 void Timer::init(Cpu_number cpu)
 {
@@ -99,5 +96,36 @@ Timer::system_clock()
 {
   if (Config::Scheduler_one_shot)
     return 0;
-  return Kip::k()->clock;
+  return Kip::k()->clock();
+}
+
+// --------------------------------------------------------------------------
+INTERFACE [arm && arm_generic_timer && jdb]:
+
+EXTENSION class Timer
+{
+private:
+  static Mword _using_interval_jdb;
+};
+
+
+// --------------------------------------------------------------
+IMPLEMENTATION [arm && arm_generic_timer && jdb]:
+
+Mword Timer::_using_interval_jdb = false;
+
+IMPLEMENT_OVERRIDE
+void
+Timer::switch_freq_jdb()
+{
+  if (mp_cas(&_using_interval_jdb, (Mword)false, (Mword)true))
+    _interval *= 10;
+}
+
+IMPLEMENT_OVERRIDE
+void
+Timer::switch_freq_system()
+{
+  if (mp_cas(&_using_interval_jdb, (Mword)true, (Mword)false))
+    _interval /= 10;
 }

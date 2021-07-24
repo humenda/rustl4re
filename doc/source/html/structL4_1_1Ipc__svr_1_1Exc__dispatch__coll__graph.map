@@ -1,3 +1,4 @@
 <map id="L4::Ipc_svr::Exc_dispatch&lt; R, Exc &gt;" name="L4::Ipc_svr::Exc_dispatch&lt; R, Exc &gt;">
-<area shape="rect" id="node2" href="$structL4_1_1Ipc__svr_1_1Direct__dispatch.html" title="Direct disptach helper, for forwarding dispatch calls a registry R. " alt="" coords="24,5,167,112"/>
+<area shape="rect" id="node1" title="Dispatch helper wrapping try {} catch {} around the dispatch call." alt="" coords="5,160,189,267"/>
+<area shape="rect" id="node2" href="$structL4_1_1Ipc__svr_1_1Direct__dispatch.html" title="Direct dispatch helper, for forwarding dispatch calls to a registry R." alt="" coords="23,5,171,112"/>
 </map>

@@ -1,0 +1,9 @@
+<map id="L4virtio::Driver::Virtqueue::desc" name="L4virtio::Driver::Virtqueue::desc">
+<area shape="rect" id="node1" title="Return a reference to a descriptor in the descriptor table." alt="" coords="459,136,649,177"/>
+<area shape="rect" id="node2" href="$classL4virtio_1_1Driver_1_1Block__device.html#a53ec612b1d207804102e34d51f6016cc" title="Add a data block to a request that has already been set up." alt="" coords="234,5,397,47"/>
+<area shape="rect" id="node3" href="$classL4virtio_1_1Driver_1_1Virtqueue.html#a8b7ef703e8e55d889419f43dc28dd40e" title="Initialize this virtqueue." alt="" coords="220,71,411,112"/>
+<area shape="rect" id="node5" href="$classL4virtio_1_1Driver_1_1Block__device.html#a63f21e71556accc8c669ef80161ecd8e" title="Process request synchronously." alt="" coords="222,136,409,177"/>
+<area shape="rect" id="node6" href="$classL4virtio_1_1Driver_1_1Block__device.html#a2c2e9924abafe2eff34821b166c6c36f" title="Process request asynchronously." alt="" coords="232,201,399,243"/>
+<area shape="rect" id="node7" href="$classL4virtio_1_1Driver_1_1Block__device.html#afdd043c2adbca7fea5eb057f9aa4b483" title="Start the setup of a new request." alt="" coords="232,267,399,308"/>
+<area shape="rect" id="node4" href="$classL4virtio_1_1Driver_1_1Block__device.html#a688df51bdec4ba327a6c0b48a83a115a" title="Setup a connection to a device and set up shared memory." alt="" coords="5,71,172,112"/>
+</map>

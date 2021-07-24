@@ -1,4 +1,6 @@
 <map id="L4vbus::Vbus::assign_dma_domain" name="L4vbus::Vbus::assign_dma_domain">
-<area shape="rect" id="node2" href="$classL4_1_1Cap__base.html#a6181bad79c41cdbf5c030877b94e25bf" title="Return capability selector. " alt="" coords="233,5,371,32"/>
-<area shape="rect" id="node3" href="$group__l4vbus__module.html#ga230bfade9c21a168c3863cbe4f39e01f" title="Bind or unbind a kernel DMA space (L4::Task) or a L4Re::Dma_space to a DMA domain. " alt="" coords="203,56,401,83"/>
+<area shape="rect" id="node1" title="Assign a kernel DMA space to a DMA domain." alt="" coords="5,49,164,90"/>
+<area shape="rect" id="node2" href="$classL4_1_1Cap__base.html#a90ff089ca2442b128c2b2b0e1c22c6d7" title="Return capability selector." alt="" coords="246,5,385,32"/>
+<area shape="rect" id="node3" href="$classL4Re_1_1Dataspace.html#a52b562764431fbb94fc960f9bba5b29b" title="Get flags of the dataspace." alt="" coords="230,56,401,83"/>
+<area shape="rect" id="node4" href="$group__l4vbus__module.html#ga230bfade9c21a168c3863cbe4f39e01f" title="Bind or unbind a kernel DMA space (L4::Task) or a L4Re::Dma_space to a DMA domain." alt="" coords="212,107,419,133"/>
 </map>

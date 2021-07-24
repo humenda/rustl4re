@@ -59,7 +59,7 @@ enum l4_msgtag_protocol
   L4_PROTO_EXCEPTION     =  -5L, ///< Exception
   L4_PROTO_SIGMA0        =  -6L, ///< Sigma0 protocol
   L4_PROTO_IO_PAGE_FAULT =  -8L, ///< I/O page fault message
-  L4_PROTO_KOBJECT       = -10L, ///< Protocol for messages to a a generic kobject
+  L4_PROTO_KOBJECT       = -10L, ///< Protocol for messages to a generic kobject
   L4_PROTO_TASK          = -11L, ///< Protocol for messages to a task object
   L4_PROTO_THREAD        = -12L, ///< Protocol for messages to a thread object
   L4_PROTO_LOG           = -13L, ///< Protocol for messages to a log object
@@ -72,7 +72,7 @@ enum l4_msgtag_protocol
   L4_PROTO_SEMAPHORE     = -20L, ///< Protocol for semaphore objects
   L4_PROTO_META          = -21L, ///< Meta information protocol
   L4_PROTO_IOMMU         = -22L, ///< Protocol ID for IO-MMUs
-  L4_PROTO_DEBUGGER      = -23L, ///< Protocol ID for the ddebugger
+  L4_PROTO_DEBUGGER      = -23L, ///< Protocol ID for the debugger
   L4_PROTO_SMCCC         = -24L, ///< Protocol ID for ARM SMCCC calls
 };
 
@@ -107,7 +107,7 @@ enum l4_msgtag_flags
    * \hideinitializer
    *
    * By enabling this flag when sending IPC, the sender indicates that the
-   * contents of the FPU shall be transfered to the receiving thread.
+   * contents of the FPU shall be transferred to the receiving thread.
    * However, the receiver has to indicate its willingness to receive
    * FPU context in its buffer descriptor register (BDR).
    */
@@ -161,34 +161,34 @@ typedef struct l4_msgtag_t
   l4_mword_t raw;   ///< raw value
 #ifdef __cplusplus
   /// Get the protocol value.
-  long label() const throw() { return raw >> 16; }
+  long label() const L4_NOTHROW { return raw >> 16; }
   /// Set the protocol value.
-  void label(long v) throw() { raw = (raw & 0x0ffff) | (v << 16); }
+  void label(long v) L4_NOTHROW { raw = (raw & 0x0ffff) | ((l4_umword_t)v << 16); }
   /// Get the number of untyped words.
-  unsigned words() const throw() { return raw & 0x3f; }
+  unsigned words() const L4_NOTHROW { return raw & 0x3f; }
   /// Get the number of typed items.
-  unsigned items() const throw() { return (raw >> 6) & 0x3f; }
+  unsigned items() const L4_NOTHROW { return (raw >> 6) & 0x3f; }
   /**
    * Get the flags value.
    *
    * The flags are a combination of the flags defined by
    * #l4_msgtag_flags.
    */
-  unsigned flags() const throw() { return raw & 0xf000; }
+  unsigned flags() const L4_NOTHROW { return raw & 0xf000; }
   /// Test if protocol indicates page-fault protocol.
-  bool is_page_fault() const throw() { return label() == L4_PROTO_PAGE_FAULT; }
+  bool is_page_fault() const L4_NOTHROW { return label() == L4_PROTO_PAGE_FAULT; }
   /// Test if protocol indicates preemption protocol.
-  bool is_preemption() const throw() { return label() == L4_PROTO_PREEMPTION; }
+  bool is_preemption() const L4_NOTHROW { return label() == L4_PROTO_PREEMPTION; }
   /// Test if protocol indicates system-exception protocol.
-  bool is_sys_exception() const throw() { return label() == L4_PROTO_SYS_EXCEPTION; }
+  bool is_sys_exception() const L4_NOTHROW { return label() == L4_PROTO_SYS_EXCEPTION; }
   /// Test if protocol indicates exception protocol.
-  bool is_exception() const throw() { return label() == L4_PROTO_EXCEPTION; }
+  bool is_exception() const L4_NOTHROW { return label() == L4_PROTO_EXCEPTION; }
   /// Test if protocol indicates sigma0 protocol.
-  bool is_sigma0() const throw() { return label() == L4_PROTO_SIGMA0; }
+  bool is_sigma0() const L4_NOTHROW { return label() == L4_PROTO_SIGMA0; }
   /// Test if protocol indicates IO-page-fault protocol.
-  bool is_io_page_fault() const throw() { return label() == L4_PROTO_IO_PAGE_FAULT; }
+  bool is_io_page_fault() const L4_NOTHROW { return label() == L4_PROTO_IO_PAGE_FAULT; }
   /// Test if flags indicate an error.
-  unsigned has_error() const throw() { return raw & L4_MSGTAG_ERROR; }
+  unsigned has_error() const L4_NOTHROW { return raw & L4_MSGTAG_ERROR; }
 #endif
 } l4_msgtag_t;
 
@@ -408,7 +408,8 @@ L4_INLINE
 l4_msgtag_t l4_msgtag(long label, unsigned words, unsigned items,
                       unsigned flags) L4_NOTHROW
 {
-  return (l4_msgtag_t){(label << 16) | (l4_mword_t)(words & 0x3f)
+  return (l4_msgtag_t){  (l4_mword_t)((l4_umword_t)label << 16)
+                       | (l4_mword_t)(words & 0x3f)
                        | (l4_mword_t)((items & 0x3f) << 6)
                        | (l4_mword_t)(flags & 0xf000)};
 }

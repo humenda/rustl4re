@@ -6,10 +6,15 @@
 include $(srcdir)/Modules.generic
 
 SUBSYSTEMS  :=	ABI KERNEL LIBK DRIVERS MINILIBC CXXLIB CRT0 \
-		VERSION JABI TCBOFFSET
+		VERSION JABI TCBOFFSET LIBUART
+
+ifeq ($(CONFIG_UNIT_TEST),y)
+	# UTEST depends on KERNEL and CHECKSUM, must be listed after them
+	SUBSYSTEMS += UTEST
+endif
 
 
-PREPROCESS_PARTS 	+= $(CONFIG_XARCH) $(CONFIG_ABI)
+PREPROCESS_PARTS 	+= $(CONFIG_XARCH) $(CONFIG_ABI) libuart
 PREPROCESS_PARTS-$(CONFIG_BIT32) += 32bit mips32
 PREPROCESS_PARTS-$(CONFIG_BIT64) += 64bit mips64
 BITS-$(CONFIG_BIT32) = 32
@@ -51,7 +56,7 @@ PRIVATE_INCDIR		+= drivers/mips/$(BITS) drivers/mips drivers
 INTERFACES_DRIVERS	:= mux_console console mem reset uart filter_console \
 			   processor delayloop io mmu
 mem_IMPL		:= mem mem-mips
-uart_IMPL		:= uart
+uart_IMPL		:= uart uart-libuart
 processor_IMPL		:= processor processor-mips
 CXXSRC_DRIVERS		:= glue_libc.cc
 #NOOPT			+= $(patsubst %.o, %, $(OBJ_DRIVERS))
@@ -67,14 +72,13 @@ CSRC_MINILIBC	:= atexit.c memccpy.c memcmp.c memmove.c memset.c memcpy.c \
 		   memchr.c panic.c strchr.c strcmp.c strcpy.c strlen.c \
 		   strncmp.c strncpy.c strstr.c printf.c \
 		   __v_printf.c vprintf.c strtol.c strtoul.c __lltostr.c \
-		   __ltostr.c putchar.c puts.c getchar.c gets.c \
+		   __ltostr.c putchar.c puts.c getchar.c \
 		   sprintf.c snprintf.c vsnprintf.c vsprintf.c \
 		   longjmp.c isalnum.c isalpha.c isascii.c isblank.c \
 		   iscntrl.c isdigit.c isgraph.c islower.c isprint.c \
 		   ispunct.c isspace.c isupper.c isxdigit.c strspn.c \
 		   strcspn.c tolower.c
 ASSRC_MINILIBC	:= setjmp.S
-NOOPT		+= $(patsubst %.o, %, $(OBJ_MINILIBC))
 
 
 #
@@ -99,7 +103,7 @@ l4_types_IMPL	:= l4_types l4_types-mips l4_types-debug
 # KERNEL subsystem
 #
 KERNEL 		:= fiasco
-KERNEL_EXTRA 	:= Symbols
+KERNEL_EXTRA 	:= Symbols kernel.mips.lds fiasco.debug
 VPATH 		+= kern/mips/$(BITS) kern/mips kern
 VPATH		+= jdb/mips/$(BITS) jdb/mips jdb
 PRIVATE_INCDIR 	+= kern/mips/$(BITS) kern/mips kern
@@ -128,13 +132,12 @@ cpu_lock_IMPL		:= cpu_lock cpu_lock-generic
 entry_frame_IMPL	:= entry_frame-mips
 fpu_IMPL		:= fpu fpu-mips
 ipi_IMPL		:= ipi ipi-mips
-kdb_ke_IMPL		:= kdb_ke-mips
+kdb_ke_IMPL		+= kdb_ke-mips
 kernel_task_IMPL	:= kernel_task
 kernel_thread_IMPL	:= kernel_thread kernel_thread-std kernel_thread-mips
-kernel_uart_IMPL  	:= kernel_uart
+kernel_uart_IMPL  	:= kernel_uart kernel_uart-libuart
 kmem_alloc_IMPL		:= kmem_alloc kmem_alloc-mips
 map_util_IMPL		:= map_util map_util-mem map_util-objs
-mapping_IMPL		:= mapping-mips mapping
 mem_layout_IMPL		:= mem_layout mem_layout-mips$(BITS)
 mem_unit_IMPL		:= mem_unit-mips
 mem_space_IMPL		:= mem_space mem_space-user mem_space-mips
@@ -175,7 +178,8 @@ jdb_kern_info_IMPL	:= jdb_kern_info
 jdb_tbuf_init_IMPL	:= jdb_tbuf_init jdb_tbuf_init-mips
 jdb_ptab_IMPL		:= jdb_ptab jdb_ptab-mips
 thread_IMPL		+= thread-debug
-INTERFACES_JDB		+= jdb_log jdb_trace_set jdb_ptab jdb_mips_tlb
+INTERFACES_JDB		+= jdb_log jdb_trace_set jdb_ptab jdb_mips_tlb \
+			   jdb_console_buffer
 INTERFACES_JDB		+= $(INTERFACES_JDB-y)
 endif
 
@@ -201,7 +205,7 @@ ASSRC_CRT0	:= crt0.S
 # 
 CXXLIB 			:= libcxx.a
 VPATH			+= lib/cxxlib
-INTERFACES_CXXLIB 	:= paranoia s_cruft
+INTERFACES_CXXLIB 	:= paranoia
 
 #
 # LIBK subsystem
@@ -211,9 +215,17 @@ VPATH          	+= lib/libk/mips/$(BITS) lib/libk/mips lib/libk lib/libk/quad
 PRIVATE_INCDIR 	+= lib/libk/mips/$(BITS) lib/libk/mips lib/libk
 
 INTERFACES_LIBK	:= atomic lock_guard std_macros
-CSRC_LIBK	+= umoddi3.c ashldi3.c udivdi3.c qdivrem.c
+CSRC_LIBK	+= umoddi3.c ashldi3.c udivdi3.c qdivrem.c ucmpdi2.c
 CXXSRC_LIBK     += construction.cc
 atomic_IMPL     := atomic atomic-mips
+
+#
+# SIMPLEMALLOC
+#
+SIMPLEMALLOC     := libsimple_malloc.a
+VPATH             += lib/simple_malloc
+PRIVATE_INCDIR    += lib/simple_malloc
+CXXSRC_SIMPLEMALLOC = simple_malloc.cc
 
 #
 # LIBDISASM subsystem (only for Jdb)
@@ -227,18 +239,22 @@ ifeq ("$(CONFIG_JDB_DISASM)","y")
   KERNEL_EXTRA_LIBS   += $(LIBDISASM)
   PREPROCESS_PARTS    += jdb_disasm
 
+  SUBSYSTEMS          += SIMPLEMALLOC
+  KERNEL_EXTRA_LIBS   += $(SIMPLEMALLOC)
+
   LIBDISASM           := libdisasm.a
-  VPATH               += lib/disasm lib/disasm/elf lib/disasm/include \
-                         lib/disasm/include/opcode lib/disasm/opcodes \
-                         lib/disasm/libiberty lib/disasm/bfd
-  PRIVATE_INCDIR      += lib/disasm lib/disasm/elf lib/disasm/include \
-                         lib/disasm/include/opcode lib/disasm/opcodes \
-                         lib/disasm/libiberty lib/disasm/bfd
-  PRIVATE_INCDIR      += lib/disasm
+  VPATH               += lib/disasm lib/disasm/capstone \
+			 lib/disasm/capstone/arch/Mips
+  PRIVATE_INCDIR      += lib/disasm lib/disasm/capstone/include
   CXXSRC_LIBDISASM    := disasm.cc
-  CSRC_LIBDISASM      := mips-dis.c mips-opc.c mips16-opc.c dis-init.c dis-buf.c \
-                         safe-ctype.c libbfd.c
-  NOOPT               += $(patsubst %.o, %, $(OBJ_LIBDISASM))
+  CSRC_LIBDISASM      := cs.c utils.c \
+                         MCInst.c MCInstrDesc.c MCRegisterInfo.c SStream.c \
+                         MipsModule.c MipsInstPrinter.c \
+                         MipsDisassembler.c MipsMapping.c
+  CPPFLAGS            += -DCAPSTONE_HAS_MIPS
+  CFLAGS_MipsInstPrinter  = -Wno-unused-parameter -Wno-bad-function-cast
+  CFLAGS_MipsMapping      = -Wno-unused-parameter
+  CFLAGS_MipsDisassembler = -Wno-unused-parameter
 endif
 
 #
@@ -270,4 +286,4 @@ CONFIG_KERNEL_LOAD_ADDR-32 := 0x80010000
 CONFIG_KERNEL_LOAD_ADDR-64 := 0xffffffff80010000
 CONFIG_KERNEL_LOAD_ADDR := $(CONFIG_KERNEL_LOAD_ADDR-$(BITS))
 
-MODULES_FILES = $(MODULES_FILE) $(MODULES_FILE_BSP)
+MODULES_FILES += $(MODULES_FILE) $(MODULES_FILE_BSP)

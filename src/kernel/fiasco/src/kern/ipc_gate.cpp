@@ -38,12 +38,12 @@ class Ipc_gate_obj :
   typedef Slab_cache Self_alloc;
 
 public:
-  bool put() { return Ipc_gate::put(); }
+  bool put() override { return Ipc_gate::put(); }
 
   Thread *thread() const { return _thread; }
   Mword id() const { return _id; }
-  Mword obj_id() const { return _id; }
-  bool is_local(Space *s) const { return _thread && _thread->space() == s; }
+  Mword obj_id() const override { return _id; }
+  bool is_local(Space *s) const override { return _thread && _thread->space() == s; }
 };
 
 //---------------------------------------------------------------------------
@@ -85,17 +85,17 @@ JDB_DEFINE_TYPENAME(Ipc_gate_obj, "\033[35mGate\033[m");
 
 PUBLIC
 ::Kobject_mappable *
-Ipc_gate_obj::map_root()
+Ipc_gate_obj::map_root() override
 { return Ipc_gate::map_root(); }
 
 PUBLIC
 Kobject_iface *
-Ipc_gate_obj::downgrade(unsigned long attr)
+Ipc_gate_ctl::downgrade(unsigned long attr) override
 {
   if (attr & L4_msg_item::C_obj_right_1)
-    return static_cast<Ipc_gate*>(this);
+    return static_cast<Ipc_gate*>(static_cast<Ipc_gate_obj*>(this));
   else
-    return static_cast<Ipc_gate_ctl*>(this);
+    return this;
 }
 
 PUBLIC inline
@@ -136,7 +136,7 @@ Ipc_gate_obj::unblock_all()
 
 PUBLIC virtual
 void
-Ipc_gate_obj::initiate_deletion(Kobject ***r)
+Ipc_gate_obj::initiate_deletion(Kobject ***r) override
 {
   if (_thread)
     _thread->ipc_gate_deleted(_id);
@@ -146,7 +146,7 @@ Ipc_gate_obj::initiate_deletion(Kobject ***r)
 
 PUBLIC virtual
 void
-Ipc_gate_obj::destroy(Kobject ***r)
+Ipc_gate_obj::destroy(Kobject ***r) override
 {
   Kobject::destroy(r);
   Thread *tmp = access_once(&_thread);
@@ -207,9 +207,12 @@ void Ipc_gate_obj::operator delete (void *_f)
 
 PRIVATE inline NOEXPORT NEEDS["assert_opt.h"]
 L4_msg_tag
-Ipc_gate_ctl::bind_thread(L4_obj_ref, L4_fpage::Rights,
+Ipc_gate_ctl::bind_thread(L4_obj_ref, L4_fpage::Rights rights,
                           Syscall_frame *f, Utcb const *in, Utcb *)
 {
+  if (EXPECT_FALSE(!(rights & L4_fpage::Rights::CS())))
+    return commit_result(-L4_err::EPerm);
+
   L4_msg_tag tag = f->tag();
 
   if (tag.words() < 2)
@@ -266,7 +269,8 @@ Ipc_gate_ctl::get_infos(L4_obj_ref, L4_fpage::Rights,
 
 PUBLIC
 void
-Ipc_gate_ctl::invoke(L4_obj_ref self, L4_fpage::Rights rights, Syscall_frame *f, Utcb *utcb)
+Ipc_gate_ctl::invoke(L4_obj_ref self, L4_fpage::Rights rights,
+                     Syscall_frame *f, Utcb *utcb) override
 {
   if (f->tag().proto() == L4_msg_tag::Label_kobject)
     Kobject_h<Ipc_gate_ctl, Kobject_iface>::invoke(self, rights, f, utcb);
@@ -345,7 +349,8 @@ Ipc_gate::block(Thread *ct, L4_timeout const &to, Utcb *u)
 
 PUBLIC
 void
-Ipc_gate::invoke(L4_obj_ref /*self*/, L4_fpage::Rights rights, Syscall_frame *f, Utcb *utcb)
+Ipc_gate::invoke(L4_obj_ref /*self*/, L4_fpage::Rights rights,
+                 Syscall_frame *f, Utcb *utcb) override
 {
   Syscall_frame *ipc_f = f;
   //LOG_MSG_3VAL(current(), "gIPC", Mword(_thread), _id, f->obj_2_flags());
@@ -384,8 +389,7 @@ Ipc_gate::invoke(L4_obj_ref /*self*/, L4_fpage::Rights rights, Syscall_frame *f,
   else
     {
       ipc_f->from(_id | cxx::int_value<L4_fpage::Rights>(rights));
-      ct->do_ipc(f->tag(), partner, partner, have_rcv, sender,
-                 f->timeout(), f, rights);
+      ct->do_ipc(f->tag(), partner, have_rcv, sender, f->timeout(), f, rights);
     }
 }
 
@@ -427,6 +431,7 @@ static inline void __attribute__((constructor)) FIASCO_INIT
 register_factory()
 {
   Kobject_iface::set_factory(0, ipc_gate_factory);
+  Kobject_iface::set_factory(L4_msg_tag::Label_kobject, ipc_gate_factory);
 }
 }
 
@@ -437,7 +442,7 @@ IMPLEMENTATION [debug]:
 
 PUBLIC
 ::Kobject_dbg *
-Ipc_gate_obj::dbg_info() const
+Ipc_gate_obj::dbg_info() const override
 { return Ipc_gate::dbg_info(); }
 
 IMPLEMENT

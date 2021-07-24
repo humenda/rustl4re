@@ -1,5 +1,5 @@
 <map id="l4/cxx/avl_map" name="l4/cxx/avl_map">
-<area shape="rect" id="node2" href="$region__mapping.html" title="Region handling. " alt="" coords="125,80,303,107"/>
-<area shape="rect" id="node3" href="$region__mapping__svr_source.html" title="l4/re/util/region_mapping_svr" alt="" coords="5,162,209,189"/>
-<area shape="rect" id="node4" href="$region__mapping__svr__2_source.html" title="l4/re/util/region_mapping\l_svr_2" alt="" coords="233,155,411,196"/>
+<area shape="rect" id="node1" title="AVL map." alt="" coords="37,5,159,32"/>
+<area shape="rect" id="node2" href="$region__mapping.html" title="Region handling." alt="" coords="5,80,191,107"/>
+<area shape="rect" id="node3" href="$region__mapping__svr__2_source.html" title=" " alt="" coords="5,155,191,196"/>
 </map>

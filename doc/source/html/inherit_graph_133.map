@@ -1,3 +1,12 @@
 <map id="Graphical Class Hierarchy" name="Graphical Class Hierarchy">
-<area shape="rect" id="node1" href="$structL4_1_1Kobject__typeid.html" title="Meta object for handling access to type information of Kobjects. " alt="" coords="5,5,175,32"/>
+<area shape="rect" id="node1" href="$structL4_1_1Typeid_1_1Detail_1_1Rpcs__end.html" title="Internal end&#45;of&#45;list marker." alt="" coords="5,173,140,214"/>
+<area shape="rect" id="node2" href="$structL4_1_1Typeid_1_1Detail_1_1__Rpcs.html" title=" " alt="" coords="210,5,391,61"/>
+<area shape="rect" id="node4" href="$structL4_1_1Typeid_1_1Detail_1_1__Rpcs.html" title=" " alt="" coords="215,85,386,141"/>
+<area shape="rect" id="node6" href="$structL4_1_1Typeid_1_1Detail_1_1__Rpcs.html" title=" " alt="" coords="221,165,380,221"/>
+<area shape="rect" id="node8" href="$structL4_1_1Typeid_1_1Detail_1_1__Rpcs.html" title=" " alt="" coords="188,246,413,287"/>
+<area shape="rect" id="node10" href="$structL4_1_1Typeid_1_1Detail_1_1__Rpcs.html" title="Empty list of RPCs." alt="" coords="207,311,395,353"/>
+<area shape="rect" id="node3" href="$structL4_1_1Typeid_1_1Rpcs__code_1_1F.html" title=" " alt="" coords="461,13,688,54"/>
+<area shape="rect" id="node5" href="$structL4_1_1Typeid_1_1Rpcs__sys.html" title="List of RPCs typically used for kernel interfaces." alt="" coords="497,93,652,134"/>
+<area shape="rect" id="node7" href="$structL4_1_1Typeid_1_1Rpcs.html" title="Standard list of RPCs of an interface." alt="" coords="479,180,670,207"/>
+<area shape="rect" id="node9" href="$structL4_1_1Typeid_1_1Rpc__nocode.html" title="List of RPCs of an interface using a single operation without an opcode." alt="" coords="488,246,661,287"/>
 </map>

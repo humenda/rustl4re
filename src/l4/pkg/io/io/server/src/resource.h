@@ -12,6 +12,7 @@
 #include <l4/sys/icu>
 
 #include <l4/vbus/vbus_types.h>
+#include <string>
 #include <vector>
 
 #include <l4/re/dataspace>
@@ -42,6 +43,16 @@ public:
    * \return The first resource with the given ID, or null_ptr if non found.
    */
   Resource *find(char const *id) const;
+
+  template<typename PRED>
+  Resource *find_if(PRED &&p) const
+  {
+    for (auto i: *this)
+      if (p(i))
+        return i;
+
+    return nullptr;
+  }
 };
 
 class Resource_space
@@ -53,10 +64,10 @@ public:
   virtual bool alloc(Resource *parent, Device *pdev,
                      Resource *child, Device *cdev, bool resize) = 0;
   virtual bool adjust_children(Resource *self) = 0;
-  virtual ~Resource_space() noexcept = 0;
-};
 
-inline Resource_space::~Resource_space() noexcept {}
+protected:
+  ~Resource_space() noexcept = default;
+};
 
 class Resource
 {
@@ -95,6 +106,9 @@ public:
     F_width_64bit   = 0x010000,
     F_cached_mem    = 0x020000,
     F_relative      = 0x040000,
+    F_internal      = 0x080000, ///< Internal resource not exported to vBUS
+
+    Mem_type_read_only    = 0x100000,
 
     Irq_type_base         = 0x100000,
     Irq_type_mask         = L4_IRQ_F_MASK       * Irq_type_base,
@@ -105,6 +119,18 @@ public:
     Irq_type_falling_edge = L4_IRQ_F_NEG_EDGE   * Irq_type_base,
     Irq_type_both_edges   = L4_IRQ_F_BOTH_EDGE  * Irq_type_base,
   };
+
+  bool is_irq() const
+  { return type() == Irq_res; }
+
+  static bool is_irq_s(Resource const *r)
+  { return r && r->is_irq(); }
+
+  bool is_irq_provider() const
+  { return type() == Irq_res && provided(); }
+
+  static bool is_irq_provider_s(Resource const *r)
+  { return r && r->is_irq_provider(); }
 
   bool irq_is_level_triggered() const
   { return (_f & Irq_type_mask) & (L4_IRQ_F_LEVEL * Irq_type_base); }
@@ -139,6 +165,7 @@ public:
   bool fixed_addr() const { return !(_f & F_can_move); }
   bool fixed_size() const { return !(_f & F_can_resize); }
   bool relative() const { return _f & F_relative; }
+  bool internal() const { return _f & F_internal; }
   unsigned type() const { return _f & F_type_mask; }
 
   virtual bool lt_compare(Resource const *o) const
@@ -160,6 +187,13 @@ public:
 
   l4_uint32_t id() const { return _id; }
 
+  std::string id_str() const
+  {
+    std::string s;
+    for (l4_uint32_t id = _id; id; id >>=8)
+      s += id & 0xff;
+    return s;
+  }
 
 public:
 //private:
@@ -265,36 +299,6 @@ public:
   { return ~0; }
 };
 
-class Resource_provider : public Resource
-{
-private:
-  class _RS : public Resource_space
-  {
-  private:
-    typedef Resource::Addr Addr;
-    typedef Resource::Size Size;
-    Resource_list _rl;
-
-  public:
-    bool request(Resource *parent, Device *pdev, Resource *child, Device *cdev);
-    bool alloc(Resource *parent, Device *pdev, Resource *child, Device *cdev,
-               bool resize);
-    void assign(Resource *parent, Resource *child);
-    bool adjust_children(Resource *self);
-  };
-
-  mutable _RS _rs;
-
-public:
-  explicit Resource_provider(unsigned long flags)
-  : Resource(flags), _rs() {}
-
-  Resource_provider(unsigned long flags, Addr s, Addr e)
-  : Resource(flags, s, e), _rs() {}
-
-  Resource_space *provided() const
-  { return &_rs; }
-};
 
 class Root_resource : public Resource
 {
@@ -305,8 +309,8 @@ public:
   Root_resource(unsigned long flags, Resource_space *rs)
   : Resource(flags), _rs(rs) {}
 
-  Resource_space *provided() const { return _rs; }
-  void dump(int) const {}
+  Resource_space *provided() const override { return _rs; }
+  void dump(int) const override {}
 };
 
 
@@ -326,7 +330,7 @@ public:
 
   void alloc_ram(Size size, unsigned long alloc_flags);
 
-  l4_addr_t map_iomem() const
+  l4_addr_t map_iomem() const override
   {
     return _r.get();
   }

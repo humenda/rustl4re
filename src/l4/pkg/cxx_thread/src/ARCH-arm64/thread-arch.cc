@@ -20,6 +20,8 @@ void L4_cxx_start(void)
                 "1: .quad L4_Thread_execute         \n");
 }
 
+void L4_cxx_kill(void);
+
 void L4_cxx_kill(void)
 {
   asm volatile (".global L4_Thread_kill_cxx_thread \n"

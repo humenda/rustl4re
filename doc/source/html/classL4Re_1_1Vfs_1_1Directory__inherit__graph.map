@@ -1,4 +1,5 @@
 <map id="L4Re::Vfs::Directory" name="L4Re::Vfs::Directory">
-<area shape="rect" id="node2" href="$classL4Re_1_1Vfs_1_1File.html" title="The basic interface for an open POSIX file. " alt="" coords="20,277,137,457"/>
-<area shape="rect" id="node3" href="$classL4Re_1_1Vfs_1_1Be__file.html" title="Boiler plate class for implementing an open file for L4Re::Vfs. " alt="" coords="5,505,152,744"/>
+<area shape="rect" id="node1" title="Interface for a POSIX file that is a directory." alt="" coords="7,5,158,259"/>
+<area shape="rect" id="node2" href="$classL4Re_1_1Vfs_1_1File.html" title="The basic interface for an open POSIX file." alt="" coords="21,307,144,487"/>
+<area shape="rect" id="node3" href="$classL4Re_1_1Vfs_1_1Be__file.html" title="Boiler plate class for implementing an open file for L4Re::Vfs." alt="" coords="5,535,160,773"/>
 </map>

@@ -1,7 +1,3 @@
 <map id="Graphical Class Hierarchy" name="Graphical Class Hierarchy">
-<area shape="rect" id="node1" href="$classL4_1_1Io__pager.html" title="Io_pager interface. " alt="" coords="5,27,107,54"/>
-<area shape="rect" id="node2" href="$classL4_1_1Kobject__t.html" title="L4::Kobject_t\&lt; Pager,\l Io_pager, L4_PROTO_PAGE\l_FAULT \&gt;" alt="" coords="155,13,365,69"/>
-<area shape="rect" id="node3" href="$classL4_1_1Pager.html" title="Pager interface including the Io_pager interface. " alt="" coords="413,27,496,54"/>
-<area shape="rect" id="node4" href="$classL4_1_1Kobject__t.html" title="L4::Kobject_t\&lt; Rm,\l L4::Pager, L4RE_PROTO\l_RM, L4::Type_info::Demand\l_t\&lt; 1 \&gt; \&gt;" alt="" coords="544,5,747,76"/>
-<area shape="rect" id="node5" href="$classL4Re_1_1Rm.html" title="Region map. " alt="" coords="795,27,877,54"/>
+<area shape="rect" id="node1" href="$structL4_1_1Ipc_1_1Array__ref.html" title="Array reference data type for arrays located in the message." alt="" coords="5,5,204,47"/>
 </map>

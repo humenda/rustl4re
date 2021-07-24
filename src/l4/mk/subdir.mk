@@ -35,8 +35,8 @@ install oldconfig txtconfig relink::
 	$(VERBOSE)set -e; $(foreach d,$(TARGET), test -f $d/broken -o -f $d/obsolete || \
 	    if [ -f $d/Makefile ] ; then PWD=$(PWD)/$d $(MAKE) -C $d $@ $(MKFLAGS) $(MKFLAGS_$(d)); fi; )
 
-# first the subdir-targets (this is were "all" will be build, e.g. in lib
-# or server.
+# first the subdir-targets (this is where "all" will be built, e.g. in lib
+# or server).
 $(filter-out ptest,$(SUBDIR_TARGET)): %:
 	$(VERBOSE)test -f $@/broken -o -f $@/obsolete ||		\
 	    if [ -f $@/Makefile ] ; then PWD=$(PWD)/$@ $(MAKE) -C $@ $(MKFLAGS) ; fi

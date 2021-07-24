@@ -8,7 +8,7 @@
  *
  * 1. Copyright Notice
  *
- * Some or all of this work - Copyright (c) 1999 - 2017, Intel Corp.
+ * Some or all of this work - Copyright (c) 1999 - 2019, Intel Corp.
  * All rights reserved.
  *
  * 2. License
@@ -111,6 +111,42 @@
  * other governmental approval, or letter of assurance, without first obtaining
  * such license, approval or letter.
  *
+ *****************************************************************************
+ *
+ * Alternatively, you may choose to be licensed under the terms of the
+ * following license:
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions, and the following disclaimer,
+ *    without modification.
+ * 2. Redistributions in binary form must reproduce at minimum a disclaimer
+ *    substantially similar to the "NO WARRANTY" disclaimer below
+ *    ("Disclaimer") and any redistribution must be conditioned upon
+ *    including a substantially similar Disclaimer requirement for further
+ *    binary redistribution.
+ * 3. Neither the names of the above-listed copyright holders nor the names
+ *    of any contributors may be used to endorse or promote products derived
+ *    from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+ * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * Alternatively, you may choose to be licensed under the terms of the
+ * GNU General Public License ("GPL") version 2 as published by the Free
+ * Software Foundation.
+ *
  *****************************************************************************/
 
 #define __PREPROCESS_H__
@@ -147,7 +183,7 @@
 
 #define PR_PREFIX_ID            "Pr(%.4u) - "             /* Used for debug output */
 
-#define THIS_TOKEN_OFFSET(t)    ((t-Gbl_MainTokenBuffer) + 1)
+#define THIS_TOKEN_OFFSET(t)    ((AslGbl_MainTokenBuffer - t) + 1)
 
 
 /*
@@ -211,21 +247,22 @@ typedef struct directive_info
 /*
  * Globals
  */
+PR_EXTERN char                  PR_INIT_GLOBAL (*AslGbl_MainTokenBuffer, NULL); /* [ASL_LINE_BUFFER_SIZE]; */
+PR_EXTERN char                  PR_INIT_GLOBAL (*AslGbl_MacroTokenBuffer, NULL); /* [ASL_LINE_BUFFER_SIZE]; */
+PR_EXTERN char                  PR_INIT_GLOBAL (*AslGbl_ExpressionTokenBuffer, NULL); /* [ASL_LINE_BUFFER_SIZE]; */
+
+PR_EXTERN UINT32                AslGbl_PreprocessorLineNumber;
+PR_EXTERN int                   AslGbl_IfDepth;
+PR_EXTERN PR_FILE_NODE          *AslGbl_InputFileList;
+PR_EXTERN BOOLEAN               PR_INIT_GLOBAL (AslGbl_PreprocessorError, FALSE);
+PR_EXTERN BOOLEAN               PR_INIT_GLOBAL (AslGbl_IgnoringThisCodeBlock, FALSE);
+PR_EXTERN PR_DEFINE_INFO        PR_INIT_GLOBAL (*AslGbl_DefineList, NULL);
+PR_EXTERN DIRECTIVE_INFO        PR_INIT_GLOBAL (*AslGbl_DirectiveStack, NULL);
+
 #if 0 /* TBD for macros */
 PR_EXTERN char                  PR_INIT_GLOBAL (*XXXEvalBuffer, NULL); /* [ASL_LINE_BUFFER_SIZE]; */
 #endif
 
-PR_EXTERN char                  PR_INIT_GLOBAL (*Gbl_MainTokenBuffer, NULL); /* [ASL_LINE_BUFFER_SIZE]; */
-PR_EXTERN char                  PR_INIT_GLOBAL (*Gbl_MacroTokenBuffer, NULL); /* [ASL_LINE_BUFFER_SIZE]; */
-PR_EXTERN char                  PR_INIT_GLOBAL (*Gbl_ExpressionTokenBuffer, NULL); /* [ASL_LINE_BUFFER_SIZE]; */
-
-PR_EXTERN UINT32                Gbl_PreprocessorLineNumber;
-PR_EXTERN int                   Gbl_IfDepth;
-PR_EXTERN PR_FILE_NODE          *Gbl_InputFileList;
-PR_EXTERN PR_DEFINE_INFO        PR_INIT_GLOBAL (*Gbl_DefineList, NULL);
-PR_EXTERN BOOLEAN               PR_INIT_GLOBAL (Gbl_PreprocessorError, FALSE);
-PR_EXTERN BOOLEAN               PR_INIT_GLOBAL (Gbl_IgnoringThisCodeBlock, FALSE);
-PR_EXTERN DIRECTIVE_INFO        PR_INIT_GLOBAL (*Gbl_DirectiveStack, NULL);
 
 /*
  * prscan - Preprocessor entry

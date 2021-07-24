@@ -54,7 +54,7 @@ static int allocate_mem(unsigned long size_in_bytes, unsigned long flags,
   /* Make the dataspace visible in our address space */
   *virt_addr = 0;
   if ((r = L4Re::Env::env()->rm()->attach(virt_addr, size_in_bytes,
-                                          L4Re::Rm::Search_addr,
+                                          L4Re::Rm::F::Search_addr | L4Re::Rm::F::RW,
                                           L4::Ipc::make_cap_rw(d), 0,
                                           flags & L4Re::Mem_alloc::Super_pages
                                             ? L4_SUPERPAGESHIFT : L4_PAGESHIFT)))

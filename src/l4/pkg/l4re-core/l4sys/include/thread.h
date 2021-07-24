@@ -237,16 +237,21 @@ l4_thread_control_exc_handler_u(l4_cap_idx_t exc_handler,
  * Bind the thread to a task.
  * \ingroup l4_thread_control_api
  *
- * \param thread_utcb  The address of the UTCB in the target task.
- * \param task         The target task of the thread.
+ * \param thread_utcb  The thread’s UTCB address within the task it shall
+ *                     be bound to. The address must be aligned
+ *                     (architecture dependent; at least word aligned) and
+ *                     it must point to at least #L4_UTCB_OFFSET bytes of
+ *                     kernel-user memory.
+ * \param task         The task the thread shall be bound to.
  *
- * Binding a thread to a task has the effect that the thread
- * afterwards executes code within that task and has access to the
- * resources visible within that task.
+ * A thread may execute code in the context of a task if and only if the
+ * thread is bound to the task. To actually start execution,
+ * l4_thread_ex_regs() needs to be used. Execution in the context of the
+ * task means that the code has access to all the task’s resources (and
+ * only those). The executed code itself must be one of those resources.
  *
- * \note There should not be more than one thread use a UTCB to prevent
- *       data corruption.
- *
+ * \note The UTCBs of different threads in the same task should not overlap
+ *       in order to prevent data corruption.
  */
 L4_INLINE void
 l4_thread_control_bind(l4_utcb_t *thread_utcb,
@@ -523,7 +528,7 @@ l4_thread_register_del_irq_u(l4_cap_idx_t thread, l4_cap_idx_t irq,
                              l4_utcb_t *utcb) L4_NOTHROW;
 
 /**
- * Start a thread sender modifiction sequence.
+ * Start a thread sender modification sequence.
  * \ingroup l4_thread_api
  *
  * Add modification rules with l4_thread_modify_sender_add() and commit with
@@ -560,7 +565,7 @@ l4_thread_modify_sender_start_u(l4_utcb_t *u) L4_NOTHROW;
  *
  * In pseudo code:
  *   if ((sender_label & match_mask) == match)
- *     { label = (label & ~del_bits) | add_bits; }
+ *     { sender_label = (sender_label & ~del_bits) | add_bits; }
  *
  * Only the first match is applied.
  *
@@ -588,6 +593,10 @@ l4_thread_modify_sender_add_u(l4_umword_t match_mask,
 /**
  * Apply (commit) a sender modification sequence.
  * \ingroup l4_thread_api
+ *
+ * The modification rules are applied to all IPCs to the thread (whether
+ * directly or by IPC gate) that are already in flight, that is that the sender
+ * is already blocking on.
  *
  * \see l4_thread_modify_sender_start
  * \see l4_thread_modify_sender_add
@@ -745,7 +754,7 @@ l4_thread_control_bind_u(l4_utcb_t *thread_utcb, l4_cap_idx_t task,
   v->mr[L4_THREAD_CONTROL_MR_IDX_FLAGS]         |= L4_THREAD_CONTROL_BIND_TASK;
   v->mr[L4_THREAD_CONTROL_MR_IDX_BIND_UTCB]      = (l4_addr_t)thread_utcb;
   v->mr[L4_THREAD_CONTROL_MR_IDX_BIND_TASK]      = L4_ITEM_MAP;
-  v->mr[L4_THREAD_CONTROL_MR_IDX_BIND_TASK + 1]  = l4_obj_fpage(task, 0, L4_FPAGE_RWX).raw;
+  v->mr[L4_THREAD_CONTROL_MR_IDX_BIND_TASK + 1]  = l4_obj_fpage(task, 0, L4_CAP_FPAGE_RWS).raw;
 }
 
 L4_INLINE void

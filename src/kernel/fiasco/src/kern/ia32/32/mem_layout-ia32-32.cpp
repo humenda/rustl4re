@@ -31,24 +31,24 @@ public:
     Idt               = Service_page + 0xfe000,  ///< % 4KB
     Syscalls          = Service_page + 0xff000,  ///< % 4KB syscall page
     Tbuf_buffer_area  = Service_page + 0x200000, ///< % 2MB
+    Tbuf_buffer_size  = 0x200000,
     Tbuf_ubuffer_area = Tbuf_buffer_area,
     // 0xeb800000-0xec000000 (8MB) free
     Io_map_area_start = 0xec000000,
     Io_map_area_end   = 0xec800000,
     __free_4          = 0xec880000,    ///< % 4MB
-    Jdb_debug_start   = 0xecc00000,    ///< % 4MB   JDB symbols/lines
-    Jdb_debug_end     = 0xee000000,    ///< % 4MB
     // 0xee000000-0xef800000 (24MB) free
     Kstatic           = 0xef800000,    ///< Io_bitmap - 4MB
     Io_bitmap         = 0xefc00000,    ///< % 4MB
     Vmem_end          = 0xf0000000,
 
     Kernel_image        = FIASCO_IMAGE_VIRT_START, // usually 0xf0000000
-    Kernel_image_end    = Kernel_image + Config::SUPERPAGE_SIZE,
+    Kernel_image_size   = FIASCO_IMAGE_VIRT_SIZE,
+    Kernel_image_end    = Kernel_image + Kernel_image_size,
 
     Adap_image           = Adap_in_kernel_image
                            ? Kernel_image
-                           : Kernel_image + Config::SUPERPAGE_SIZE,
+                           : Kernel_image + Kernel_image_size,
 
     Adap_vram_mda_beg = Adap_image + 0xb0000, ///< % 8KB video RAM MDA memory
     Adap_vram_mda_end = Adap_image + 0xb8000,

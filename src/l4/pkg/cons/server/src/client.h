@@ -235,6 +235,8 @@ public:
     unsigned long stat_lines() const { return _sum_lines; }
 
   private:
+    Buf(Buf const &) = delete;
+    Buf &operator = (Buf const &) = delete;
     char *_buf;
     int _bufsz;
     int _head, _tail;

@@ -16,6 +16,9 @@ Revision History
 
 --*/
 
+#ifdef __GNUC__
+#pragma GCC visibility push(hidden)
+#endif
 
 #include "efi.h"
 #include "efilib.h"
@@ -81,6 +84,7 @@ LibDuplicateDevicePathInstance (
 //
 extern BOOLEAN                          LibInitialized;
 extern BOOLEAN                          LibFwInstance;
+extern EFI_HANDLE			LibImageHandle;
 extern SIMPLE_TEXT_OUTPUT_INTERFACE     *LibRuntimeDebugOut;
 extern EFI_UNICODE_COLLATION_INTERFACE  *UnicodeInterface;
 extern EFI_UNICODE_COLLATION_INTERFACE  LibStubUnicodeInterface;

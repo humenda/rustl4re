@@ -295,10 +295,10 @@ SRC_C_$(TARGET_DDE_FS) += \
 
 all::
 
-lib/crc32.o : crc32table.h
-lib/crc32.o : PRIVATE_INCDIR += .
-kernel/time.o : timeconst.h
-kernel/time.o : PRIVATE_INCDIR += .
+PRIVATE_INCDIR_lib/crc32.c += .
+lib/crc32.c : | crc32table.h
+PRIVATE_INCDIR_kernel/time.c += .
+kernel/time.c : | timeconst.h
 
 timeconst.h : $(SRC_DIR)/kernel/timeconst.pl
 	@$(GEN_MESSAGE)

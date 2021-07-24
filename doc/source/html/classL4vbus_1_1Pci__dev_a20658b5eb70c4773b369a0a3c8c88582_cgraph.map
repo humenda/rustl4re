@@ -1,4 +1,5 @@
 <map id="L4vbus::Pci_dev::cfg_read" name="L4vbus::Pci_dev::cfg_read">
-<area shape="rect" id="node2" href="$classL4vbus_1_1Device.html#a86e2a0b4eb5abb5ce6443690c6e2361f" title="Access the Vbus capability of the underlying virtual bus. " alt="" coords="238,5,411,32"/>
-<area shape="rect" id="node3" href="$group__l4vbus__pci__module.html#gaf6db088ef60ca6f09dbfb50a4b34ae32" title="Read from the device&#39;s vPCI configuration space. " alt="" coords="237,56,412,83"/>
+<area shape="rect" id="node1" title="Read from the device&#39;s vPCI configuration space." alt="" coords="5,31,195,57"/>
+<area shape="rect" id="node2" href="$classL4vbus_1_1Device.html#a86e2a0b4eb5abb5ce6443690c6e2361f" title="Access the Vbus capability of the underlying virtual bus." alt="" coords="243,5,425,32"/>
+<area shape="rect" id="node3" href="$group__l4vbus__pci__module.html#gaf6db088ef60ca6f09dbfb50a4b34ae32" title="Read from the device&#39;s vPCI configuration space." alt="" coords="245,56,423,83"/>
 </map>

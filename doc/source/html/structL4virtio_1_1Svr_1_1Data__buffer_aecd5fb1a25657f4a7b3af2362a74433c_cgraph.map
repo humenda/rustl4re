@@ -1,3 +1,4 @@
 <map id="L4virtio::Svr::Data_buffer::skip" name="L4virtio::Svr::Data_buffer::skip">
-<area shape="rect" id="node2" href="$group__cxx__api.html#ga0bd9662898a7499fcd3feefe594a699b" title="Get the minimum of a and b. " alt="" coords="184,13,255,39"/>
+<area shape="rect" id="node1" title="Skip given number of bytes in this buffer." alt="" coords="5,5,144,47"/>
+<area shape="rect" id="node2" href="$group__cxx__api.html#ga0bd9662898a7499fcd3feefe594a699b" title="Get the minimum of a and b." alt="" coords="192,13,271,39"/>
 </map>

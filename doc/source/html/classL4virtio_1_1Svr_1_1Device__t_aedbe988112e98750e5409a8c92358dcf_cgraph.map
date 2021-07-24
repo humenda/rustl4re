@@ -1,0 +1,5 @@
+<map id="L4virtio::Svr::Device_t::reset_queue_config" name="L4virtio::Svr::Device_t::reset_queue_config">
+<area shape="rect" id="node1" title="Trigger reset for the configuration space for queue idx." alt="" coords="5,5,173,47"/>
+<area shape="rect" id="node2" href="$classL4virtio_1_1Svr_1_1Dev__config.html#a23076c47a39c091db853262e9db32f1c" title="Reset queue config for the given queue." alt="" coords="221,5,377,47"/>
+<area shape="rect" id="node3" href="$classL4virtio_1_1Svr_1_1Dev__config.html#a74a26ad283492e76764b9f079416579c" title="Get queue read&#45;only config data for queue with the given index." alt="" coords="425,5,560,47"/>
+</map>

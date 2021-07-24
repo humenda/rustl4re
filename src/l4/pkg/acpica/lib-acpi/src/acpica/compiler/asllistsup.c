@@ -8,7 +8,7 @@
  *
  * 1. Copyright Notice
  *
- * Some or all of this work - Copyright (c) 1999 - 2017, Intel Corp.
+ * Some or all of this work - Copyright (c) 1999 - 2019, Intel Corp.
  * All rights reserved.
  *
  * 2. License
@@ -111,6 +111,42 @@
  * other governmental approval, or letter of assurance, without first obtaining
  * such license, approval or letter.
  *
+ *****************************************************************************
+ *
+ * Alternatively, you may choose to be licensed under the terms of the
+ * following license:
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions, and the following disclaimer,
+ *    without modification.
+ * 2. Redistributions in binary form must reproduce at minimum a disclaimer
+ *    substantially similar to the "NO WARRANTY" disclaimer below
+ *    ("Disclaimer") and any redistribution must be conditioned upon
+ *    including a substantially similar Disclaimer requirement for further
+ *    binary redistribution.
+ * 3. Neither the names of the above-listed copyright holders nor the names
+ *    of any contributors may be used to endorse or promote products derived
+ *    from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+ * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * Alternatively, you may choose to be licensed under the terms of the
+ * GNU General Public License ("GPL") version 2 as published by the Free
+ * Software Foundation.
+ *
  *****************************************************************************/
 
 #include "aslcompiler.h"
@@ -205,7 +241,7 @@ LsDumpAsciiInComment (
             {
                 /* Insert a space to break the sequence */
 
-                FlPrintFile (FileId, ".", BufChar);
+                FlPrintFile (FileId, " ");
             }
 
             FlPrintFile (FileId, "%c", BufChar);
@@ -233,7 +269,7 @@ LsDumpAsciiInComment (
  *
  * DESCRIPTION: Check if there is an exception for this line, and if there is,
  *              put it in the listing immediately. Handles multiple errors
- *              per line. Gbl_NextError points to the next error in the
+ *              per line. AslGbl_NextError points to the next error in the
  *              sorted (by line #) list of compile errors/warnings.
  *
  ******************************************************************************/
@@ -244,8 +280,8 @@ LsCheckException (
     UINT32                  FileId)
 {
 
-    if ((!Gbl_NextError) ||
-        (LineNumber < Gbl_NextError->LogicalLineNumber ))
+    if ((!AslGbl_NextError) ||
+        (LineNumber < AslGbl_NextError->LogicalLineNumber ))
     {
         return;
     }
@@ -254,11 +290,11 @@ LsCheckException (
 
     if (FileId == ASL_FILE_LISTING_OUTPUT)
     {
-        while (Gbl_NextError &&
-              (LineNumber >= Gbl_NextError->LogicalLineNumber))
+        while (AslGbl_NextError &&
+              (LineNumber >= AslGbl_NextError->LogicalLineNumber))
         {
-            AePrintException (FileId, Gbl_NextError, "\n[****iasl****]\n");
-            Gbl_NextError = Gbl_NextError->Next;
+            AePrintException (FileId, AslGbl_NextError, "\n[****iasl****]\n");
+            AslGbl_NextError = AslGbl_NextError->Next;
         }
 
         FlPrintFile (FileId, "\n");
@@ -297,9 +333,9 @@ LsWriteListingHexBytes (
     {
         /* Print line header when buffer is empty */
 
-        if (Gbl_CurrentHexColumn == 0)
+        if (AslGbl_CurrentHexColumn == 0)
         {
-            if (Gbl_HasIncludeFiles)
+            if (AslGbl_HasIncludeFiles)
             {
                 FlPrintFile (FileId, "%*s", 10, " ");
             }
@@ -308,7 +344,7 @@ LsWriteListingHexBytes (
             {
             case ASL_FILE_LISTING_OUTPUT:
 
-                FlPrintFile (FileId, "%8.8X%s", Gbl_CurrentAmlOffset,
+                FlPrintFile (FileId, "%8.8X%s", AslGbl_CurrentAmlOffset,
                     ASL_LISTING_LINE_PREFIX);
                 break;
 
@@ -332,14 +368,14 @@ LsWriteListingHexBytes (
 
         /* Transfer AML byte and update counts */
 
-        Gbl_AmlBuffer[Gbl_CurrentHexColumn] = Buffer[i];
+        AslGbl_AmlBuffer[AslGbl_CurrentHexColumn] = Buffer[i];
 
-        Gbl_CurrentHexColumn++;
-        Gbl_CurrentAmlOffset++;
+        AslGbl_CurrentHexColumn++;
+        AslGbl_CurrentAmlOffset++;
 
         /* Flush buffer when it is full */
 
-        if (Gbl_CurrentHexColumn >= HEX_LISTING_LINE_SIZE)
+        if (AslGbl_CurrentHexColumn >= HEX_LISTING_LINE_SIZE)
         {
             LsFlushListingBuffer (FileId);
         }
@@ -380,7 +416,7 @@ LsWriteSourceLines (
         return;
     }
 
-    Gbl_CurrentLine = ToLogicalLineNumber;
+    AslGbl_CurrentLine = ToLogicalLineNumber;
 
     /* Flush any hex bytes remaining from the last opcode */
 
@@ -388,16 +424,16 @@ LsWriteSourceLines (
 
     /* Read lines and write them as long as we are not caught up */
 
-    if (Gbl_SourceLine < Gbl_CurrentLine)
+    if (AslGbl_SourceLine < AslGbl_CurrentLine)
     {
         /*
          * If we just completed writing some AML hex bytes, output a linefeed
          * to add some whitespace for readability.
          */
-        if (Gbl_HexBytesWereWritten)
+        if (AslGbl_HexBytesWereWritten)
         {
             FlPrintFile (FileId, "\n");
-            Gbl_HexBytesWereWritten = FALSE;
+            AslGbl_HexBytesWereWritten = FALSE;
         }
 
         if (FileId == ASL_FILE_C_SOURCE_OUTPUT)
@@ -407,7 +443,7 @@ LsWriteSourceLines (
 
         /* Write one line at a time until we have reached the target line # */
 
-        while ((Gbl_SourceLine < Gbl_CurrentLine) &&
+        while ((AslGbl_SourceLine < AslGbl_CurrentLine) &&
                 LsWriteOneSourceLine (FileId))
         { ; }
 
@@ -446,8 +482,8 @@ LsWriteOneSourceLine (
     BOOLEAN                 ProcessLongLine = FALSE;
 
 
-    Gbl_SourceLine++;
-    Gbl_ListingNode->LineNumber++;
+    AslGbl_SourceLine++;
+    AslGbl_ListingNode->LineNumber++;
 
     /* Ignore lines that are completely blank (but count the line above) */
 
@@ -476,21 +512,21 @@ LsWriteOneSourceLine (
         FlPrintFile (FileId, "; ");
     }
 
-    if (Gbl_HasIncludeFiles)
+    if (AslGbl_HasIncludeFiles)
     {
         /*
          * This file contains "include" statements, print the current
          * filename and line number within the current file
          */
         FlPrintFile (FileId, "%12s %5d%s",
-            Gbl_ListingNode->Filename, Gbl_ListingNode->LineNumber,
+            AslGbl_ListingNode->Filename, AslGbl_ListingNode->LineNumber,
             ASL_LISTING_LINE_PREFIX);
     }
     else
     {
         /* No include files, just print the line number */
 
-        FlPrintFile (FileId, "%8u%s", Gbl_SourceLine,
+        FlPrintFile (FileId, "%8u%s", AslGbl_SourceLine,
             ASL_LISTING_LINE_PREFIX);
     }
 
@@ -565,7 +601,7 @@ WriteByte:
                  * Check if an error occurred on this source line during the compile.
                  * If so, we print the error message after the source line.
                  */
-                LsCheckException (Gbl_SourceLine, FileId);
+                LsCheckException (AslGbl_SourceLine, FileId);
                 return (1);
             }
         }
@@ -579,7 +615,7 @@ WriteByte:
                  * Check if an error occurred on this source line during the compile.
                  * If so, we print the error message after the source line.
                  */
-                LsCheckException (Gbl_SourceLine, FileId);
+                LsCheckException (AslGbl_SourceLine, FileId);
                 return (1);
             }
         }
@@ -613,7 +649,7 @@ LsFlushListingBuffer (
     UINT32                  i;
 
 
-    if (Gbl_CurrentHexColumn == 0)
+    if (AslGbl_CurrentHexColumn == 0)
     {
         return;
     }
@@ -624,58 +660,58 @@ LsFlushListingBuffer (
     {
     case ASL_FILE_LISTING_OUTPUT:
 
-        for (i = 0; i < Gbl_CurrentHexColumn; i++)
+        for (i = 0; i < AslGbl_CurrentHexColumn; i++)
         {
-            FlPrintFile (FileId, "%2.2X ", Gbl_AmlBuffer[i]);
+            FlPrintFile (FileId, "%2.2X ", AslGbl_AmlBuffer[i]);
         }
 
-        for (i = 0; i < ((HEX_LISTING_LINE_SIZE - Gbl_CurrentHexColumn) * 3); i++)
+        for (i = 0; i < ((HEX_LISTING_LINE_SIZE - AslGbl_CurrentHexColumn) * 3); i++)
         {
             FlWriteFile (FileId, ".", 1);
         }
 
         /* Write the ASCII character associated with each of the bytes */
 
-        LsDumpAscii (FileId, Gbl_CurrentHexColumn, Gbl_AmlBuffer);
+        LsDumpAscii (FileId, AslGbl_CurrentHexColumn, AslGbl_AmlBuffer);
         break;
 
 
     case ASL_FILE_ASM_SOURCE_OUTPUT:
 
-        for (i = 0; i < Gbl_CurrentHexColumn; i++)
+        for (i = 0; i < AslGbl_CurrentHexColumn; i++)
         {
             if (i > 0)
             {
                 FlPrintFile (FileId, ",");
             }
 
-            FlPrintFile (FileId, "0%2.2Xh", Gbl_AmlBuffer[i]);
+            FlPrintFile (FileId, "0%2.2Xh", AslGbl_AmlBuffer[i]);
         }
 
-        for (i = 0; i < ((HEX_LISTING_LINE_SIZE - Gbl_CurrentHexColumn) * 5); i++)
+        for (i = 0; i < ((HEX_LISTING_LINE_SIZE - AslGbl_CurrentHexColumn) * 5); i++)
         {
             FlWriteFile (FileId, " ", 1);
         }
 
         FlPrintFile (FileId, "  ;%8.8X",
-            Gbl_CurrentAmlOffset - HEX_LISTING_LINE_SIZE);
+            AslGbl_CurrentAmlOffset - HEX_LISTING_LINE_SIZE);
 
         /* Write the ASCII character associated with each of the bytes */
 
-        LsDumpAscii (FileId, Gbl_CurrentHexColumn, Gbl_AmlBuffer);
+        LsDumpAscii (FileId, AslGbl_CurrentHexColumn, AslGbl_AmlBuffer);
         break;
 
 
     case ASL_FILE_C_SOURCE_OUTPUT:
 
-        for (i = 0; i < Gbl_CurrentHexColumn; i++)
+        for (i = 0; i < AslGbl_CurrentHexColumn; i++)
         {
-            FlPrintFile (FileId, "0x%2.2X,", Gbl_AmlBuffer[i]);
+            FlPrintFile (FileId, "0x%2.2X,", AslGbl_AmlBuffer[i]);
         }
 
         /* Pad hex output with spaces if line is shorter than max line size */
 
-        for (i = 0; i < ((HEX_LISTING_LINE_SIZE - Gbl_CurrentHexColumn) * 5); i++)
+        for (i = 0; i < ((HEX_LISTING_LINE_SIZE - AslGbl_CurrentHexColumn) * 5); i++)
         {
             FlWriteFile (FileId, " ", 1);
         }
@@ -683,11 +719,11 @@ LsFlushListingBuffer (
         /* AML offset for the start of the line */
 
         FlPrintFile (FileId, "    /* %8.8X",
-            Gbl_CurrentAmlOffset - Gbl_CurrentHexColumn);
+            AslGbl_CurrentAmlOffset - AslGbl_CurrentHexColumn);
 
         /* Write the ASCII character associated with each of the bytes */
 
-        LsDumpAsciiInComment (FileId, Gbl_CurrentHexColumn, Gbl_AmlBuffer);
+        LsDumpAsciiInComment (FileId, AslGbl_CurrentHexColumn, AslGbl_AmlBuffer);
         FlPrintFile (FileId, " */");
         break;
 
@@ -700,8 +736,8 @@ LsFlushListingBuffer (
 
     FlPrintFile (FileId, "\n");
 
-    Gbl_CurrentHexColumn = 0;
-    Gbl_HexBytesWereWritten = TRUE;
+    AslGbl_CurrentHexColumn = 0;
+    AslGbl_HexBytesWereWritten = TRUE;
 }
 
 
@@ -738,8 +774,8 @@ LsPushNode (
 
     /* Link (push) */
 
-    Lnode->Next = Gbl_ListingNode;
-    Gbl_ListingNode = Lnode;
+    Lnode->Next = AslGbl_ListingNode;
+    AslGbl_ListingNode = Lnode;
 }
 
 
@@ -765,19 +801,19 @@ LsPopNode (
 
     /* Just grab the node at the head of the list */
 
-    Lnode = Gbl_ListingNode;
+    Lnode = AslGbl_ListingNode;
     if ((!Lnode) ||
         (!Lnode->Next))
     {
         AslError (ASL_ERROR, ASL_MSG_COMPILER_INTERNAL, NULL,
             "Could not pop empty listing stack");
-        return (Gbl_ListingNode);
+        return (AslGbl_ListingNode);
     }
 
-    Gbl_ListingNode = Lnode->Next;
+    AslGbl_ListingNode = Lnode->Next;
     ACPI_FREE (Lnode);
 
     /* New "Current" node is the new head */
 
-    return (Gbl_ListingNode);
+    return (AslGbl_ListingNode);
 }

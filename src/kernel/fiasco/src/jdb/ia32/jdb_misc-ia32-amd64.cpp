@@ -6,7 +6,6 @@ IMPLEMENTATION[ia32 || amd64]:
 #include "jdb.h"
 #include "jdb_ktrace.h"
 #include "jdb_module.h"
-#include "jdb_symbol.h"
 #include "jdb_screen.h"
 #include "static_init.h"
 #include "task.h"
@@ -25,7 +24,7 @@ char Jdb_misc_general::first_char;
 
 PUBLIC
 Jdb_module::Action_code
-Jdb_misc_general::action(int cmd, void *&, char const *&, int &)
+Jdb_misc_general::action(int cmd, void *&, char const *&, int &) override
 {
   switch (cmd)
     {
@@ -46,7 +45,7 @@ Jdb_misc_general::action(int cmd, void *&, char const *&, int &)
 
 PUBLIC
 Jdb_module::Cmd const *
-Jdb_misc_general::cmds() const
+Jdb_misc_general::cmds() const override
 {
   static Cmd cs[] =
     {
@@ -59,7 +58,7 @@ Jdb_misc_general::cmds() const
 
 PUBLIC
 int
-Jdb_misc_general::num_cmds() const
+Jdb_misc_general::num_cmds() const override
 {
   return 1;
 }
@@ -90,16 +89,12 @@ Mword    Jdb_misc_debug::task;
 static void
 Jdb_misc_debug::show_lbr_entry(const char *str, Address addr)
 {
-  char symbol[60];
-
   printf("%s " L4_PTR_FMT " ", str, addr);
-  if (Jdb_symbol::match_addr_to_symbol_fuzzy(&addr, 0, symbol, sizeof(symbol)))
-    printf("(%s)", symbol);
 }
 
 PUBLIC
 Jdb_module::Action_code
-Jdb_misc_debug::action(int cmd, void *&args, char const *&fmt, int &)
+Jdb_misc_debug::action(int cmd, void *&args, char const *&fmt, int &) override
 {
   switch (cmd)
     {
@@ -203,7 +198,7 @@ Jdb_misc_debug::action(int cmd, void *&args, char const *&fmt, int &)
 
 PUBLIC
 Jdb_module::Cmd const *
-Jdb_misc_debug::cmds() const
+Jdb_misc_debug::cmds() const override
 {
   static Cmd cs[] =
     {
@@ -220,7 +215,7 @@ Jdb_misc_debug::cmds() const
 
 PUBLIC
 int
-Jdb_misc_debug::num_cmds() const
+Jdb_misc_debug::num_cmds() const override
 {
   return 2;
 }
@@ -302,7 +297,7 @@ Unsigned64 Jdb_misc_info::value64;
 
 PUBLIC
 Jdb_module::Action_code
-Jdb_misc_info::action(int cmd, void *&args, char const *&fmt, int &)
+Jdb_misc_info::action(int cmd, void *&args, char const *&fmt, int &) override
 {
   switch (cmd)
     {
@@ -387,7 +382,7 @@ Jdb_misc_info::action(int cmd, void *&args, char const *&fmt, int &)
 
 PUBLIC
 Jdb_module::Cmd const *
-Jdb_misc_info::cmds() const
+Jdb_misc_info::cmds() const override
 {
   static Cmd cs[] =
     {
@@ -403,7 +398,7 @@ Jdb_misc_info::cmds() const
 
 PUBLIC
 int
-Jdb_misc_info::num_cmds() const
+Jdb_misc_info::num_cmds() const override
 {
   return 2;
 }

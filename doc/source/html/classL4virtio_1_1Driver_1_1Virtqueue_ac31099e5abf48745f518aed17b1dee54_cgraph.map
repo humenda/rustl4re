@@ -1,0 +1,4 @@
+<map id="L4virtio::Driver::Virtqueue::initialize_rings" name="L4virtio::Driver::Virtqueue::initialize_rings">
+<area shape="rect" id="node1" title="Initialize the descriptor table and the index structures of this queue." alt="" coords="5,5,196,47"/>
+<area shape="rect" id="node2" href="$classL4virtio_1_1Virtqueue.html#af61e3e4e436b93f37f22243a1c0ffe0e" title=" " alt="" coords="244,13,423,39"/>
+</map>

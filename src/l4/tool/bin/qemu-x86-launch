@@ -1,4 +1,4 @@
-#! /usr/bin/perl -w
+#! /usr/bin/env perl
 #
 # (c) 2009 Technische Universität Dresden
 # This file is part of TUD:OS and distributed under the terms of the
@@ -9,12 +9,14 @@
 #
 
 use strict;
+use warnings;
 
 BEGIN { unshift @INC, $ENV{L4DIR}.'/tool/lib'
            if $ENV{L4DIR} && -d $ENV{L4DIR}.'/tool/lib/L4';}
 
 use L4::ModList;
 use File::Temp qw/tempdir/;
+use File::Basename qw/basename/;
 
 my $qemu         = $ENV{QEMU}         || 'qemu';
 my $kernelname   = $ENV{KERNEL}       || 'bootstrap';
@@ -24,24 +26,21 @@ my $modulesfile  = shift;
 my $entryname    = shift;
 my $tmpdir       = tempdir(CLEANUP => 1); 
 
-sub qemu_get_file($$)
+sub qemu_get_file
 {
-  my $command = shift;
-  my $cmdline = shift;
-
-  my $fp = L4::ModList::get_file_uncompressed_or_die($command, $module_path,
+  my $mod = shift;
+  my $fp = L4::ModList::get_file_uncompressed_or_die($mod->{file}, $module_path,
                                                      $tmpdir);
+  my $bn = basename($fp);
 
-  (my $arguments = $cmdline) =~ s/^\S+\s*//;;
-  (my $fname = $cmdline) =~ s/^(\S+).*/$1/;
-
-  if ($fname ne $command)
+  if ($bn ne $mod->{command})
     {
-      my $link = "$tmpdir/$fname";
+      my $link = "$tmpdir/" . $mod->{command};
       symlink $fp, $link;
       $fp = $link;
     }
 
+  my $arguments = $mod->{args_quoted};
   $arguments =~ s/,/,,/g;
   $fp.' '.$arguments;
 }
@@ -52,24 +51,16 @@ die "No entry name given" unless defined $entryname;
 my %entry = L4::ModList::get_module_entry($modulesfile, $entryname);
 
 my @mods = @{$entry{mods}};
-my $kernel = L4::ModList::search_file_or_die($entry{bootstrap}{command}, $module_path);
-my $initrd = join(',', map { qemu_get_file($_->{command}, $_->{cmdline}) } @mods);
+my $kernel = L4::ModList::search_file_or_die($entry{bootstrap}{file}, $module_path);
+L4::ModList::fetch_remote_file($_->{file}) foreach (@{$entry{mods}});
+my $initrd = join(',', map { qemu_get_file($_) } @mods);
+my $args = $entry{bootstrap}{args_quoted};
+$args =~ s/"/'/;
+$args = "" unless defined $args;
 
 my $qemu_cmd =
-      "$qemu -kernel $kernel -append \"$entry{bootstrap}{cmdline}\" ".
+      "$qemu -kernel $kernel -append \"$args\" ".
       "-initrd \"$initrd\" $qemu_options";
 
-# check installed qemu version
-my $o = `$qemu -version 2>&1`;
-if ($?)
-  {
-    print "Failed to launch QEmu ($qemu)\n";
-    exit $?;
-  }
-if ($o !~ /\s(\d+)\.(\d+)/ || ($1 == 0 && $2 < 13))
-  {
-    print "\nYour installed Qemu is too old, please upgrade to at least version 0.13.\n\n";
-    exit 1;
-  }
 print "$qemu_cmd\n";
 system("$qemu_cmd");

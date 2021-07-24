@@ -62,7 +62,7 @@ depcheck:
 	  echo ----------------------------------------------------------;     \
 	  echo "Trying standalone build of '$$checkpkg'";                      \
 	  $(MAKE) -C $(L4DIR) O=$(OBJ_BASE)                                    \
-	    --no-print-directory silentoldconfig;                              \
+	    --no-print-directory syncconfig;                                   \
 	  echo $(MAKE) O=$(OBJ_BASE) --no-print-directory $$checkpkg;          \
 	  $(MAKE) O=$(OBJ_BASE) --no-print-directory $$checkpkg                \
 	    || (echo "Failed package: $$checkpkg";                             \

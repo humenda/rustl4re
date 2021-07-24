@@ -53,6 +53,7 @@
 #include <termios.h>
 #undef CEOF			/* syntax.h redefines this */
 #endif
+#include "eval.h"
 #include "redir.h"
 #include "show.h"
 #include "main.h"
@@ -406,12 +407,11 @@ out:
 #endif
 
 STATIC int
-sprint_status(char *s, int status, int sigonly)
+sprint_status(char *os, int status, int sigonly)
 {
-	int col;
+	char *s = os;
 	int st;
 
-	col = 0;
 	st = WEXITSTATUS(status);
 	if (!WIFEXITED(status)) {
 #if JOBS
@@ -427,21 +427,21 @@ sprint_status(char *s, int status, int sigonly)
 				goto out;
 #endif
 		}
-		col = fmtstr(s, 32, strsignal(st));
+		s = stpncpy(s, strsignal(st), 32);
 #ifdef WCOREDUMP
 		if (WCOREDUMP(status)) {
-			col += fmtstr(s + col, 16, " (core dumped)");
+			s = stpcpy(s, " (core dumped)");
 		}
 #endif
 	} else if (!sigonly) {
 		if (st)
-			col = fmtstr(s, 16, "Done(%d)", st);
+			s += fmtstr(s, 16, "Done(%d)", st);
 		else
-			col = fmtstr(s, 16, "Done");
+			s = stpcpy(s, "Done");
 	}
 
 out:
-	return col;
+	return s - os;
 }
 
 static void
@@ -648,7 +648,7 @@ out:
 	return retval;
 
 sigout:
-	retval = 128 + pendingsigs;
+	retval = 128 + pending_sig;
 	goto out;
 }
 
@@ -699,7 +699,7 @@ check:
 
 	if (is_number(p)) {
 		num = atoi(p);
-		if (num <= njobs) {
+		if (num > 0 && num <= njobs) {
 			jp = jobtab + num - 1;
 			if (jp->used)
 				goto gotit;
@@ -714,9 +714,7 @@ check:
 	}
 
 	found = 0;
-	while (1) {
-		if (!jp)
-			goto err;
+	while (jp) {
 		if (match(jp->ps[0].cmd, p)) {
 			if (found)
 				goto err;
@@ -725,6 +723,10 @@ check:
 		}
 		jp = jp->prev_job;
 	}
+
+	if (!found)
+		goto err;
+	jp = found;
 
 gotit:
 #if JOBS
@@ -971,10 +973,18 @@ waitforjob(struct job *jp)
 {
 	int st;
 
-	TRACE(("waitforjob(%%%d) called\n", jobno(jp)));
-	while (jp->state == JOBRUNNING) {
-		dowait(DOWAIT_BLOCK, jp);
+	TRACE(("waitforjob(%%%d) called\n", jp ? jobno(jp) : 0));
+	if (!jp) {
+		int pid = gotsigchld;
+
+		while (pid > 0)
+			pid = dowait(DOWAIT_NORMAL, NULL);
+
+		return exitstatus;
 	}
+
+	while (jp->state == JOBRUNNING)
+		dowait(DOWAIT_BLOCK, jp);
 	st = getstatus(jp);
 #if JOBS
 	if (jp->jobctl) {
@@ -1145,7 +1155,7 @@ waitproc(int block, int *status)
 		sigfillset(&mask);
 		sigprocmask(SIG_SETMASK, &mask, &oldmask);
 
-		while (!gotsigchld && !pendingsigs)
+		while (!gotsigchld && !pending_sig)
 			sigsuspend(&oldmask);
 
 		sigclearmask();

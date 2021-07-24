@@ -1,3 +1,4 @@
 <map id="L4virtio::Svr::Virtqueue" name="L4virtio::Svr::Virtqueue">
-<area shape="rect" id="node2" href="$classL4virtio_1_1Virtqueue.html" title="Low&#45;level Virtqueue. " alt="" coords="8,5,163,464"/>
+<area shape="rect" id="node1" title="Virtqueue implementation for the device." alt="" coords="5,512,176,707"/>
+<area shape="rect" id="node2" href="$classL4virtio_1_1Virtqueue.html" title="Low&#45;level Virtqueue." alt="" coords="9,5,172,464"/>
 </map>

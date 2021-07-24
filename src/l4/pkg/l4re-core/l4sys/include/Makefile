@@ -4,7 +4,7 @@ L4DIR		?= $(PKGDIR)/../../..
 PKGNAME		= sys
 EXTRA_TARGET	+= capability kip task factory irq icu thread vcon \
                    smart_capability scheduler meta typeinfo_svr ipc_gate \
-                   vm debugger         \
+                   vm ARCH-arm/vm ARCH-arm64/vm debugger         \
                    platform_control    \
                    exception           \
                    kobject             \
@@ -27,6 +27,7 @@ EXTRA_TARGET	+= capability kip task factory irq icu thread vcon \
                    cxx/ipc_legacy      \
                    cxx/smart_capability_1x \
                    cxx/types           \
+                   cxx/consts          \
 
 
 include $(L4DIR)/mk/include.mk

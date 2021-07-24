@@ -1,4 +1,5 @@
 <map id="Shared Memory Library" name="Shared Memory Library">
-<area shape="rect" id="node2" href="$group__api__l4shmc__chunk.html" title="Chunks" alt="" coords="224,5,293,32"/>
-<area shape="rect" id="node3" href="$group__api__l4shmc__signal.html" title="Signals" alt="" coords="225,56,293,83"/>
+<area shape="rect" id="node1" title="L4SHM provides a shared memory infrastructure that establishes a shared memory area between multiple ..." alt="" coords="5,31,180,56"/>
+<area shape="rect" id="node2" href="$group__api__l4shmc__chunk.html" title=" " alt="" coords="228,5,299,31"/>
+<area shape="rect" id="node3" href="$group__api__l4shmc__signal.html" title=" " alt="" coords="229,55,298,80"/>
 </map>

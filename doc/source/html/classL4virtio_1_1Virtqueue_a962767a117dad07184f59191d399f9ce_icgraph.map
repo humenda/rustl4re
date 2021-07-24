@@ -1,3 +1,6 @@
 <map id="L4virtio::Virtqueue::avail_size" name="L4virtio::Virtqueue::avail_size">
-<area shape="rect" id="node2" href="$classL4virtio_1_1Svr_1_1Device__t.html#ab906b4cc61026fd815a8056f07bef10e" title="Enable/disable the specified queue. " alt="" coords="187,5,384,47"/>
+<area shape="rect" id="node1" title="Calculate the size of the available ring for num entries." alt="" coords="445,39,588,80"/>
+<area shape="rect" id="node2" href="$classL4virtio_1_1Svr_1_1Device__t.html#ab906b4cc61026fd815a8056f07bef10e" title="Enable/disable the specified queue." alt="" coords="244,5,397,47"/>
+<area shape="rect" id="node3" href="$classL4virtio_1_1Virtqueue.html#a437c0ed2eb83201cc69c41d011503036" title="Enable this queue." alt="" coords="249,71,392,112"/>
+<area shape="rect" id="node4" href="$classL4virtio_1_1Driver_1_1Virtqueue.html#a285bae271e6acfe9c5bfa3df388c6b17" title="Initialize this virtqueue." alt="" coords="5,71,196,112"/>
 </map>

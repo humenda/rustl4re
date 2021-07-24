@@ -125,13 +125,9 @@ static void l4shmc_rb_receiver_get_signals(l4shmc_ringbuf_t *buf)
 
 	static const int SIGNAME_SIZE = 40;
 	char s1[SIGNAME_SIZE];
-	strncpy(s1, buf->_signame, SIGNAME_SIZE);
-	strncpy(s1 + strlen(buf->_signame), "_rx", 3);
-	s1[strlen(buf->_signame) + 3] = 0;
+	snprintf(s1, sizeof(s1), "%s_rx", buf->_signame);
 	char s2[SIGNAME_SIZE];
-	strncpy(s2, buf->_signame, SIGNAME_SIZE);
-	strncpy(s2 + strlen(buf->_signame), "_tx", 3);
-	s2[strlen(buf->_signame) + 3] = 0;
+	snprintf(s2, sizeof(s2), "%s_tx", buf->_signame);
 
 	err = l4shmc_get_chunk(buf->_area, buf->_chunkname, &buf->_chunk);
 	ASSERT_OK(err);
@@ -195,9 +191,7 @@ L4_CV void l4shmc_rb_attach_receiver(l4shmc_ringbuf_t *buf, l4_cap_idx_t owner)
 	int err;
 	static const int SIGNAME_SIZE = 40;
 	char s1[SIGNAME_SIZE];
-	strncpy(s1, buf->_signame, SIGNAME_SIZE);
-	strncpy(s1 + strlen(buf->_signame), "_rx", 3);
-	s1[strlen(buf->_signame) + 3] = 0;
+	snprintf(s1, sizeof(s1), "%s_rx", buf->_signame);
 
 	buf->_owner = owner;
 	printf("RCV: attaching to signal %lx (%lx)\n",
@@ -341,12 +335,8 @@ static L4_CV void l4shmc_rb_sender_add_signals(l4shmc_ringbuf_t *buf,
 	static const int SIGNAME_SIZE = 40;
 	char s1[SIGNAME_SIZE];
 	char s2[SIGNAME_SIZE];
-	strncpy(s1, signal_name, SIGNAME_SIZE);
-	strncpy(s1 + strlen(signal_name), "_rx", 3);
-	s1[strlen(signal_name) + 3] = 0;
-	strncpy(s2, signal_name, SIGNAME_SIZE);
-	strncpy(s2 + strlen(signal_name), "_tx", 3);
-	s2[strlen(signal_name) + 3] = 0;
+	snprintf(s1, sizeof(s1), "%s_rx", buf->_signame);
+	snprintf(s2, sizeof(s2), "%s_tx", buf->_signame);
 
 	err = l4shmc_add_signal(buf->_area, s1, &buf->_signal_empty);
 	ASSERT_OK(err);
@@ -398,9 +388,7 @@ L4_CV int l4shmc_rb_attach_sender(l4shmc_ringbuf_t *buf, char const *signal_name
 
 	static const int SIGNAME_SIZE = 40;
 	char signame[SIGNAME_SIZE];
-	strncpy(signame, signal_name, SIGNAME_SIZE);
-	strncpy(signame + strlen(signal_name), "_tx", 3);
-	signame[strlen(signal_name) + 3] = 0;
+	snprintf(signame, sizeof(signame), "%s_tx", signal_name);
 
 	buf->_owner = owner;
 

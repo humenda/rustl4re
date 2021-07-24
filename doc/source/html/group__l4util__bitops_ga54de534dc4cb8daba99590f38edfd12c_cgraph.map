@@ -1,3 +1,4 @@
 <map id="l4util_btr" name="l4util_btr">
-<area shape="rect" id="node2" href="$group__l4util__atomic.html#ga929dc4219f96656545bb658d95b0c7c2" title="Atomic compare and exchange (machine wide fields) " alt="" coords="128,5,243,32"/>
+<area shape="rect" id="node1" title="Bit test and reset." alt="" coords="5,5,85,32"/>
+<area shape="rect" id="node2" href="$group__l4util__atomic.html#ga929dc4219f96656545bb658d95b0c7c2" title="Atomic compare and exchange (machine wide fields)" alt="" coords="133,5,255,32"/>
 </map>

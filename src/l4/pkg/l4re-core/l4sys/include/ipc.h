@@ -147,10 +147,13 @@ l4_ipc_error(l4_msgtag_t tag, l4_utcb_t *utcb) L4_NOTHROW;
 
 
 /**
- * Return error code of a system call return message tag.
+ * Return error code of a system call return message tag or the tag label.
  * \ingroup l4_ipc_err_api
- * \param tag   System call return message type
- * \return 0 for no error, error number in case of error
+ *
+ * \param tag  System call return message type.
+ *
+ * \return  In case of IPC error a negative error code in the range of
+ *          L4_EIPC_LO to L4_EIPC_HI, otherwise the tag label.
  */
 L4_INLINE long
 l4_error(l4_msgtag_t tag) L4_NOTHROW;
@@ -212,7 +215,10 @@ L4_INLINE long l4_ipc_to_errno(unsigned long ipc_error_code) L4_NOTHROW;
  * Send a message to an object (do \b not wait for a reply).
  * \ingroup l4_ipc_api
  *
- * \param dest     Capability selector for the destination object.
+ * \param dest     Capability selector for the destination object. A value of
+ *                 #L4_INVALID_CAP denotes the current thread and could be used
+ *                 for sleeping without busy waiting for the time specified in
+ *                 the \c snd part of the \c timeout parameter.
  * \param utcb     UTCB of the caller.
  * \param tag      Descriptor for the message to be sent.
  * \param timeout  Timeout pair (see #l4_timeout_t) only send part is relevant.
@@ -234,10 +240,10 @@ l4_ipc_send(l4_cap_idx_t dest, l4_utcb_t *utcb, l4_msgtag_t tag,
  * Wait for an incoming message from any possible sender.
  * \ingroup l4_ipc_api
  *
- * \param   utcb     UTCB of the caller.
- * \retval  label    Label assigned to the source object (IPC gate or IRQ).
- * \param   timeout  Timeout pair (see #l4_timeout_t, only the receive part is
- *                   used).
+ * \param      utcb     UTCB of the caller.
+ * \param[out] label    Label assigned to the source object (IPC gate or IRQ).
+ * \param      timeout  Timeout pair (see #l4_timeout_t, only the receive part
+ *                      is used).
  *
  * \return  return tag
  *
@@ -259,9 +265,12 @@ l4_ipc_wait(l4_utcb_t *utcb, l4_umword_t *label,
  * Wait for a message from a specific source.
  * \ingroup l4_ipc_api
  *
- * \param object   Object to receive a message from.
+ * \param object   Object to receive a message from. A value of #L4_INVALID_CAP
+ *                 denotes the current thread. It could be used for sleeping
+ *                 without busy waiting for the time specified in the \c rcv
+ *                 part of the \c timeout parameter.
  * \param timeout  Timeout pair (see #l4_timeout_t, only the receive part
- *                  matters).
+ *                 matters).
  * \param utcb     UTCB of the caller.
  *
  * \return  result tag.
@@ -282,7 +291,10 @@ l4_ipc_receive(l4_cap_idx_t object, l4_utcb_t *utcb,
  * Object call (usual invocation).
  * \ingroup l4_ipc_api
  *
- * \param object   Capability selector for the object to call.
+ * \param object   Capability selector for the object to call. A value of
+ *                 #L4_INVALID_CAP denotes the current thread and will abort
+ *                 the IPC after the time specified in the \c snd part of the
+ *                 \c timeout parameter has expired.
  * \param utcb     UTCB of the caller.
  * \param tag      Message tag to describe the message to be sent.
  * \param timeout  Timeout pair for send an receive phase (see #l4_timeout_t).
@@ -303,8 +315,8 @@ l4_ipc_call(l4_cap_idx_t object, l4_utcb_t *utcb, l4_msgtag_t tag,
  * Reply and wait operation (uses the *reply* capability).
  * \ingroup l4_ipc_api
  *
- * \param      tag      Describes the message to be sent as reply.
  * \param      utcb     UTCB of the caller.
+ * \param      tag      Describes the message to be sent as reply.
  * \param[out] label    Label assigned to the source object of the received
  *                      message.
  * \param      timeout  Timeout pair (see #l4_timeout_t).
@@ -326,7 +338,10 @@ l4_ipc_reply_and_wait(l4_utcb_t *utcb, l4_msgtag_t tag,
  * Send a message and do an open wait.
  * \ingroup l4_ipc_api
  *
- * \param      dest     Object to send a message to.
+ * \param      dest     Object to send a message to. A value of #L4_INVALID_CAP
+ *                      denotes the current thread and will abort the IPC after
+ *                      the time specified in the \c snd part of the \c timeout
+ *                      parameter has expired.
  * \param      utcb     UTCB of the caller.
  * \param      tag      Describes the message that shall be sent.
  * \param[out] label    Label assigned to the source object of the receive
@@ -373,7 +388,10 @@ l4_ipc_wait_next_period(l4_utcb_t *utcb,
  * Generic L4 object invocation.
  * \ingroup l4_ipc_api
  *
- * \param      dest     Destination object.
+ * \param      dest     Destination object. #L4_INVALID_CAP denotes the current
+ *                      thread. An IPC to the current thread will always abort
+ *                      after the specified timeout and can be used for
+ *                      sleeping without busy waiting.
  * \param      utcb     UTCB of the caller.
  * \param      flags    Invocation flags (see #l4_syscall_flags_t).
  * \param      slabel   Send label if applicable (may be seen by the receiver).
@@ -521,7 +539,7 @@ l4_error(l4_msgtag_t tag) L4_NOTHROW
 
 
 L4_INLINE int l4_ipc_is_snd_error(l4_utcb_t *u) L4_NOTHROW
-{ return (l4_utcb_tcr_u(u)->error & 1) != 0; }
+{ return (l4_utcb_tcr_u(u)->error & 1) == 0; }
 
 L4_INLINE int l4_ipc_is_rcv_error(l4_utcb_t *u) L4_NOTHROW
 { return l4_utcb_tcr_u(u)->error & 1; }

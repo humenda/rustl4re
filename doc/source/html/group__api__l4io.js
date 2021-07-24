@@ -31,6 +31,5 @@ var group__api__l4io =
     [ "l4io_request_iomem", "group__api__l4io.html#ga5a5ac16d0a8a479a864027900e4f3374", null ],
     [ "l4io_request_iomem_region", "group__api__l4io.html#gaee2262febf0fdc1619cabb1091ed6936", null ],
     [ "l4io_request_ioport", "group__api__l4io.html#ga4157f860899b502fa9679797a0a513b6", null ],
-    [ "l4io_request_resource_iomem", "group__api__l4io.html#gac2ec7fad588b7d3d64090651aff6fd50", null ],
-    [ "l4io_search_iomem_region", "group__api__l4io.html#ga91cdc19644ce0e5406e8fe06e2476673", null ]
+    [ "l4io_request_resource_iomem", "group__api__l4io.html#gac2ec7fad588b7d3d64090651aff6fd50", null ]
 ];

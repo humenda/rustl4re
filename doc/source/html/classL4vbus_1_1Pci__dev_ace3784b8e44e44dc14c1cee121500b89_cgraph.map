@@ -1,4 +1,5 @@
 <map id="L4vbus::Pci_dev::irq_enable" name="L4vbus::Pci_dev::irq_enable">
-<area shape="rect" id="node2" href="$classL4vbus_1_1Device.html#a86e2a0b4eb5abb5ce6443690c6e2361f" title="Access the Vbus capability of the underlying virtual bus. " alt="" coords="203,5,376,32"/>
-<area shape="rect" id="node3" href="$group__l4vbus__pci__module.html#ga71117c2627ed84dc404d6fc4582b9ec5" title="Enable the device&#39;s PCI interrupt. " alt="" coords="197,56,381,83"/>
+<area shape="rect" id="node1" title="Enable the device&#39;s PCI interrupt." alt="" coords="5,23,156,65"/>
+<area shape="rect" id="node2" href="$classL4vbus_1_1Device.html#a86e2a0b4eb5abb5ce6443690c6e2361f" title="Access the Vbus capability of the underlying virtual bus." alt="" coords="208,5,391,32"/>
+<area shape="rect" id="node3" href="$group__l4vbus__pci__module.html#ga71117c2627ed84dc404d6fc4582b9ec5" title="Enable the device&#39;s PCI interrupt." alt="" coords="204,56,395,83"/>
 </map>

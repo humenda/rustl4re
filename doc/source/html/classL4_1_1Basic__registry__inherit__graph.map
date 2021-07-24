@@ -1,3 +1,4 @@
 <map id="L4::Basic_registry" name="L4::Basic_registry">
-<area shape="rect" id="node2" href="$classL4Re_1_1Util_1_1Object__registry.html" title="A registry that manages server objects and their attached IPC gates for a single server loop for a sp..." alt="" coords="5,145,148,355"/>
+<area shape="rect" id="node1" title="This registry returns the corresponding server object based on the label of an Ipc_gate." alt="" coords="11,5,148,97"/>
+<area shape="rect" id="node2" href="$classL4Re_1_1Util_1_1Object__registry.html" title="A registry that manages server objects and their attached IPC gates for a single server loop for a sp..." alt="" coords="5,145,153,355"/>
 </map>

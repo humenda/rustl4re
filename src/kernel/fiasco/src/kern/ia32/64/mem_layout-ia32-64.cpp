@@ -18,7 +18,7 @@ public:
   {
     Kentry_start      = 0xffff810000000000UL, ///< 512GB slot 258
     Kentry_syscall    = FIASCO_KENTRY_SYSCALL_PAGE,
-    Kentry_cpu_page   = 0xffff817fffffc000UL, ///< last 4KB in solt 258
+    Kentry_cpu_page   = 0xffff817fffffc000UL, ///< last 16KB in slot 258
     Io_bitmap         = 0xffff818000000000UL, ///< 512GB slot 259 first page
     Caps_start        = 0xffff818000800000UL,    ///< % 4MB
     Caps_end          = 0xffff81800c400000UL,    ///< % 4MB
@@ -38,24 +38,24 @@ public:
     utcb_ptr_align    = Tl_math::Ld<64>::Res,    // 64byte cachelines
     Syscalls          = Service_page + 0xff000,  ///< % 4KB syscall page
     Tbuf_buffer_area  = Service_page + 0x200000, ///< % 2MB
+    Tbuf_buffer_size  = 0x200000,
     Tbuf_ubuffer_area = Tbuf_buffer_area,
     // 0xffffffffeb800000-0xfffffffffec000000 (8MB) free
     Io_map_area_start = Kglobal_area + 0xc000000UL,
     Io_map_area_end   = Kglobal_area + 0xc800000UL,
     ___free_3         = Kglobal_area + 0xc800000UL, ///< % 4MB
     ___free_4         = Kglobal_area + 0xc880000UL, ///< % 4MB
-    Jdb_debug_start   = Kglobal_area + 0xcc00000UL,    ///< % 4MB   JDB symbols/lines
-    Jdb_debug_end     = Kglobal_area + 0xe000000UL,    ///< % 4MB
     // 0xffffffffee000000-0xffffffffef800000 (24MB) free
     Kstatic           = 0xffffffffef800000UL,    ///< % 4MB Io_bitmap
     Vmem_end          = 0xfffffffff0000000UL,
 
     Kernel_image        = FIASCO_IMAGE_VIRT_START,
-    Kernel_image_end    = Kernel_image + Config::SUPERPAGE_SIZE,
+    Kernel_image_size   = FIASCO_IMAGE_VIRT_SIZE,
+    Kernel_image_end    = Kernel_image + Kernel_image_size,
 
     Adap_image           = Adap_in_kernel_image
                            ? Kernel_image
-                           : Kernel_image + Config::SUPERPAGE_SIZE,
+                           : Kernel_image + Kernel_image_size,
 
     Adap_vram_mda_beg = Adap_image + 0xb0000, ///< % 8KB video RAM MDA memory
     Adap_vram_mda_end = Adap_image + 0xb8000,
@@ -90,12 +90,40 @@ private:
 };
 
 //-----------------------------------------------------------
+INTERFACE [amd64 && kernel_isolation && !kernel_nx]:
+
+EXTENSION class Mem_layout
+{
+public:
+  enum : Mword
+  {
+    Kentry_cpu_syscall_entry = Kentry_cpu_page + 0x30
+  };
+};
+
+//-----------------------------------------------------------
+INTERFACE [amd64 && kernel_isolation && kernel_nx]:
+
+EXTENSION class Mem_layout
+{
+public:
+  enum : Mword
+  {
+    Kentry_cpu_page_text     = Kentry_cpu_page + Config::PAGE_SIZE,
+    Kentry_cpu_syscall_entry = Kentry_cpu_page_text
+  };
+};
+
+//-----------------------------------------------------------
 INTERFACE [amd64 && !kernel_isolation]:
 
 EXTENSION class Mem_layout
 {
 public:
-  enum { Idt = Service_page + 0xfe000 };
+  enum : Mword
+  {
+    Idt = Service_page + 0xfe000
+  };
 };
 
 //-----------------------------------------------------------
@@ -104,8 +132,10 @@ INTERFACE [amd64 && kernel_isolation]:
 EXTENSION class Mem_layout
 {
 public:
-  // IDT in Kentry area
-  enum { Idt = 0xffff817fffffa000UL };
+  enum : Mword
+  {
+    Idt = 0xffff817fffffa000UL,                  ///< IDT in Kentry area
+  };
 };
 
 //-----------------------------------------------------------
@@ -162,4 +192,3 @@ Mem_layout::in_pmem(Address addr)
 {
   return addr >= Physmem && addr < Physmem_end;
 }
-

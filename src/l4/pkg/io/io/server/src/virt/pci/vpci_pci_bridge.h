@@ -39,10 +39,10 @@ public:
   } __attribute__((packed));
 
   Pci_to_pci_bridge();
-  int cfg_read(int reg, l4_uint32_t *v, Cfg_width o);
-  int cfg_write(int reg, l4_uint32_t v, Cfg_width o);
+  int cfg_read(int reg, l4_uint32_t *v, Cfg_width o) override;
+  int cfg_write(int reg, l4_uint32_t v, Cfg_width o) override;
 
-  int irq_enable(Irq_info *irq)
+  int irq_enable(Irq_info *irq) override
   {
     irq->irq = -1;
     return -1;
@@ -53,8 +53,8 @@ public:
 
   bool is_vpci_bridge() const { return true; }
 
-  bool match_hw_feature(const Hw::Dev_feature*) const { return false; }
-  int dispatch(l4_umword_t, l4_uint32_t, L4::Ipc::Iostream&)
+  bool match_hw_feature(const Hw::Dev_feature*) const override { return false; }
+  int dispatch(l4_umword_t, l4_uint32_t, L4::Ipc::Iostream&) override
   { return -L4_ENOSYS; }
 
 

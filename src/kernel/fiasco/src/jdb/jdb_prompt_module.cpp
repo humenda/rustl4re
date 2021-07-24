@@ -105,7 +105,7 @@ Jdb_pcm::detect_screensize()
 
 PUBLIC
 Jdb_module::Action_code
-Jdb_pcm::action(int cmd, void *&args, char const *&fmt, int &)
+Jdb_pcm::action(int cmd, void *&args, char const *&fmt, int &) override
 {
   if (cmd)
     return NOTHING;
@@ -119,6 +119,11 @@ Jdb_pcm::action(int cmd, void *&args, char const *&fmt, int &)
           args = &prompt_color;
           return EXTRA_INPUT;
 	case 'd':
+          if (!Kconsole::console()->find_console(Console::DIRECT))
+            {
+              printf("\nDirect console not available\n");
+              return ERROR;
+            }
 	  fmt = "%c";
 	  args = &direct_enable;
 	  return EXTRA_INPUT;
@@ -198,13 +203,13 @@ Jdb_pcm::action(int cmd, void *&args, char const *&fmt, int &)
 }
 
 PUBLIC
-int Jdb_pcm::num_cmds() const
+int Jdb_pcm::num_cmds() const override
 {
   return 1;
 }
 
 PUBLIC
-Jdb_module::Cmd const * Jdb_pcm::cmds() const
+Jdb_module::Cmd const * Jdb_pcm::cmds() const override
 {
   static Cmd cs[] =
     {
@@ -213,7 +218,7 @@ Jdb_module::Cmd const * Jdb_pcm::cmds() const
 	   "\tnN: noir(black), rR: red, gG: green, bB: blue,\n"
 	   "\tyY: yellow, mM: magenta, cC: cyan, wW: white;\n"
 	   "\tthe capital letters are for bold text.\n"
-	   "Jd{+|-}\ton/off Jdb output to VGA/Hercules console\n"
+	   "Jd{+|-}\ton/off Jdb output to direct console\n"
 	   "Jh\tset Jdb screen height\n"
 	   "Jw\tset Jdb screen width\n"
 	   "JS\tdetect screen size using ESCape sequence ESC [ 6 n\n"

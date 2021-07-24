@@ -139,3 +139,45 @@ LIBBSD_0.7 {
 LIBBSD_0.8 {
     explicit_bzero;
 } LIBBSD_0.7;
+
+LIBBSD_0.9 {
+    flopenat;
+
+    pidfile_fileno;
+
+    strtoi;
+    strtou;
+
+    nvis;
+    snvis;
+    stravis;
+    strenvisx;
+    strnunvisx;
+    strsenvisx;
+    strsnvis;
+    strsnvisx;
+    strsvis;
+    strsvisx;
+    svis;
+} LIBBSD_0.8;
+
+LIBBSD_0.9.1 {
+    /* The strnvis() and strnunvis() symbols changed prototype to match
+     * the NetBSD implementation. Provided as versioned nodes in 0.9.1, and
+     * exposed here explicitly so that we can redirect at compile-time. */
+    strnvis_netbsd;
+    strnunvis_netbsd;
+} LIBBSD_0.9;
+
+LIBBSD_0.10.0 {
+    /* These BSD extensions are available on GNU systems, but not on other
+     * systems such as Windows or musl libc based ones. */
+    vwarn;
+    vwarnx;
+    warn;
+    warnx;
+    verr;
+    verrx;
+    err;
+    errx;
+} LIBBSD_0.9.1;

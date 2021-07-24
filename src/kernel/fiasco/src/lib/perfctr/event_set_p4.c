@@ -1,4 +1,4 @@
-/* $Id: event_set_p4.c 18810 2004-10-28 14:18:48Z fm3 $
+/* $Id$
  * Performance counter event descriptions for Intel P4.
  *
  * Copyright (C) 2003-2004  Mikael Pettersson

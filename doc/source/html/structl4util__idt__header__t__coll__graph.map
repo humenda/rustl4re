@@ -1,3 +1,4 @@
 <map id="l4util_idt_header_t" name="l4util_idt_header_t">
-<area shape="rect" id="node2" href="$structl4util__idt__desc__t.html" title="IDT entry. " alt="" coords="13,5,136,127"/>
+<area shape="rect" id="node1" title="Header of an IDT table." alt="" coords="5,189,148,281"/>
+<area shape="rect" id="node2" href="$structl4util__idt__desc__t.html" title="IDT entry." alt="" coords="13,5,141,127"/>
 </map>

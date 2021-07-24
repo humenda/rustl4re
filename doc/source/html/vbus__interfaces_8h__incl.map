@@ -1,0 +1,10 @@
+<map id="l4/vbus/vbus_interfaces.h" name="l4/vbus/vbus_interfaces.h">
+<area shape="rect" id="node1" title="This header contains the definition of VBUS sub&#45;interfaces and convenience functions to work with the..." alt="" coords="155,5,343,32"/>
+<area shape="rect" id="node2" href="$l4_2sys_2types_8h.html" title="Common L4 ABI Data Types." alt="" coords="193,80,305,107"/>
+<area shape="rect" id="node3" href="$l4_2sys_2l4int_8h.html" title="Fixed sized integer types, generic version." alt="" coords="41,229,147,256"/>
+<area shape="rect" id="node4" href="$compiler_8h.html" title="L4 compiler related defines." alt="" coords="280,229,412,256"/>
+<area shape="rect" id="node6" href="$l4_2sys_2consts_8h.html" title="Common constants." alt="" coords="189,155,308,181"/>
+<area shape="rect" id="node7" href="$____l4__fpage_8h_source.html" title=" " alt="" coords="383,155,530,181"/>
+<area shape="rect" id="node8" href="$____timeout_8h_source.html" title=" " alt="" coords="23,155,165,181"/>
+<area shape="rect" id="node5" title=" " alt="" coords="285,304,407,331"/>
+</map>

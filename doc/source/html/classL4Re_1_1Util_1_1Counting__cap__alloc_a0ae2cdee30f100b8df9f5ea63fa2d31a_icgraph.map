@@ -1,0 +1,10 @@
+<map id="L4Re::Util::Counting_cap_alloc::alloc" name="L4Re::Util::Counting_cap_alloc::alloc">
+<area shape="rect" id="node1" title="Allocate a new capability slot." alt="" coords="264,181,415,223"/>
+<area shape="rect" id="node2" href="$classL4Re_1_1Util_1_1Counting__cap__alloc.html#a7620032a3a03d07e70b95f92776e82c2" title="Allocate a new capability slot." alt="" coords="35,5,186,47"/>
+<area shape="rect" id="node3" href="$namespaceL4Re_1_1Util.html#aa47ac0998b99a90c541a2df23ed9f4fe" title="Allocate a capability slot and wrap it in a Ref_cap." alt="" coords="19,71,203,98"/>
+<area shape="rect" id="node4" href="$namespaceL4Re_1_1Util.html#aee6401b410f38f5cd94bb5406f742b65" title="Allocate a capability slot and wrap it in a Ref_del_cap." alt="" coords="33,123,188,164"/>
+<area shape="rect" id="node5" href="$namespaceL4Re_1_1Util.html#a365e03bc16cebbdc705f6b977e9b584a" title="Allocate a capability slot and wrap it in a Shared_cap." alt="" coords="5,189,216,215"/>
+<area shape="rect" id="node6" href="$namespaceL4Re_1_1Util.html#ab6ee1adc2284a9324243338e17aff922" title="Allocate a capability slot and wrap it in a Shared_del_cap." alt="" coords="21,240,201,281"/>
+<area shape="rect" id="node7" href="$namespaceL4Re_1_1Util.html#ae08b4a4eb21c40fd6e104b6c1f79fc7f" title="Allocate a capability slot and wrap it in an Unique_cap." alt="" coords="5,306,216,333"/>
+<area shape="rect" id="node8" href="$namespaceL4Re_1_1Util.html#aedfe21f678c7bcd4a1897677f64473e9" title="Allocate a capability slot and wrap it in an Unique_del_cap." alt="" coords="21,357,201,399"/>
+</map>

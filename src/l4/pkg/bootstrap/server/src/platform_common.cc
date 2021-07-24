@@ -1,6 +1,6 @@
 #include "support.h"
 #include <l4/cxx/minmax>
-#include <cassert>
+#include <assert.h>
 
 #ifdef RAM_SIZE_MB
 
@@ -70,5 +70,6 @@ Platform_single_region_ram::setup_memory_map()
       Region::n(RAM_BASE,
                 (unsigned long long)RAM_BASE + (ram_size_mb << 20),
                 ".ram", Region::Ram));
+  post_memory_hook();
 }
 #endif

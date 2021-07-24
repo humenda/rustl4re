@@ -8,7 +8,7 @@
  *
  * 1. Copyright Notice
  *
- * Some or all of this work - Copyright (c) 1999 - 2017, Intel Corp.
+ * Some or all of this work - Copyright (c) 1999 - 2019, Intel Corp.
  * All rights reserved.
  *
  * 2. License
@@ -111,6 +111,42 @@
  * other governmental approval, or letter of assurance, without first obtaining
  * such license, approval or letter.
  *
+ *****************************************************************************
+ *
+ * Alternatively, you may choose to be licensed under the terms of the
+ * following license:
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions, and the following disclaimer,
+ *    without modification.
+ * 2. Redistributions in binary form must reproduce at minimum a disclaimer
+ *    substantially similar to the "NO WARRANTY" disclaimer below
+ *    ("Disclaimer") and any redistribution must be conditioned upon
+ *    including a substantially similar Disclaimer requirement for further
+ *    binary redistribution.
+ * 3. Neither the names of the above-listed copyright holders nor the names
+ *    of any contributors may be used to endorse or promote products derived
+ *    from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+ * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * Alternatively, you may choose to be licensed under the terms of the
+ * GNU General Public License ("GPL") version 2 as published by the Free
+ * Software Foundation.
+ *
  *****************************************************************************/
 
 #include "acpinames.h"
@@ -170,13 +206,13 @@ AnInitializeTableHeader (
     UINT32                  Length)
 {
 
-    ACPI_MOVE_NAME (Header->Signature, Signature);
+    ACPI_COPY_NAMESEG (Header->Signature, Signature);
     Header->Length = Length;
 
     Header->OemRevision = 0x1001;
-    strncpy (Header->OemId, "Intel", ACPI_OEM_ID_SIZE);
-    strncpy (Header->OemTableId, "AcpiName", ACPI_OEM_TABLE_ID_SIZE);
-    strncpy (Header->AslCompilerId, "INTL", ACPI_NAME_SIZE);
+    memcpy (Header->OemId, "Intel ", ACPI_OEM_ID_SIZE);
+    memcpy (Header->OemTableId, "AcpiExec", ACPI_OEM_TABLE_ID_SIZE);
+    ACPI_COPY_NAMESEG (Header->AslCompilerId, "INTL");
     Header->AslCompilerRevision = ACPI_CA_VERSION;
 
     /* Set the checksum, must set to zero first */
@@ -221,8 +257,8 @@ AnBuildLocalTables (
     NextTable = TableList;
     while (NextTable)
     {
-        if (!ACPI_COMPARE_NAME (NextTable->Table->Signature, ACPI_SIG_DSDT) &&
-            !ACPI_COMPARE_NAME (NextTable->Table->Signature, ACPI_SIG_FADT))
+        if (!ACPI_COMPARE_NAMESEG (NextTable->Table->Signature, ACPI_SIG_DSDT) &&
+            !ACPI_COMPARE_NAMESEG (NextTable->Table->Signature, ACPI_SIG_FADT))
         {
             TableCount++;
         }
@@ -258,7 +294,7 @@ AnBuildLocalTables (
          * Incoming DSDT or FADT are special cases. All other tables are
          * just immediately installed into the XSDT.
          */
-        if (ACPI_COMPARE_NAME (NextTable->Table->Signature, ACPI_SIG_DSDT))
+        if (ACPI_COMPARE_NAMESEG (NextTable->Table->Signature, ACPI_SIG_DSDT))
         {
             if (DsdtAddress)
             {
@@ -270,7 +306,7 @@ AnBuildLocalTables (
 
             DsdtAddress = ACPI_PTR_TO_PHYSADDR (NextTable->Table);
         }
-        else if (ACPI_COMPARE_NAME (NextTable->Table->Signature, ACPI_SIG_FADT))
+        else if (ACPI_COMPARE_NAMESEG (NextTable->Table->Signature, ACPI_SIG_FADT))
         {
             ExternalFadt =
                 ACPI_CAST_PTR (ACPI_TABLE_FADT, NextTable->Table);
@@ -398,7 +434,7 @@ AnBuildLocalTables (
     /* Build a FACS */
 
     memset (&LocalFACS, 0, sizeof (ACPI_TABLE_FACS));
-    ACPI_MOVE_NAME (LocalFACS.Signature, ACPI_SIG_FACS);
+    ACPI_COPY_NAMESEG (LocalFACS.Signature, ACPI_SIG_FACS);
 
     LocalFACS.Length = sizeof (ACPI_TABLE_FACS);
     LocalFACS.GlobalLock = 0x11AA0011;

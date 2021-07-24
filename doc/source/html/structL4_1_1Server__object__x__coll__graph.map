@@ -1,4 +1,7 @@
 <map id="L4::Server_object_x&lt; Derived, IFACE, BASE &gt;" name="L4::Server_object_x&lt; Derived, IFACE, BASE &gt;">
-<area shape="rect" id="node2" href="$classL4_1_1Server__object.html" title="Abstract server object to be used with L4::Server and L4::Basic_registry. " alt="" coords="5,13,136,119"/>
-<area shape="rect" id="node3" href="$structL4_1_1Server__object__t.html" title="Base class (template) for server implementing server objects. " alt="" coords="160,5,352,127"/>
+<area shape="rect" id="node1" title="Helper class to implement p_dispatch based server objects." alt="" coords="5,804,195,896"/>
+<area shape="rect" id="node2" href="$classL4_1_1Server__object.html" title="Abstract server object to be used with L4::Server and L4::Basic_registry." alt="" coords="67,264,202,371"/>
+<area shape="rect" id="node4" href="$structL4_1_1Server__object__t.html" title=" " alt="" coords="121,619,319,755"/>
+<area shape="rect" id="node5" href="$structL4_1_1Server__object__t.html" title="Base class (template) for server implementing server objects." alt="" coords="171,420,370,541"/>
+<area shape="rect" id="node3" href="$structL4_1_1Epiface.html" title="Base class for interface implementations." alt="" coords="48,5,221,215"/>
 </map>

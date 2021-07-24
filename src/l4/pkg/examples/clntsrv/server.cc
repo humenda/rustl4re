@@ -48,7 +48,7 @@ main()
     }
 
   printf("Welcome to the calculation server!\n"
-         "I can do substractions and negations.\n");
+         "I can do subtractions and negations.\n");
 
   // Wait for client requests
   server.loop();

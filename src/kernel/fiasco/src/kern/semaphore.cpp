@@ -22,6 +22,7 @@ protected:
 IMPLEMENTATION:
 
 #include "ipc_timeout.h"
+#include "assert_opt.h"
 
 JDB_DEFINE_TYPENAME(Semaphore,  "\033[37mIRQ sem\033[m");
 
@@ -57,8 +58,8 @@ Semaphore::count_up(Thread **wakeup)
   return old;
 }
 
-PRIVATE inline NOEXPORT
-void ALWAYS_INLINE
+PRIVATE inline NOEXPORT ALWAYS_INLINE
+void
 Semaphore::_hit_edge_irq(Upstream_irq const *ui)
 {
   assert (cpu_lock.test());
@@ -83,8 +84,8 @@ void
 Semaphore::hit_edge_irq(Irq_base *i, Upstream_irq const *ui)
 { nonull_static_cast<Semaphore*>(i)->_hit_edge_irq(ui); }
 
-PRIVATE inline NOEXPORT
-void ALWAYS_INLINE
+PRIVATE inline NOEXPORT ALWAYS_INLINE
+void
 Semaphore::_hit_level_irq(Upstream_irq const *ui)
 {
   assert (cpu_lock.test());
@@ -105,7 +106,7 @@ Semaphore::hit_level_irq(Irq_base *i, Upstream_irq const *ui)
 
 PUBLIC
 void
-Semaphore::switch_mode(bool is_edge_triggered)
+Semaphore::switch_mode(bool is_edge_triggered) override
 {
   hit_func = is_edge_triggered ? &hit_edge_irq : &hit_level_irq;
 }
@@ -115,8 +116,8 @@ Sender *
 Semaphore::sem_partner()
 { return reinterpret_cast<Sender *>(5); }
 
-PRIVATE inline NOEXPORT
-bool ALWAYS_INLINE
+PRIVATE inline NOEXPORT ALWAYS_INLINE
+bool
 Semaphore::down(Thread *ct)
 {
   bool run = true;
@@ -144,10 +145,13 @@ Semaphore::down(Thread *ct)
    return run;
 }
 
-PRIVATE inline NOEXPORT
-L4_msg_tag ALWAYS_INLINE
-Semaphore::sys_down(L4_timeout t, Utcb const *utcb)
+PRIVATE inline NEEDS["assert_opt.h"] NOEXPORT ALWAYS_INLINE
+L4_msg_tag
+Semaphore::sys_down(L4_fpage::Rights rights, L4_timeout t, Utcb const *utcb)
 {
+  if (EXPECT_FALSE(!(rights & L4_fpage::Rights::CS())))
+    return commit_result(-L4_err::EPerm);
+
   Thread *const c_thread = ::current_thread();
   assert_opt (c_thread);
 
@@ -190,7 +194,7 @@ Semaphore::sys_down(L4_timeout t, Utcb const *utcb)
 
 PUBLIC
 L4_msg_tag
-Semaphore::kinvoke(L4_obj_ref, L4_fpage::Rights /*rights*/, Syscall_frame *f,
+Semaphore::kinvoke(L4_obj_ref, L4_fpage::Rights rights, Syscall_frame *f,
                    Utcb const *utcb, Utcb *)
 {
   L4_msg_tag tag = f->tag();
@@ -208,7 +212,7 @@ Semaphore::kinvoke(L4_obj_ref, L4_fpage::Rights /*rights*/, Syscall_frame *f,
       switch (op)
         {
         case Op_down:
-          return sys_down(f->timeout().rcv, utcb);
+          return sys_down(rights, f->timeout().rcv, utcb);
 
         default:
           return commit_result(-L4_err::ENosys);

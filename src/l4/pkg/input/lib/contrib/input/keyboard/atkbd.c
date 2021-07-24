@@ -860,7 +860,7 @@ static void atkbd_connect(struct serio *serio, struct serio_driver *drv)
 		sprintf(atkbd->name, "AT %s Set %d keyboard",
 			atkbd->translated ? "Translated" : "Raw", atkbd->set);
 
-	sprintf(atkbd->phys, "%s/input0", serio->phys);
+	snprintf(atkbd->phys, sizeof(atkbd->phys), "%s/input0", serio->phys);
 
 	atkbd_set_keycode_table(atkbd);
 	atkbd_set_device_attrs(atkbd);

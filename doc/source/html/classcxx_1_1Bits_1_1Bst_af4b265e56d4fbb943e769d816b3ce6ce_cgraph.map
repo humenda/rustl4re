@@ -1,0 +1,4 @@
+<map id="cxx::Bits::Bst::rbegin" name="cxx::Bits::Bst::rbegin">
+<area shape="rect" id="node1" title="Get the mutable backward iterator for the last element of the set." alt="" coords="5,5,161,32"/>
+<area shape="rect" id="node2" href="$classcxx_1_1Bits_1_1Bst.html#ad0507c7685968acce75bafa667add503" title="Access the head node as object of type Node." alt="" coords="209,5,356,32"/>
+</map>

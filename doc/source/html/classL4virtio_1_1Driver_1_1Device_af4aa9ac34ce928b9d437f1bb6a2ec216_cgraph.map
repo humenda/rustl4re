@@ -1,0 +1,13 @@
+<map id="L4virtio::Driver::Device::send_and_wait" name="L4virtio::Driver::Device::send_and_wait">
+<area shape="rect" id="node1" title="Send a request to the device and wait for it to be processed." alt="" coords="5,104,177,145"/>
+<area shape="rect" id="node2" href="$classL4virtio_1_1Driver_1_1Device.html#a72090d324268b51f3937197748c26853" title="Send a request to the device." alt="" coords="225,71,397,112"/>
+<area shape="rect" id="node6" href="$classL4virtio_1_1Driver_1_1Device.html#a156576a5d43ef2fe11b39f4d8ffc4c9e" title="Wait for the next item to arrive in the used queue and return it." alt="" coords="225,136,397,177"/>
+<area shape="rect" id="node3" href="$classL4virtio_1_1Driver_1_1Virtqueue.html#a20a030dd769eddf44b6cb0bb07b84ee8" title="Enqueue a descriptor in the available ring." alt="" coords="445,5,636,47"/>
+<area shape="rect" id="node4" href="$classL4virtio_1_1Virtqueue.html#ad478e575bf6023866e8bd4ea6b5b0200" title="Get the no notify flag of this queue." alt="" coords="469,71,612,112"/>
+<area shape="rect" id="node5" href="$structL4virtio_1_1Virtqueue_1_1Used_1_1Flags.html#ac3ce47fc7d1ceb8cbe209a71d898bc6e" title="Get the no_notify bits ( 0 to 0 ) of raw." alt="" coords="684,71,859,112"/>
+<area shape="rect" id="node7" href="$classL4virtio_1_1Driver_1_1Virtqueue.html#a6d320be956d592d0a064fb89c5a69ba5" title="Return the next finished block." alt="" coords="445,136,636,177"/>
+<area shape="rect" id="node8" href="$classL4virtio_1_1Driver_1_1Device.html#a05a02d57ddf646f029311ca8a63f4081" title="Wait for a notification from the device." alt="" coords="455,201,627,243"/>
+<area shape="rect" id="node9" href="$group__l4__ipc__err__api.html#gad40f404217497793e95a10d77a47db39" title="Get the error code for an object invocation." alt="" coords="722,183,821,210"/>
+<area shape="rect" id="node11" href="$group__l4__utcb__api.html#gadc099b4a59e1d99638c72c11a8c8b644" title="Get the UTCB address." alt="" coords="737,234,806,261"/>
+<area shape="rect" id="node10" href="$group__l4__msgtag__api.html#ga52e71bb66855f4d78fa5c82b5f0c5a87" title="Test for error indicator flag." alt="" coords="907,183,1065,210"/>
+</map>

@@ -49,7 +49,7 @@ protected:
   void wr_adr(u8 a);
   void wr_dat(u8 d);
   u8 rd_dat();
-  void rd_dat(const u8 *buf, unsigned len);
+  void rd_dat(u8 *buf, unsigned len);
   void wr_dat(const u8 *buf, unsigned len);
 
   int handle_irq();

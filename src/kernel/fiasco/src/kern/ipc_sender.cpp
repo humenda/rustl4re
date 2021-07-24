@@ -32,7 +32,7 @@ IMPLEMENT inline Ipc_sender_base::~Ipc_sender_base() {}
 
 PUBLIC
 virtual void
-Ipc_sender_base::ipc_receiver_aborted()
+Ipc_sender_base::ipc_receiver_aborted() override
 {
   assert (wait_queue());
   set_wait_queue(0);
@@ -45,7 +45,7 @@ Ipc_sender_base::ipc_receiver_aborted()
  */
 PUBLIC template< typename Derived >
 virtual void
-Ipc_sender<Derived>::ipc_send_msg(Receiver *recv)
+Ipc_sender<Derived>::ipc_send_msg(Receiver *recv, bool) override
 {
   derived()->transfer_msg(recv);
   if (derived()->dequeue_sender())
@@ -152,7 +152,7 @@ Ipc_sender<Derived>::send_msg(Receiver *receiver, bool is_not_xcpu)
           || EXPECT_TRUE(current_cpu() == receiver->home_cpu()))
         {
           auto &rq = Sched_context::rq.current();
-          if (s == Receiver::Rs_ipc_receive
+          if (s.is_ipc()
               && handle_shortcut(dst_regs, receiver))
             return false;
 

@@ -10,7 +10,7 @@ virt_address       = kernel_load_addr;
 #elif defined CONFIG_BIT32
 virt_address       = 0xf0000000;
 #elif defined CONFIG_BIT64
-virt_address       = 0xffff000040000000;
+virt_address       = 0xffff000040000000 + (RAM_PHYS_BASE & ((1 << 30) - 1));
 #endif
 phys_offset        = virt_address - kernel_load_addr;
 
@@ -58,17 +58,17 @@ SECTIONS {
 		*(.exitcall.exit)
                 *(.bootstrap.dropped*)
 	      }
-	      
+	
   . = kernel_load_addr + 0x1000;
-	      
-  .text : {
+	
+  .text kernel_load_addr + 0x1000 : {
     MWORD(_start_kernel)
     MWORD(my_kernel_info_page)
     KEEP(*(.bootstrap.info))
     ASSERT (ABSOLUTE(.) == end_of_bootstrap_info, "invalid size of bootstrap.info");
 
     . = ABSOLUTE(start_of_loader);
-    *(.bootstrap.text)
+    KEEP(*(.bootstrap.text))
   } :bstrap
 
   . = ALIGN(4K);
@@ -104,7 +104,7 @@ SECTIONS {
     *(.fini)
 
     *(.text.jdb)
-     
+
     PROVIDE (_ecode = .);
 
     *(.rodata .rodata.* .gnu.linkonce.r.* .rodata1)
@@ -115,13 +115,13 @@ SECTIONS {
     JDB_TABLE(typeinfo);
 
     . = ALIGN(0x40);
-    
+
     PROVIDE (_etext = .);
 
     *(.data .data.* .gnu.linkonce.d.*)
     *(.anno)
 
-    *(.data) 
+    *(.data)
     *(.gnu.linkonce.d*)
     *(.anno)
     *(.data.jdb)
@@ -194,7 +194,7 @@ SECTIONS {
     KEEP (*(SORT (.ctors.*)))
     __CTOR_LIST__ = .;
 
-    __DTOR_END__ = .;    
+    __DTOR_END__ = .;
     KEEP (*(SORT(.dtors.*)))
     KEEP (*(.dtors))
     __DTOR_LIST__ = .;
@@ -242,7 +242,7 @@ SECTIONS {
   . = __end_of_the_kernel + SIZEOF(.excp);
 
   PROVIDE( _end = . );
-    
+
   . = ALIGN(4K);
   .initcall : AT(ADDR(.initcall) - phys_offset) {
     _initcall_start = .;

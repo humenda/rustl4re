@@ -16,6 +16,8 @@
 #include <l4/cxx/avl_tree>
 #include <l4/cxx/list>
 
+#include <l4/vbus/vbus>
+
 #include <l4/re/util/cap_alloc>
 
 #include "irqs.h"
@@ -91,7 +93,6 @@ private:
   int unbind_irq(unsigned irqn, L4::Ipc::Snd_fpage const &irqc);
   int unmask_irq(unsigned irqn);
   int set_mode(unsigned irqn, l4_umword_t mode);
-
 
   class Sw_irq_pin : public cxx::Avl_tree_node
   {
@@ -169,7 +170,6 @@ public:
     S_allow_set_mode = Sw_irq_pin::S_allow_set_mode,
   };
 
-  static void *irq_loop(void*);
   void set_host(Device *d) override
   { _host = d; }
 

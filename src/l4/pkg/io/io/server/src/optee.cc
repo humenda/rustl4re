@@ -36,7 +36,7 @@ public:
     add_cid("optee-mem");
   }
 
-  void init()
+  void init() override
   {
     Hw::Device::init();
 

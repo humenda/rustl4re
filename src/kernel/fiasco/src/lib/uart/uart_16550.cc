@@ -53,17 +53,14 @@ namespace L4
       return false;  // this is not the uart
 #endif
 
-    if (!(_init_flags & F_skip_init))
-      {
-        /* disable all rs-232 interrupts */
-        _regs->write<unsigned char>(IER, _ier_bits);
-        /* rts, and dtr enabled */
-        _regs->write<unsigned char>(MCR, _mcr_bits | 3);
-        /* enable fifo + clear rcv+xmit fifo */
-        _regs->write<unsigned char>(FCR, _fcr_bits | 7);
-        /* clear line control register: set to (8N1) */
-        _regs->write<unsigned char>(LCR, 3);
-      }
+    /* disable all rs-232 interrupts */
+    _regs->write<unsigned char>(IER, _ier_bits);
+    /* rts, and dtr enabled */
+    _regs->write<unsigned char>(MCR, _mcr_bits | 3);
+    /* enable fifo + clear rcv+xmit fifo */
+    _regs->write<unsigned char>(FCR, _fcr_bits | 7);
+    /* clear line control register: set to (8N1) */
+    _regs->write<unsigned char>(LCR, 3);
 
     /* clearall interrupts */
     _regs->read<unsigned char>(MSR); /* IRQID 0*/
@@ -89,7 +86,7 @@ namespace L4
   bool Uart_16550::change_mode(Transfer_mode m, Baud_rate r)
   {
     unsigned long old_lcr = _regs->read<unsigned char>(LCR);
-    if(r != BAUD_NC) {
+    if(r != BAUD_NC && _base_rate) {
       unsigned short divisor = _base_rate / r;
       _regs->write<unsigned char>(LCR, old_lcr | 0x80/*DLAB*/);
       _regs->write<unsigned char>(TRB, divisor & 0x0ff);        /* BRD_LOW  */

@@ -36,7 +36,6 @@ public:
 
   Kobject_iface *ptr(Space *, L4_fpage::Rights *) const;
 
-  bool is_kernel() const { return false; }
   bool is_valid() const { return _t != Cap_index(~0UL); }
 
   // only for debugging use
@@ -105,6 +104,7 @@ class Context :
   protected Rcu_item
 {
   MEMBER_OFFSET();
+  friend class Jdb_thread;
   friend class Jdb_thread_list;
   friend class Context_ptr;
   friend class Jdb_utcb;
@@ -179,7 +179,6 @@ public:
 
     typedef Result (Request_func)(Drq *, Context *target, void *);
     enum Wait_mode { No_wait = 0, Wait = 1 };
-    enum Exec_mode { Target_ctxt = 0, Any_ctxt = 1 };
     // enum State { Idle = 0, Handled = 1, Reply_handled = 2 };
 
     Request_func *func;
@@ -198,7 +197,7 @@ public:
   public:
     enum Drop_mode { Drop = true, No_drop = false };
     void enq(Drq *rq);
-    bool dequeue(Drq *drq, Queue_item::Status reason);
+    bool dequeue(Drq *drq);
     bool handle_requests(Drop_mode drop = No_drop);
     bool execute_request(Drq *r, Drop_mode drop, bool local);
   };
@@ -313,7 +312,6 @@ protected:
   Context_space_ref _space;
 
 private:
-  Context *_donatee;
   Context *_helper;
 
   // Lock state
@@ -462,31 +460,25 @@ Context_ptr::ptr(Space *s, L4_fpage::Rights *rights) const
 
 #include <cstdio>
 
-/** Initialize a context.  After setup, a switch_exec to this context results
-    in a return to user code using the return registers at regs().  The
-    return registers are not initialized however; neither is the space_context
-    to be used in thread switching (use set_space_context() for that).
-    @pre (_kernel_sp == 0)  &&  (* (stack end) == 0)
+/**
+ * Initialize a context.
+ *
+ * After setup, a switch_exec_locked to this context results in a return to user
+ * code using the return registers at regs(). The return registers are not
+ * initialized however; neither is the Space to be used in thread switching.
+ *
+ * \pre (_kernel_sp == 0)  &&  (* (stack end) == 0)
  */
 PUBLIC inline NEEDS ["atomic.h", "entry_frame.h", <cstdio>]
 Context::Context()
 : _kernel_sp(reinterpret_cast<Mword*>(regs())),
-  /* TCBs are zero initialized _utcb_handler(0), */
+  // TCBs are zero initialized. Thus, members not explictly initialized can be
+  // assumed to be zero-initialized, unless their default constructor does
+  // something different.
   _helper(this),
   _sched_context(),
   _sched(&_sched_context)
-  /* TCBs should be initialized to zero!
-  _migration(0),
-  _need_to_finish_migration(false)
-  */
 {
-  // NOTE: We do not have to synchronize the initialization of
-  // _space_context because it is constant for all concurrent
-  // invocations of this constructor.  When two threads concurrently
-  // try to create a new task, they already synchronize in
-  // sys_task_new() and avoid calling us twice with different
-  // space_context arguments.
-
   _home_cpu = Cpu::invalid();
 }
 
@@ -497,52 +489,6 @@ Context::reset_kernel_sp()
   _kernel_sp = reinterpret_cast<Mword*>(regs());
 }
 
-PUBLIC inline
-void
-Context::spill_fpu_if_owner()
-{
-  // spill FPU state into memory before migration
-  if (state() & Thread_fpu_owner)
-    {
-      Fpu &f = Fpu::fpu.current();
-      if (current() != this)
-        f.enable();
-
-      spill_fpu();
-      f.set_owner(0);
-      f.disable();
-    }
-}
-
-PUBLIC static
-void
-Context::spill_current_fpu(Cpu_number cpu)
-{
-  (void)cpu;
-  assert (cpu == current_cpu());
-  Fpu &f = Fpu::fpu.current();
-  if (f.owner())
-    {
-      f.enable();
-      f.owner()->spill_fpu();
-      f.set_owner(0);
-      f.disable();
-    }
-}
-
-
-PUBLIC inline
-void
-Context::release_fpu_if_owner()
-{
-  // If this context owned the FPU, noone owns it now
-  Fpu &f = Fpu::fpu.current();
-  if (f.is_owner(this))
-    {
-      f.set_owner(0);
-      f.disable();
-    }
-}
 
 /** Destroy context.
  */
@@ -783,7 +729,7 @@ Context::schedule()
   assert (!Sched_context::rq.current().schedule_in_progress);
 
   // we give up the CPU as a helpee, so we have no helper anymore
-  if (EXPECT_FALSE(helper() != 0))
+  if (EXPECT_FALSE(helper() != this))
     set_helper(Not_Helping);
 
   // if we are a thread on a foreign CPU we must ask the kernel context to
@@ -980,25 +926,6 @@ Context::set_helper(Helping_mode const mode)
     }
 }
 
-/** Donatee.  Context that receives our time slices, for example
-    because it has locked us.
-    @return context that should be activated instead of us when we're
-            switch_exec()'ed.
-*/
-PUBLIC inline
-Context *
-Context::donatee() const
-{
-  return _donatee;
-}
-
-PUBLIC inline
-void
-Context::set_donatee(Context * const donatee)
-{
-  _donatee = donatee;
-}
-
 PUBLIC inline
 void
 Context::set_kernel_sp(Mword * const esp)
@@ -1093,39 +1020,6 @@ Context::deblock_and_schedule(Context *to)
 
 
 /**
- * Switch execution context while not running under CPU lock.
- */
-
-PRIVATE inline
-Context *
-Context::handle_helping(Context *t)
-{
-  // XXX: maybe we do not need this on MP, because we have no helping there
-  assert (current() == this);
-  // Time-slice lending: if t is locked, switch to its locker
-  // instead, this is transitive
-  while (t->donatee() &&		// target thread locked
-         t->donatee() != t)		// not by itself
-    {
-      // Special case for Thread::kill(): If the locker is
-      // current(), switch to the locked thread to allow it to
-      // release other locks.  Do this only when the target thread
-      // actually owns locks.
-      if (t->donatee() == this)
-        {
-          if (t->lock_cnt() > 0)
-            break;
-
-          return this;
-        }
-
-      t = t->donatee();
-    }
-  return t;
-}
-
-
-/**
  * Switch to a specific different execution context.
  *        If that context is currently locked, switch to its locker instead
  *        (except if current() is the locker)
@@ -1151,11 +1045,6 @@ Context::switch_exec_locked(Context *t, enum Helping_mode mode)
   // Time-slice lending: if t is locked, switch to its locker
   // instead, this is transitive
   //
-  // For the Thread_lock case only, so skip this
-  // t = handle_helping(t);
-  Context *ret = handle_helping(t);
-  assert(ret == t);
-  (void)ret;
 
   if (EXPECT_FALSE(t->running_on_different_cpu()))
     {
@@ -1182,7 +1071,7 @@ Context::switch_exec_locked(Context *t, enum Helping_mode mode)
 
   t->set_helper(mode);
 
-  if (EXPECT_TRUE(current_cpu() == home_cpu()))
+  if (EXPECT_TRUE(get_current_cpu() == home_cpu()))
     update_ready_list();
 
   t->set_current_cpu(get_current_cpu());
@@ -1205,12 +1094,6 @@ Context::switch_exec_helping(Context *t, Mword const *lock, Mword val)
   // only for logging
   Context *t_orig = t;
   (void)t_orig;
-
-  // Time-slice lending: if t is locked, switch to its locker
-  // instead, this is transitive
-  //
-  // For the Thread_lock case only, so skip this
-  // t = handle_helping(t);
 
   // we actually hold locks
   if (!t->need_help(lock, val))
@@ -1259,7 +1142,7 @@ Context::Drq_q::enq(Drq *rq)
   enqueue(rq);
 }
 
-IMPLEMENT inline
+IMPLEMENT inline NEEDS["logdefs.h"]
 bool
 Context::Drq_q::execute_request(Drq *r, Drop_mode drop, bool local)
 {
@@ -1312,10 +1195,10 @@ Context::Drq_q::execute_request(Drq *r, Drop_mode drop, bool local)
           if (local)
             {
               c->state_change_dirty(~Thread_drq_wait, Thread_ready);
-              return need_resched || !(c->state() & Thread_ready_mask);
+              return need_resched;
             }
           else
-            need_resched |= c->enqueue_drq(r, Drq::Target_ctxt);
+            need_resched |= c->enqueue_drq(r);
         }
     }
   return need_resched;
@@ -1323,12 +1206,12 @@ Context::Drq_q::execute_request(Drq *r, Drop_mode drop, bool local)
 
 IMPLEMENT inline NEEDS["lock_guard.h"]
 bool
-Context::Drq_q::dequeue(Drq *drq, Queue_item::Status reason)
+Context::Drq_q::dequeue(Drq *drq)
 {
   auto guard = lock_guard(q_lock());
   if (!drq->queued())
     return false;
-  return Queue::dequeue(drq, reason);
+  return Queue::dequeue(drq);
 }
 
 IMPLEMENT inline NEEDS["mem.h", "lock_guard.h"]
@@ -1347,7 +1230,7 @@ Context::Drq_q::handle_requests(Drop_mode drop)
           if (!qi)
             return need_resched;
 
-          check (Queue::dequeue(qi, Queue_item::Ok));
+          check (Queue::dequeue(qi));
         }
 
       Drq *r = static_cast<Drq*>(qi);
@@ -1358,47 +1241,6 @@ Context::Drq_q::handle_requests(Drop_mode drop)
 }
 
 /**
- * \brief Forced dequeue from lock wait queue, or DRQ queue.
- */
-PRIVATE
-void
-Context::force_dequeue()
-{
-  Queue_item *const qi = queue_item();
-
-  if (qi->queued())
-    {
-      // we're waiting for a lock or have a DRQ pending
-      Queue *const q = qi->queue();
-        {
-          auto guard = lock_guard(q->q_lock());
-          // check again, with the queue lock held.
-          // NOTE: we may be already removed from the queue on another CPU
-          if (qi->queued() && qi->queue())
-            {
-              // we must never be taken from one queue to another on a
-              // different CPU
-              assert(q == qi->queue());
-              // pull myself out of the queue, mark reason as invalidation
-              q->dequeue(qi, Queue_item::Invalid);
-            }
-        }
-    }
-}
-
-/**
- * \brief Dequeue from lock and DRQ queues, abort pending DRQs
- */
-PROTECTED
-void
-Context::shutdown_queues()
-{
-  force_dequeue();
-  shutdown_drqs();
-}
-
-
-/**
  * \brief Check for pending DRQs.
  * \return true if there are DRQs pending, false if not.
  */
@@ -1407,7 +1249,7 @@ bool
 Context::drq_pending() const
 { return _drq_q.first(); }
 
-PUBLIC inline
+PUBLIC inline NEEDS["thread_state.h"]
 void
 Context::try_finish_migration()
 {
@@ -1476,8 +1318,8 @@ Context::switch_handle_drq()
 }
 
 /**
- * \brief Get the queue item of the context.
- * \pre The context must currently not be in any queue.
+ * Get the queue item of the context.
+ *
  * \return The queue item of the context.
  *
  * The queue item can be used to enqueue the context to a Queue.
@@ -1539,7 +1381,7 @@ Context::set_home_cpu(Cpu_number cpu)
  * This function must be used to change the state of contexts that are
  * potentially running on a different CPU.
  */
-PUBLIC inline NEEDS[Context::pending_rqq_enqueue]
+PUBLIC inline NEEDS[Context::pending_rqq_enqueue, "thread_state.h"]
 bool
 Context::xcpu_state_change(Mword mask, Mword add, bool lazy_q = false)
 {
@@ -1580,10 +1422,9 @@ Context::xcpu_state_change(Mword mask, Mword add, bool lazy_q = false)
  *
  * This function enqueues a DRQ and blocks the current context for a reply DRQ.
  */
-PUBLIC inline NEEDS[Context::enqueue_drq, "logdefs.h"]
+PUBLIC inline NEEDS[Context::enqueue_drq, "logdefs.h", "thread_state.h"]
 void
 Context::drq(Drq *drq, Drq::Request_func *func, void *arg,
-             Drq::Exec_mode exec = Drq::Target_ctxt,
              Drq::Wait_mode wait = Drq::Wait)
 {
   if (0)
@@ -1608,7 +1449,7 @@ Context::drq(Drq *drq, Drq::Request_func *func, void *arg,
     cur->state_add(Thread_drq_wait);
 
 
-  enqueue_drq(drq, exec);
+  enqueue_drq(drq);
 
   //LOG_MSG_3VAL(src, "<drq", src->state(), Mword(this), 0);
   while (wait == Drq::Wait && cur->state() & Thread_drq_wait)
@@ -1651,9 +1492,8 @@ Context::kernel_context_drq(Drq::Request_func *func, void *arg)
 PUBLIC inline NEEDS[Context::drq]
 void
 Context::drq(Drq::Request_func *func, void *arg,
-             Drq::Exec_mode exec = Drq::Target_ctxt,
              Drq::Wait_mode wait = Drq::Wait)
-{ return drq(&current()->_drq, func, arg, exec, wait); }
+{ return drq(&current()->_drq, func, arg, wait); }
 
 PRIVATE static
 bool
@@ -1756,7 +1596,7 @@ Context::pending_rqq_enqueue()
 
 PUBLIC
 bool
-Context::enqueue_drq(Drq *rq, Drq::Exec_mode /*exec*/)
+Context::enqueue_drq(Drq *rq)
 {
   assert (cpu_lock.test());
 
@@ -1871,7 +1711,7 @@ private:
      */
     bool try_dispatch()
     {
-      if (_s)
+      if (access_once(&_s))
         return false;
 
       return mp_cas(&_s, Not_running, Running);
@@ -2060,7 +1900,7 @@ Context::Pending_rqq::handle_requests(Context **mq)
           if (!qi)
             return resched;
 
-          check (dequeue(qi, Queue_item::Ok));
+          check (dequeue(qi));
           c = static_cast<Context::Pending_rq *>(qi)->context();
         }
 
@@ -2111,29 +1951,50 @@ bool
 Context::take_cpu_offline(Cpu_number cpu, bool drain_rqq = false)
 {
   assert (cpu == current_cpu());
+  assert (!Proc::interrupts());
 
+  for (;;)
     {
       auto &q = _pending_rqq.current();
-      auto guard = lock_guard(q.q_lock());
 
-      if (q.first())
         {
+          auto guard = lock_guard(q.q_lock());
+
+          if (!q.first())
+            {
+              Cpu::cpus.current().set_online(false);
+              break;
+            }
+
           if (!drain_rqq)
             return false;
-
-          Context *migration_q = 0;
-          q.handle_requests(&migration_q);
-          // assume we run from the idle thread, and the idle thread does
-          // never migrate so `migration_q` must be 0
-          assert (!migration_q);
         }
 
-      Cpu::cpus.current().set_online(false);
+      // Pending_rqq::handle_requests must be called without the
+      // queue lock held.
+      Context *migration_q = 0;
+      q.handle_requests(&migration_q);
+      // assume we run from the idle thread, and the idle thread does
+      // never migrate so `migration_q` must be 0
+      assert (!migration_q);
     }
+
   Mem::mp_mb();
 
-  Rcu::do_pending_work(cpu);
+  // As the interrupts are disabled (this is acceptable as this function is
+  // called during system suspend only), the loop safely drains all the RCU
+  // queues of the current CPU without race conditions. And the enter_idle()
+  // does safely remove the CPU from the list of active CPUs.
+  do
+    {
+      Rcu::do_pending_work(cpu);
+      Proc::pause();
+    }
+  while (!Rcu::idle(cpu));
+  Rcu::enter_idle(cpu);
+
   Cpu_call::handle_global_requests();
+
   return true;
 }
 
@@ -2142,6 +2003,7 @@ void
 Context::take_cpu_online(Cpu_number cpu)
 {
   Cpu::cpus.cpu(cpu).set_online(true);
+  Rcu::leave_idle(cpu);
 }
 
 PRIVATE
@@ -2206,7 +2068,7 @@ PRIVATE inline
 bool
 Context::_deq_exec_drq(Drq *rq, bool offline_cpu = false)
 {
-  if (!_drq_q.dequeue(rq, Queue_item::Ok))
+  if (!_drq_q.dequeue(rq))
     return false; // already handled
 
   if (!drq_pending() && EXPECT_FALSE(state(false) & Thread_drq_ready))
@@ -2217,7 +2079,7 @@ Context::_deq_exec_drq(Drq *rq, bool offline_cpu = false)
 
 PUBLIC
 bool
-Context::enqueue_drq(Drq *rq, Drq::Exec_mode /*exec*/)
+Context::enqueue_drq(Drq *rq)
 {
   assert (cpu_lock.test());
 
@@ -2287,7 +2149,7 @@ Context::shutdown_drqs()
     {
       auto guard = lock_guard(_pending_rq.queue()->q_lock());
       if (_pending_rq.queued())
-        _pending_rq.queue()->dequeue(&_pending_rq, Queue_item::Ok);
+        _pending_rq.queue()->dequeue(&_pending_rq);
     }
 
   _drq_q.handle_requests(Drq_q::Drop);
@@ -2311,10 +2173,8 @@ Context::rcu_wait()
     }
 }
 
-
-
 //----------------------------------------------------------------------------
-IMPLEMENTATION [fpu && !ux]:
+IMPLEMENTATION [fpu && !ux && lazy_fpu]:
 
 #include "fpu.h"
 
@@ -2331,7 +2191,6 @@ Context::spill_fpu()
   Fpu::save_state(fpu_state());
   state_del_dirty(Thread_fpu_owner);
 }
-
 
 /**
  * When switching away from the FPU owner, disable the FPU to cause
@@ -2351,11 +2210,137 @@ Context::switch_fpu(Context *t)
 }
 
 //----------------------------------------------------------------------------
+IMPLEMENTATION [fpu && lazy_fpu]:
+
+#include "fpu.h"
+
+PUBLIC inline NEEDS["fpu.h"]
+void
+Context::spill_fpu_if_owner()
+{
+  // spill FPU state into memory before migration
+  if (!(state() & Thread_fpu_owner))
+    return;
+
+  Fpu &f = Fpu::fpu.current();
+
+  if (current() != this)
+    f.enable();
+
+  spill_fpu();
+  f.set_owner(0);
+  f.disable();
+}
+
+PUBLIC static
+void
+Context::spill_current_fpu(Cpu_number cpu)
+{
+  (void)cpu;
+  assert (cpu == current_cpu());
+
+  Fpu &f = Fpu::fpu.current();
+  if (f.owner())
+    {
+      f.enable();
+      f.owner()->spill_fpu();
+      f.set_owner(0);
+      f.disable();
+    }
+}
+
+
+PUBLIC inline NEEDS["fpu.h"]
+void
+Context::release_fpu_if_owner()
+{
+  // If this context owns the FPU, no one owns it now
+  Fpu &f = Fpu::fpu.current();
+  if (f.is_owner(this))
+    {
+      f.set_owner(0);
+      f.disable();
+    }
+}
+
+//----------------------------------------------------------------------------
+IMPLEMENTATION [fpu && !ux && !lazy_fpu]:
+
+#include "fpu.h"
+
+PUBLIC inline NEEDS ["fpu.h"]
+void
+Context::spill_fpu()
+{
+  assert (fpu_state());
+
+  // Save the FPU state of the previous FPU owner
+  Fpu::save_state(fpu_state());
+}
+
+IMPLEMENT inline NEEDS ["fpu.h"]
+void
+Context::switch_fpu(Context *t)
+{
+  Fpu &f = Fpu::fpu.current();
+
+  if (state() & Thread_vcpu_fpu_disabled)
+    f.enable();
+
+  spill_fpu();
+  f.restore_state(t->fpu_state());
+
+  if (t->state() & Thread_vcpu_fpu_disabled)
+    f.disable();
+}
+
+PUBLIC inline
+void
+Context::spill_fpu_if_owner()
+{
+  if (current() != this)
+    return;
+
+  spill_fpu();
+}
+
+PUBLIC static
+void
+Context::spill_current_fpu(Cpu_number cpu)
+{
+  (void)cpu;
+  assert (cpu == current_cpu());
+
+  current()->spill_fpu();
+}
+
+
+PUBLIC inline
+void
+Context::release_fpu_if_owner()
+{}
+
+//----------------------------------------------------------------------------
 IMPLEMENTATION [!fpu]:
 
 PUBLIC inline
 void
+Context::spill_fpu_if_owner()
+{}
+
+PUBLIC static
+void
+Context::spill_current_fpu(Cpu_number)
+{}
+
+PUBLIC inline
+void
 Context::spill_fpu()
+{}
+
+PUBLIC inline
+void
+Context::release_fpu_if_owner()
 {}
 
 IMPLEMENT inline

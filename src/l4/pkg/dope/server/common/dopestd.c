@@ -29,7 +29,7 @@ int dope_ftoa(float v, int prec, char *dst, int max_len) {
 
 	if (v < 0) { v = -v; dig++; neg = 1; }
 	
-	for (; (int)v > 0; v = v/10.0) dig++;
+	for (; (int)v > 0; v = v/10.0f) dig++;
 	
 	if (dig == 0) { dig = 1; zero = 1; }
 	

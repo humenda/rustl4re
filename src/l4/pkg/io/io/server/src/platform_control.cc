@@ -22,7 +22,7 @@ struct Suspend_timeout : L4::Ipc_svr::Timeout
   Platform_control *ctl;
   explicit Suspend_timeout(Platform_control *ctl) : ctl(ctl) {}
 
-  void expired()
+  void expired() override
   {
     d_printf(DBG_ERR, "error: timeout during suspend, abort suspend\n");
     ctl->print_lock_holders(L4VBUS_INHIBITOR_SUSPEND);
@@ -36,7 +36,7 @@ struct Shutdown_timeout : L4::Ipc_svr::Timeout
   Platform_control *ctl;
   explicit Shutdown_timeout(Platform_control *ctl) : ctl(ctl) {}
 
-  void expired()
+  void expired() override
   {
     d_printf(DBG_ERR,
              "error: timeout during shutdown / reboot, force operation\n");

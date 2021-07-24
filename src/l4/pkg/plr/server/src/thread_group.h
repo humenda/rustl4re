@@ -156,7 +156,7 @@ struct GateAgent
 		if (l4_error(tag)) {
 			enter_kdebug("IRQ creation error");
 		}
-		tag = gate_irq->attach(GateAgent_label+2, listener_cap);
+		tag = gate_irq->bind_thread(listener_cap, GateAgent_label+2);
 		if (l4_error(tag)) {
 			enter_kdebug("attach error");
 		}

@@ -1,4 +1,5 @@
 <map id="L4virtio::Virtqueue::disable" name="L4virtio::Virtqueue::disable">
-<area shape="rect" id="node2" href="$classL4virtio_1_1Svr_1_1Block__dev.html#a9a96e928470518780132b45397e8ad35" title="Attach device to an object registry. " alt="" coords="218,5,353,47"/>
-<area shape="rect" id="node3" href="$classL4virtio_1_1Svr_1_1Device__t.html#ab906b4cc61026fd815a8056f07bef10e" title="Enable/disable the specified queue. " alt="" coords="187,71,384,112"/>
+<area shape="rect" id="node1" title="Completely disable the queue." alt="" coords="207,39,349,80"/>
+<area shape="rect" id="node2" href="$classL4virtio_1_1Svr_1_1Block__dev__base.html#aa0d0377a069419b77e4ff9c6ae08b092" title="reset callback, called for doing a device reset" alt="" coords="10,5,154,47"/>
+<area shape="rect" id="node3" href="$classL4virtio_1_1Svr_1_1Device__t.html#ab906b4cc61026fd815a8056f07bef10e" title="Enable/disable the specified queue." alt="" coords="5,71,159,112"/>
 </map>

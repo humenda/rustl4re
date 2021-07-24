@@ -8,7 +8,6 @@
  */
 
 #include "vm_state_vmx.h"
-#include "mem_access.h"
 #include "consts.h"
 
 namespace Vmm {
@@ -36,95 +35,109 @@ int
 Vmx_state::handle_exception_nmi_ext_int()
 {
   auto interrupt_info = Vmx_int_info_field(
-    (l4_uint32_t)vmx_read(L4VCPU_VMCS_VM_EXIT_INTERRUPT_INFO));
+    (l4_uint32_t)vmx_read(VMCS_VM_EXIT_INTERRUPT_INFO));
 
   l4_uint32_t interrupt_error = 0;
   if (interrupt_info.error_valid())
     interrupt_error =
-      (l4_uint32_t)vmx_read(L4VCPU_VMCS_VM_EXIT_INTERRUPT_ERROR);
+      (l4_uint32_t)vmx_read(VMCS_VM_EXIT_INTERRUPT_ERROR);
 
-  Dbg().printf("Interrupt exit: 0x%x/0x%x\n", interrupt_info.field,
-               (unsigned)interrupt_error);
+  info().printf("Interrupt exit: 0x%x/0x%x\n", interrupt_info.field,
+                (unsigned)interrupt_error);
 
   switch ((interrupt_info.type()))
     {
-    case 0x6: Dbg().printf("Software exception\n"); break;
+    case 0x6:
+      warn().printf("Software exception %u\n",
+                    (unsigned)interrupt_info.vector());
+      break;
     case 0x3:
       return handle_hardware_exception(interrupt_info.vector());
 
-    case 0x2: Dbg().printf("NMI\n"); break;
-    case 0x0: Dbg().printf("External interrupt\n"); break;
-    default: Dbg().printf("Unknown\n"); break;
+    case 0x2: warn().printf("NMI\n"); break;
+    case 0x0: warn().printf("External interrupt\n"); break;
+    default: warn().printf("Unknown\n"); break;
     }
   return -L4_ENOSYS;
 }
 
-int
-Vmx_state::handle_exec_rmsr(l4_vcpu_regs_t *regs,
-                            Gic::Virt_lapic *apic)
+bool
+Vmx_state::read_msr(unsigned msr, l4_uint64_t *value) const
 {
-  l4_uint64_t result = 0;
-  auto msr = regs->cx;
-
   unsigned shadow = msr_shadow_reg(msr);
   if (shadow > 0)
     {
-      result = vmx_read(shadow);
+      *value = vmx_read(shadow);
     }
-  else if (!apic->read_msr(msr, &result))
+  else
     {
       switch (msr)
         {
+        case 0x8b: // IA32_BIOS_SIGN_ID
+        case 0x1a0: // IA32_MISC_ENABLE
+          *value = 0U;
+          break;
+        case 0x3a: // IA32_FEATURE_CONTROL
+          // Lock register so the guest does not try to enable anything.
+          *value = 1U;
+          break;
         case 0xc0000080: // efer
-          result = vmx_read(L4VCPU_VMCS_GUEST_IA32_EFER);
+          *value = vmx_read(VMCS_GUEST_IA32_EFER);
           break;
 
+        /*
+         * Non-architectural MSRs known to be probed by Linux that can be
+         * safely ignored:
+         *   0xce // MSR_PLATFORM_INFO
+         *   0x33 // TEST_CTRL
+         *   0x34 // MSR_SMI_COUNT
+         *  0x140 // MISC_FEATURE_ENABLES
+         *  0x64e // MSR_PPERF
+         *  0x639 // MSR_PP0_ENERGY_STATUS
+         *  0x611 // MSR_PKG_ENERGY_STATUS
+         *  0x619 // MSR_DRAM_ENERGY_STATUS
+         *  0x641 // MSR_PP1_ENERGY_STATUS
+         *  0x64d // MSR_PLATFORM_ENERGY_COUNTER
+         *  0x606 // MSR_RAPL_POWER_UNIT
+         */
         default:
-          Dbg().printf("Warning: reading unsupported MSR 0x%lx\n", regs->cx);
+          return false;
         }
     }
 
-  regs->ax = (l4_uint32_t)result;
-  regs->dx = (l4_uint32_t)(result >> 32);
-  return Jump_instr;
+  return true;
 }
 
-int
-Vmx_state::handle_exec_wmsr(l4_vcpu_regs_t *regs,
-                            Gic::Virt_lapic *apic)
+bool
+Vmx_state::write_msr(unsigned msr, l4_uint64_t value)
 {
-  auto msr = regs->cx;
-  l4_uint64_t value =
-    (l4_uint64_t(regs->ax) & 0xFFFFFFFF) | (l4_uint64_t(regs->dx) << 32);
-
   unsigned shadow = msr_shadow_reg(msr);
   if (shadow > 0)
     {
       vmx_write(shadow, value);
-      return Jump_instr;
+      return true;
     }
-
-  if (apic->write_msr(msr, value))
-    return Jump_instr;
 
   switch (msr)
     {
     case 0xc0000080: // efer
       {
-        l4_uint64_t efer = value & 0xF01;
-        auto vm_entry_ctls = vmx_read(L4VCPU_VMCS_VM_ENTRY_CTLS);
+        l4_uint64_t efer = value & 0xD01;
+        auto vm_entry_ctls = vmx_read(VMCS_VM_ENTRY_CTLS);
 
-        Dbg().printf("vmx read CRO: 0x%llx efer 0x%llx, vm_entry_ctls 0x%llx\n",
-                     vmx_read(L4VCPU_VMCS_GUEST_CR0), efer, vm_entry_ctls);
+        trace().printf("vmx read CRO: 0x%llx old efer 0x%llx new efer 0x%llx, "
+                       "vm_entry_ctls 0x%llx\n",
+                       vmx_read(VMCS_GUEST_CR0),
+                       vmx_read(VMCS_GUEST_IA32_EFER), efer,
+                       vm_entry_ctls);
 
         if ((efer & Efer_lme_bit)
-            && (vmx_read(L4VCPU_VMCS_GUEST_CR0) & Cr0_pg_bit))
+            && (vmx_read(VMCS_GUEST_CR0) & Cr0_pg_bit))
           {
             // enable long mode
-            vmx_write(L4VCPU_VMCS_VM_ENTRY_CTLS,
+            vmx_write(VMCS_VM_ENTRY_CTLS,
                       vm_entry_ctls | Entry_ctrl_ia32e_bit);
             efer |= Efer_lma_bit;
-            Dbg().printf("long mode efer\n");
           }
         else // There is no going back from enabling long mode.
           {
@@ -134,25 +147,28 @@ Vmx_state::handle_exec_wmsr(l4_vcpu_regs_t *regs,
                   efer |= Efer_lma_bit;
               }
           }
-        Dbg().printf("efer: 0x%llx, vm_entry_ctls 0x%llx\n", efer,
-                     vm_entry_ctls);
-        vmx_write(L4VCPU_VMCS_GUEST_IA32_EFER, efer);
-        return Jump_instr;
+        trace().printf("efer: 0x%llx, vm_entry_ctls 0x%llx\n", efer,
+                       vm_entry_ctls);
+        vmx_write(VMCS_GUEST_IA32_EFER, efer);
+        break;
       }
     case 0x8b: // IA32_BIOS_SIGN_ID
+    case 0x140:  // unknown in Intel 6th gen, but MISC_FEATURE register for xeon
+    case 0xe01: // MSR_UNC_PERF_GLOBAL_CTRL
       // can all be savely ignored
-      return Jump_instr;
+      break;
 
     default:
-      Dbg().printf("FATAL: Writing unhandled MSR: 0x%lx\n", regs->cx);
-      return -L4_ENOSYS;
+      return false;
     }
+
+  return true;
 }
 
 int
 Vmx_state::handle_cr_access(l4_vcpu_regs_t *regs)
 {
-  auto qual = vmx_read(L4VCPU_VMCS_EXIT_QUALIFICATION);
+  auto qual = vmx_read(VMCS_EXIT_QUALIFICATION);
   int crnum;
   l4_umword_t newval;
 
@@ -160,14 +176,13 @@ Vmx_state::handle_cr_access(l4_vcpu_regs_t *regs)
     {
     case 0: // mov to cr
       crnum = qual & 0xF;
-      Dbg().printf("mov to cr %d\n", crnum);
       switch ((qual >> 8) & 0xF)
         {
         case 0: newval = regs->ax; break;
         case 1: newval = regs->cx; break;
         case 2: newval = regs->dx; break;
         case 3: newval = regs->bx; break;
-        case 4: newval = vmx_read(L4VCPU_VMCS_GUEST_RSP); break;
+        case 4: newval = vmx_read(VMCS_GUEST_RSP); break;
         case 5: newval = regs->bp; break;
         case 6: newval = regs->si; break;
         case 7: newval = regs->di; break;
@@ -180,45 +195,64 @@ Vmx_state::handle_cr_access(l4_vcpu_regs_t *regs)
         case 14: newval = regs->r14; break;
         case 15: newval = regs->r15; break;
         default:
-          Dbg().printf("Loading CR from unknown register\n");
+          warn().printf("Loading CR from unknown register\n");
           return -L4_EINVAL;
         }
       break;
     case 2: // clts
       crnum = 0;
-      newval = vmx_read(L4VCPU_VMCS_GUEST_CR0) & ~(1ULL << 3);
+      newval = vmx_read(VMCS_GUEST_CR0) & ~(1ULL << 3);
       break;
     default:
-      Dbg().printf("Unknown CR action %lld.\n", (qual >> 4) & 3);
+      warn().printf("Unknown CR action %lld.\n", (qual >> 4) & 3);
       return -L4_EINVAL;
     }
 
   switch (crnum)
     {
     case 0:
-      Dbg().printf("Write to cr0: 0x%lx\n", newval);
-      // 0x10 => Extension Type; hardcoded to 1 see manual
-      vmx_write(L4VCPU_VMCS_GUEST_CR0, newval | 0x10);
-      vmx_write(L4VCPU_VMCS_CR0_READ_SHADOW, newval);
-      if ((newval & Cr0_pg_bit)
-          && (vmx_read(L4VCPU_VMCS_GUEST_IA32_EFER) & Efer_lme_bit))
-        {
-          // enable long mode
-          Dbg().printf("Enable long mode\n");
-          vmx_write(L4VCPU_VMCS_VM_ENTRY_CTLS,
-                    vmx_read(L4VCPU_VMCS_VM_ENTRY_CTLS) | Entry_ctrl_ia32e_bit);
-          vmx_write(L4VCPU_VMCS_GUEST_IA32_EFER,
-                    vmx_read(L4VCPU_VMCS_GUEST_IA32_EFER) | Efer_lma_bit);
-        }
-      break;
+      {
+        auto old_cr0 = vmx_read(VMCS_GUEST_CR0);
+        trace().printf("Write to cr0: 0x%llx -> 0x%lx\n", old_cr0, newval);
+        // 0x10 => Extension Type; hardcoded to 1 see manual
+        vmx_write(VMCS_GUEST_CR0, newval | 0x10);
+        vmx_write(VMCS_CR0_READ_SHADOW, newval);
+        if ((newval & Cr0_pg_bit)
+            && (old_cr0 & Cr0_pg_bit) == 0
+            && (vmx_read(VMCS_GUEST_IA32_EFER) & Efer_lme_bit))
+          {
+            // enable long mode
+            info().printf("Enable long mode\n");
+            vmx_write(VMCS_VM_ENTRY_CTLS,
+                      vmx_read(VMCS_VM_ENTRY_CTLS)
+                        | Entry_ctrl_ia32e_bit);
+            vmx_write(VMCS_GUEST_IA32_EFER,
+                      vmx_read(VMCS_GUEST_IA32_EFER) | Efer_lma_bit);
+          }
+
+        if ((newval & Cr0_pg_bit) == 0
+            && (old_cr0 & Cr0_pg_bit))
+          {
+            trace().printf("Disabling paging ...\n");
+            vmx_write(VMCS_VM_ENTRY_CTLS,
+                      vmx_read(VMCS_VM_ENTRY_CTLS)
+                        & ~Entry_ctrl_ia32e_bit);
+
+            if (vmx_read(VMCS_GUEST_IA32_EFER) & Efer_lme_bit)
+              vmx_write(VMCS_GUEST_IA32_EFER,
+                        vmx_read(VMCS_GUEST_IA32_EFER) & ~Efer_lma_bit);
+          }
+
+        break;
+      }
     case 4:
       // force VMXE bit but hide it from guest
-      Dbg().printf("mov to cr4: 0x%lx, RIP 0x%lx\n", newval, ip());
+      trace().printf("mov to cr4: 0x%lx, RIP 0x%lx\n", newval, ip());
       // CR4 0x2000  = VMXEnable bit
-      vmx_write(L4VCPU_VMCS_GUEST_CR4, newval | 0x2000);
-      vmx_write(L4VCPU_VMCS_CR4_READ_SHADOW, newval);
+      vmx_write(VMCS_GUEST_CR4, newval | 0x2000);
+      vmx_write(VMCS_CR4_READ_SHADOW, newval);
       break;
-    default: Dbg().printf("Unknown CR access.\n"); return -L4_EINVAL;
+    default: warn().printf("Unknown CR access.\n"); return -L4_EINVAL;
     }
   return Jump_instr;
 }

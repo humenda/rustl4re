@@ -23,29 +23,27 @@ i_matmul_c  = $(filter generated/matmul_i%,$(C_FILES)) \
 	      $(filter generated/matmul_c%,$(C_FILES))
 i_matmull_c = $(filter generated/matmul_l%,$(C_FILES))
 
-$(foreach f,$(eval CFLAGS_$(f) = -ftree-vectorize -funroll-loops),$(i_matmul_c))
-$(foreach f,$(eval CFLAGS_$(f) = -funroll-loops),$(i_matmull_c))
+$(foreach f,$(i_matmul_c),$(eval CFLAGS_$(f) = -ftree-vectorize -funroll-loops))
+$(foreach f,$(i_matmull_c),$(eval CFLAGS_$(f) = -funroll-loops))
 
 IEEE_FFLAGS = -Wno-unused-dummy-argument -Wno-c-binding-type \
               -ffree-line-length-0 -fallow-leading-underscore
 
-$(GENERAL_D_LOC): nonpic pic
+IEEE_FILES = $(addprefix ieee/,ieee_arithmetic.F90 ieee_exceptions.F90 \
+                               ieee_features.F90)
 
-nonpic pic:
-	$(VERBOSE)$(MKDIR) $@
+PICFLAGS   += -Jpic
+NOPICFLAGS += -Jnonpic
 
-FFLAGS_ieee/ieee_arithmetic.o   = -Jnonpic $(IEEE_FFLAGS)
-FFLAGS_ieee/ieee_exceptions.o   = -Jnonpic $(IEEE_FFLAGS)
-FFLAGS_ieee/ieee_features.o     = -Jnonpic $(IEEE_FFLAGS)
+$(IEEE_FILES): pic/. nonpic/.
 
-FFLAGS_ieee/ieee_arithmetic.s.o = -Jpic $(IEEE_FFLAGS)
-FFLAGS_ieee/ieee_exceptions.s.o = -Jpic $(IEEE_FFLAGS)
-FFLAGS_ieee/ieee_features.s.o   = -Jpic $(IEEE_FFLAGS)
+pic/. nonpic/.:
+	$(VERBOSE)$(call create_dir,$(@D))
 
-SRC_C_libgfortran.a      = $(C_FILES)
-SRC_F_libgfortran.a      = $(F_FILES)
-SRC_C_libgfortran.so     = $(C_FILES)
-SRC_F_libgfortran.so     = $(F_FILES)
+$(foreach f,$(IEEE_FILES),$(eval FFLAGS_$(f) = $(IEEE_FFLAGS)))
+
+SRC_C += $(C_FILES)
+SRC_F += $(F_FILES)
 
 $(SRC_DIR)/Makefile: $(SRC_DIR)/Makefile.dist-c $(SRC_DIR)/Makefile.dist-f
 

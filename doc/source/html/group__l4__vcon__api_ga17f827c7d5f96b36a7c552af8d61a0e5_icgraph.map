@@ -1,4 +1,5 @@
 <map id="l4_vcon_set_attr_u" name="l4_vcon_set_attr_u">
-<area shape="rect" id="node2" href="$group__l4__vcon__api.html#gad6423b427845fd9cff6d6b39b17f44d3" title="Set attributes of a Vcon. " alt="" coords="198,5,325,32"/>
-<area shape="rect" id="node3" href="$classL4_1_1Vcon.html#a3f49fc477f851177920b05743c113e98" title="Set the attributes of this virtual console. " alt="" coords="196,56,327,83"/>
+<area shape="rect" id="node1" title="Set the attributes of this virtual console." alt="" coords="188,31,332,57"/>
+<area shape="rect" id="node2" href="$group__l4__vcon__api.html#gad6423b427845fd9cff6d6b39b17f44d3" title="Set attributes of a Vcon." alt="" coords="8,5,137,32"/>
+<area shape="rect" id="node3" href="$classL4_1_1Vcon.html#a95422b151c12b5e20dda868972516f1a" title="Set the attributes of this virtual console." alt="" coords="5,56,140,83"/>
 </map>

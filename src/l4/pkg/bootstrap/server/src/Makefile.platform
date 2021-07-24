@@ -18,16 +18,19 @@ SUPPORT_CC_arm-imx21           := platform/imx.cc
 SUPPORT_CC_arm-imx28           := platform/imx.cc
 SUPPORT_CC_arm-ls1021atwr      := platform/layerscape.cc
 SUPPORT_CC_arm-ls1012afrdm     := platform/layerscape.cc
+SUPPORT_CC_arm-ls1046          := platform/ls1046.cc
 DEFAULT_RELOC_arm-imx21        := 0x00200000  # because of blob
 SUPPORT_CC_arm-imx35           := platform/imx.cc
 SUPPORT_CC_arm-imx51           := platform/imx.cc
 SUPPORT_CC_arm-imx6            := platform/imx.cc
 SUPPORT_CC_arm-imx6ul          := platform/imx.cc
 SUPPORT_CC_arm-imx7            := platform/imx.cc
+SUPPORT_CC_arm-imx8m           := platform/imx.cc
+SUPPORT_CC_arm-imx8q           := platform/imx.cc
+SUPPORT_CC_arm-imx8x           := platform/imx.cc
 SUPPORT_CC_arm-om              := platform/om.cc
 SUPPORT_CC_arm-kirkwood        := platform/kirkwood.cc
-SUPPORT_CC_arm-rpi_a           := platform/rpi.cc
-SUPPORT_CC_arm-rpi_b           := platform/rpi.cc
+SUPPORT_CC_arm-rpi             := platform/rpi.cc
 SUPPORT_CC_arm-exynos4         := platform/exynos.cc
 SUPPORT_CC_arm-exynos5         := platform/exynos.cc
 SUPPORT_CC_arm-zedboard        := platform/zynq.cc
@@ -38,16 +41,24 @@ SUPPORT_CC_arm-armada38x       := platform/armada38x.cc
 SUPPORT_CC_arm-rcar3           := platform/rcar3.cc
 DEFAULT_RELOC_arm-rcar3        := 0x09000000
 SUPPORT_CC_arm-arm_virt        := platform/arm_virt.cc
+SUPPORT_CC_arm-armada37xx      := platform/armada37xx.cc
+SUPPORT_CC_arm-s32             := platform/s32.cc
 
 # ARM64
 SUPPORT_CC_arm64-rv            := platform/rv.cc
 SUPPORT_CC_arm64-rv_vexpress_a15 := platform/rv_vexpress.cc
+SUPPORT_CC_arm64-armada37xx    := platform/armada37xx.cc
 SUPPORT_CC_arm64-rcar3         := platform/rcar3.cc
 DEFAULT_RELOC_arm64-rcar3      := 0x09000000
-SUPPORT_CC_arm64-rpi_b         := platform/rpi.cc
+SUPPORT_CC_arm64-rpi           := platform/rpi.cc
 SUPPORT_CC_arm64-ls1012afrdm   := platform/layerscape.cc
+SUPPORT_CC_arm64-ls1046        := platform/ls1046.cc
 SUPPORT_CC_arm64-zynqmp        := platform/zynq.cc
 SUPPORT_CC_arm64-arm_virt      := platform/arm_virt.cc
+SUPPORT_CC_arm64-imx8m         := platform/imx.cc
+SUPPORT_CC_arm64-imx8q         := platform/imx.cc
+SUPPORT_CC_arm64-imx8x         := platform/imx.cc
+SUPPORT_CC_arm64-s32           := platform/s32.cc
 
 # PPC
 SUPPORT_CC_ppc32-mpc5200       := platform/mpc5200.cc

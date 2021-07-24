@@ -5,7 +5,8 @@ TARGET          = libl4png.a libl4png.so
 REQUIRES_LIBS   = zlib
 CONTRIB_INCDIR  = libpng
 
-SRC_C-arm       = arm/arm_init.c arm/filter_neon_intrinsics.c
+SRC_C-arm       = arm/arm_init.c arm/filter_neon_intrinsics.c \
+                  arm/palette_neon_intrinsics.c
 SRC_S-arm       = arm/filter_neon.S
 SRC_C-arm64     = $(SRC_C-arm)
 SRC_C-mips      = mips/mips_init.c mips/filter_msa_intrinsics.c

@@ -1,9 +1,5 @@
 mainmenu "L4Re Configuration"
 
-config KERNELVERSION
-        string
-	option env="KERNELVERSION"
-
 config ARCH_ENABLE_STACK_PROTECTOR
 	bool
 
@@ -46,8 +42,9 @@ config BUILD_ABI
 
 choice
 	prompt "Platform Selection"
+# ARCH_DEFAULT_PF
 
-INSERT_PLATFORMS
+# ARCH_PLATFORMS
 
 config PLATFORM_TYPE_custom
 	bool "Custom platform"
@@ -85,7 +82,7 @@ config PLATFORM_UART_NR
 endmenu # Custom platform
 endif
 
-INSERT_PLATFORM_TYPES
+source "Kconfig.generated.platform_types"
 
 config USE_DROPS_STDDIR
 	def_bool n
@@ -127,6 +124,14 @@ config ETAGS
 config HAVE_LDSO
 	def_bool y
 
+config BID_DEBUG_INFO
+	bool "Generate debug information"
+	default y
+	help
+	  Generate debug information.
+
+	  If unsure, say 'Y'.
+
 config INT_CPP_NAME_SWITCH
 	bool "Automatically determine internal gcc preprocessor names"
 	default y
@@ -146,13 +151,14 @@ config INT_LD_NAME
 	depends on !INT_LD_NAME_SWITCH
 
 
-config BID_STRIP_PROGS
+config BID_STRIP_BINARIES
 	bool "Strip binaries on install"
+	default y
 	help
-	  If enabled, binaries will be stripped on installation into
-	  $(L4DIR)/bin or $(DROPS_STDDIR)/bin. If you want to load them with
-	  all their symbols (eg to show the symbols with the Fiasco kernel
-	  debugger), say 'N' here.
+	  If enabled, binaries (libraries and executables) will be stripped on
+	  installation into $(L4DIR)/bin or $(DROPS_STDDIR)/bin. If you want
+	  to load them with all their symbols (eg to show the symbols with the
+	  Fiasco kernel debugger), say 'N' here.
 
 	  If unsure, say 'Y'.
 
@@ -228,5 +234,14 @@ config MAKECONFS_ADD
 	  List of white space separated suffixes of Makeconf files
 	  which will be included in every source directory as
 	  Makeconf.<suffix>.
+
+config EXPERIMENTAL
+	bool "Prompt for experimental features"
+	help
+	  Experimental features are available when enabling this option.
+	  This encompases features that are still in development and might not
+	  work correctly for all packages on all architectures at all times.
+
+	  Use with caution!
 
 endmenu

@@ -1,3 +1,4 @@
 <map id="fiasco_tbuf_log_3val" name="fiasco_tbuf_log_3val">
-<area shape="rect" id="node2" href="$group__l4__ipc__err__api.html#ga05c11e3e10b6c2aa941396ac2018899f" title="Return error code of a system call return message tag. " alt="" coords="204,5,276,32"/>
+<area shape="rect" id="node1" title="Create new trace&#45;buffer entry with describing &lt;text&gt; and three additional values." alt="" coords="5,5,160,32"/>
+<area shape="rect" id="node2" href="$group__l4__ipc__err__api.html#ga05c11e3e10b6c2aa941396ac2018899f" title="Return error code of a system call return message tag or the tag label." alt="" coords="208,5,280,32"/>
 </map>

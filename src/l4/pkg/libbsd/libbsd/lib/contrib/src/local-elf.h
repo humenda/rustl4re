@@ -37,6 +37,8 @@
 
 #define ELF_TARG_VER	EV_CURRENT
 
+/* The following entries are sorted alphabetically. */
+
 #if defined(__alpha__)
 
 #define ELF_TARG_MACH	EM_ALPHA
@@ -53,6 +55,12 @@
 #endif
 #define ELF_TARG_DATA	ELFDATA2LSB
 
+#elif defined (__arc__)
+
+#define ELF_TARG_MACH   EM_ARC
+#define ELF_TARG_CLASS  ELFCLASS32
+#define ELF_TARG_DATA   ELFDATA2LSB
+
 #elif defined(__arm__)
 
 #define ELF_TARG_MACH	EM_ARM
@@ -66,7 +74,11 @@
 #elif defined(__aarch64__)
 
 #define ELF_TARG_MACH	EM_AARCH64
+#if defined(__ILP32__)
+#define ELF_TARG_CLASS	ELFCLASS32
+#else
 #define ELF_TARG_CLASS	ELFCLASS64
+#endif
 #if defined(__AARCH64EB__)
 #define ELF_TARG_DATA	ELFDATA2MSB
 #else
@@ -87,6 +99,12 @@
 #else
 #error Unknown AVR32 endianness
 #endif
+
+#elif defined(__e2k__)
+
+#define ELF_TARG_MACH	EM_MCST_ELBRUS
+#define ELF_TARG_CLASS	ELFCLASS64
+#define ELF_TARG_DATA	ELFDATA2LSB
 
 #elif defined(__hppa__)
 
@@ -186,7 +204,11 @@
 #define ELF_TARG_MACH	EM_SPARCV9
 #define ELF_TARG_CLASS	ELFCLASS64
 #else
+#if defined(__sparc_v9__) || defined(__sparcv9)
+#define ELF_TARG_MACH	EM_SPARC32PLUS
+#else
 #define ELF_TARG_MACH	EM_SPARC
+#endif
 #define ELF_TARG_CLASS	ELFCLASS32
 #endif
 #define ELF_TARG_DATA	ELFDATA2MSB
@@ -221,7 +243,11 @@
 
 #elif defined(__or1k__)
 
+#if defined(EM_OPENRISC)
 #define ELF_TARG_MACH	EM_OPENRISC
+#else
+#define ELF_TARG_MACH	EM_OR1K
+#endif
 #define ELF_TARG_CLASS	ELFCLASS32
 #define ELF_TARG_DATA	ELFDATA2MSB
 

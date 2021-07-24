@@ -64,10 +64,12 @@ l4_uint32_t l4_rdtsc_32(void);
 
 /**
  * \brief Return current value of CPU-internal performance measurement counter.
- * \param  nr		Number of counter (0 or 1)
+ * \param  ecx          ECX value for the rdpmc instruction. For details see
+ *                      the Intel IA-32 Architectures Software Developer's
+ *                      Manual.
  * \return 64-bit PMC */
-L4_INLINE l4_cpu_time_t
-l4_rdpmc (int nr);
+L4_INLINE l4_uint64_t
+l4_rdpmc (int ecx);
 
 /**
  * \brief Return the least significant 32 bit of a performance counter.
@@ -75,7 +77,7 @@ l4_rdpmc (int nr);
  * Useful for smaller differences, needs less cycles.
  */
 L4_INLINE
-l4_uint32_t l4_rdpmc_32(int nr);
+l4_uint32_t l4_rdpmc_32(int ecx);
 
 /** Convert time stamp to ns value.
  * \param tsc time value in CPU ticks
@@ -110,7 +112,7 @@ l4_ns_to_tsc (l4_uint64_t ns);
 /**
  * \brief Wait busy for a small amount of time.
  * \param ns nano seconds to wait
- * \attention Not intendet for any use!
+ * \attention Not intended for any use!
  */
 L4_INLINE void
 l4_busy_wait_ns (l4_uint64_t ns);
@@ -137,7 +139,7 @@ L4_INLINE l4_uint32_t
 l4_calibrate_tsc (l4_kernel_info_t *kip);
 
 /**
- * \brief Initialitze scaler for TSC calicaltions.
+ * \brief Initialize scaler for TSC calibrations.
  *
  * Initialize the scalers needed by l4_tsc_to_ns()/l4_ns_to_tsc() and so on.
  * Current versions of Fiasco export these scalers from kernel into userland.
@@ -216,8 +218,8 @@ l4_uint32_t l4_rdtsc_32(void)
   return x;
 }
 
-L4_INLINE l4_cpu_time_t
-l4_rdpmc (int nr)
+L4_INLINE l4_uint64_t
+l4_rdpmc (int ecx)
 {
     l4_cpu_time_t v;
 
@@ -225,7 +227,7 @@ l4_rdpmc (int nr)
 	 "rdpmc				\n\t"
 	:
 	"=A" (v)
-	: "c" (nr)
+	: "c" (ecx)
 	);
 
     return v;
@@ -234,14 +236,14 @@ l4_rdpmc (int nr)
 /* the same, but only 32 bit. Useful for smaller differences,
    needs less cycles. */
 L4_INLINE
-l4_uint32_t l4_rdpmc_32(int nr)
+l4_uint32_t l4_rdpmc_32(int ecx)
 {
   l4_uint32_t x;
 
   __asm__ __volatile__ (
        "rdpmc				\n\t"
        : "=a" (x)
-       : "c" (nr)
+       : "c" (ecx)
        : "edx");
 
   return x;

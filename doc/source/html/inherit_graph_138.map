@@ -1,3 +1,5 @@
 <map id="Graphical Class Hierarchy" name="Graphical Class Hierarchy">
-<area shape="rect" id="node1" href="$structL4_1_1Proto__t.html" title="Data type for defining protocol numbers. " alt="" coords="5,5,128,32"/>
+<area shape="rect" id="node1" href="$structL4_1_1Types_1_1Bool.html" title=" " alt="" coords="5,5,187,32"/>
+<area shape="rect" id="node2" href="$structL4_1_1Types_1_1False.html" title="False meta value." alt="" coords="235,5,357,32"/>
+<area shape="rect" id="node3" href="$structL4_1_1Types_1_1Same.html" title="Compare two data types for equality." alt="" coords="405,5,588,32"/>
 </map>

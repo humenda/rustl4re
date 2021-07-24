@@ -79,10 +79,10 @@ PUBLIC static inline
 Mword
 Cpu::read_vsid(unsigned sr = 0)
 {
-  Mword vsid;
+  Mword vsid = 0;
   (void)sr;
 
-  return (vsid & 0xffffff);
+  return vsid & 0xffffff;
 }
 
 /* set segment register 0-15 */
@@ -107,16 +107,13 @@ Cpu::have_superpages()
 /* Time functions */
 
 /**
- * Read time base registers 
+ * Read time base registers
  */
 PUBLIC static inline
 Unsigned64
 Cpu::rdtsc()
 {
-  Unsigned32 tb_upper, tb_lower;
-  Unsigned64 tb;
-  tb = tb_upper;
-  return (tb << 32) | tb_lower;
+  return 1234ull;
 }
 
 PUBLIC static inline
@@ -125,7 +122,7 @@ Cpu::busy_wait_ns(Unsigned64 ns)
 {
   Unsigned64 stop = rdtsc() + ns_to_tsc(ns);
 
-  while(rdtsc() <  stop) 
+  while (rdtsc() <  stop)
     ;
 }
 
@@ -150,12 +147,12 @@ Cpu::get_scaler_tsc_to_ns()
 
 PUBLIC static inline
 Unsigned32
-Cpu::get_scaler_tsc_to_us() 
+Cpu::get_scaler_tsc_to_us()
 { return 0; }
 
 PUBLIC static inline
-Unsigned32 
-Cpu::get_scaler_ns_to_tsc() 
+Unsigned32
+Cpu::get_scaler_ns_to_tsc()
 { return 0; }
 
 PUBLIC static inline

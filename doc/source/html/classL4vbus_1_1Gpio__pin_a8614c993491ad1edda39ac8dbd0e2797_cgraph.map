@@ -1,3 +1,4 @@
 <map id="L4vbus::Gpio_pin::get" name="L4vbus::Gpio_pin::get">
-<area shape="rect" id="node2" href="$group__l4vbus__gpio__module.html#gaff5806be8c3c1e8d52dfe52d832bdf43" title="Read value of GPIO input pin. " alt="" coords="208,5,332,32"/>
+<area shape="rect" id="node1" title="Read value of GPIO input pin." alt="" coords="5,5,168,32"/>
+<area shape="rect" id="node2" href="$group__l4vbus__gpio__module.html#gaff5806be8c3c1e8d52dfe52d832bdf43" title="Read value of GPIO input pin." alt="" coords="216,5,344,32"/>
 </map>

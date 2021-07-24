@@ -7,6 +7,7 @@
 #include "boot_paging.h"
 #include "mem_layout.h"
 #include "processor.h"
+#include "panic.h"
 #include "regdefs.h"
 
 enum
@@ -52,8 +53,8 @@ enum
   INTEL_PML4E_WRITE	= 0x0000000000000002LL,
   INTEL_PML4E_USER	= 0x0000000000000004LL,
   INTEL_PML4E_PFN	= 0x000ffffffffff000LL,
- 
-  CPUF_4MB_PAGES	= 0x00000008,
+
+  CPUF_EXT_PCID         = 1 << 17,
 
   BASE_TSS		= 0x08,
   KERNEL_DS		= 0x18,
@@ -144,15 +145,14 @@ struct trap_state
   Unsigned64 rip, cs, rflags, rsp, ss;
 };
 
-static Unsigned64       cpu_feature_flags;
+static Unsigned32       cpu_feature_flags;
+static Unsigned32       cpu_ext_feature_flags;
 static Address          base_pml4_pa;
 static struct x86_tss   base_tss;
 static struct x86_desc  base_gdt[GDTSZ];
 static struct idt_desc  base_idt[IDTSZ];
 
 static char dbf_stack[2048];
-
-extern "C" void _exit(int code) __attribute__((noreturn));
 
 static inline Unsigned64* find_pml4e(Address pml4_pa, Address la)
 { return (&((Unsigned64*)pml4_pa)[(la >> PML4ESHIFT) & PML4EMASK]); }
@@ -260,6 +260,11 @@ paging_enable(Address pml4)
   /* Enable Physical Address Extension (PAE). */
   set_cr4(get_cr4() | CR4_PAE);
 
+  /* We need to check for the CPU feature otherwise setting the PCID bit may
+   * trigger a #GP, see Intel manual. If needed we will complain later. */
+  if (Config::Pcid_enabled && (cpu_ext_feature_flags & CPUF_EXT_PCID))
+    set_cr4(get_cr4() | CR4_PCID);
+
   /* Load the page map level 4.  */
   set_cr3(pml4);
 
@@ -268,13 +273,6 @@ paging_enable(Address pml4)
 
   /* Turn on paging and switch to long mode. */
   asm volatile("mov  %0,%%cr0 ; jmp  1f ; 1:" : : "r" (get_cr0() | CR0_PG));
-}
-
-static void
-panic(const char *str)
-{
-  printf("\n%s\n", str);
-  _exit(-1);
 }
 
 static void
@@ -297,11 +295,12 @@ cpuid()
 
 	  if (highest_val >= 1)
 	    {
-	      asm volatile("cpuid"
-		           : "=a" (dummy),
-      			     "=d" (cpu_feature_flags)
-			     : "a" (1)
-			     : "ebx", "ecx");
+              asm volatile("cpuid"
+                           : "=a" (dummy),
+                             "=c" (cpu_ext_feature_flags),
+                             "=d" (cpu_feature_flags)
+                           : "a" (1)
+                           : "ebx");
 	    }
 	}
     }
@@ -428,7 +427,7 @@ ptab_alloc(Address *out_ptab_pa)
     {
       initialized = 1;
       memset(pool, 0, sizeof(pool));
-      pdirs = ((Address)pool + PAGE_SIZE - 1) & ~PAGE_MASK;
+      pdirs = ((Address)pool + PAGE_SIZE - 1) & ~(PAGE_SIZE - 1);
     }
 
   if (pdirs > (Address)pool + sizeof(pool))
@@ -487,7 +486,6 @@ pdir_map_range(Address pml4_pa, Address la, Address pa,
 	      /* Use a 2MB page if we can.  */
 	      if (superpage_aligned(la) && superpage_aligned(pa)
 		  && (size >= SUPERPAGE_SIZE))
-		  //&& (cpu_feature_flags & CPUF_4MB_PAGES)) XXX
 		{
 		  /* a failed assertion here may indicate a memory wrap
 		     around problem */
@@ -549,10 +547,10 @@ base_paging_init(void)
   pdir_map_range(base_pml4_pa, /*virt*/0, /*phys*/0, /*size*/4 << 20,
 		 INTEL_PDE_VALID | INTEL_PDE_WRITE | INTEL_PDE_USER);
 
-  // map in the first 4MB of physical memory to 0xfffffffff0000000
+  // map in the physical start of the kernel to 0xfffffffff0000000
   pdir_map_range(base_pml4_pa, Mem_layout::Kernel_image,
                  Mem_layout::Kernel_image_phys,
-                 Mem_layout::Kernel_image_end - Mem_layout::Kernel_image,
+                 Mem_layout::Kernel_image_size,
                  INTEL_PDE_VALID | INTEL_PDE_WRITE | INTEL_PDE_USER);
 
   // Adapter memory needs a seperate mapping
@@ -593,17 +591,18 @@ trap_dump_panic(const struct trap_state *st)
   int from_user = (st->cs & 3);
   int i;
 
-  printf("RAX %016llx RBX %016llx\n", st->rax, st->rbx);
-  printf("RCX %016llx RDX %016llx\n", st->rcx, st->rdx);
-  printf("RSI %016llx RDI %016llx\n", st->rsi, st->rdi);
-  printf("RBP %016llx RSP %016llx\n",
+  putchar('\n');
+  printf("RAX %016llx  RBX %016llx\n", st->rax, st->rbx);
+  printf("RCX %016llx  RDX %016llx\n", st->rcx, st->rdx);
+  printf("RSI %016llx  RDI %016llx\n", st->rsi, st->rdi);
+  printf("RBP %016llx  RSP %016llx\n",
       st->rbp, from_user ? st->rsp : (Address)&st->rsp);
-  printf("R8  %016llx R9  %016llx\n", st->r8, st->r9);
-  printf("R10 %016llx R11 %016llx\n", st->r10, st->r11);
-  printf("R12 %016llx R13 %016llx\n", st->r12, st->r13);
-  printf("R14 %016llx R15 %016llx\n", st->r14, st->r15);
-  printf("RIP %016llx RFLAGS %016llx\n", st->rip, st->rflags);
-  printf("CS %04llx SS %04llx\n",
+  printf("R8  %016llx  R9  %016llx\n", st->r8, st->r9);
+  printf("R10 %016llx  R11 %016llx\n", st->r10, st->r11);
+  printf("R12 %016llx  R13 %016llx\n", st->r12, st->r13);
+  printf("R14 %016llx  R15 %016llx\n", st->r14, st->r15);
+  printf("RIP %016llx  RFL %016llx\n", st->rip, st->rflags);
+  printf("CS %04llx  SS %04llx\n",
       st->cs & 0xffff, from_user ? st->ss & 0xffff : get_ss());
   printf("trapno %llu, error %08llx, from %s mode\n",
       st->trapno, st->err, from_user ? "user" : "kernel");
@@ -630,7 +629,7 @@ trap_dump_panic(const struct trap_state *st)
   if (!from_user)
     {
       for (i = 0; i < 32; i++)
-	printf("%016llx%c", (&st->rsp)[i], ((i & 7) == 7) ? '\n' : ' ');
+	printf("%016llx%c", (&st->rsp)[i], ((i & 3) == 3) ? '\n' : ' ');
     }
   panic("Unexpected trap while booting Fiasco!");
 }

@@ -1,6 +1,7 @@
 <map id="L4::Types::True" name="L4::Types::True">
-<area shape="rect" id="node4" href="$structL4_1_1Ipc_1_1Msg_1_1Is__valid__rpc__type.html" title="{L4::Ipc::Msg::Is_valid\l_rpc_type\&lt; A *\&gt;\n||}" alt="" coords="35,553,186,645"/>
-<area shape="rect" id="node5" href="$structL4_1_1Ipc_1_1Msg_1_1Is__valid__rpc__type.html" title="Type trait defining a valid RPC parameter type. " alt="" coords="110,399,261,491"/>
-<area shape="rect" id="node2" href="$structL4_1_1Types_1_1Bool.html" title="{L4::Types::Bool\&lt; true \&gt;\n||}" alt="" coords="5,145,171,223"/>
-<area shape="rect" id="node3" href="$structL4_1_1Types_1_1Bool.html" title="Boolean meta type. " alt="" coords="13,5,163,83"/>
+<area shape="rect" id="node1" title="True meta value." alt="" coords="34,272,151,349"/>
+<area shape="rect" id="node4" href="$structL4_1_1Ipc_1_1Msg_1_1Is__valid__rpc__type.html" title=" " alt="" coords="19,553,177,645"/>
+<area shape="rect" id="node5" href="$structL4_1_1Ipc_1_1Msg_1_1Is__valid__rpc__type.html" title="Type trait defining a valid RPC parameter type." alt="" coords="114,399,271,491"/>
+<area shape="rect" id="node2" href="$structL4_1_1Types_1_1Bool.html" title=" " alt="" coords="5,145,180,223"/>
+<area shape="rect" id="node3" href="$structL4_1_1Types_1_1Bool.html" title="Boolean meta type." alt="" coords="13,5,172,83"/>
 </map>

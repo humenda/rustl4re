@@ -86,7 +86,7 @@ void Romain::PThreadLock_priv::attach_lock_info_priv(Romain::App_instance*inst, 
 {
 
 	L4::Cap<L4Re::Dataspace> page;
-	l4_addr_t page_local  = Romain::Region_map::allocate_and_attach(&page, L4_PAGESIZE, 0, 0);
+	l4_addr_t page_local  = Romain::Region_map::allocate_and_attach(&page, L4_PAGESIZE, 0, L4Re::Rm::Flags(0));
 	
 	inst->vcpu_task()->map(L4Re::This_task, l4_fpage((l4_addr_t)page_local, L4_PAGESHIFT, L4_FPAGE_RO),
 						   PRIV_INFO_ADDR);
@@ -102,7 +102,7 @@ void Romain::PThreadLock_priv::attach_lock_info_page(Romain::App_model *am)
 	INFO() << "Local LIP address: " << std::hex << _lip_local
 	       << " size = " << lip_size << " target " << LOCK_INFO_ADDR;
 	void* remote__lip = (void*)am->prog_attach_ds(LOCK_INFO_ADDR,
-	                                              lip_size, _lip_ds, 0, 0,
+	                                              lip_size, _lip_ds, 0, L4Re::Rm::Flags(0),
 	                                              "lock info page",
 	                                              _lip_local, true);
 	_check(reinterpret_cast<l4_umword_t>(remote__lip) != LOCK_INFO_ADDR, 

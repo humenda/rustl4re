@@ -1,0 +1,4 @@
+<map id="L4Re::Util::Counting_cap_alloc::release" name="L4Re::Util::Counting_cap_alloc::release">
+<area shape="rect" id="node1" title="Decrease the reference counter for a capability." alt="" coords="5,5,156,47"/>
+<area shape="rect" id="node2" href="$group__l4__task__api.html#gaa5558855716b35c1790b61249cf2974b" title="Revoke rights from the task." alt="" coords="204,13,325,39"/>
+</map>

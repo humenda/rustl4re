@@ -1,11 +1,11 @@
 <map id="l4/cxx/bits/bst_base.h" name="l4/cxx/bits/bst_base.h">
-<area shape="rect" id="node2" href="$bst_8h.html" title="AVL tree. " alt="" coords="75,155,191,181"/>
-<area shape="rect" id="node10" href="$bst__iter_8h.html" title="AVL tree. " alt="" coords="157,80,301,107"/>
-<area shape="rect" id="node3" href="$avl__tree.html" title="AVL tree. " alt="" coords="124,229,237,256"/>
-<area shape="rect" id="node4" href="$name__space__svr_source.html" title="l4/re/util/name_space_svr" alt="" coords="5,304,188,331"/>
-<area shape="rect" id="node5" href="$avl__set.html" title="AVL set. " alt="" coords="213,304,319,331"/>
-<area shape="rect" id="node6" href="$avl__map.html" title="AVL map. " alt="" coords="209,379,323,405"/>
-<area shape="rect" id="node7" href="$region__mapping.html" title="Region handling. " alt="" coords="177,453,355,480"/>
-<area shape="rect" id="node8" href="$region__mapping__svr_source.html" title="l4/re/util/region_mapping_svr" alt="" coords="57,535,261,562"/>
-<area shape="rect" id="node9" href="$region__mapping__svr__2_source.html" title="l4/re/util/region_mapping\l_svr_2" alt="" coords="285,528,463,569"/>
+<area shape="rect" id="node1" title="AVL tree." alt="" coords="99,5,261,32"/>
+<area shape="rect" id="node2" href="$bst_8h.html" title="AVL tree." alt="" coords="75,155,200,181"/>
+<area shape="rect" id="node9" href="$bst__iter_8h.html" title="AVL tree." alt="" coords="161,80,314,107"/>
+<area shape="rect" id="node3" href="$avl__tree.html" title="AVL tree." alt="" coords="127,229,246,256"/>
+<area shape="rect" id="node4" href="$name__space__svr_source.html" title=" " alt="" coords="5,304,195,331"/>
+<area shape="rect" id="node5" href="$avl__set.html" title="AVL set." alt="" coords="219,304,331,331"/>
+<area shape="rect" id="node6" href="$avl__map.html" title="AVL map." alt="" coords="214,379,335,405"/>
+<area shape="rect" id="node7" href="$region__mapping.html" title="Region handling." alt="" coords="182,453,367,480"/>
+<area shape="rect" id="node8" href="$region__mapping__svr__2_source.html" title=" " alt="" coords="182,528,367,569"/>
 </map>

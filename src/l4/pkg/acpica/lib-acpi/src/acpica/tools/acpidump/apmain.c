@@ -8,7 +8,7 @@
  *
  * 1. Copyright Notice
  *
- * Some or all of this work - Copyright (c) 1999 - 2017, Intel Corp.
+ * Some or all of this work - Copyright (c) 1999 - 2019, Intel Corp.
  * All rights reserved.
  *
  * 2. License
@@ -111,6 +111,42 @@
  * other governmental approval, or letter of assurance, without first obtaining
  * such license, approval or letter.
  *
+ *****************************************************************************
+ *
+ * Alternatively, you may choose to be licensed under the terms of the
+ * following license:
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions, and the following disclaimer,
+ *    without modification.
+ * 2. Redistributions in binary form must reproduce at minimum a disclaimer
+ *    substantially similar to the "NO WARRANTY" disclaimer below
+ *    ("Disclaimer") and any redistribution must be conditioned upon
+ *    including a substantially similar Disclaimer requirement for further
+ *    binary redistribution.
+ * 3. Neither the names of the above-listed copyright holders nor the names
+ *    of any contributors may be used to endorse or promote products derived
+ *    from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+ * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * Alternatively, you may choose to be licensed under the terms of the
+ * GNU General Public License ("GPL") version 2 as published by the Free
+ * Software Foundation.
+ *
  *****************************************************************************/
 
 #define _DECLARE_GLOBALS
@@ -163,7 +199,7 @@ UINT32                      CurrentAction = 0;
 
 
 #define AP_UTILITY_NAME             "ACPI Binary Table Dump Utility"
-#define AP_SUPPORTED_OPTIONS        "?a:bc:f:hn:o:r:svxz"
+#define AP_SUPPORTED_OPTIONS        "?a:bc:f:hn:o:r:sv^xz"
 
 
 /******************************************************************************
@@ -187,6 +223,7 @@ ApDisplayUsage (
     ACPI_OPTION ("-r <Address>",            "Dump tables from specified RSDP");
     ACPI_OPTION ("-s",                      "Print table summaries only");
     ACPI_OPTION ("-v",                      "Display version information");
+    ACPI_OPTION ("-vd",                     "Display build date and time");
     ACPI_OPTION ("-z",                      "Verbose mode");
 
     ACPI_USAGE_TEXT ("\nTable Options:\n");
@@ -195,8 +232,7 @@ ApDisplayUsage (
     ACPI_OPTION ("-c <on|off>",             "Turning on/off customized table dumping");
     ACPI_OPTION ("-f <BinaryFile>",         "Get table via a binary file");
     ACPI_OPTION ("-n <Signature>",          "Get table via a name/signature");
-    ACPI_OPTION ("-x",                      "Do not use but dump XSDT");
-    ACPI_OPTION ("-x -x",                   "Do not use or dump XSDT");
+    ACPI_OPTION ("-x",                      "Use RSDT instead of XSDT");
 
     ACPI_USAGE_TEXT (
         "\n"
@@ -232,7 +268,7 @@ ApInsertAction (
     CurrentAction++;
     if (CurrentAction > AP_MAX_ACTIONS)
     {
-        fprintf (stderr, "Too many table options (max %u)\n", AP_MAX_ACTIONS);
+        fprintf (stderr, "Too many table options (max %d)\n", AP_MAX_ACTIONS);
         return (-1);
     }
 
@@ -308,8 +344,7 @@ ApDoOptions (
 
     case 'r':   /* Dump tables from specified RSDP */
 
-        Status = AcpiUtStrtoul64 (AcpiGbl_Optarg, ACPI_STRTOUL_64BIT,
-            &Gbl_RsdpBase);
+        Status = AcpiUtStrtoul64 (AcpiGbl_Optarg, &Gbl_RsdpBase);
         if (ACPI_FAILURE (Status))
         {
             fprintf (stderr, "%s: Could not convert to a physical address\n",
@@ -335,10 +370,27 @@ ApDoOptions (
         }
         continue;
 
-    case 'v':   /* Revision/version */
+    case 'v': /* -v: (Version): signon already emitted, just exit */
 
-        AcpiOsPrintf (ACPI_COMMON_SIGNON (AP_UTILITY_NAME));
-        return (1);
+        switch (AcpiGbl_Optarg[0])
+        {
+        case '^':  /* -v: (Version) */
+
+            fprintf (stderr, ACPI_COMMON_SIGNON (AP_UTILITY_NAME));
+            return (1);
+
+        case 'd':
+
+            fprintf (stderr, ACPI_COMMON_SIGNON (AP_UTILITY_NAME));
+            printf (ACPI_COMMON_BUILD_TIME);
+            return (1);
+
+        default:
+
+            printf ("Unknown option: -v%s\n", AcpiGbl_Optarg);
+            return (-1);
+        }
+        break;
 
     case 'z':   /* Verbose mode */
 
@@ -405,7 +457,7 @@ ApDoOptions (
  *
  ******************************************************************************/
 
-#ifndef _GNU_EFI
+#if !defined(_GNU_EFI) && !defined(_EDK2_EFI)
 int ACPI_SYSTEM_XFACE
 main (
     int                     argc,

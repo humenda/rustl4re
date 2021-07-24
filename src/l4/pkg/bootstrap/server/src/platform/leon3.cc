@@ -18,6 +18,7 @@
 #include <l4/drivers/uart_leon3.h>
 
 #include "support.h"
+#include "startup.h"
 
 namespace {
 class Platform_leon3 :
@@ -57,8 +58,18 @@ class Platform_leon3 :
 
   void init()
   {
+    kuart.base_address = LEON3_APBUART; // XXX hard
+    kuart.base_baud    = 115200; // seems unused in the drivers
+    kuart.baud         = 115200;
+    kuart.irqno        = 3;
+    kuart.access_type  = L4_kernel_options::Uart_type_mmio;
+    kuart_flags       |=   L4_kernel_options::F_uart_base
+                         | L4_kernel_options::F_uart_baud
+                         | L4_kernel_options::F_uart_irq;
+
+
     static L4::Uart_leon3 _uart;
-    static L4::Io_register_block_mmio r(LEON3_APBUART); // XXX hard
+    static L4::Io_register_block_mmio r(kuart.base_address);
     _uart.startup(&r);
     set_stdio_uart(&_uart);
 

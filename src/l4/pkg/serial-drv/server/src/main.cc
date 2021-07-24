@@ -21,6 +21,8 @@
 #include <l4/sys/irq>
 #include <l4/util/util.h>
 
+#include <l4/sys/cxx/ipc_epiface>
+
 #include <cstdlib>
 #include <cstdio>
 #include <stdarg.h>
@@ -42,7 +44,7 @@ using L4Re::Util::Icu_cap_array_svr;
 class Serial_drv :
   public Vcon_svr<Serial_drv>,
   public Icu_cap_array_svr<Serial_drv>,
-  public L4::Server_object_t<L4::Vcon>
+  public L4::Epiface_t<Serial_drv, L4::Vcon>
 {
 public:
   Serial_drv();
@@ -53,6 +55,7 @@ public:
   int vcon_write(const char *buffer, unsigned size);
   unsigned vcon_read(char *buffer, unsigned size);
 
+  // FIXEME: IRQ handling brohen need xtra object
   int handle_irq();
 
   bool init();
@@ -173,8 +176,8 @@ Serial_drv::init()
     }
 
   /* setting IRQ type to L4_IRQ_F_POS_EDGE seems to be wrong place */
-  if (l4_error(_uart_irq->attach((l4_umword_t)static_cast<L4::Server_object *>(this),
-	  L4Re::Env::env()->main_thread())))
+  if (l4_error(_uart_irq->bind_thread(L4Re::Env::env()->main_thread(),
+                                      (l4_umword_t)static_cast<L4::Epiface *>(this))))
     {
       serprintf("serial-drv: attach to uart-irq failed.\n");
       return false;
@@ -189,29 +192,6 @@ Serial_drv::init()
 
   return true;
 }
-
-#if 0
-int
-Serial_drv::dispatch(l4_umword_t obj, L4::Ipc::Iostream &ios)
-{
-  l4_msgtag_t tag;
-  ios >> tag;
-  switch (tag.label())
-    {
-    case L4_PROTO_IRQ:
-        {
-          int r = L4Re::Util::Icu_svr<Serial_drv>::dispatch(obj, ios);
-          if (r)
-            return r;
-	  return handle_irq();
-        }
-    case L4_PROTO_LOG:
-      return L4Re::Util::Vcon_svr<Serial_drv>::dispatch(obj, ios);
-    default:
-      return -L4_EBADPROTO;
-    }
-}
-#endif
 
 int main()
 {

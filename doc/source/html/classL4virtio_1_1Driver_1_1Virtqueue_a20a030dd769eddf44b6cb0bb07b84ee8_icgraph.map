@@ -1,0 +1,7 @@
+<map id="L4virtio::Driver::Virtqueue::enqueue_descriptor" name="L4virtio::Driver::Virtqueue::enqueue_descriptor">
+<area shape="rect" id="node1" title="Enqueue a descriptor in the available ring." alt="" coords="680,39,871,80"/>
+<area shape="rect" id="node2" href="$classL4virtio_1_1Driver_1_1Device.html#a72090d324268b51f3937197748c26853" title="Send a request to the device." alt="" coords="460,39,632,80"/>
+<area shape="rect" id="node3" href="$classL4virtio_1_1Driver_1_1Device.html#af4aa9ac34ce928b9d437f1bb6a2ec216" title="Send a request to the device and wait for it to be processed." alt="" coords="240,5,412,47"/>
+<area shape="rect" id="node5" href="$classL4virtio_1_1Driver_1_1Block__device.html#a2c2e9924abafe2eff34821b166c6c36f" title="Process request asynchronously." alt="" coords="243,71,409,112"/>
+<area shape="rect" id="node4" href="$classL4virtio_1_1Driver_1_1Block__device.html#a63f21e71556accc8c669ef80161ecd8e" title="Process request synchronously." alt="" coords="5,5,192,47"/>
+</map>

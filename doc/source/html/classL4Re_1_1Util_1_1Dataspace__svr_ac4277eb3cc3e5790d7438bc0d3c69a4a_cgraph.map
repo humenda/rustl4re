@@ -1,0 +1,5 @@
+<map id="L4Re::Util::Dataspace_svr::map_hook" name="L4Re::Util::Dataspace_svr::map_hook">
+<area shape="rect" id="node1" title="A hook that is called as the first operation in each map request." alt="" coords="5,23,168,65"/>
+<area shape="rect" id="node2" href="$group__cxx__api.html#ga1d7a566ab5b06016155d693f91a7ee2d" title="Get the maximum of a and b." alt="" coords="216,5,299,32"/>
+<area shape="rect" id="node3" href="$group__cxx__api.html#ga0bd9662898a7499fcd3feefe594a699b" title="Get the minimum of a and b." alt="" coords="218,56,297,83"/>
+</map>

@@ -31,6 +31,8 @@
 
 #include <l4/util/assert.h>
 
+#include <ctype.h>
+#include <string>
 #include <cstring>
 #include <climits>
 #include <getopt.h>
@@ -78,9 +80,11 @@ enum
 static struct option options[] =
 {
     {"size", 1, 0, 's'},  // size of in/out queue == #buffers in queue
+    {"poll", 1, 0, 'p'},  // enable polling mode
     {0, 0, 0, 0}
 };
 
+using Mac_address = l4_uint8_t[6];
 
 #ifdef CONFIG_STATS
 static void *stats_thread_loop(void *);
@@ -152,14 +156,16 @@ public:
 
   struct Net_config_space
   {
+    /// MAC address of the device (if VIRTIO_NET_F_MAC aka Features::mac)
+    Mac_address mac;
   };
 
   L4virtio::Svr::Dev_config_t<Net_config_space> _dev_config;
 
   explicit Virtio_net(unsigned vq_max)
   : L4virtio::Svr::Device(&_dev_config),
-    _dev_config(0x44, L4VIRTIO_ID_NET, 2),
-    _vq_max(vq_max), _enabled_features(0)
+    _dev_config(L4VIRTIO_VENDOR_KK, L4VIRTIO_ID_NET, 2),
+    _vq_max(vq_max), _enabled_features(0), _poll_mode(false)
 #ifdef CONFIG_STATS
     , num_tx(0), num_rx(0), num_dropped(0), num_irqs(0)
 #endif
@@ -185,19 +191,40 @@ public:
       }
 
     _dev_config.host_features(0) = hf.raw;
-    _dev_config.host_features(1) = 1;
+
+    _dev_config.set_host_feature(L4VIRTIO_FEATURE_VERSION_1);
     _dev_config.reset_hdr();
 
     reset_queue_config(0, vq_max);
     reset_queue_config(1, vq_max);
   }
 
+  void set_mac_address(Mac_address const &mac)
+  {
+    _dev_config.priv_config()->mac[0] = mac[0];
+    _dev_config.priv_config()->mac[1] = mac[1];
+    _dev_config.priv_config()->mac[2] = mac[2];
+    _dev_config.priv_config()->mac[3] = mac[3];
+    _dev_config.priv_config()->mac[4] = mac[4];
+    _dev_config.priv_config()->mac[5] = mac[5];
+
+    Features hf(_dev_config.host_features(0));
+    hf.mac()        = true;
+    _dev_config.host_features(0) = hf.raw;
+    _dev_config.reset_hdr();
+  }
+
   void register_single_driver_irq()
   {
-    kick_guest_irq = L4Re::Util::Unique_cap<L4::Irq>(
+    _kick_guest_irq = L4Re::Util::Unique_cap<L4::Irq>(
        L4Re::chkcap(server_iface()->template rcv_cap<L4::Irq>(0)));
 
     L4Re::chksys(server_iface()->realloc_rcv_cap(0));
+  }
+
+  void trigger_driver_config_irq() const override
+  {
+    _kick_guest_irq->trigger();
   }
 
   Server_iface *server_iface() const
@@ -210,6 +237,9 @@ public:
   {
     for (Virtqueue &q: _q)
       q.disable();
+
+    reset_queue_config(0, _vq_max);
+    reset_queue_config(1, _vq_max);
   }
 
   bool available()
@@ -232,7 +262,11 @@ public:
       return -L4_ERANGE;
 
     if (setup_queue(_q + index, index, _vq_max))
-      return 0;
+      {
+        if (_poll_mode)
+          _q[index].disable_notify();
+        return 0;
+      }
 
     return -L4_EINVAL;
   }
@@ -275,10 +309,21 @@ public:
     // we do not care about this anywhere, so skip
     // _device_config->irq_status |= 1;
 
-    kick_guest_irq->trigger();
+    _kick_guest_irq->trigger();
 #ifdef CONFIG_STATS
     ++num_irqs;
 #endif
+  }
+
+  void enable_poll_mode()
+  {
+    _poll_mode = true;
+
+    _dev_config.set_host_feature(L4VIRTIO_FEATURE_CMD_CONFIG);
+    _dev_config.reset_hdr();
+
+    for (auto &q : _q)
+      q.disable_notify();
   }
 
   char const *name;
@@ -309,16 +354,96 @@ private:
 
   unsigned _vq_max;
   Virtqueue _q[2];
-  L4Re::Util::Unique_cap<L4::Irq> kick_guest_irq;
+  L4Re::Util::Unique_cap<L4::Irq> _kick_guest_irq;
   L4::Cap<L4::Irq> _host_irq;
   Features _enabled_features;
+  bool _poll_mode;
 };
 
-static L4Re::Util::Registry_server<L4Re::Util::Br_manager_hooks> server;
+static L4Re::Util::Registry_server<L4Re::Util::Br_manager_timeout_hooks> server;
 
-class Sock_pair : public L4::Epiface_t<Sock_pair, L4::Factory>
+static bool
+parse_string_param(L4::Ipc::Varg const &param, char const *prefix,
+                   std::string *out)
+{
+  l4_size_t headlen = strlen(prefix);
+
+  if (param.length() < headlen)
+    return false;
+
+  char const *pstr = param.value<char const *>();
+
+  if (strncmp(pstr, prefix, headlen) != 0)
+    return false;
+
+  *out = std::string(pstr + headlen, strnlen(pstr, param.length()) - headlen);
+
+  return true;
+}
+
+static bool
+parse_int_optstring(char const *optstring, int *out)
+{
+  char *endp;
+
+  errno = 0;
+  long num = strtol(optstring, &endp, 10);
+
+  // check that long can be converted to int
+  if (errno || *endp != '\0' || num < INT_MIN || num > INT_MAX)
+    return false;
+
+  *out = num;
+
+  return true;
+}
+
+static bool
+parse_int_param(L4::Ipc::Varg const &param, char const *prefix, int *out)
+{
+  l4_size_t headlen = strlen(prefix);
+
+  if (param.length() < headlen)
+    return false;
+
+  char const *pstr = param.value<char const *>();
+
+  if (strncmp(pstr, prefix, headlen) != 0)
+    return false;
+
+  std::string tail(pstr + headlen, param.length() - headlen);
+
+  if (!parse_int_optstring(tail.c_str(), out))
+    {
+      printf("Bad paramter '%s'. Invalid number specified.\n", prefix);
+      L4Re::chksys(-L4_EINVAL);
+    }
+
+  return true;
+}
+
+class Sock_pair
+: public L4::Epiface_t<Sock_pair, L4::Factory>,
+  private L4::Ipc_svr::Timeout_queue::Timeout
 {
 private:
+  void expired()
+  {
+    for (Virtio_net *p: port)
+      p->handle_mem_cmd_write();
+
+    for (bool more = true; more; )
+      {
+        more = false;
+        for (auto p: pipe)
+          if (L4_LIKELY(p->ready()))
+            more |= p->copy();
+      }
+
+    _poll_next += _poll_interval;
+    server_iface()->add_timeout(this, _poll_next);
+  }
+
   struct Host_irq : public L4::Irqep_t<Host_irq>
   {
     explicit Host_irq(Sock_pair *sp) : s(sp) {}
@@ -353,8 +478,26 @@ private:
 
   Host_irq _host_irq;
   Del_cap_irq _del_cap_irq;
+  unsigned _poll_interval;
+  l4_kernel_clock_t _poll_next;
 
 public:
+  void enable_timer(unsigned poll_interval)
+  {
+    assert(poll_interval > 0);
+    assert(_poll_interval == 0); // must not have been set before
+
+    printf("Enable polling at interval %u usec\n", poll_interval);
+
+    // disable all notifications
+    for (auto *p : port)
+      p->enable_poll_mode();
+
+    _poll_next = l4_kip_clock(l4re_kip()) + poll_interval;
+    _poll_interval = poll_interval;
+    server_iface()->add_timeout(this, _poll_next);
+  }
+
   L4::Cap<L4::Irq> host_irq() const
   { return L4::cap_cast<L4::Irq>(_host_irq.obj_cap()); }
 
@@ -771,7 +914,8 @@ public:
    */
   Sock_pair(unsigned vq_max)
   : _host_irq(this),
-    _del_cap_irq(port, Nports)
+    _del_cap_irq(port, Nports),
+    _poll_interval(0)
   {
     for (Virtio_net *&p: port)
       p = new Virtio_net(vq_max);
@@ -783,28 +927,90 @@ public:
     L4Re::chksys(L4Re::Env::env()->main_thread()->register_del_irq(c));
   }
 
+  /**
+   * Convert colon-delimited MAC address string into numeric MAC address
+   *
+   * \param      text   MAC address string to parse (i.e. "X:XX:Xx:x:xx:xX").
+   * \param[out] mac    Output buffer for MAC address.
+   *
+   * \retval L4_EOK     Success
+   * \retval -L4_EINVAL Invalid MAC address supplied.
+   */
+  long text_to_mac(char const *text, Mac_address &mac)
+  {
+    char const *t = text;
+    char const *next = text;
+
+    for (int i = 0; i < 6; i++)
+      {
+        if (isxdigit(t[0]) && isxdigit(t[1]) && t[2] == (i < 5 ? ':' : '\0'))
+          next += 3;
+        else if (isxdigit(t[0]) && t[1] == (i < 5 ? ':' : '\0'))
+          next += 2;
+        else
+          return -L4_EINVAL;
+
+        mac[i] = (l4_uint8_t)std::stoul(t, nullptr, 16);
+        t = next;
+      }
+
+    return L4_EOK;
+  }
+
   long op_create(L4::Factory::Rights, L4::Ipc::Cap<void> &res,
                  l4_umword_t type, L4::Ipc::Varg_list_ref va)
   {
+    int num_ds = 2; // set a default
+    bool has_mac = false;
+    Mac_address mac;
+
     // test for supported object types
     if (type != 0)
       return -L4_EINVAL;
 
-    L4::Ipc::Varg opt = va.next();
-    if (!opt.is_of_int())
-      return -L4_EINVAL;
-
-    unsigned num_ds = opt.value<l4_mword_t>();
-    if (num_ds == 0 || num_ds > 80)
+    for (L4::Ipc::Varg opt: va)
       {
-        printf("warning: client requested invalid number of data spaces: 0 < %u <= 80\n", num_ds);
-        return -L4_EINVAL;
+        std::string mac_str;
+
+        if (!opt.is_of<char const *>())
+          {
+            printf("String parameter expected.\n");
+            return -L4_EINVAL;
+          }
+
+        if (parse_int_param(opt, "ds-max=", &num_ds))
+          {
+            if (num_ds <= 0 || num_ds > 80)
+              {
+                printf("Invalid range for parameter 'ds-max'. "
+                       "Number must be between 1 and 80 inclusive.\n");
+                return -L4_EINVAL;
+              }
+            continue;
+          }
+        if (parse_string_param(opt, "mac-addr=", &mac_str))
+          {
+            has_mac = true;
+
+            if (text_to_mac(mac_str.c_str(), mac) < 0)
+              {
+                printf("Invalid value for parameter 'mac-addr'. "
+                       "Must be of the form 'X:XX:Xx:x:xx:xX'.\n");
+                return -L4_EINVAL;
+              }
+            continue;
+          }
+        printf("Invalid client option ignored. '%s'.\n",
+               opt.value<char const *>());
       }
 
     for (auto *p: port)
       {
         if (p->available())
           {
+            if (has_mac)
+              p->set_mac_address(mac);
+
             p->register_client(server.registry(), host_irq(), num_ds);
             res = L4::Ipc::make_cap(p->obj_cap(), L4_CAP_FPAGE_RWSD);
 
@@ -819,25 +1025,25 @@ public:
   {
     for (;;)
       {
-        for (auto p: pipe)
+        for (auto *p: pipe)
           p->disable_notify();
 
         for (bool more = true; more; )
           {
             more = false;
-            for (auto p: pipe)
+            for (auto *p: pipe)
               if (L4_LIKELY(p->ready()))
                 more |= p->copy();
           }
 
-        for (auto p: pipe)
+        for (auto *p: pipe)
           p->enable_notify();
 
         L4virtio::wmb();
         L4virtio::rmb();
 
         bool work = false;
-        for (auto p: pipe)
+        for (auto *p: pipe)
           if (L4_UNLIKELY((work |= p->work_pending())))
             break;
 
@@ -869,7 +1075,8 @@ static void *stats_thread_loop(void *)
 };
 #endif
 
-int main(int argc, char *argv[])
+static int
+run(int argc, char *const *argv)
 {
   Dbg info;
   Dbg warn(Dbg::Warn);
@@ -877,26 +1084,48 @@ int main(int argc, char *argv[])
   Dbg::set_level(0xf);
 
   int opt, index;
-  unsigned vq_max_num = 0x100; // default value for data queues
+  int vq_max_num = 0x100; // default value for data queues
+  int poll_interval = 0;
 
   printf("Hello from l4vio_net_p2p\n");
 
-  while( (opt = getopt_long(argc, argv, "s:", options, &index)) != -1)
+  while( (opt = getopt_long(argc, argv, "s:p:", options, &index)) != -1)
     {
       switch (opt)
         {
         case 's':
-          vq_max_num = atoi(optarg);
-          printf("Max number of buffers in virtqueue: %u\n", vq_max_num);
+          // QueueNumMax must be power of 2 between 1 and 0x8000
+          if (!parse_int_optstring(optarg, &vq_max_num) || vq_max_num < 1
+              || vq_max_num > 32768 || (vq_max_num & (vq_max_num - 1)))
+            {
+              printf("Max number of virtqueue buffers must be power of 2"
+                     " between 1 and 32768. Invalid value: %s\n",
+                     optarg);
+              return 1;
+            }
+          break;
+        case 'p':
+          if (!parse_int_optstring(optarg, &poll_interval)
+              || poll_interval <= 0)
+            {
+              printf("Bad poll interval '%s' usec. Must be greater than 0.\n",
+                     optarg);
+              return 1;
+            }
           break;
         }
     }
+
+  printf("Max number of buffers in virtqueue: %i\n", vq_max_num);
 
   Sock_pair *s = new Sock_pair(vq_max_num);
   L4::Cap<void> cap = server.registry()->register_obj(s, "svr");
   server.registry()->register_irq_obj(s->irq_object());
   if (!cap.is_valid())
     printf("error registering switch\n");
+
+  if (poll_interval > 0)
+    s->enable_timer(poll_interval);
 
 #ifdef CONFIG_STATS
   pthread_t stats_thread;
@@ -908,4 +1137,25 @@ int main(int argc, char *argv[])
 }
 
 
+int
+main(int argc, char *const *argv)
+{
+  try
+    {
+      return run(argc, argv);
+    }
+  catch (L4::Runtime_error const &e)
+    {
+      Err().printf("%s: %s\n", e.str(), e.extra_str());
+    }
+  catch (L4::Base_exception const &e)
+    {
+      Err().printf("Error: %s\n", e.str());
+    }
+  catch (std::exception const &e)
+    {
+      Err().printf("Error: %s\n", e.what());
+    }
 
+  return 2;
+}

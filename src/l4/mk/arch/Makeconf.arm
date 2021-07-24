@@ -1,5 +1,6 @@
 CROSS_COMPILE_arm         = arm-linux-gnueabihf-
 LD_EMULATION_CHOICE_arm   = armelf armelf_linux_eabi
+LDFLAGS_arm              += -z max-page-size=0x1000 -z common-page-size=0x1000
 OFORMAT_arm               = elf32-littlearm
 BFD_ARCH_arm              = arm
 L4_KIP_ADDR_arm          ?= 0xaffff000

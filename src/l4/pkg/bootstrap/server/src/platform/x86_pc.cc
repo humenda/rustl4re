@@ -15,6 +15,7 @@
  * Please see the COPYING-GPL-2 file for details.
  */
 
+#include <l4/util/mb_info.h>
 #include "support.h"
 #include "x86_pc-base.h"
 
@@ -37,6 +38,7 @@ namespace {
 struct Platform_x86_1 : Platform_x86
 {
   l4util_mb_info_t *mbi;
+  l4util_l4mod_info *l4mi;
 
   void setup_memory_map()
   {
@@ -140,19 +142,35 @@ class Platform_x86_multiboot : public Platform_x86_1, public Boot_modules
 {
 public:
   Boot_modules *modules() { return this; }
+  unsigned base_mod_idx(Mod_info_flags mod_info_mod_type)
+  { return mod_info_mod_type - 1; }
 
   Module module(unsigned index, bool) const
   {
     Module m;
-    l4util_mb_mod_t *mb_mod = (l4util_mb_mod_t*)(unsigned long)mbi->mods_addr;
 
-    m.start   = (char const *)(l4_addr_t)mb_mod[index].mod_start;
-    m.end     = (char const *)(l4_addr_t)mb_mod[index].mod_end;
-    m.cmdline = (char const *)(l4_addr_t)mb_mod[index].cmdline;
+    if (l4mi)
+      {
+        l4util_l4mod_mod *l4m = (l4util_l4mod_mod *)(unsigned long)l4mi->mods_addr;
+
+        m.start   = (char const *)(l4_addr_t)l4m[index].mod_start;
+        m.end     = (char const *)(l4_addr_t)l4m[index].mod_end;
+        m.cmdline = (char const *)(l4_addr_t)l4m[index].cmdline;
+      }
+    else if (mbi)
+      {
+        l4util_mb_mod_t *mb_mod = (l4util_mb_mod_t*)(unsigned long)mbi->mods_addr;
+
+        m.start   = (char const *)(l4_addr_t)mb_mod[index].mod_start;
+        m.end     = (char const *)(l4_addr_t)mb_mod[index].mod_end;
+        m.cmdline = (char const *)(l4_addr_t)mb_mod[index].cmdline;
+      }
+    else
+      assert(0);
     return m;
   }
 
-  unsigned num_modules() const { return mbi->mods_count; }
+  unsigned num_modules() const { return l4mi->mods_count; }
 
   void reserve()
   {
@@ -207,13 +225,11 @@ public:
       }
   }
 
-  void move_module(unsigned index, void *dest,
-                   bool overlap_check)
+  void move_module(unsigned index, void *dest)
   {
-    l4util_mb_mod_t *mod = (l4util_mb_mod_t*)(unsigned long)mbi->mods_addr + index;
+    l4util_l4mod_mod *mod = (l4util_l4mod_mod *)(unsigned long)l4mi->mods_addr + index;
     unsigned long size = mod->mod_end - mod->mod_start;
-    _move_module(index, dest, (char const *)(l4_addr_t)mod->mod_start,
-                 size, overlap_check);
+    _move_module(index, dest, (char const *)(l4_addr_t)mod->mod_start, size);
 
     assert ((l4_addr_t)dest < 0xfffffff0);
     assert ((l4_addr_t)dest < 0xfffffff0 - size);
@@ -221,10 +237,10 @@ public:
     mod->mod_end   = (l4_addr_t)dest + size;
   }
 
-  l4util_mb_info_t *construct_mbi(unsigned long mod_addr)
+  l4util_l4mod_info *construct_mbi(unsigned long mod_addr)
   {
     // calculate the size needed to cover the full MBI, including command lines
-    unsigned long total_size = sizeof(l4util_mb_info_t);
+    unsigned long total_size = sizeof(l4util_l4mod_info);
 
     // consider the global command line
     if (mbi->flags & L4UTIL_MB_CMDLINE)
@@ -241,7 +257,7 @@ public:
       }
 
     // consider modules
-    total_size += sizeof(l4util_mb_mod_t) * mbi->mods_count;
+    total_size += sizeof(l4util_l4mod_mod) * mbi->mods_count;
 
     // scan through all modules and add the command line
     l4util_mb_mod_t *mods = (l4util_mb_mod_t*)(unsigned long)mbi->mods_addr;
@@ -259,17 +275,19 @@ public:
 
     // mark the region as reserved
     mem_manager->regions->add(Region::start_size((l4_addr_t)_mb, total_size, ".mbi_rt",
-                                                 Region::Root));
+                                                 Region::Root, L4_FPAGE_RWX));
     if (Verbose_mbi)
       printf("  reserved %ld bytes at %p\n", total_size, _mb);
 
-    // copy the whole MBI
-    l4util_mb_info_t *dst = (l4util_mb_info_t *)_mb;
-    *dst = *mbi;
+    // copy over from MBI to l4mods
+    l4mi = (l4util_l4mod_info *)_mb;
+    memset(l4mi, 0, total_size);
 
-    l4util_mb_mod_t *dst_mods = (l4util_mb_mod_t *)(dst + 1);
-    dst->mods_addr = (l4_addr_t)dst_mods;
-    _mb = (char *)(dst_mods + mbi->mods_count);
+    l4mi->mods_count = mbi->mods_count;
+
+    l4util_l4mod_mod *l4m_mods = (l4util_l4mod_mod *)(l4mi + 1);
+    l4mi->mods_addr = (l4_addr_t)l4m_mods;
+    _mb = (char *)(l4m_mods + l4mi->mods_count);
 
     if (mbi->flags & L4UTIL_MB_VIDEO_INFO)
       {
@@ -277,7 +295,7 @@ public:
           {
             l4util_mb_vbe_mode_t *d = (l4util_mb_vbe_mode_t *)_mb;
             *d = *((l4util_mb_vbe_mode_t *)(l4_addr_t)mbi->vbe_mode_info);
-            dst->vbe_mode_info = (l4_addr_t)d;
+            l4mi->vbe_mode_info = (l4_addr_t)d;
             _mb = (char *)(d + 1);
           }
 
@@ -285,7 +303,7 @@ public:
           {
             l4util_mb_vbe_ctrl_t *d = (l4util_mb_vbe_ctrl_t *)_mb;
             *d = *((l4util_mb_vbe_ctrl_t *)(l4_addr_t)mbi->vbe_ctrl_info);
-            dst->vbe_ctrl_info = (l4_addr_t)d;
+            l4mi->vbe_ctrl_info = (l4_addr_t)d;
             _mb = (char *)(d + 1);
           }
       }
@@ -293,23 +311,41 @@ public:
     if (mbi->cmdline)
       {
         strcpy(_mb, (char const *)(l4_addr_t)mbi->cmdline);
-        dst->cmdline = (l4_addr_t)_mb;
+        l4mi->cmdline = (l4_addr_t)_mb;
         _mb += round_wordsize(strlen(_mb) + 1);
       }
 
-    for (unsigned i = 0; i < mbi->mods_count; ++i)
+    for (unsigned i = 0; i < l4mi->mods_count; ++i)
       {
-        dst_mods[i] = mods[i];
+        switch (i)
+          {
+          case 0:
+            l4m_mods[i].flags = Mod_info_flag_mod_kernel;
+            break;
+          case 1:
+            l4m_mods[i].flags = Mod_info_flag_mod_sigma0;
+            break;
+          case 2:
+            l4m_mods[i].flags = Mod_info_flag_mod_roottask;
+            break;
+          default:
+            l4m_mods[i].flags = 0;
+            break;
+          };
+        l4m_mods[i].mod_start = mods[i].mod_start;
+        l4m_mods[i].mod_end   = mods[i].mod_end;
         if (char const *c = (char const *)(l4_addr_t)(mods[i].cmdline))
           {
             unsigned l = strlen(c) + 1;
-            dst_mods[i].cmdline = (l4_addr_t)_mb;
+            l4m_mods[i].cmdline = (l4_addr_t)_mb;
             memcpy(_mb, c, l);
             _mb += round_wordsize(l);
           }
       }
 
-    mbi = dst;
+    assert(_mb - (char *)l4mi == (long)total_size);
+
+    mbi = 0;
 
     // remove the old MBI from the reserved memory
     for (Region *r = mem_manager->regions->begin();
@@ -330,10 +366,6 @@ public:
     // currently no better one that is called this late.
     if (rsdp_start)
       {
-        enum {
-          // XXX: need a single definition of this
-          Info_acpi_rsdp = 0
-        };
         char *rsdp_buf =
           (char *)mem_manager->find_free_ram(sizeof(rsdp_tmp_buf));
         if (!rsdp_buf)
@@ -343,10 +375,10 @@ public:
         mem_manager->regions->add(
           Region::n((l4_addr_t)rsdp_buf,
                     (l4_addr_t)rsdp_buf + sizeof(rsdp_tmp_buf), ".ACPI",
-                    Region::Info, Info_acpi_rsdp));
+                    Region::Info, Region::Info_acpi_rsdp));
       }
 
-    return mbi;
+    return l4mi;
   }
 };
 
@@ -486,6 +518,9 @@ void __main(l4util_mb_info_t *mbi, unsigned long p2, char const *realmode_si,
   ctor_init();
   Platform_base::platform = &_x86_pc_platform;
   _x86_pc_platform.init();
+#ifdef IMAGE_MODE
+  init_modules_infos();
+#endif
 #ifdef ARCH_amd64
   // remember this info to reserve the memory in setup_memory_map later
   _x86_pc_platform.boot32_info = boot32_info;

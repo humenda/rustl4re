@@ -59,14 +59,14 @@
  */
 L4_INLINE l4_msgtag_t
 l4_task_map(l4_cap_idx_t dst_task, l4_cap_idx_t src_task,
-            l4_fpage_t snd_fpage, l4_addr_t snd_base) L4_NOTHROW;
+            l4_fpage_t snd_fpage, l4_umword_t snd_base) L4_NOTHROW;
 
 /**
  * \internal
  */
 L4_INLINE l4_msgtag_t
 l4_task_map_u(l4_cap_idx_t dst_task, l4_cap_idx_t src_task,
-              l4_fpage_t snd_fpage, l4_addr_t snd_base, l4_utcb_t *utcb) L4_NOTHROW;
+              l4_fpage_t snd_fpage, l4_umword_t snd_base, l4_utcb_t *utcb) L4_NOTHROW;
 
 /**
  * Revoke rights from the task.
@@ -122,14 +122,14 @@ l4_task_unmap_u(l4_cap_idx_t task, l4_fpage_t fpage,
  */
 L4_INLINE l4_msgtag_t
 l4_task_unmap_batch(l4_cap_idx_t task, l4_fpage_t const *fpages,
-                    unsigned num_fpages, unsigned long map_mask) L4_NOTHROW;
+                    unsigned num_fpages, l4_umword_t map_mask) L4_NOTHROW;
 
 /**
  * \internal
  */
 L4_INLINE l4_msgtag_t
 l4_task_unmap_batch_u(l4_cap_idx_t task, l4_fpage_t const *fpages,
-                      unsigned num_fpages, unsigned long map_mask,
+                      unsigned num_fpages, l4_umword_t map_mask,
                       l4_utcb_t *u) L4_NOTHROW;
 
 /**
@@ -184,13 +184,16 @@ l4_task_release_cap_u(l4_cap_idx_t task, l4_cap_idx_t cap,
  * \ingroup l4_task_api
  *
  * \param task  Task to check the capability in.
- * \param cap   Capability to check for presence..
+ * \param cap   Valid capability to check for presence.
  *
  * \retval tag.label() > 0   Capability is present (refers to an object).
  * \retval tag.label() == 0  No capability present (void object).
  *
  * A capability is considered present when it refers to an existing
  * kernel object.
+ *
+ * \pre `cap` must be a valid capability index (i.e. not L4_INVALID_CAP or
+ *      the like).
  */
 L4_INLINE l4_msgtag_t
 l4_task_cap_valid(l4_cap_idx_t task, l4_cap_idx_t cap) L4_NOTHROW;
@@ -200,28 +203,6 @@ l4_task_cap_valid(l4_cap_idx_t task, l4_cap_idx_t cap) L4_NOTHROW;
  */
 L4_INLINE l4_msgtag_t
 l4_task_cap_valid_u(l4_cap_idx_t task, l4_cap_idx_t cap, l4_utcb_t *utcb) L4_NOTHROW;
-
-/**
- * Test whether a capability has child mappings (in another task).
- * \ingroup l4_task_api
- *
- * \param task         Capability selector of the destination task to do the
- *                     lookup in
- * \param cap          Capability selector to look up in the destination task
- *
- * \return label contains 1 if it has at least one child, 0 if not or invalid
- *
- * \deprecated Do not use. Undetermined future, might be removed.
- */
-L4_INLINE l4_msgtag_t
-l4_task_cap_has_child(l4_cap_idx_t task, l4_cap_idx_t cap) L4_NOTHROW
-  L4_DEPRECATED("Do not use. Future uncertain.");
-
-/**
- * \internal
- */
-L4_INLINE l4_msgtag_t
-l4_task_cap_has_child_u(l4_cap_idx_t task, l4_cap_idx_t cap, l4_utcb_t *utcb) L4_NOTHROW;
 
 /**
  * Test whether two capabilities point to the same object with the same
@@ -272,11 +253,12 @@ l4_task_cap_equal_u(l4_cap_idx_t task, l4_cap_idx_t cap_a,
  */
 enum L4_task_ops
 {
-  L4_TASK_MAP_OP         = 0UL,    /**< Map */
-  L4_TASK_UNMAP_OP       = 1UL,    /**< Unmap */
-  L4_TASK_CAP_INFO_OP    = 2UL,    /**< Cap info */
-  L4_TASK_ADD_KU_MEM_OP  = 3UL,    /**< Add kernel-user memory */
-  L4_TASK_LDT_SET_X86_OP = 0x11UL, /**< x86: LDT set */
+  L4_TASK_MAP_OP           = 0UL,    /**< Map */
+  L4_TASK_UNMAP_OP         = 1UL,    /**< Unmap */
+  L4_TASK_CAP_INFO_OP      = 2UL,    /**< Cap info */
+  L4_TASK_ADD_KU_MEM_OP    = 3UL,    /**< Add kernel-user memory */
+  L4_TASK_LDT_SET_X86_OP   = 0x11UL, /**< x86: LDT set */
+  L4_TASK_MAP_VGICC_ARM_OP = 0x12UL, /**< Arm: Map virtual GICC area */
 };
 
 
@@ -287,12 +269,12 @@ enum L4_task_ops
 
 L4_INLINE l4_msgtag_t
 l4_task_map_u(l4_cap_idx_t dst_task, l4_cap_idx_t src_task,
-              l4_fpage_t snd_fpage, unsigned long snd_base, l4_utcb_t *u) L4_NOTHROW
+              l4_fpage_t snd_fpage, l4_umword_t snd_base, l4_utcb_t *u) L4_NOTHROW
 {
   l4_msg_regs_t *v = l4_utcb_mr_u(u);
   v->mr[0] = L4_TASK_MAP_OP;
   v->mr[3] = l4_map_obj_control(0,0);
-  v->mr[4] = l4_obj_fpage(src_task, 0, L4_FPAGE_RWX).raw;
+  v->mr[4] = l4_obj_fpage(src_task, 0, L4_CAP_FPAGE_RWS).raw;
   v->mr[1] = snd_base;
   v->mr[2] = snd_fpage.raw;
   return l4_ipc_call(dst_task, u, l4_msgtag(L4_PROTO_TASK, 3, 1, 0), L4_IPC_NEVER);
@@ -300,7 +282,7 @@ l4_task_map_u(l4_cap_idx_t dst_task, l4_cap_idx_t src_task,
 
 L4_INLINE l4_msgtag_t
 l4_task_unmap_u(l4_cap_idx_t task, l4_fpage_t fpage,
-                unsigned long map_mask, l4_utcb_t *u) L4_NOTHROW
+                l4_umword_t map_mask, l4_utcb_t *u) L4_NOTHROW
 {
   l4_msg_regs_t *v = l4_utcb_mr_u(u);
   v->mr[0] = L4_TASK_UNMAP_OP;
@@ -311,7 +293,7 @@ l4_task_unmap_u(l4_cap_idx_t task, l4_fpage_t fpage,
 
 L4_INLINE l4_msgtag_t
 l4_task_unmap_batch_u(l4_cap_idx_t task, l4_fpage_t const *fpages,
-                      unsigned num_fpages, unsigned long map_mask,
+                      unsigned num_fpages, l4_umword_t map_mask,
                       l4_utcb_t *u) L4_NOTHROW
 {
   l4_msg_regs_t *v = l4_utcb_mr_u(u);
@@ -327,15 +309,6 @@ l4_task_cap_valid_u(l4_cap_idx_t task, l4_cap_idx_t cap, l4_utcb_t *u) L4_NOTHRO
   l4_msg_regs_t *v = l4_utcb_mr_u(u);
   v->mr[0] = L4_TASK_CAP_INFO_OP;
   v->mr[1] = cap & ~1UL;
-  return l4_ipc_call(task, u, l4_msgtag(L4_PROTO_TASK, 2, 0, 0), L4_IPC_NEVER);
-}
-
-L4_INLINE l4_msgtag_t
-l4_task_cap_has_child_u(l4_cap_idx_t task, l4_cap_idx_t cap, l4_utcb_t *u) L4_NOTHROW
-{
-  l4_msg_regs_t *v = l4_utcb_mr_u(u);
-  v->mr[0] = L4_TASK_CAP_INFO_OP;
-  v->mr[1] = cap | 1UL;
   return l4_ipc_call(task, u, l4_msgtag(L4_PROTO_TASK, 2, 0, 0), L4_IPC_NEVER);
 }
 
@@ -364,21 +337,21 @@ l4_task_add_ku_mem_u(l4_cap_idx_t task, l4_fpage_t ku_mem,
 
 L4_INLINE l4_msgtag_t
 l4_task_map(l4_cap_idx_t dst_task, l4_cap_idx_t src_task,
-            l4_fpage_t snd_fpage, unsigned long snd_base) L4_NOTHROW
+            l4_fpage_t snd_fpage, l4_umword_t snd_base) L4_NOTHROW
 {
   return l4_task_map_u(dst_task, src_task, snd_fpage, snd_base, l4_utcb());
 }
 
 L4_INLINE l4_msgtag_t
 l4_task_unmap(l4_cap_idx_t task, l4_fpage_t fpage,
-              unsigned long map_mask) L4_NOTHROW
+              l4_umword_t map_mask) L4_NOTHROW
 {
   return l4_task_unmap_u(task, fpage, map_mask, l4_utcb());
 }
 
 L4_INLINE l4_msgtag_t
 l4_task_unmap_batch(l4_cap_idx_t task, l4_fpage_t const *fpages,
-                    unsigned num_fpages, unsigned long map_mask) L4_NOTHROW
+                    unsigned num_fpages, l4_umword_t map_mask) L4_NOTHROW
 {
   return l4_task_unmap_batch_u(task, fpages, num_fpages, map_mask,
                                l4_utcb());
@@ -417,12 +390,6 @@ L4_INLINE l4_msgtag_t
 l4_task_cap_valid(l4_cap_idx_t task, l4_cap_idx_t cap) L4_NOTHROW
 {
   return l4_task_cap_valid_u(task, cap, l4_utcb());
-}
-
-L4_INLINE l4_msgtag_t
-l4_task_cap_has_child(l4_cap_idx_t task, l4_cap_idx_t cap) L4_NOTHROW
-{
-  return l4_task_cap_has_child_u(task, cap, l4_utcb());
 }
 
 L4_INLINE l4_msgtag_t

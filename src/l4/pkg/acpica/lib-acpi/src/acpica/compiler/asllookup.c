@@ -8,7 +8,7 @@
  *
  * 1. Copyright Notice
  *
- * Some or all of this work - Copyright (c) 1999 - 2017, Intel Corp.
+ * Some or all of this work - Copyright (c) 1999 - 2019, Intel Corp.
  * All rights reserved.
  *
  * 2. License
@@ -110,6 +110,42 @@
  * United States government or any agency thereof requires an export license,
  * other governmental approval, or letter of assurance, without first obtaining
  * such license, approval or letter.
+ *
+ *****************************************************************************
+ *
+ * Alternatively, you may choose to be licensed under the terms of the
+ * following license:
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions, and the following disclaimer,
+ *    without modification.
+ * 2. Redistributions in binary form must reproduce at minimum a disclaimer
+ *    substantially similar to the "NO WARRANTY" disclaimer below
+ *    ("Disclaimer") and any redistribution must be conditioned upon
+ *    including a substantially similar Disclaimer requirement for further
+ *    binary redistribution.
+ * 3. Neither the names of the above-listed copyright holders nor the names
+ *    of any contributors may be used to endorse or promote products derived
+ *    from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+ * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * Alternatively, you may choose to be licensed under the terms of the
+ * GNU General Public License ("GPL") version 2 as published by the Free
+ * Software Foundation.
  *
  *****************************************************************************/
 
@@ -216,9 +252,9 @@ LkIsObjectUsed (
             if ((MethodLocals[i].Flags & ASL_LOCAL_INITIALIZED) &&
                 (!(MethodLocals[i].Flags & ASL_LOCAL_REFERENCED)))
             {
-                sprintf (MsgBuffer, "Local%u", i);
+                sprintf (AslGbl_MsgBuffer, "Local%u", i);
                 AslError (ASL_WARNING, ASL_MSG_LOCAL_NOT_USED,
-                    MethodLocals[i].Op, MsgBuffer);
+                    MethodLocals[i].Op, AslGbl_MsgBuffer);
             }
         }
 
@@ -235,9 +271,9 @@ LkIsObjectUsed (
                 if ((MethodArgs[i].Flags & ASL_ARG_INITIALIZED) &&
                     (!(MethodArgs[i].Flags & ASL_ARG_REFERENCED)))
                 {
-                    sprintf (MsgBuffer, "Arg%u", i);
+                    sprintf (AslGbl_MsgBuffer, "Arg%u", i);
                     AslError (ASL_WARNING, ASL_MSG_ARG_AS_LOCAL_NOT_USED,
-                        MethodArgs[i].Op, MsgBuffer);
+                        MethodArgs[i].Op, AslGbl_MsgBuffer);
                 }
             }
             else
@@ -250,9 +286,9 @@ LkIsObjectUsed (
                 if ((Node->Name.Ascii[0] != '_') &&
                     (!(MethodArgs[i].Flags & ASL_ARG_REFERENCED)))
                 {
-                    sprintf (MsgBuffer, "Arg%u", i);
+                    sprintf (AslGbl_MsgBuffer, "Arg%u", i);
                     AslError (ASL_REMARK, ASL_MSG_ARG_NOT_USED,
-                        MethodArgs[i].Op, MsgBuffer);
+                        MethodArgs[i].Op, AslGbl_MsgBuffer);
                 }
             }
         }
@@ -300,10 +336,10 @@ LkIsObjectUsed (
              * Issue a remark even if it is a reserved name (starts
              * with an underscore).
              */
-            sprintf (MsgBuffer, "Name [%4.4s] is within a method [%4.4s]",
+            sprintf (AslGbl_MsgBuffer, "Name [%4.4s] is within a method [%4.4s]",
                 Node->Name.Ascii, Next->Name.Ascii);
             AslError (ASL_REMARK, ASL_MSG_NOT_REFERENCED,
-                LkGetNameOp (Node->Op), MsgBuffer);
+                LkGetNameOp (Node->Op), AslGbl_MsgBuffer);
             return (AE_OK);
         }
 
@@ -377,7 +413,7 @@ LkGetNameOp (
         /* Name must appear as the last parameter */
 
         NameOp = Op->Asl.Child;
-        while (!(NameOp->Asl.CompileFlags & NODE_IS_NAME_DECLARATION))
+        while (!(NameOp->Asl.CompileFlags & OP_IS_NAME_DECLARATION))
         {
             NameOp = NameOp->Asl.Next;
         }

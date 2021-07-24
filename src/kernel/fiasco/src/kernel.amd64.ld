@@ -51,7 +51,7 @@ SECTIONS {
     *(.bootstrap.anno)
 
   } : btext
-  
+
   . = ALIGN(0x10);
   .bss_boot : {
       *(.bootstrap.bss .bootstrap.gnu.linkonce.b.*)
@@ -76,29 +76,43 @@ SECTIONS {
     *(.koptions)
   } :koptions :l4_koptions = 0
 
-#ifdef CONFIG_ALLOW_RO_TEXT
-  . = ALIGN(4K);
+#ifdef CONFIG_KERNEL_NX
+  . = ALIGN(2M);
 #endif
+
   .text : AT (ADDR(.text) - _fiasco_image_offset) {
     PROVIDE ( _kernel_text_start = . );
     *(SORT(.entry.text.*))
     PROVIDE ( _kernel_text_entry_end = . );
+    . = ALIGN(8);
     crt0.o(.text)
     *(.init)
     *(.text SORT(.text.*) .gnu.linkonce.t.*)
-    *(.fini)
+    *(.fixup .fixup.*)
+/*    *(.fini) */
+
+#ifdef CONFIG_KERNEL_NX
+    /*
+     * We don't want to have another executable superpage in the kernel, so we
+     * keep the initcall text here.
+     */
+    *(.initcall.text*)
+#endif
 
     PROVIDE (_ecode = .);
 
     *(.rodata .rodata.* .gnu.linkonce.r.*)
+
+    . = ALIGN(8);
+    PROVIDE(__exc_table_start = .);
+    KEEP(*(__exc_table __exc_table.*))
+    PROVIDE(__exc_table_end = .);
 
     . = ALIGN(16);
     PROVIDE (ia32_intel_microcode_start = .);
     KEEP(*(.intel_microcode))
     PROVIDE (ia32_intel_microcode_end = .);
 
-    . = ALIGN(8);
-    JDB_TABLE(log);
     . = ALIGN(8);
     JDB_TABLE(typeinfo);
 
@@ -107,15 +121,29 @@ SECTIONS {
     PROVIDE (_etext = .);
   } : ktext = 0x90909090
 
-#ifdef CONFIG_ALLOW_RO_TEXT
-  . = ALIGN(4K);
-#else
-  . = ALIGN(0x10);
+#ifdef CONFIG_KERNEL_NX
+  /*
+   * This section serves the purpose of taking up the remainder of the last 2M
+   * up to a new 2M boundary without taking up any space in the file (the linker
+   * script can apparently do this only for writable sections). This way we tell
+   * the kernel this memory (i.e. the executable part of the kernel address
+   * space) is reserved and should not be used for anything.
+   */
+  .fill_kernel : AT (ADDR(.fill_kernel) - _fiasco_image_offset) {
+    . = ALIGN(2M);
+  }
 #endif
+
   .data : AT (ADDR(.data) - _fiasco_image_offset) {
     PROVIDE (_kernel_data_start = .);
     *(.data .data.* .gnu.linkonce.d.*)
     *(.anno)
+
+#ifdef CONFIG_KERNEL_NX
+    PROVIDE (_kernel_data_entry_start = .);
+    *(SORT(.entry.data.*));
+    PROVIDE (_kernel_data_entry_end = .);
+#endif
 
     /* Constructor and destructor lists, ordered by priority.  The lists
        are traversed from end to start, therefore the *_END__ symbols
@@ -191,10 +219,13 @@ SECTIONS {
     __CTOR_LIST__ = .;
 
     . = ALIGN(0x10);
-    __DTOR_END__ = .;    
+    __DTOR_END__ = .;
     KEEP (*(SORT (.dtors.*)))
     KEEP (*(.dtors))
     __DTOR_LIST__ = .;
+
+    . = ALIGN(8);
+    JDB_TABLE(log);
 
     PROVIDE (_edata = .);
   } : kdata
@@ -224,7 +255,9 @@ SECTIONS {
   . = ALIGN(4096);
   PROVIDE (_initcall_start = .);
   .initcall.text : AT (ADDR(.initcall.text) - _fiasco_image_offset) {
+#ifndef CONFIG_KERNEL_NX
     *(.initcall.text*)
+#endif
   } : kitext = 0x90909090
 
   .initcall.data : AT (ADDR(.initcall.data) - _fiasco_image_offset) {
@@ -232,6 +265,9 @@ SECTIONS {
     . = ALIGN(4096);
     PROVIDE (_initcall_end = .);
   } : kidata
+
+  ASSERT(_initcall_end - _kernel_image < FIASCO_IMAGE_VIRT_SIZE,
+         "Increase FIASCO_IMAGE_VIRT_SIZE!")
 
   /DISCARD/ : {
     *(.note)

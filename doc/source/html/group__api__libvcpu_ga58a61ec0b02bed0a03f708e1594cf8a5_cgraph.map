@@ -1,3 +1,4 @@
 <map id="l4vcpu_irq_enable" name="l4vcpu_irq_enable">
-<area shape="rect" id="node2" href="$group__l4sys__defines.html#ga4accdcabe8bddb4964f8986855e7c728" title="Memory barrier. " alt="" coords="189,5,272,32"/>
+<area shape="rect" id="node1" title="Enable a vCPU for event delivery." alt="" coords="5,5,145,32"/>
+<area shape="rect" id="node2" href="$compiler_8h.html#a4accdcabe8bddb4964f8986855e7c728" title="Memory barrier." alt="" coords="193,5,277,32"/>
 </map>

@@ -1,8 +1,8 @@
 var l4_2sys_2utcb_8h =
 [
-    [ "l4_buf_regs_t", "group__l4__utcb__br__api.html#gacb139d0ce8628eac5a3e68e7869a44c7", null ],
-    [ "l4_msg_regs_t", "group__l4__utcb__mr__api.html#ga6a956b7f0afc10b4f36e6c0fe42a9b2b", null ],
-    [ "l4_thread_regs_t", "group__l4__utcb__tcr__api.html#gad27387b36278bc67a82da7299ee80262", null ],
+    [ "l4_buf_regs_t", "group__l4__utcb__br__api.html#gae166f923e400efff8f39be3425641fc5", null ],
+    [ "l4_msg_regs_t", "group__l4__utcb__mr__api.html#ga3501fc9601dfb2fd7b49d04607d2ac84", null ],
+    [ "l4_thread_regs_t", "group__l4__utcb__tcr__api.html#gacdbcfef25e66bdcc9e65c3a0207c8520", null ],
     [ "l4_utcb_t", "group__l4__utcb__api.html#ga89be8a86d11c1d532b636cc2df1330fb", null ],
     [ "l4_timeout_abs", "group__l4__timeout__api.html#gab3eeabba0542c7723fbd5628c6e4d6c3", null ],
     [ "l4_utcb", "group__l4__utcb__api.html#gadc099b4a59e1d99638c72c11a8c8b644", null ],

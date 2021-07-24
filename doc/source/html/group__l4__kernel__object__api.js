@@ -11,8 +11,9 @@ var group__l4__kernel__object__api =
     [ "Thread", "group__l4__thread__api.html", "group__l4__thread__api" ],
     [ "Virtual Console", "group__l4__vcon__api.html", "group__l4__vcon__api" ],
     [ "Virtual Machines", "group__l4__vm__api.html", "group__l4__vm__api" ],
+    [ "Vm", "classL4_1_1Vm.html", null ],
     [ "Kobject", "classL4_1_1Kobject.html", [
-      [ "cap", "classL4_1_1Kobject.html#a314161cb755de6fd0c50da0a757eb4c7", null ],
+      [ "cap", "classL4_1_1Kobject.html#a4f2117ae76762f4084e6a1adb915863c", null ],
       [ "dec_refcnt", "classL4_1_1Kobject.html#a9fe009599de49f1af438ff49998faec0", null ]
     ] ]
 ];

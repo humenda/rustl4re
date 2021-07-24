@@ -1,0 +1,5 @@
+<map id="L4::Ipc_svr::Timeout_queue::timeout_expired" name="L4::Ipc_svr::Timeout_queue::timeout_expired">
+<area shape="rect" id="node1" title="Determine if a timeout has happened." alt="" coords="259,39,443,80"/>
+<area shape="rect" id="node2" href="$classL4_1_1Ipc__svr_1_1Timeout__queue__hooks.html#a27b6731396dc52f3fd5bf35f6788e27b" title="server loop hook" alt="" coords="5,5,211,47"/>
+<area shape="rect" id="node3" href="$classL4_1_1Ipc__svr_1_1Timeout__queue__hooks.html#aa2441ebaedd9d9a3c3e7066d2696ba2f" title="setup_wait() for the server loop" alt="" coords="11,71,205,112"/>
+</map>

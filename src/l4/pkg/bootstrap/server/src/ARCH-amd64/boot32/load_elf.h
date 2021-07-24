@@ -12,8 +12,6 @@
 
 #include "types.h"
 
-typedef void (*Startup_func)(void);
-
-l4_uint32_t load_elf(void *addr, l4_uint32_t *vma_start, l4_uint32_t *vma_end);
+l4_uint32_t load_elf(void *elf);
 
 #endif

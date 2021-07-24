@@ -8,7 +8,7 @@
  *
  * 1. Copyright Notice
  *
- * Some or all of this work - Copyright (c) 1999 - 2017, Intel Corp.
+ * Some or all of this work - Copyright (c) 1999 - 2019, Intel Corp.
  * All rights reserved.
  *
  * 2. License
@@ -111,6 +111,42 @@
  * other governmental approval, or letter of assurance, without first obtaining
  * such license, approval or letter.
  *
+ *****************************************************************************
+ *
+ * Alternatively, you may choose to be licensed under the terms of the
+ * following license:
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions, and the following disclaimer,
+ *    without modification.
+ * 2. Redistributions in binary form must reproduce at minimum a disclaimer
+ *    substantially similar to the "NO WARRANTY" disclaimer below
+ *    ("Disclaimer") and any redistribution must be conditioned upon
+ *    including a substantially similar Disclaimer requirement for further
+ *    binary redistribution.
+ * 3. Neither the names of the above-listed copyright holders nor the names
+ *    of any contributors may be used to endorse or promote products derived
+ *    from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+ * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * Alternatively, you may choose to be licensed under the terms of the
+ * GNU General Public License ("GPL") version 2 as published by the Free
+ * Software Foundation.
+ *
  *****************************************************************************/
 
 #define ACPI_CREATE_PREDEFINED_TABLE
@@ -129,6 +165,10 @@ AhDisplayPredefinedName (
 
 static void
 AhDisplayPredefinedInfo (
+    char                    *Name);
+
+static void
+AhDoSpecialNames (
     char                    *Name);
 
 static void
@@ -257,16 +297,24 @@ AhFindPredefinedNames (
 {
     UINT32                  Length;
     BOOLEAN                 Found;
-    char                    Name[9];
+    char                    Name[ACPI_NAMESEG_SIZE + 1];
 
 
-    if (!NamePrefix || (NamePrefix[0] == '*'))
+    if (!NamePrefix || (*NamePrefix == '*'))
     {
         Found = AhDisplayPredefinedName (NULL, 0);
         return;
     }
 
-    /* Contruct a local name or name prefix */
+    Length = strlen (NamePrefix);
+    if (Length > ACPI_NAMESEG_SIZE)
+    {
+        printf ("%.8s: Predefined name must be 4 characters maximum\n",
+            NamePrefix);
+        return;
+    }
+
+    /* Construct a local name or name prefix */
 
     AcpiUtStrupr (NamePrefix);
     if (*NamePrefix == '_')
@@ -275,19 +323,107 @@ AhFindPredefinedNames (
     }
 
     Name[0] = '_';
-    strncpy (&Name[1], NamePrefix, 7);
+    AcpiUtSafeStrncpy (&Name[1], NamePrefix, 4);
 
-    Length = strlen (Name);
-    if (Length > ACPI_NAME_SIZE)
-    {
-        printf ("%.8s: Predefined name must be 4 characters maximum\n", Name);
-        return;
-    }
+    /* Check for special names such as _Exx, _ACx, etc. */
+
+    AhDoSpecialNames (Name);
+
+    /* Lookup and display the name(s) */
 
     Found = AhDisplayPredefinedName (Name, Length);
     if (!Found)
     {
         printf ("%s, no matching predefined names\n", Name);
+    }
+}
+
+
+/*******************************************************************************
+ *
+ * FUNCTION:    AhDoSpecialNames
+ *
+ * PARAMETERS:  Name          - Name or prefix to find
+ *
+ * RETURN:      None
+ *
+ * DESCRIPTION: Detect and handle the "special" names such as _Exx, _ACx, etc.
+ *
+ * Current support:
+ *  _EJx
+ *  _Exx
+ *  _Lxx
+ *  _Qxx
+ *  _Wxx
+ *  _ACx
+ *  _ALx
+ *  _T_x
+ *
+ ******************************************************************************/
+
+static void
+AhDoSpecialNames (
+    char                    *Name)
+{
+
+    /*
+     * Check for the special names that have one or more numeric
+     * suffixes. For example, _Lxx can have 256 different flavors,
+     * from _L00 to _LFF.
+     */
+    switch (Name[1])
+    {
+    case 'E':
+        if (Name[2] == 'J')
+        {
+            if (isdigit (Name[3]) || (Name[3] == 'X'))
+            {
+                /* _EJx */
+
+                Name[3] = 'x';
+                break;
+            }
+        }
+
+        /* Fallthrough */
+
+    case 'L':
+    case 'Q':
+    case 'W':
+        if ((isxdigit (Name[2]) && isxdigit (Name[3]))
+                ||
+            ((Name[2] == 'X') && (Name[3] == 'X')))
+        {
+            /* _Exx, _Lxx, _Qxx, or _Wxx */
+
+            Name[2] = 'x';
+            Name[3] = 'x';
+        }
+        break;
+
+    case 'A':
+        if ((Name[2] == 'C') || (Name[2] == 'L'))
+        {
+            if (isdigit (Name[3]) || (Name[3] == 'X'))
+            {
+                /* _ACx or _ALx */
+
+                Name[3] = 'x';
+            }
+        }
+        break;
+
+    case 'T':
+        if (Name[2] == '_')
+        {
+            /* _T_x (Reserved for iASL compiler */
+
+            Name[3] = 'x';
+        }
+        break;
+
+    default:
+        break;
     }
 }
 
@@ -384,7 +520,7 @@ AhDisplayPredefinedInfo (
 
     /* NOTE: we check both tables always because there are some dupes */
 
-    /* Check against the predefine methods first */
+    /* Check against the predefined methods first */
 
     ThisName = AcpiUtMatchPredefinedMethod (Name);
     if (ThisName)
@@ -574,7 +710,7 @@ AhDisplayTables (
 
     printf ("Known ACPI tables:\n");
 
-    for (Info = Gbl_AcpiSupportedTables; Info->Signature; Info++)
+    for (Info = AcpiGbl_SupportedTables; Info->Signature; Info++)
     {
         printf ("%8s : %s\n", Info->Signature, Info->Description);
         i++;

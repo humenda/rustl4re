@@ -1,5 +1,9 @@
 <map id="L4::Server_object_t&lt; IFACE, BASE &gt;" name="L4::Server_object_t&lt; IFACE, BASE &gt;">
-<area shape="rect" id="node2" href="$structL4_1_1Server__object__x.html" title="Helper class to implement p_dispatch based server objects. " alt="" coords="5,204,152,296"/>
-<area shape="rect" id="node3" href="$structL4_1_1Server__object__t.html" title="{L4::Server_object_t\l\&lt; Kobject \&gt;\n||+ get_buffer_demand()\l+ dispatch_meta_request()\l+ proto_dispatch()\l}" alt="" coords="176,189,368,311"/>
-<area shape="rect" id="node4" href="$structL4_1_1Irq__handler__object.html" title="Server object base class for handling IRQ messages. " alt="" coords="191,360,353,437"/>
+<area shape="rect" id="node1" title="Base class (template) for server implementing server objects." alt="" coords="116,420,315,541"/>
+<area shape="rect" id="node4" href="$structL4_1_1Server__object__t.html" title=" " alt="" coords="5,626,204,747"/>
+<area shape="rect" id="node6" href="$structL4_1_1Server__object__t.html" title=" " alt="" coords="228,619,427,755"/>
+<area shape="rect" id="node2" href="$classL4_1_1Server__object.html" title="Abstract server object to be used with L4::Server and L4::Basic_registry." alt="" coords="148,264,283,371"/>
+<area shape="rect" id="node3" href="$structL4_1_1Epiface.html" title="Base class for interface implementations." alt="" coords="129,5,302,215"/>
+<area shape="rect" id="node5" href="$structL4_1_1Irq__handler__object.html" title="Server object base class for handling IRQ messages." alt="" coords="22,811,187,889"/>
+<area shape="rect" id="node7" href="$structL4_1_1Server__object__x.html" title="Helper class to implement p_dispatch based server objects." alt="" coords="233,804,422,896"/>
 </map>

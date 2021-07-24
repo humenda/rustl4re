@@ -1,3 +1,6 @@
 <map id="l4_timeout" name="l4_timeout">
-<area shape="rect" id="node2" href="$classL4_1_1Ipc__svr_1_1Timeout__queue__hooks.html#ae4a6bd9781bf97a37dbff039db58d47d" title="get the time for the next timeout " alt="" coords="140,5,347,76"/>
+<area shape="rect" id="node1" title="Combine send and receive timeout in a timeout." alt="" coords="481,50,573,77"/>
+<area shape="rect" id="node2" href="$classL4_1_1Ipc__svr_1_1Timeout__queue__hooks.html#ae4a6bd9781bf97a37dbff039db58d47d" title="get the time for the next timeout" alt="" coords="259,43,433,84"/>
+<area shape="rect" id="node3" href="$classL4_1_1Ipc__svr_1_1Timeout__queue__hooks.html#af6affbb704e771370cd0ae5486263784" title="Add a timout to the queue for time time." alt="" coords="5,5,211,47"/>
+<area shape="rect" id="node4" href="$classL4_1_1Ipc__svr_1_1Timeout__queue__hooks.html#ab1fba549749a3efc182d719e22d23a4e" title="Remove timeout from the queue." alt="" coords="21,71,195,127"/>
 </map>

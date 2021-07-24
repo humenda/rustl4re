@@ -1,3 +1,4 @@
 <map id="Basic Macros" name="Basic Macros">
-<area shape="rect" id="node1" href="$group__l4__api.html" title="Interfaces for all kinds of base functionality. " alt="" coords="5,5,85,32"/>
+<area shape="rect" id="node1" href="$group__l4__api.html" title="Interfaces for all kinds of base functionality." alt="" coords="5,5,84,31"/>
+<area shape="rect" id="node2" title="L4 standard macros for header files, function definitions, and public APIs etc." alt="" coords="132,5,240,31"/>
 </map>

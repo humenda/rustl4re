@@ -129,6 +129,7 @@ public:
   explicit Rect(Area const &a) : _p1(0, 0), _p2(a.w() - 1, a.h() - 1) {}
 
   Rect() {}
+  Rect(const Rect &r) : _p1(r._p1), _p2(r._p2) {}
 
   Rect operator = (Rect const &o) { _p1 = o._p1; _p2 = o._p2; return *this; }
   bool operator == (Rect const &o) const
@@ -300,6 +301,7 @@ public:
   Flags &operator &= (Flags const &o) { _v &= o._v; return *this; }
   Flags &operator &= (Enum e) { _v &= (unsigned)e; return *this; }
   Flags operator ~ () const { return Flags(~_v, true); }
+  Flags &operator = (Flags const &o) { _v = o._v; return *this; }
 
   unsigned value() const { return _v; }
 };

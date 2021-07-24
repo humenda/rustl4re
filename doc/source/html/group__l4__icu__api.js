@@ -5,7 +5,7 @@ var group__l4__icu__api =
       [ "nr_irqs", "structl4__icu__info__t.html#aa4095d8f20850fc1b3814946c0330ca8", null ],
       [ "nr_msis", "structl4__icu__info__t.html#a84a4af9b1e2def9499727e34abf2a24e", null ]
     ] ],
-    [ "l4_icu_info_t", "group__l4__icu__api.html#gacfdf3e00e12fe195b2403f437cc09f17", null ],
+    [ "l4_icu_info_t", "group__l4__icu__api.html#ga054d1d824af9ba14cb7bda808ad5a4eb", null ],
     [ "L4_icu_flags", "group__l4__icu__api.html#gae0eed2f822f96b14e27506b723adbe03", [
       [ "L4_ICU_FLAG_MSI", "group__l4__icu__api.html#ggae0eed2f822f96b14e27506b723adbe03a1fd33de4bedf743cc5f94aaf718ed109", null ]
     ] ],

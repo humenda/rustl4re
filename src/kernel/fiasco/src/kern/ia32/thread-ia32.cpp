@@ -38,6 +38,7 @@ IMPLEMENTATION [ia32,amd64,ux]:
 #include "thread.h"
 #include "timer.h"
 #include "trap_state.h"
+#include "exc_table.h"
 
 Trap_state::Handler Thread::nested_trap_handler FIASCO_FASTCALL;
 
@@ -66,6 +67,8 @@ Thread::Thread(Ram_quota *q)
   prepare_switch_to(&user_invoke);
 
   arch_init();
+
+  alloc_eager_fpu_state();
 
   state_add_dirty(Thread_dead, false);
 
@@ -129,7 +132,7 @@ Thread::pagein_tcb_request(Return_frame *regs)
       assert((op >> 11) <= 2);
       reg[-(op>>11)] = 0; // op==0 => eax, op==1 => ecx, op==2 => edx
 
-      // tell program that a pagefault occured we cannot handle
+      // tell program that a pagefault occurred we cannot handle
       regs->flags(regs->flags() | 0x41); // set carry and zero flag in EFLAGS
       return true;
     }
@@ -158,6 +161,39 @@ Thread::print_page_fault_error(Mword e)
   printf("%lx", e);
 }
 
+PRIVATE static
+bool
+Thread::handle_kernel_exc(Trap_state *ts)
+{
+  for (auto const &e: Exc_entry::table())
+    {
+      if (e.ip == ts->ip())
+        {
+          if (e.handler)
+            {
+              if (0)
+                printf("fixup exception(h): %ld: ip=%lx -> handler %p fixup %lx ts @ %p -> %lx\n",
+                       ts->trapno(), ts->ip(), e.handler, e.fixup, ts, reinterpret_cast<Mword const *>(ts)[-1]);
+              if (0)
+                ts->dump();
+
+              return e.handler(&e, ts);
+            }
+          else if (e.fixup)
+            {
+              if (0)
+                printf("fixup exception: %ld: ip=%lx -> fixup %lx\n",
+                       ts->trapno(), ts->ip(), e.fixup);
+              ts->ip(e.fixup);
+              return true;
+            }
+          else
+            return false;
+        }
+    }
+  return false;
+}
+
 /**
  * The global trap handler switch.
  * This function handles CPU-exception reflection, int3 debug messages,
@@ -171,7 +207,6 @@ PUBLIC
 int
 Thread::handle_slow_trap(Trap_state *ts)
 {
-  Address ip;
   int from_user = ts->cs() & 3;
 
   if (EXPECT_FALSE(ts->_trapno == 0xee)) //debug IPI
@@ -179,6 +214,9 @@ Thread::handle_slow_trap(Trap_state *ts)
       Ipi::eoi(Ipi::Debug, current_cpu());
       goto generic_debug;
     }
+
+  if (EXPECT_FALSE(ts->_trapno == 2))
+    goto generic_debug;        // NMI always enters kernel debugger
 
   if (from_user && _space.user_mode())
     {
@@ -207,21 +245,15 @@ Thread::handle_slow_trap(Trap_state *ts)
 
   if (EXPECT_FALSE(!from_user))
     {
+      if (handle_kernel_exc(ts))
+        goto success;
+
       // get also here if a pagefault was not handled by the user level pager
       if (ts->_trapno == 14)
-	goto check_exception;
-
-      if (check_known_inkernel_fault(ts))
-        {
-          ts->ip(regs()->ip());
-          goto check_exception;
-        }
+        goto check_exception;
 
       goto generic_debug;      // we were in kernel mode -- nothing to emulate
     }
-
-  if (EXPECT_FALSE(ts->_trapno == 2))
-    goto generic_debug;        // NMI always enters kernel debugger
 
   if (EXPECT_FALSE(ts->_trapno == 0xffffffff))
     goto generic_debug;        // debugger interrupt
@@ -259,10 +291,6 @@ Thread::handle_slow_trap(Trap_state *ts)
       break;
     }
 
-  ip = ts->ip();
-
-  // just print out some warning, we do the normal exception handling
-  handle_sysenter_trap(ts, ip, from_user);
   _recover_jmpbuf = 0;
 
 check_exception:
@@ -328,8 +356,8 @@ Thread::update_local_map(Address pfa, Mword /*error_code*/)
     return false;
 
   m->set_bit(idx);
-   *s.pte = *r.pte;
-   return true;
+  *s.pte = *r.pte;
+  return true;
 }
 
 //----------------------------------------------------------------------------
@@ -407,7 +435,7 @@ bool
 Thread::handle_sigma0_page_fault(Address pfa)
 {
   Mem_space::Page_order size = mem_space()->largest_page_size(); // take a page size less than 16MB (1<<24)
-  auto f = mem_space()->fitting_sizes();
+  auto const &f = mem_space()->fitting_sizes();
   Virt_addr va = Virt_addr(pfa);
 
   // Check if mapping a superpage doesn't exceed the size of physical memory
@@ -429,21 +457,6 @@ void
 Thread::save_fpu_state_to_utcb(Trap_state *, Utcb *)
 {}
 
-/* return 1 if this exception should be sent, return 0 if not
- */
-PUBLIC inline NEEDS["trap_state.h"]
-int
-Thread::send_exception_arch(Trap_state *ts)
-{
-  // Do not send exception IPC but return 'not for us' if thread is a normal
-  // thread (not alien) and it's a debug trap,
-  // debug traps for aliens are always reflected as exception IPCs
-  if (!(state() & Thread_alien) && (ts->_trapno == 1))
-    return 0; // we do not handle this
-
-  return 1; // make it an exception
-}
-
 //----------------------------------------------------------------------------
 IMPLEMENTATION [!(vmx || svm) && (ia32 || amd64)]:
 
@@ -455,12 +468,15 @@ IMPLEMENTATION [(vmx || svm) && (ia32 || amd64)]:
 #include "vmx.h"
 #include "svm.h"
 
-PRIVATE inline NEEDS["vmx.h", "svm.h"]
+PRIVATE inline NEEDS["vmx.h", "svm.h", "cpu.h"]
 void
 Thread::_hw_virt_arch_init_vcpu_state(Vcpu_state *vcpu_state)
 {
   if (Vmx::cpus.current().vmx_enabled())
     Vmx::cpus.current().init_vmcs_infos(vcpu_state);
+
+  if (Cpu::boot_cpu()->vendor() == Cpu::Vendor_intel)
+    vcpu_state->user_data[6] = (Mword)Cpu::ucode_revision();
 
   // currently we do nothing for SVM here
 }
@@ -520,12 +536,12 @@ Thread::vcpu_resume_user_arch()
 
 PRIVATE inline
 L4_msg_tag
-Thread::sys_gdt_x86(L4_msg_tag tag, Utcb *utcb)
+Thread::sys_gdt_x86(L4_msg_tag tag, Utcb const *utcb, Utcb *out)
 {
   // if no words given then return the first gdt entry
   if (EXPECT_FALSE(tag.words() == 1))
     {
-      utcb->values[0] = Gdt::gdt_user_entry1 >> 3;
+      out->values[0] = Gdt::gdt_user_entry1 >> 3;
       return Kobject_iface::commit_result(0, 1);
     }
 
@@ -600,11 +616,10 @@ IMPLEMENTATION[ia32 || amd64]:
 #include "gdt.h"
 #include "globalconfig.h"
 #include "idt.h"
+#include "keycodes.h"
 #include "simpleio.h"
 #include "static_init.h"
 #include "terminate.h"
-
-DEFINE_PER_CPU Per_cpu<Thread::Dbg_stack> Thread::dbg_stack;
 
 IMPLEMENT static inline NEEDS ["gdt.h"]
 Mword
@@ -698,35 +713,7 @@ Thread::check_io_bitmap_delimiter_fault(Trap_state *ts)
   return 1;
 }
 
-PRIVATE inline
-bool
-Thread::handle_sysenter_trap(Trap_state *ts, Address eip, bool from_user)
-{
-  if (EXPECT_FALSE
-      ((ts->_trapno == 6 || ts->_trapno == 13)
-       && (ts->_err & 0xffff) == 0
-       && (eip < Mem_layout::User_max - 1)
-       && (mem_space()->peek((Unsigned16*) eip, from_user)) == 0x340f))
-    {
-      // somebody tried to do sysenter on a machine without support for it
-      WARN("tcb=%p killed:\n"
-	   "\033[1;31mSYSENTER not supported on this machine\033[0m",
-	   this);
-
-      if (Cpu::have_sysenter())
-	// GP exception if sysenter is not correctly set up..
-        WARN("MSR_SYSENTER_CS: %llx", Cpu::rdmsr(MSR_SYSENTER_CS));
-      else
-	// We get UD exception on processors without SYSENTER/SYSEXIT.
-        WARN("SYSENTER/EXIT not available.");
-
-      return false;
-    }
-
-  return true;
-}
-
-PRIVATE inline
+PRIVATE inline NEEDS["keycodes.h"]
 int
 Thread::handle_not_nested_trap(Trap_state *ts)
 {
@@ -740,7 +727,7 @@ Thread::handle_not_nested_trap(Trap_state *ts)
   while ((r = Kconsole::console()->getchar(false)) == -1)
     Proc::pause();
 
-  if (r == '\033')
+  if (r == KEY_ESC)
     terminate (1);
 
   return 0;
@@ -748,7 +735,7 @@ Thread::handle_not_nested_trap(Trap_state *ts)
 
 PROTECTED inline
 int
-Thread::sys_control_arch(Utcb *)
+Thread::sys_control_arch(Utcb const *, Utcb *)
 {
   return 0;
 }

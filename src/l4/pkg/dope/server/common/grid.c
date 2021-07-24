@@ -114,7 +114,7 @@ void print_grid_info(GRID *g) {
 		printf("  index: %d\n", sec->index);
 		printf("   offset:%d\n", sec->offset);
 		printf("   size:  %d\n", sec->size);
-		printf("   weight:%f\n",  sec->weight);
+		printf("   weight:%f\n",  (double)sec->weight);
 		sec=sec->next;
 	}
 	printf(" column-sections:\n");
@@ -123,7 +123,7 @@ void print_grid_info(GRID *g) {
 		printf("  index: %d\n", sec->index);
 		printf("   offset:%d\n", sec->offset);
 		printf("   size:  %d\n", sec->size);
-		printf("   weight:%f\n",  sec->weight);
+		printf("   weight:%f\n",  (double)sec->weight);
 		sec = sec->next;
 	}
 	printf(" child-widgets:\n");
@@ -1259,7 +1259,7 @@ static void script_column_config(GRID *g, long index, float weight, long width) 
 	 && !get_section(g->gd->cols, index)) weight = 1.0;
 
 	if (width!=-1) grid_set_col_w(g, index, width);
-	else if (weight > 0.0) grid_set_col_weight(g, index, weight);
+	else if (weight > 0.0f) grid_set_col_weight(g, index, weight);
 	gen_methods.update(g);
 }
 
@@ -1274,7 +1274,7 @@ static void script_row_config(GRID *g, long index, float weight, long width) {
 	 && !get_section(g->gd->rows, index)) weight = 1.0;
 
 	if (width!=-1) grid_set_row_h(g, index, width);
-	else if (weight > 0.0) grid_set_row_weight(g, index, weight);
+	else if (weight > 0.0f) grid_set_row_weight(g, index, weight);
 	gen_methods.update(g);
 }
 

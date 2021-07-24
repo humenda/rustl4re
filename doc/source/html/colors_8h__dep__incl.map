@@ -1,7 +1,8 @@
 <map id="l4/re/c/video/colors.h" name="l4/re/c/video/colors.h">
-<area shape="rect" id="node2" href="$view_8h.html" title="l4/re/c/video/view.h" alt="" coords="139,80,281,107"/>
-<area shape="rect" id="node5" href="$goos_8h.html" title="l4/re/c/video/goos.h" alt="" coords="248,155,393,181"/>
-<area shape="rect" id="node3" href="$bitmap_8h.html" title="Bitmap renderer header file. " alt="" coords="5,155,172,181"/>
-<area shape="rect" id="node4" href="$font_8h.html" title="Bitmap font renderer header file. " alt="" coords="51,237,201,263"/>
-<area shape="rect" id="node6" href="$goos__fb_8h.html" title="Framebuffer utility functionality. " alt="" coords="261,229,381,271"/>
+<area shape="rect" id="node1" title=" " alt="" coords="96,5,253,32"/>
+<area shape="rect" id="node2" href="$goos_8h.html" title=" " alt="" coords="5,155,155,181"/>
+<area shape="rect" id="node4" href="$view_8h.html" title=" " alt="" coords="177,80,325,107"/>
+<area shape="rect" id="node3" href="$goos__fb_8h.html" title="Framebuffer utility functionality." alt="" coords="17,229,143,271"/>
+<area shape="rect" id="node5" href="$bitmap_8h.html" title="Bitmap renderer header file." alt="" coords="179,155,362,181"/>
+<area shape="rect" id="node6" href="$font_8h.html" title="Bitmap font renderer header file." alt="" coords="253,237,416,263"/>
 </map>

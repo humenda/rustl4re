@@ -30,10 +30,12 @@
  */
 enum L4virtio_block_operations
 {
-  L4VIRTIO_BLOCK_T_IN     = 0,  /**<  Read from device */
-  L4VIRTIO_BLOCK_T_OUT    = 1,  /**<  Write to device */
-  L4VIRTIO_BLOCK_T_FLUSH  = 4,  /**<  Flush data to disk */
-  L4VIRTIO_BLOCK_T_GET_ID = 8,  /**<  Get device ID */
+  L4VIRTIO_BLOCK_T_IN      = 0,       /**<  Read from device */
+  L4VIRTIO_BLOCK_T_OUT     = 1,       /**<  Write to device */
+  L4VIRTIO_BLOCK_T_FLUSH   = 4,       /**<  Flush data to disk */
+  L4VIRTIO_BLOCK_T_GET_ID  = 8,       /**<  Get device ID */
+  L4VIRTIO_BLOCK_T_DISCARD = 11,      /**<  Discard a range of sectors */
+  L4VIRTIO_BLOCK_T_WRITE_ZEROES = 13, /**< Write zeroes to a range of sectors */
 };
 
 /**
@@ -56,6 +58,21 @@ typedef struct l4virtio_block_header_t
   l4_uint64_t sector; /**<  First sector to read/write */
 } l4virtio_block_header_t;
 
+enum L4virtio_block_discard_flags_t
+{
+  L4VIRTIO_BLOCK_DISCARD_F_UNMAP    = 0x00000001UL,
+  L4VIRTIO_BLOCK_DISCARD_F_RESERVED = 0xFFFFFFFEUL,
+};
+
+/**
+ * Structure used for the write zeroes and discard commands.
+ */
+typedef struct l4virtio_block_discard_t
+{
+  l4_uint64_t sector;
+  l4_uint32_t num_sectors;
+  l4_uint32_t flags;
+} l4virtio_block_discard_t;
 
 /**
  * Device configuration for block devices.
@@ -83,6 +100,15 @@ typedef struct l4virtio_block_config_t
     /**  Suggested optimal (i.e. maximum) I/O size in blocks */
     l4_uint32_t opt_io_size;
   } topology;
+  l4_uint8_t writeback;
+  l4_uint8_t unused0[3];
+  l4_uint32_t max_discard_sectors;
+  l4_uint32_t max_discard_seg;
+  l4_uint32_t discard_sector_alignment;
+  l4_uint32_t max_write_zeroes_sectors;
+  l4_uint32_t max_write_zeroes_seg;
+  l4_uint8_t write_zeroes_may_unmap;
+  l4_uint8_t unused1[3];
 } l4virtio_block_config_t;
 
 /**\}*/

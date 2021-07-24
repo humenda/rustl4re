@@ -1,5 +1,5 @@
 /*
- * (c) 2010 Adam Lackorzynski <adam@os.inf.tu-dresden.de>,
+ * (c) 2010-2020 Adam Lackorzynski <adam@os.inf.tu-dresden.de>,
  *          Alexander Warg <warg@os.inf.tu-dresden.de>
  *     economic rights: Technische Universität Dresden (Germany)
  *
@@ -15,11 +15,15 @@
 #include <cstring>
 #include <cstdlib>
 #include <l4/cxx/exceptions>
-#include <l4/io/pciids.h>
 #include <l4/sys/err.h>
 
 #include "debug.h"
-#include "pci.h"
+#include <pci-caps.h>
+#include <pci-if.h>
+#include <pci-dev.h>
+#ifdef CONFIG_L4IO_PCIID_DB
+# include "pciids.h"
+#endif
 #include "vpci.h"
 #include "virt/vbus_factory.h"
 
@@ -28,11 +32,6 @@ namespace Vi {
 // -----------------------------------------------------------------------
 // Pci_virtual_dev
 // -----------------------------------------------------------------------
-
-Pci_virtual_dev::Pci_virtual_dev()
-{
-  memset(&_h, 0, sizeof(_h));
-}
 
 int
 Pci_virtual_dev::cfg_read(int reg, l4_uint32_t *v, Cfg_width order)
@@ -133,13 +132,11 @@ Pci_dev_feature::dispatch(l4_umword_t, l4_uint32_t func, L4::Ipc::Iostream& ios)
 bool
 Pci_proxy_dev::scan_pci_caps()
 {
-  l4_uint8_t pci_cap;
-  _hwf->cfg_read(Hw::Pci::Config::Capability_ptr, &pci_cap);
+  l4_uint8_t pci_cap = _hwf->config().read<l4_uint8_t>(Hw::Pci::Config::Capability_ptr);
   bool is_pci_express = false;
   while (pci_cap)
     {
-      l4_uint16_t cap;
-      _hwf->cfg_read(pci_cap, &cap);
+      l4_uint16_t cap = _hwf->config().read<l4_uint16_t>(pci_cap);
       switch (cap & 0xff)
         {
         case Hw::Pci::Cap::Pcie:
@@ -159,24 +156,69 @@ Pci_proxy_dev::scan_pci_caps()
   return is_pci_express;
 }
 
+namespace {
+    struct Pcie_dummy_cap : Pcie_capability
+    {
+      Pcie_dummy_cap(unsigned offset, unsigned sz)
+      : Pcie_capability(offset)
+      {
+        set_cap(0xfe); // reserved ID
+        set_size(sz);
+      }
+
+      int cap_read(int, l4_uint32_t *v, Cfg_width) override
+      {
+        *v = 0xffffffff;
+        return 0;
+      }
+
+      int cap_write(int, l4_uint32_t, Cfg_width) override
+      {
+        return 0;
+      }
+    };
+}
+
+l4_uint16_t
+Pci_proxy_dev::_skip_pcie_cap(Hw::Pci::Extended_cap const &cap, unsigned sz)
+{
+  // create "fake" capability with a reserved ID, according to
+  // PCI-SIG IDs >0x2c are reserved
+  add_pcie_cap(new Pcie_dummy_cap(cap.reg(), sz));
+  return cap.next();
+}
+
 void
 Pci_proxy_dev::scan_pcie_caps()
 {
   l4_uint16_t offset = 0x100;
-  l4_uint32_t c;
-  for (;;)
+  while (offset)
     {
-      _hwf->cfg_read(offset, &c);
-      if (offset == 0x100 && ((c & 0xffff) == 0xffff))
+      Hw::Pci::Extended_cap cap = _hwf->config(offset);
+
+      // the device doesn't have extended capabilities
+      if (offset == 0x100 && !cap.is_valid())
         return;
 
-      add_pcie_cap(new Pcie_proxy_cap(_hwf, c, offset, offset));
+      // hide special extended capabilities from virtual devices
+      switch (cap.id())
+        {
+        default:
+          break;
 
-      offset = c >> 20;
-      if (!offset)
-        break;
+        case Hw::Pci::Sr_iov_cap::Id:
+          offset = _skip_pcie_cap(cap, Hw::Pci::Sr_iov_cap::Size);
+          continue;
+        case Hw::Pci::Extended_cap::Acs:
+          offset = _skip_pcie_cap(cap, 8);
+          continue;
+        }
+
+      add_pcie_cap(new Pcie_proxy_cap(_hwf, cap.header(), offset, offset));
+      offset = cap.next();
     }
 
+  // if the device has extended capabilities there must be one at offset 0x100
   assert (!_pcie_caps || _pcie_caps->offset() == 0x100);
 #if 0
   if (_pcie_caps && _pcie_caps->offset() != 0x100)
@@ -188,36 +230,8 @@ Pci_proxy_dev::Pci_proxy_dev(Hw::Pci::If *hwf)
 : _hwf(hwf), _rom(0)
 {
   assert (hwf);
-  for (int i = 0; i < 6; ++i)
-    {
-      Resource *r = _hwf->bar(i);
-
-      if (!r)
-	{
-	  _vbars[i] = 0;
-	  continue;
-	}
-
-      if (_hwf->is_64bit_high_bar(i))
-	{
-	  _vbars[i] = l4_uint64_t(r->start()) >> 32;
-	}
-      else
-	{
-	  _vbars[i] = r->start();
-	  if (r->type() == Resource::Io_res)
-	    _vbars[i] |= 1;
-
-	  if (r->is_64bit())
-	    _vbars[i] |= 4;
-
-	  if (r->prefetchable())
-	    _vbars[i] |= 8;
-
-	}
-
-      //printf("  bar: %d = %08x\n", i, _vbars[i]);
-    }
+  for (int i = 0; i < 6;)
+    i += _vbars.from_resource(i, _hwf->bar(i));
 
   if (_hwf->rom())
     _rom = _hwf->rom()->start();
@@ -249,44 +263,13 @@ Pci_proxy_dev::irq_enable(Irq_info *irq)
   return -L4_EINVAL;
 }
 
-
-
-l4_uint32_t
-Pci_proxy_dev::read_bar(int bar)
-{
-  // d_printf(DBG_ALL, "   read bar[%x]: %08x\n", bar, _vbars[bar]);
-  return _vbars[bar];
-}
-
-void
-Pci_proxy_dev::write_bar(int bar, l4_uint32_t v)
-{
-  Hw::Pci::If *p = _hwf;
-
-  Resource *r = p->bar(bar);
-  if (!r)
-    return;
-
-  // printf("  write bar[%x]: %llx-%llx...\n", bar, r->abs_start(), r->abs_end());
-  l4_uint64_t size_mask = r->alignment();
-
-  if (r->type() == Resource::Io_res)
-    size_mask |= 0xffff0000;
-
-  if (p->is_64bit_high_bar(bar))
-    size_mask >>= 32;
-
-  _vbars[bar] = (_vbars[bar] & size_mask) | (v & ~size_mask);
-
-  // printf("    bar=%lx\n", _vbars[bar]);
-}
-
 void
 Pci_proxy_dev::write_rom(l4_uint32_t v)
 {
   Hw::Pci::If *p = _hwf;
 
-  // printf("write rom bar %x %p\n", v, _dev->rom());
+  if (0)
+    printf("write ROM bar %x %p\n", v, p->rom());
   Resource *r = p->rom();
   if (!r)
     return;
@@ -371,13 +354,13 @@ Pci_proxy_dev::cfg_read(int reg, l4_uint32_t *v, Cfg_width order)
     case 0x08: buf = p->class_rev(); break;
     case 0x04: buf = p->checked_cmd_read(); break;
     /* simulate multi function on hdr type */
-    case 0x0c: p->cfg_read(dw_reg, &buf); buf |= 0x00800000; break;
+    case 0x0c: buf = p->config().read<l4_uint32_t>(dw_reg) | 0x00800000; break;
     case 0x10: /* bars 0 to 5 */
     case 0x14:
     case 0x18:
     case 0x1c:
     case 0x20:
-    case 0x24: buf = read_bar((dw_reg - 0x10) / 4); break;
+    case 0x24: buf = _vbars.read(reg - 0x10, order); break;
     case 0x2c: buf = p->subsys_vendor_ids(); break;
     case 0x30: buf = read_rom(); break;
     case 0x34: /* CAPS */
@@ -395,8 +378,8 @@ Pci_proxy_dev::cfg_read(int reg, l4_uint32_t *v, Cfg_width order)
                /* fall through */
     case 0x28:
     case 0x3c:
-               /* pass trough the rest ... */
-               p->cfg_read(dw_reg, &buf);
+               /* pass through the rest ... */
+               buf = p->config().read<l4_uint32_t>(dw_reg);
                break;
     }
 
@@ -468,14 +451,7 @@ Pci_proxy_dev::cfg_write(int reg, l4_uint32_t v, Cfg_width order)
     case 0x18:
     case 0x1c:
     case 0x20:
-    case 0x24:
-      {
-        l4_uint32_t b = read_bar(reg / 4 - 4);
-        b &= ~mask_32;
-        b |= value_32 & mask_32;
-        write_bar(reg / 4 - 4, b);
-        return 0;
-      }
+    case 0x24: _vbars.write(reg - 0x10, v, order); return 0;
     case Hw::Pci::Config::Subsys_vendor:  return 0;
     case Hw::Pci::Config::Rom_address:    return _do_rom_bar_write(mask_32, value_32);
     case Hw::Pci::Config::Capability_ptr: return 0;
@@ -523,7 +499,7 @@ private:
   unsigned char _cfg_space[4*4];
 
 public:
-  int irq_enable(Irq_info *irq)
+  int irq_enable(Irq_info *irq) override
   {
     irq->irq = -1;
     return -1;
@@ -532,8 +508,11 @@ public:
   Pci_dummy()
   {
     add_feature(this);
+    memset(_cfg_space, 0, sizeof(_cfg_space));
+
     _h = &_cfg_space[0];
     _h_len = sizeof(_cfg_space);
+
     cfg_hdr()->hdr_type = 0x80;
     cfg_hdr()->vendor_device = 0x02000400;
     cfg_hdr()->status = 0;
@@ -541,9 +520,9 @@ public:
     cfg_hdr()->cmd = 0x0;
   }
 
-  bool match_hw_feature(const Hw::Dev_feature*) const { return false; }
-  void set_host(Device *d) { _host = d; }
-  Device *host() const { return _host; }
+  bool match_hw_feature(const Hw::Dev_feature*) const override { return false; }
+  void set_host(Device *d) override { _host = d; }
+  Device *host() const override { return _host; }
 
 private:
   Device *_host;
@@ -656,7 +635,9 @@ Pci_bridge::add_child_fixed(Device *d, Pci_dev *vp, unsigned dn, unsigned fn)
 Pci_bridge *
 Pci_bridge::find_bridge(unsigned bus)
 {
-  // printf("PCI[%p]: look for bridge for bus %x %02x %02x\n", this, bus, _subordinate, _secondary);
+  if (0)
+    printf("PCI[%p]: look for bridge for bus %x %02x %02x\n",
+           this, bus, _subordinate, _secondary);
   if (bus == _secondary)
     return this;
 

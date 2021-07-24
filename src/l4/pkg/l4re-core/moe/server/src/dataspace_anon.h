@@ -12,15 +12,20 @@
 
 namespace Moe {
 
+/**
+ * Dynamically allocatable dataspace based on a contiguous region of RAM.
+ *
+ * This type of dataspace is always fully preallocated.
+ */
 class Dataspace_anon : public Dataspace_cont
 {
 public:
-  Dataspace_anon(long size, bool writable = true,
+  Dataspace_anon(long size, Flags flags = L4Re::Dataspace::F::RWX,
                  unsigned char page_shift = L4_PAGESHIFT);
   virtual ~Dataspace_anon();
 
-  bool is_static() const throw() { return false; }
-  int pre_allocate(l4_addr_t, l4_size_t, unsigned) { return 0; }
+  bool is_static() const throw() override { return false; }
+  int pre_allocate(l4_addr_t, l4_size_t, unsigned) override { return 0; }
 };
 
 };

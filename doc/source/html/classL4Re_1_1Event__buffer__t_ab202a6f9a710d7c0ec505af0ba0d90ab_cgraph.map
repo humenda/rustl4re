@@ -1,0 +1,4 @@
+<map id="L4Re::Event_buffer_t::put" name="L4Re::Event_buffer_t::put">
+<area shape="rect" id="node1" title="Put event into buffer at current position." alt="" coords="5,5,149,47"/>
+<area shape="rect" id="node2" href="$compiler_8h.html#a095f2ab26de8289771dae829f4637fc0" title="Write memory barrier." alt="" coords="197,13,271,39"/>
+</map>

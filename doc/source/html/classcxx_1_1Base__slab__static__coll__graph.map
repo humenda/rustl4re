@@ -1,2 +1,3 @@
 <map id="cxx::Base_slab_static&lt; Obj_size, Slab_size, Max_free, Alloc &gt;" name="cxx::Base_slab_static&lt; Obj_size, Slab_size, Max_free, Alloc &gt;">
+<area shape="rect" id="node1" title="Merged slab allocator (allocators for objects of the same size are merged together)." alt="" coords="5,5,171,156"/>
 </map>

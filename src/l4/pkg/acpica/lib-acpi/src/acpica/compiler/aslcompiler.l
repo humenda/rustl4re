@@ -9,7 +9,7 @@
  *
  * 1. Copyright Notice
  *
- * Some or all of this work - Copyright (c) 1999 - 2017, Intel Corp.
+ * Some or all of this work - Copyright (c) 1999 - 2019, Intel Corp.
  * All rights reserved.
  *
  * 2. License
@@ -112,10 +112,47 @@
  * other governmental approval, or letter of assurance, without first obtaining
  * such license, approval or letter.
  *
+ *****************************************************************************
+ *
+ * Alternatively, you may choose to be licensed under the terms of the
+ * following license:
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions, and the following disclaimer,
+ *    without modification.
+ * 2. Redistributions in binary form must reproduce at minimum a disclaimer
+ *    substantially similar to the "NO WARRANTY" disclaimer below
+ *    ("Disclaimer") and any redistribution must be conditioned upon
+ *    including a substantially similar Disclaimer requirement for further
+ *    binary redistribution.
+ * 3. Neither the names of the above-listed copyright holders nor the names
+ *    of any contributors may be used to endorse or promote products derived
+ *    from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+ * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * Alternatively, you may choose to be licensed under the terms of the
+ * GNU General Public License ("GPL") version 2 as published by the Free
+ * Software Foundation.
+ *
  *****************************************************************************/
 
 #include "aslcompiler.h"
 #include "aslcompiler.y.h"
+#include "acconvert.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -138,10 +175,10 @@ YYSTYPE AslCompilerlval;
 static void
 AslDoLineDirective (void);
 
-static char
+static BOOLEAN
 AslDoComment (void);
 
-static char
+static BOOLEAN
 AslDoCommentType2 (void);
 
 static char
@@ -158,6 +195,7 @@ count (int type);
 
 LeadNameChar                [A-Za-z_]
 DigitChar                   [0-9]
+OctalChar                   [0-7]
 HexDigitChar                [A-Fa-f0-9]
 RootChar                    [\\]
 Nothing                     []
@@ -241,8 +279,7 @@ NamePathTail                [.]{NameSeg}
     /*
      * Begin standard ASL grammar
      */
-0[xX]{HexDigitChar}+ |
-{DigitChar}+                { AslCompilerlval.i = UtDoConstant ((char *) AslCompilertext);
+[0-9][a-zA-Z0-9]*            { AslCompilerlval.i = UtDoConstant ((char *) AslCompilertext);
                                 count (1); return (PARSEOP_INTEGER); }
 
 "Include"                   { count (1); return (PARSEOP_INCLUDE); }
@@ -418,6 +455,11 @@ NamePathTail                [.]{NameSeg}
 "Memory24"                  { count (1); return (PARSEOP_MEMORY24); }
 "Memory32"                  { count (1); return (PARSEOP_MEMORY32); }
 "Memory32Fixed"             { count (1); return (PARSEOP_MEMORY32FIXED); }
+"PinConfig"                 { count (1); return (PARSEOP_PINCONFIG); }
+"PinFunction"               { count (1); return (PARSEOP_PINFUNCTION); }
+"PinGroup"                  { count (1); return (PARSEOP_PINGROUP); }
+"PinGroupConfig"            { count (1); return (PARSEOP_PINGROUPCONFIG); }
+"PinGroupFunction"          { count (1); return (PARSEOP_PINGROUPFUNCTION); }
 "QWordIO"                   { count (1); return (PARSEOP_QWORDIO); }
 "QWordMemory"               { count (1); return (PARSEOP_QWORDMEMORY); }
 "QWordSpace"                { count (1); return (PARSEOP_QWORDSPACE); }
@@ -524,7 +566,7 @@ NamePathTail                [.]{NameSeg}
 
     /* ExtendedAttribKeyword: Bus attributes, AccessAs operator (ACPI 5.0) */
 
-"AttribBytes"               { count (0); return (PARSEOP_ACCESSATTRIB_MULTIBYTE); }
+"AttribBytes"               { count (0); return (PARSEOP_ACCESSATTRIB_BYTES); }
 "AttribRawBytes"            { count (0); return (PARSEOP_ACCESSATTRIB_RAW_BYTES); }
 "AttribRawProcessBytes"     { count (0); return (PARSEOP_ACCESSATTRIB_RAW_PROCESS); }
 
@@ -650,7 +692,7 @@ NamePathTail                [.]{NameSeg}
 "IPMI"                      { count (0); return (PARSEOP_REGIONSPACE_IPMI); }
 "GeneralPurposeIo"          { count (0); return (PARSEOP_REGIONSPACE_GPIO); }       /* ACPI 5.0 */
 "GenericSerialBus"          { count (0); return (PARSEOP_REGIONSPACE_GSBUS); }      /* ACPI 5.0 */
-"PCC"                       { count (0); return (PARSEOP_REGIONSPACE_PCC); }        /* ACPI 5.0 */
+"PlatformCommChannel"       { count (0); return (PARSEOP_REGIONSPACE_PCC); }        /* ACPI 5.0 */
 "FFixedHW"                  { count (0); return (PARSEOP_REGIONSPACE_FFIXEDHW); }
 
     /* ResourceTypeKeyword: Resource Usage - Resource Descriptors */
@@ -767,13 +809,20 @@ NamePathTail                [.]{NameSeg}
 "__FILE__"                  { count (0); return (PARSEOP___FILE__); }
 "__LINE__"                  { count (0); return (PARSEOP___LINE__); }
 "__PATH__"                  { count (0); return (PARSEOP___PATH__); }
-
+"__METHOD__"                { count (0); return (PARSEOP___METHOD__); }
 
 {NameSeg}                   { char *s;
                                 count (0);
-                                s=UtStringCacheCalloc (ACPI_NAME_SIZE + 1);
+                                s=UtLocalCacheCalloc (ACPI_NAMESEG_SIZE + 1);
                                 if (strcmp (AslCompilertext, "\\"))
                                 {
+                                    /*
+                                     * According to the ACPI specification,
+                                     * NameSegments must have length of 4. If
+                                     * the NameSegment has length less than 4,
+                                     * they are padded with underscores to meet
+                                     * the required length.
+                                     */
                                     strcpy (s, "____");
                                     AcpiUtStrupr (AslCompilertext);
                                 }
@@ -784,7 +833,7 @@ NamePathTail                [.]{NameSeg}
 
 {NameString}                { char *s;
                                 count (0);
-                                s=UtStringCacheCalloc (strlen (AslCompilertext)+1);
+                                s=UtLocalCacheCalloc (strlen (AslCompilertext)+1);
                                 AcpiUtStrupr (AslCompilertext);
                                 strcpy (s, AslCompilertext);
                                 AslCompilerlval.s = s;
@@ -794,17 +843,17 @@ NamePathTail                [.]{NameSeg}
 .                           { count (1);
                                 if (isprint ((int) *AslCompilertext))
                                 {
-                                    sprintf (MsgBuffer,
+                                    sprintf (AslGbl_MsgBuffer,
                                         "Invalid character (%c), expecting ASL keyword or name",
                                         *AslCompilertext);
                                 }
                                 else
                                 {
-                                    sprintf (MsgBuffer,
+                                    sprintf (AslGbl_MsgBuffer,
                                         "Invalid character (0x%2.2X), expecting ASL keyword or name",
                                         *AslCompilertext);
                                 }
-                                AslCompilererror (MsgBuffer);}
+                                AslCompilererror (AslGbl_MsgBuffer);}
 
 <<EOF>>                     { if (AslPopInputFileStack ())
                                 {yyterminate();}

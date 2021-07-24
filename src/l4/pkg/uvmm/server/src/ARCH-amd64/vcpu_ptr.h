@@ -12,9 +12,6 @@
 #include "mem_access.h"
 #include "vm_state.h"
 
-#include <string>
-#include <assert.h>
-
 namespace Vmm {
 
 class Pt_walker;
@@ -25,9 +22,14 @@ public:
   enum User_data_regs_arch
   {
     Reg_vmm_type = Reg_arch_base,
-    Reg_ptw_ptr,
     Reg_mmio_read,
+    // <insert further register usage here>
+    Reg_must_be_last_before_ucode,
+    Reg_ucode_rev = 6, // must be in sync with Fiasco
   };
+  static_assert(Reg_ucode_rev >= Reg_must_be_last_before_ucode,
+                "Last user data register is reserved for microcode revision.");
+
   enum class Vm_state_t { Vmx, Svm };
 
   explicit Vcpu_ptr(l4_vcpu_state_t *s) : Generic_vcpu_ptr(s)
@@ -57,17 +59,10 @@ public:
     *decode_reg_ptr(_s->user_data[Reg_mmio_read]) = m.value;
   }
 
-  void reset()
-  {
-    // VMX/SVM specific stuff done in setup_protected_mode
-    vm_state()->init_state();
-    vm_state()->setup_protected_mode(_s->r.ip);
-  }
+  void reset();
 
-  void register_pt_walker(Pt_walker const *ptw)
-  {
-    _s->user_data[Reg_ptw_ptr] = reinterpret_cast<l4_umword_t>(ptw);
-  }
+  l4_umword_t ucode_revision() const
+  { return _s->user_data[Reg_ucode_rev]; }
 
 private:
   void *extended_state() const

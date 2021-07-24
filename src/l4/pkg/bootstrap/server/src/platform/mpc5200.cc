@@ -16,6 +16,7 @@
  */
 
 #include "support.h"
+#include "startup.h"
 #include <l4/drivers/uart_of.h>
 #include <l4/drivers/of_if.h>
 #include <l4/drivers/of_dev.h>
@@ -30,7 +31,7 @@ class Platform_ppc_mpc52000 :
 
   void boot_kernel(unsigned long entry)
   {
-    typedef void (*func)(l4util_mb_info_t *, unsigned long);
+    typedef void (*func)(void *, unsigned long);
     L4_drivers::Of_if of_if;
     of_if.boot_finish();
     ((func)entry)(0, of_if.get_prom());
@@ -39,8 +40,18 @@ class Platform_ppc_mpc52000 :
 
   void init()
   {
+    // need to read stuff from Open Firmare device tree
+    kuart.base_address = -1;
+    kuart.base_baud = 115200;
+    kuart.baud = 115200;
+    kuart.irqno = -1;
+    kuart.access_type  = L4_kernel_options::Uart_type_mmio;
+    kuart_flags       |=   L4_kernel_options::F_uart_base
+                         | L4_kernel_options::F_uart_baud
+                         | L4_kernel_options::F_uart_irq;
+
     static L4::Uart_of _uart;
-    static L4::Io_register_block_mmio r(0);
+    static L4::Io_register_block_mmio r(kuart.base_address);
     _uart.startup(&r);
     set_stdio_uart(&_uart);
   }

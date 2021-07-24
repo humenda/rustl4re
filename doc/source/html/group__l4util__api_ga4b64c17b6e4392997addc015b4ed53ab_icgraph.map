@@ -1,3 +1,4 @@
 <map id="l4util_splitlog2_size" name="l4util_splitlog2_size">
-<area shape="rect" id="node2" href="$group__l4util__api.html#gab91ed7305d923e57c844060ac1b63234" title="Split a range into log2 base and size aligned chunks. " alt="" coords="196,5,333,32"/>
+<area shape="rect" id="node1" title="Return log2 base and size aligned length of a range." alt="" coords="199,5,349,32"/>
+<area shape="rect" id="node2" href="$group__l4util__api.html#gab91ed7305d923e57c844060ac1b63234" title="Split a range into log2 base and size aligned chunks." alt="" coords="5,5,151,32"/>
 </map>

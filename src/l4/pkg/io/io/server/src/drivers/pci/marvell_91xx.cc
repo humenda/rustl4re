@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 Kernkonzept GmbH.
+ * Copyright (C) 2016-2020 Kernkonzept GmbH.
  * Author(s): Alexander Warg <alexander.warg@kernkonzept.com>
  *
  * This file is distributed under the terms of the GNU General Public
@@ -17,7 +17,7 @@
 
 #include "cfg.h"
 #include "debug.h"
-#include "pci.h"
+#include <pci-driver.h>
 
 namespace {
 

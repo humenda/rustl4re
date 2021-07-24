@@ -1,6 +1,7 @@
 <map id="l4/cxx/bits/bst.h" name="l4/cxx/bits/bst.h">
-<area shape="rect" id="node2" href="$type__traits_source.html" title="../type_traits" alt="" coords="18,80,117,107"/>
-<area shape="rect" id="node4" href="$bst__base_8h.html" title="AVL tree. " alt="" coords="169,155,259,181"/>
-<area shape="rect" id="node5" href="$bst__iter_8h.html" title="AVL tree. " alt="" coords="192,80,271,107"/>
-<area shape="rect" id="node3" href="$type__traits_8h_source.html" title="bits/type_traits.h" alt="" coords="5,155,129,181"/>
+<area shape="rect" id="node1" title="AVL tree." alt="" coords="98,5,223,32"/>
+<area shape="rect" id="node2" href="$type__traits_source.html" title=" " alt="" coords="19,80,123,107"/>
+<area shape="rect" id="node4" href="$bst__base_8h.html" title="AVL tree." alt="" coords="177,155,269,181"/>
+<area shape="rect" id="node5" href="$bst__iter_8h.html" title="AVL tree." alt="" coords="198,80,281,107"/>
+<area shape="rect" id="node3" href="$type__traits_8h_source.html" title=" " alt="" coords="5,155,137,181"/>
 </map>

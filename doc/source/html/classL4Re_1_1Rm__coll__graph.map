@@ -1,7 +1,8 @@
 <map id="L4Re::Rm" name="L4Re::Rm">
-<area shape="rect" id="node2" href="$classL4_1_1Kobject__t.html" title="{L4::Kobject_t\&lt; Rm,\l L4::Pager, L4RE_PROTO\l_RM, L4::Type_info::Demand\l_t\&lt; 1 \&gt; \&gt;\n||# c()\l# __check_protocols__()\l}" alt="" coords="209,529,412,665"/>
-<area shape="rect" id="node3" href="$classL4_1_1Pager.html" title="Pager interface including the Io_pager interface. " alt="" coords="99,403,210,480"/>
-<area shape="rect" id="node4" href="$classL4_1_1Kobject__t.html" title="{L4::Kobject_t\&lt; Pager,\l Io_pager, L4_PROTO_PAGE\l_FAULT \&gt;\n||# c()\l# __check_protocols__()\l}" alt="" coords="9,189,220,311"/>
-<area shape="rect" id="node5" href="$classL4_1_1Io__pager.html" title="Io_pager interface. " alt="" coords="5,20,136,97"/>
-<area shape="rect" id="node6" href="$classL4_1_1Kobject__t.html" title="Helper class to create an L4Re interface class that is derived from a single base class..." alt="" coords="189,5,400,112"/>
+<area shape="rect" id="node1" title="Region map." alt="" coords="184,715,316,968"/>
+<area shape="rect" id="node2" href="$classL4_1_1Kobject__t.html" title=" " alt="" coords="147,529,353,665"/>
+<area shape="rect" id="node3" href="$classL4_1_1Pager.html" title="Pager interface including the Io_pager interface." alt="" coords="132,403,248,480"/>
+<area shape="rect" id="node4" href="$classL4_1_1Kobject__t.html" title=" " alt="" coords="17,189,216,311"/>
+<area shape="rect" id="node5" href="$classL4_1_1Io__pager.html" title="Io_pager interface." alt="" coords="5,20,140,97"/>
+<area shape="rect" id="node6" href="$classL4_1_1Kobject__t.html" title="Helper class to create an L4Re interface class that is derived from a single base class." alt="" coords="185,5,393,112"/>
 </map>

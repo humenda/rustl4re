@@ -1,0 +1,4 @@
+<map id="cxx::Avl_map::insert" name="cxx::Avl_map::insert">
+<area shape="rect" id="node1" title="Insert a &lt;key, data&gt; pair into the map." alt="" coords="236,5,391,32"/>
+<area shape="rect" id="node2" href="$classcxx_1_1Avl__map.html#a2c0afd6419949d5df1a6002a96e3d81c" title="Get or insert data for the given key." alt="" coords="5,5,188,32"/>
+</map>

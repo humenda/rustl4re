@@ -1,6 +1,7 @@
 IMPLEMENTATION[arm_smc_user]:
 
 #include "kobject_helper.h"
+#include "kobject_rpc.h"
 #include "smc_call.h"
 
 JDB_DEFINE_TYPENAME(Smc_user, "SMC");
@@ -18,11 +19,16 @@ struct Smc_user : Kobject_h<Smc_user, Kobject>
     if (f->tag().words() != 8)
       return commit_result(-L4_err::EInval);
 
-    // only allow calls to trusted applications or a trusted OS
-    if ((in->values[0] & 0x3F000000) < 0x30000000)
+    register Mword r0 FIASCO_ARM_ASM_REG(0) = access_once(&in->values[0]);
+
+    // only allow fast calls
+    if (!(r0 & 0x80000000))
       return commit_result(-L4_err::ENosys);
 
-    register Mword r0 FIASCO_ARM_ASM_REG(0) = in->values[0];
+    // only allow calls to trusted applications or a trusted OS
+    if ((r0 & 0x3F000000) < 0x30000000)
+      return commit_result(-L4_err::ENosys);
+
     register Mword r1 FIASCO_ARM_ASM_REG(1) = in->values[1];
     register Mword r2 FIASCO_ARM_ASM_REG(2) = in->values[2];
     register Mword r3 FIASCO_ARM_ASM_REG(3) = in->values[3];
@@ -31,7 +37,8 @@ struct Smc_user : Kobject_h<Smc_user, Kobject>
     register Mword r6 FIASCO_ARM_ASM_REG(6) = in->values[6];
     register Mword r7 FIASCO_ARM_ASM_REG(7) = in->values[7];
 
-    asm volatile("smc #0" FIASCO_ARM_SMC_CALL_ASM_OPERANDS);
+    asm volatile(FIASCO_ARM_ARCH_EXTENSION_SEC
+                 "smc #0" FIASCO_ARM_SMC_CALL_ASM_OPERANDS);
 
     out->values[0] = r0;
     out->values[1] = r1;
@@ -39,8 +46,6 @@ struct Smc_user : Kobject_h<Smc_user, Kobject>
     out->values[3] = r3;
 
     return commit_result(0, 4);
-
-
   }
 };
 

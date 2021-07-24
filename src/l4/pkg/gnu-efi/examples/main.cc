@@ -1,14 +1,11 @@
 #include <stdint.h>
-#include <efi.h>
-#include <efilib.h>
-
-#ifdef __cplusplus
 extern "C"
 {
-  EFI_STATUS efi_main(EFI_HANDLE image, EFI_SYSTEM_TABLE *systab);
+#include <efi.h>
+#include <efilib.h>
 }
-#endif
 
+extern "C" EFI_STATUS efi_main(EFI_HANDLE image, EFI_SYSTEM_TABLE *systab);
 EFI_STATUS
 efi_main(EFI_HANDLE image, EFI_SYSTEM_TABLE *systab)
 {

@@ -1,3 +1,7 @@
 <map id="L4::Ipc_svr::Timeout_queue::handle_expired_timeouts" name="L4::Ipc_svr::Timeout_queue::handle_expired_timeouts">
-<area shape="rect" id="node2" href="$classL4_1_1Ipc__svr_1_1Timeout.html#a0309d30e94f93df7a08ab855d59c61fe" title="callback function to be called when timeout happened " alt="" coords="225,13,372,54"/>
+<area shape="rect" id="node1" title="run the callbacks of expired timeouts" alt="" coords="5,93,183,149"/>
+<area shape="rect" id="node2" href="$classcxx_1_1Bits_1_1Basic__list.html#af857846edcaf6cbc84827c585b45fd49" title="Return an iterator to the beginning of the list." alt="" coords="233,5,381,47"/>
+<area shape="rect" id="node3" href="$classcxx_1_1Bits_1_1Basic__list.html#a18b55807a5a50a2dc3e3eacb18d9b436" title="Check if the list is empty." alt="" coords="233,71,381,112"/>
+<area shape="rect" id="node4" href="$classcxx_1_1H__list.html#a691a6cd317a699e2cc636ea7f0917c1d" title="Remove the element at the given iterator position." alt="" coords="240,137,375,163"/>
+<area shape="rect" id="node5" href="$classL4_1_1Ipc__svr_1_1Timeout.html#a0309d30e94f93df7a08ab855d59c61fe" title="callback function to be called when timeout happened" alt="" coords="231,188,384,229"/>
 </map>

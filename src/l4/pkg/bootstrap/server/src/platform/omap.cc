@@ -16,6 +16,7 @@
  */
 
 #include "support.h"
+#include "startup.h"
 #include <l4/drivers/uart_omap35x.h>
 
 namespace {
@@ -25,18 +26,30 @@ class Platform_arm_omap : public Platform_single_region_ram
 
   void init()
   {
-    static L4::Uart_omap35x _uart;
+    kuart.baud         = 115200;
+    kuart.access_type  = L4_kernel_options::Uart_type_mmio;
 #ifdef PLATFORM_TYPE_beagleboard
-    static L4::Io_register_block_mmio r(0x49020000);
+    kuart.base_address = 0x49020000;
+    kuart.irqno = 74;
 #elif defined(PLATFORM_TYPE_omap3evm)
-    static L4::Io_register_block_mmio r(0x4806a000);
+    kuart.base_address = 0x4806a000;
+    kuart.irqno = 72;
 #elif defined(PLATFORM_TYPE_omap3_am33xx)
-    static L4::Io_register_block_mmio r(0x44e09000);
+    kuart.base_address = 0x44e09000;
+    kuart.irqno = 72;
 #elif defined(PLATFORM_TYPE_pandaboard) || defined(PLATFORM_TYPE_omap5)
-    static L4::Io_register_block_mmio r(0x48020000);
+    kuart.base_address = 0x48020000;
+    kuart.irqno = 32 + 74;
 #else
 #error Unknown platform
 #endif
+
+    kuart_flags       |=   L4_kernel_options::F_uart_base
+                         | L4_kernel_options::F_uart_baud
+                         | L4_kernel_options::F_uart_irq;
+
+    static L4::Uart_omap35x _uart;
+    static L4::Io_register_block_mmio r(kuart.base_address);
     _uart.startup(&r);
     set_stdio_uart(&_uart);
   }

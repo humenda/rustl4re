@@ -161,20 +161,19 @@ Unsigned64
 Vm_vmx_ept::Epte_ptr::page_addr() const
 { return cxx::get_lsb(cxx::mask_lsb(*e, Vm_vmx_ept::Ept::page_order_for_level(level)), 52); }
 
-static Mem_space::Fit_size::Size_array __ept_ps;
+static Mem_space::Fit_size __ept_ps;
 
 PUBLIC
-Mem_space::Fit_size
+Mem_space::Fit_size const &
 Vm_vmx_ept::mem_space_fitting_sizes() const override
-{ return Mem_space::Fit_size(__ept_ps); }
+{ return __ept_ps; }
 
 PUBLIC static
 void
 Vm_vmx_ept::add_page_size(Mem_space::Page_order o)
 {
   add_global_page_size(o);
-  for (Mem_space::Page_order c = o; c < __ept_ps.size(); ++c)
-    __ept_ps[c] = o;
+  __ept_ps.add_page_size(o);
 }
 
 PUBLIC
@@ -302,7 +301,7 @@ Vm_vmx_ept::~Vm_vmx_ept()
     {
       _ept->destroy(Virt_addr(0UL), Virt_addr(~0UL), 0, Ept::Depth,
                     Kmem_alloc::q_allocator(ram_quota()));
-      Kmem_alloc::allocator()->q_free(ram_quota(), Config::PAGE_SHIFT, _ept);
+      Kmem_alloc::allocator()->q_free(ram_quota(), Config::page_order(), _ept);
       _ept = 0;
       _ept_phys = 0;
     }
@@ -314,7 +313,7 @@ Vm_vmx_ept::initialize()
 {
   void *b;
   if (EXPECT_FALSE(!(b = Kmem_alloc::allocator()
-	  ->q_alloc(ram_quota(), Config::PAGE_SHIFT))))
+	  ->q_alloc(ram_quota(), Config::page_order()))))
     return false;
 
   _ept = static_cast<Ept*>(b);

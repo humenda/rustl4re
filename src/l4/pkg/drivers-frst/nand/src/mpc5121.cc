@@ -142,21 +142,21 @@ void Mpc5121::wr_dat(u8 d)
 u8 Mpc5121::rd_dat()
 { return _buffer_main[0]; }
 
-void Mpc5121::rd_dat(const u8 *buf, unsigned len)
+void Mpc5121::rd_dat(u8 *buf, unsigned len)
 {
   while (len && (_buffer_ptr < (sz_write + sz_spare)))
     {
       if (_buffer_ptr < sz_write)
 	{
 	  int l = len < sz_write ? len : sz_write;
-	  _copy_from_data((u8 *)buf, l);
+	  _copy_from_data(buf, l);
 	  _buffer_ptr += l;
 	  len -= l;
 	}
       else if (_buffer_ptr < (sz_write + sz_spare))
 	{
 	  int l = len < sz_spare ? len : sz_spare;
-	  _copy_from_spare((u8 *)buf, l);
+	  _copy_from_spare(buf, l);
 	  _buffer_ptr += l;
 	  len -= l;
 	}

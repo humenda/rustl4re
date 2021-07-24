@@ -1,0 +1,4 @@
+<map id="l4_kip_clock_lw" name="l4_kip_clock_lw">
+<area shape="rect" id="node1" title="Return least significant machine word of clock value from the KIP." alt="" coords="5,5,129,32"/>
+<area shape="rect" id="node2" href="$compiler_8h.html#a5d5bbbe36a0d144d1f465dbca715718e" title="Memory barrier." alt="" coords="177,5,240,32"/>
+</map>

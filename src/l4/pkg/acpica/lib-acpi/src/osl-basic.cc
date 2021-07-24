@@ -201,7 +201,7 @@ AcpiOsSignal (
 
         if (Info)
         {
-            AcpiOsPrintf ("AcpiOsBreakpoint: %s ****\n", Info);
+            AcpiOsPrintf ("AcpiOsBreakpoint: %s ****\n", (char *)Info);
         }
         else
         {

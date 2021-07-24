@@ -37,7 +37,7 @@ namespace L4Re {
 long
 Namespace::_query(char const *name, unsigned len,
                   L4::Cap<void> const &target,
-                  l4_umword_t *local_id, bool iterate) const throw()
+                  l4_umword_t *local_id, bool iterate) const noexcept
 {
   l4_assert(target.is_valid());
 
@@ -75,7 +75,7 @@ Namespace::_query(char const *name, unsigned len,
 
 long
 Namespace::query(char const *name, unsigned len, L4::Cap<void> const &target,
-                 int timeout, l4_umword_t *local_id, bool iterate) const throw()
+                 int timeout, l4_umword_t *local_id, bool iterate) const noexcept
 {
   if (L4_UNLIKELY(len == 0))
     return -L4_EINVAL;
@@ -93,7 +93,7 @@ Namespace::query(char const *name, unsigned len, L4::Cap<void> const &target,
       if (ret >= 0)
         return ret;
 
-      if (L4_UNLIKELY(ret < 0 && (ret != -L4_EAGAIN)))
+      if (L4_UNLIKELY(ret != -L4_EAGAIN))
         return ret;
 
       if (rem == to)
@@ -117,7 +117,7 @@ Namespace::query(char const *name, unsigned len, L4::Cap<void> const &target,
 long
 Namespace::query(char const *name, L4::Cap<void> const &target,
                  int timeout, l4_umword_t *local_id,
-                 bool iterate) const throw()
+                 bool iterate) const noexcept
 {
   return query(name, __builtin_strlen(name), target,
                timeout, local_id, iterate);

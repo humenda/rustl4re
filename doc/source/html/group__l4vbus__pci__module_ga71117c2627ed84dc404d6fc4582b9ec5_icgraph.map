@@ -1,3 +1,4 @@
 <map id="l4vbus_pcidev_irq_enable" name="l4vbus_pcidev_irq_enable">
-<area shape="rect" id="node2" href="$classL4vbus_1_1Pci__dev.html#ace3784b8e44e44dc14c1cee121500b89" title="Enable the device&#39;s PCI interrupt. " alt="" coords="237,5,381,47"/>
+<area shape="rect" id="node1" title="Enable the device&#39;s PCI interrupt." alt="" coords="204,13,395,39"/>
+<area shape="rect" id="node2" href="$classL4vbus_1_1Pci__dev.html#ace3784b8e44e44dc14c1cee121500b89" title="Enable the device&#39;s PCI interrupt." alt="" coords="5,5,156,47"/>
 </map>

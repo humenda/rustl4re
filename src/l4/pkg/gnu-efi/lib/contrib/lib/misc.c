@@ -216,6 +216,7 @@ LibMemoryMap (
     // Initialize for GrowBuffer loop
     //
 
+    Status = EFI_SUCCESS;
     Buffer = NULL;
     BufferSize = sizeof(EFI_MEMORY_DESCRIPTOR);
 

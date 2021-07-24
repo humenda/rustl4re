@@ -8,7 +8,7 @@
  *
  * 1. Copyright Notice
  *
- * Some or all of this work - Copyright (c) 1999 - 2017, Intel Corp.
+ * Some or all of this work - Copyright (c) 1999 - 2019, Intel Corp.
  * All rights reserved.
  *
  * 2. License
@@ -111,6 +111,42 @@
  * other governmental approval, or letter of assurance, without first obtaining
  * such license, approval or letter.
  *
+ *****************************************************************************
+ *
+ * Alternatively, you may choose to be licensed under the terms of the
+ * following license:
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions, and the following disclaimer,
+ *    without modification.
+ * 2. Redistributions in binary form must reproduce at minimum a disclaimer
+ *    substantially similar to the "NO WARRANTY" disclaimer below
+ *    ("Disclaimer") and any redistribution must be conditioned upon
+ *    including a substantially similar Disclaimer requirement for further
+ *    binary redistribution.
+ * 3. Neither the names of the above-listed copyright holders nor the names
+ *    of any contributors may be used to endorse or promote products derived
+ *    from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+ * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * Alternatively, you may choose to be licensed under the terms of the
+ * GNU General Public License ("GPL") version 2 as published by the Free
+ * Software Foundation.
+ *
  *****************************************************************************/
 
 #include "aslcompiler.h"
@@ -169,32 +205,32 @@ LsDoListings (
     void)
 {
 
-    if (Gbl_C_OutputFlag)
+    if (AslGbl_C_OutputFlag)
     {
         LsGenerateListing (ASL_FILE_C_SOURCE_OUTPUT);
     }
 
-    if (Gbl_ListingFlag)
+    if (AslGbl_ListingFlag)
     {
         LsGenerateListing (ASL_FILE_LISTING_OUTPUT);
     }
 
-    if (Gbl_AsmOutputFlag)
+    if (AslGbl_AsmOutputFlag)
     {
         LsGenerateListing (ASL_FILE_ASM_SOURCE_OUTPUT);
     }
 
-    if (Gbl_C_IncludeOutputFlag)
+    if (AslGbl_C_IncludeOutputFlag)
     {
         LsGenerateListing (ASL_FILE_C_INCLUDE_OUTPUT);
     }
 
-    if (Gbl_AsmIncludeOutputFlag)
+    if (AslGbl_AsmIncludeOutputFlag)
     {
         LsGenerateListing (ASL_FILE_ASM_INCLUDE_OUTPUT);
     }
 
-    if (Gbl_C_OffsetTableFlag)
+    if (AslGbl_C_OffsetTableFlag)
     {
         LsGenerateListing (ASL_FILE_C_OFFSET_OUTPUT);
     }
@@ -218,24 +254,25 @@ static void
 LsGenerateListing (
     UINT32                  FileId)
 {
+    UINT32                  WalkMode = ASL_WALK_VISIT_DOWNWARD | ASL_WALK_VISIT_DB_SEPARATELY;
 
     /* Start at the beginning of both the source and AML files */
 
     FlSeekFile (ASL_FILE_SOURCE_OUTPUT, 0);
     FlSeekFile (ASL_FILE_AML_OUTPUT, 0);
-    Gbl_SourceLine = 0;
-    Gbl_CurrentHexColumn = 0;
-    LsPushNode (Gbl_Files[ASL_FILE_INPUT].Filename);
+    AslGbl_SourceLine = 0;
+    AslGbl_CurrentHexColumn = 0;
+    LsPushNode (AslGbl_Files[ASL_FILE_INPUT].Filename);
 
     if (FileId == ASL_FILE_C_OFFSET_OUTPUT)
     {
-        Gbl_CurrentAmlOffset = 0;
+        AslGbl_CurrentAmlOffset = 0;
 
         /* Offset table file has a special header and footer */
 
         LsDoOffsetTableHeader (FileId);
 
-        TrWalkParseTree (Gbl_ParseTreeRoot, ASL_WALK_VISIT_DOWNWARD,
+        TrWalkParseTree (AslGbl_CurrentDB, WalkMode,
             LsAmlOffsetWalk, NULL, (void *) ACPI_TO_POINTER (FileId));
         LsDoOffsetTableFooter (FileId);
         return;
@@ -243,7 +280,7 @@ LsGenerateListing (
 
     /* Process all parse nodes */
 
-    TrWalkParseTree (Gbl_ParseTreeRoot, ASL_WALK_VISIT_DOWNWARD,
+    TrWalkParseTree (AslGbl_CurrentDB, WalkMode,
         LsAmlListingWalk, NULL, (void *) ACPI_TO_POINTER (FileId));
 
     /* Final processing */
@@ -277,7 +314,7 @@ LsAmlListingWalk (
 
     LsWriteNodeToListing (Op, FileId);
 
-    if (Op->Asl.CompileFlags & NODE_IS_RESOURCE_DATA)
+    if (Op->Asl.CompileFlags & OP_IS_RESOURCE_DATA)
     {
         /* Buffer is a resource template, don't dump the data all at once */
 
@@ -324,7 +361,7 @@ LsDumpParseTree (
     void)
 {
 
-    if (!Gbl_DebugFlag)
+    if (!AslGbl_DebugFlag)
     {
         return;
     }
@@ -332,7 +369,7 @@ LsDumpParseTree (
     DbgPrint (ASL_TREE_OUTPUT, "\nOriginal parse tree from parser:\n\n");
     DbgPrint (ASL_TREE_OUTPUT, ASL_PARSE_TREE_HEADER1);
 
-    TrWalkParseTree (Gbl_ParseTreeRoot, ASL_WALK_VISIT_DOWNWARD,
+    TrWalkParseTree (AslGbl_ParseTreeRoot, ASL_WALK_VISIT_DOWNWARD,
         LsTreeWriteWalk, NULL, NULL);
 
     DbgPrint (ASL_TREE_OUTPUT, ASL_PARSE_TREE_HEADER1);
@@ -409,7 +446,7 @@ LsTreeWriteWalk (
         Op->Asl.LineNumber, Op->Asl.EndLine,
         Op->Asl.LogicalLineNumber, Op->Asl.EndLogicalLine);
 
-    TrPrintNodeCompileFlags (Op->Asl.CompileFlags);
+    TrPrintOpFlags (Op->Asl.CompileFlags, ASL_TREE_OUTPUT);
     DbgPrint (ASL_TREE_OUTPUT, "\n");
     return (AE_OK);
 }
@@ -503,7 +540,7 @@ LsWriteNodeToListing (
 
         /* Always start a definition block at AML offset zero */
 
-        Gbl_CurrentAmlOffset = 0;
+        AslGbl_CurrentAmlOffset = 0;
         LsWriteSourceLines (Op->Asl.EndLine, Op->Asl.EndLogicalLine, FileId);
 
         /* Use the table Signature and TableId to build a unique name */
@@ -514,28 +551,28 @@ LsWriteNodeToListing (
 
             FlPrintFile (FileId,
                 "%s_%s_Header \\\n",
-                Gbl_TableSignature, Gbl_TableId);
+                AslGbl_TableSignature, AslGbl_TableId);
             break;
 
         case ASL_FILE_C_SOURCE_OUTPUT:
 
             FlPrintFile (FileId,
                 "    unsigned char    %s_%s_Header [] =\n    {\n",
-                Gbl_TableSignature, Gbl_TableId);
+                AslGbl_TableSignature, AslGbl_TableId);
             break;
 
         case ASL_FILE_ASM_INCLUDE_OUTPUT:
 
             FlPrintFile (FileId,
                 "extrn %s_%s_Header : byte\n",
-                Gbl_TableSignature, Gbl_TableId);
+                AslGbl_TableSignature, AslGbl_TableId);
             break;
 
         case ASL_FILE_C_INCLUDE_OUTPUT:
 
             FlPrintFile (FileId,
                 "extern unsigned char    %s_%s_Header [];\n",
-                Gbl_TableSignature, Gbl_TableId);
+                AslGbl_TableSignature, AslGbl_TableId);
             break;
 
         default:
@@ -580,7 +617,7 @@ LsWriteNodeToListing (
 
     case PARSEOP_DEFAULT_ARG:
 
-        if (Op->Asl.CompileFlags & NODE_IS_RESOURCE_DESC)
+        if (Op->Asl.CompileFlags & OP_IS_RESOURCE_DESC)
         {
             LsWriteSourceLines (Op->Asl.LineNumber, Op->Asl.EndLogicalLine,
                 FileId);
@@ -624,7 +661,7 @@ LsWriteNodeToListing (
 
         case AML_NAME_OP:
 
-            if (Op->Asl.CompileFlags & NODE_IS_RESOURCE_DESC)
+            if (Op->Asl.CompileFlags & OP_IS_RESOURCE_DESC)
             {
                 LsWriteSourceLines (Op->Asl.LineNumber, Op->Asl.LogicalLineNumber,
                     FileId);
@@ -696,28 +733,28 @@ LsWriteNodeToListing (
 
                             FlPrintFile (FileId,
                                 "%s_%s_%s  \\\n",
-                                Gbl_TableSignature, Gbl_TableId, &Pathname[1]);
+                                AslGbl_TableSignature, AslGbl_TableId, &Pathname[1]);
                             break;
 
                         case ASL_FILE_C_SOURCE_OUTPUT:
 
                             FlPrintFile (FileId,
                                 "    unsigned char    %s_%s_%s [] =\n    {\n",
-                                Gbl_TableSignature, Gbl_TableId, &Pathname[1]);
+                                AslGbl_TableSignature, AslGbl_TableId, &Pathname[1]);
                             break;
 
                         case ASL_FILE_ASM_INCLUDE_OUTPUT:
 
                             FlPrintFile (FileId,
                                 "extrn %s_%s_%s : byte\n",
-                                Gbl_TableSignature, Gbl_TableId, &Pathname[1]);
+                                AslGbl_TableSignature, AslGbl_TableId, &Pathname[1]);
                             break;
 
                         case ASL_FILE_C_INCLUDE_OUTPUT:
 
                             FlPrintFile (FileId,
                                 "extern unsigned char    %s_%s_%s [];\n",
-                                Gbl_TableSignature, Gbl_TableId, &Pathname[1]);
+                                AslGbl_TableSignature, AslGbl_TableId, &Pathname[1]);
                             break;
 
                         default:
@@ -743,7 +780,7 @@ LsWriteNodeToListing (
     default:
 
         if ((Op->Asl.ParseOpcode == PARSEOP_BUFFER) &&
-            (Op->Asl.CompileFlags & NODE_IS_RESOURCE_DESC))
+            (Op->Asl.CompileFlags & OP_IS_RESOURCE_DESC))
         {
             return;
         }
@@ -785,7 +822,7 @@ LsFinishSourceListing (
     }
 
     LsFlushListingBuffer (FileId);
-    Gbl_CurrentAmlOffset = 0;
+    AslGbl_CurrentAmlOffset = 0;
 
     /* Flush any remaining text in the source file */
 
@@ -811,7 +848,7 @@ LsFinishSourceListing (
         FlPrintFile (FileId, "\n\nSummary of errors and warnings\n\n");
         AePrintErrorLog (FileId);
         FlPrintFile (FileId, "\n");
-        UtDisplaySummary (FileId);
+        UtDisplayOneSummary (FileId, TRUE);
         FlPrintFile (FileId, "\n");
     }
 }

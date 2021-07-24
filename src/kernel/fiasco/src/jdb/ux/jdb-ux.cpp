@@ -14,7 +14,7 @@ EXTENSION class Jdb
 public:
   typedef enum
     {
-      s_unknown, s_ipc, s_syscall, s_pagefault, s_fputrap,
+      s_unknown, s_ipc, s_pagefault, s_fputrap,
       s_interrupt, s_timer_interrupt, s_slowtrap, s_user_invoke,
     } Guessed_thread_state;
 
@@ -23,7 +23,8 @@ public:
   template < typename T > static T peek(T const *addr, Address_type user);
 
   static int (*bp_test_log_only)();
-  static int (*bp_test_break)(String_buffer *buf);
+  static int (*bp_test_break)(Cpu_number cpu, Jdb_entry_frame *ef,
+                              String_buffer *buf);
 
 private:
   static unsigned short rows, cols;
@@ -41,7 +42,6 @@ IMPLEMENTATION [ux]:
 #include "globals.h"
 #include "initcalls.h"
 #include "jdb_core.h"
-#include "jdb_dbinfo.h"
 #include "jdb_screen.h"
 #include "kernel_console.h"
 #include "kernel_task.h"
@@ -62,7 +62,8 @@ IMPLEMENTATION [ux]:
 #include "vkey.h"
 
 int (*Jdb::bp_test_log_only)();
-int (*Jdb::bp_test_break)(String_buffer *buf);
+int (*Jdb::bp_test_break)(Cpu_number cpu, Jdb_entry_frame *ef,
+                          String_buffer *buf);
 
 unsigned short Jdb::rows, Jdb::cols;
 
@@ -159,42 +160,23 @@ Jdb::conf_screen()
 
 /** handle int3 debug extension */
 PUBLIC static inline NOEXPORT
-int
+bool
 Jdb::int3_extension()
 {
-  Jdb_entry_frame *entry_frame = Jdb::entry_frame.cpu(Cpu_number::boot_cpu());
-  Address      addr = entry_frame->ip();
-  Address_type user = (entry_frame->cs() & 3) ? ADDR_USER : ADDR_KERNEL;
-  Unsigned8    todo = peek ((Unsigned8 *) addr, user);
-  Space *space = NULL; //get_task_id(0);
-  error_buffer.cpu(Cpu_number::boot_cpu()).clear();
+  auto cpu = Cpu_number::boot_cpu();
+  Jdb_entry_frame *ef = Jdb::entry_frame.cpu(cpu);
+  error_buffer.cpu(cpu).clear();
 
-  if (todo != 0xeb)
-    {
-      error_buffer.cpu(Cpu_number::boot_cpu()).printf("INT 3");
-      return 0;
-    }
+  if (ef->debug_entry_kernel_str())
+    error_buffer.cpu(cpu).printf("%s", ef->text());
+  else if (ef->debug_entry_user_str())
+    error_buffer.cpu(cpu).printf("user \"%.*s\"", ef->textlen(), ef->text());
+  else if (ef->debug_entry_kernel_sequence())
+    return execute_command_ni(ef->text(), ef->textlen());
+  else
+    return false;
 
-  // todo == 0xeb => enter_kdebug()
-  Mword i;
-  Mword len = peek ((Unsigned8 *) ++addr, user);
-
-  if (len > 2 &&
-      peek (((Unsigned8 *) addr + 1), user) == '*' &&
-      peek (((Unsigned8 *) addr + 2), user) == '#')
-    {
-      char c = peek (((Unsigned8 *) addr + 3), user);
-
-      if ((c == '#')
-	  ? execute_command_ni(space, (char const *) entry_frame->_ax)
-	  : execute_command_ni(space, (char const *)(addr + 3), len-2))
-	return 1; // => leave Jdb
-    }
-
-  for (i = 0; i < len; i++)
-    error_buffer.cpu(Cpu_number::boot_cpu()).append(peek ((Unsigned8 *) ++addr, user));
-  error_buffer.cpu(Cpu_number::boot_cpu()).terminate();
-  return 0;
+  return true;
 }
 
 static
@@ -213,7 +195,7 @@ Jdb::handle_debug_traps(Cpu_number cpu)
         error_buffer.cpu(cpu).printf("Interception");
         break;
       case 3:
-	if (int3_extension())
+	if (!int3_extension())
           return false;
 #ifdef FIXME
         if (get_thread(cpu)->d_taskno())
@@ -221,7 +203,7 @@ Jdb::handle_debug_traps(Cpu_number cpu)
 	    if (bp_test_log_only && bp_test_log_only())
 	      return false;
 	    if (bp_test_break
-		&& bp_test_break(&error_buffer.cpu(cpu)))
+		&& bp_test_break(cp, &entry_frame, &error_buffer.cpu(cpu)))
 	      break;
 	  }
 #endif
@@ -243,35 +225,30 @@ Jdb::handle_conditional_breakpoint(Cpu_number, Jdb_entry_frame *)
 { return false; }
 
 
-PUBLIC
-static Space *
-Jdb::translate_task(Address /*addr*/, Space *task)
-{
-  // we have no idea if addr belongs to kernel or user space
-  // since kernel and user occupy different address spaces
-  return task;
-}
-
-PUBLIC
-static Address
-Jdb::virt_to_kvirt(Address virt, Mem_space* space)
+PUBLIC static
+unsigned char *
+Jdb::access_mem_task(Jdb_address addr, bool)
 {
   Mem_space::Phys_addr phys;
   Mem_space::Page_order size;
 
-  if (!space)
+  if (addr.is_kmem())
     {
       // Kernel address.
       // We can directly access it via virtual addresses if it's kernel code
       // (which is always mapped, but doesn't appear in the kernel pagetable)
       //  or if we find a mapping for it in the kernel's master pagetable.
-      return ((virt >= (Address)&Mem_layout::load &&
-               virt <  (Kernel_thread::init_done()
-                        ? (Address)&Mem_layout::end
-                        : (Address)&Mem_layout::initcall_end))
-              || Kernel_task::kernel_task()->virt_to_phys(virt) != ~0UL)
-             ? virt
-             : (Address) -1;
+      return ((addr.addr() >= (Address)&Mem_layout::load
+               && addr.addr() < (Kernel_thread::init_done()
+                                   ? (Address)&Mem_layout::end
+                                   : (Address)Mem_layout::initcall_end))
+              || Kernel_task::kernel_task()->virt_to_phys(addr.addr()) != ~0UL)
+               ? (unsigned char *)addr.virt()
+               : nullptr;
+    }
+  else if (addr.is_phys())
+    {
+      return nullptr;
     }
   else
     {
@@ -279,10 +256,13 @@ Jdb::virt_to_kvirt(Address virt, Mem_space* space)
       // We can't directly access it because it's in a different host process
       // but if the task's pagetable has a mapping for it, we can translate
       // task-virtual -> physical -> kernel-virtual address and then access.
-      Virt_addr va(virt);
-      return (space->v_lookup(va, &phys, &size, 0))
-	? (Address) Kmem::phys_to_virt(Mem_space::Phys_addr::val(phys) + Virt_size::val(cxx::get_lsb(va, size)))
-	: (Address) -1;
+      Virt_addr va(addr.addr());
+      return (static_cast<Mem_space *>(addr.space())
+                ->v_lookup(va, &phys, &size, 0))
+               ? (unsigned char *)Kmem::phys_to_virt(
+                 cxx::int_value<Mem_space::Phys_addr>(phys)
+                 + cxx::int_value<Virt_size>(cxx::get_lsb(va, size)))
+               : nullptr;
     }
 }
 
@@ -295,42 +275,9 @@ Jdb::peek (T const *addr, Address_type user)
   return Mem_space::current_mem_space(Cpu_number::boot_cpu())->peek(addr, user);
 }
 
-PUBLIC static
-int
-Jdb::peek_task(Address virt, Space *space, void *value, int width)
-{
-  // make sure we don't cross a page boundary
-  if (virt & (width-1))
-    return -1;
-
-  Address kvirt = virt_to_kvirt(virt, space);
-  if (kvirt == (Address)-1)
-    return -1;
-
-  memcpy(value, (void*)kvirt, width);
-  return 0;
-}
-
-PUBLIC static
-int
-Jdb::poke_task(Address virt, Space *space, void const *value, int width)
-{
-  // make sure we don't cross a page boundary
-  if (virt & (width-1))
-    return -1;
-
-  Address kvirt = virt_to_kvirt(virt, space);
-
-  if (kvirt == (Address)-1)
-    return -1;
-
-  memcpy((void*)kvirt, value, width);
-  return 0;
-}
-
 PUBLIC
 static int
-Jdb::is_adapter_memory(Address /*addr*/, Space * /*task*/)
+Jdb::is_adapter_memory(Jdb_address)
 {
   return 0;
 }
@@ -340,7 +287,7 @@ extern "C" char in_slowtrap, in_page_fault, in_handle_fputrap;
 extern "C" char in_interrupt, in_timer_interrupt, in_timer_interrupt_slow;
 extern "C" char i30_ret_switch WEAK, in_slow_ipc1 WEAK;
 extern "C" char in_slow_ipc2 WEAK, in_slow_ipc4;
-extern "C" char in_sc_ipc1 WEAK, in_sc_ipc2 WEAK, in_syscall WEAK;
+extern "C" char in_sc_ipc1 WEAK, in_sc_ipc2 WEAK;
 #undef WEAK
 
 /** Try to guess the thread state of t by walking down the kernel stack and
@@ -368,8 +315,6 @@ Jdb::guess_thread_state(Thread *t)
 #endif
 	     0)
 	    state = s_ipc;
-	  else if (ktop[i] == (Mword)&in_syscall)
-	    state = s_syscall;
 	  else if (ktop[i] == (Mword)&Thread::user_invoke)
 	    state = s_user_invoke;
 	  else if (ktop[i] == (Mword)&in_handle_fputrap)

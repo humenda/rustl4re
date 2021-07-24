@@ -79,7 +79,7 @@ public:
 
   Generic_factory_t() : BASE(&typeid(HW)) {}
 
-  VI *do_match(HW_BASE *dev)
+  VI *do_match(HW_BASE *dev) override
   {
     VI *d = 0;
     if (HW* h = dynamic_cast<HW*>(dev))
@@ -113,7 +113,7 @@ public:
   { }
 
 
-  Device *do_match(Hw::Device *dev)
+  Device *do_match(Hw::Device *dev) override
   {
     if (dev->ref_count())
       if (!dev->is_multi_vbus_dev())
@@ -128,7 +128,7 @@ public:
     return d;
   }
 
-  Device *vcreate()
+  Device *vcreate() override
   { return 0; }
 
 };
@@ -144,10 +144,10 @@ public:
   { name_map()[_class] = this; }
 
 
-  Device *do_match(Hw::Device *)
+  Device *do_match(Hw::Device *) override
   { return 0; }
 
-  Device *vcreate()
+  Device *vcreate() override
   { return new V_dev; }
 
 };

@@ -1,6 +1,7 @@
 <map id="l4re_rm_detach_srv" name="l4re_rm_detach_srv">
-<area shape="rect" id="node2" href="$group__api__l4re__c__rm.html#ga5d553540131111a12f66712bb6d4d449" title="Detach and unmap in current task. " alt="" coords="238,5,359,32"/>
-<area shape="rect" id="node3" href="$group__api__l4re__c__rm.html#gab808c5167e7464afa8be55a1650c938a" title="Detach, unmap and return affected dataspace in current task. " alt="" coords="227,56,371,83"/>
-<area shape="rect" id="node4" href="$group__api__l4re__c__rm.html#gaf909259f07302cc9f7d4798192aa58f4" title="Detach and unmap in specified task. " alt="" coords="201,107,396,133"/>
-<area shape="rect" id="node5" href="$group__api__l4re__c__rm.html#gac52716554eaf92c93e3634f1dbde236b" title="Detach and unmap in specified task. " alt="" coords="213,157,384,184"/>
+<area shape="rect" id="node1" title=" " alt="" coords="251,81,401,108"/>
+<area shape="rect" id="node2" href="$group__api__l4re__c__rm.html#ga5d553540131111a12f66712bb6d4d449" title="Detach and unmap in current task." alt="" coords="43,5,165,32"/>
+<area shape="rect" id="node3" href="$group__api__l4re__c__rm.html#gab808c5167e7464afa8be55a1650c938a" title="Detach, unmap and return affected dataspace in current task." alt="" coords="31,56,177,83"/>
+<area shape="rect" id="node4" href="$group__api__l4re__c__rm.html#gaf909259f07302cc9f7d4798192aa58f4" title="Detach and unmap in specified task." alt="" coords="5,107,203,133"/>
+<area shape="rect" id="node5" href="$group__api__l4re__c__rm.html#gac52716554eaf92c93e3634f1dbde236b" title="Detach and unmap in specified task." alt="" coords="17,157,191,184"/>
 </map>

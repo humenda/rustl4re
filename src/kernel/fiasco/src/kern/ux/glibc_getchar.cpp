@@ -1,6 +1,7 @@
 IMPLEMENTATION:
 
 #include <cstdio>
+#include <unistd.h>
 #include "console.h"
 #include "filter_console.h"
 #include "glibc_getchar.h"
@@ -15,15 +16,18 @@ public:
 
 PUBLIC
 int
-Glibc_getchar::getchar(bool blocking)
+Glibc_getchar::getchar(bool blocking) override
 {
   (void)blocking;
-  return ::getchar();
+  int c = 0;
+  if (::read(STDIN_FILENO, &c, 1) <= 0)
+    c = -1;
+  return c;
 }
 
 PUBLIC
 int
-Glibc_getchar::write(char const *str, size_t len)
+Glibc_getchar::write(char const *str, size_t len) override
 {
   (void)str; (void)len;
   return 1;
@@ -31,7 +35,7 @@ Glibc_getchar::write(char const *str, size_t len)
 
 PUBLIC
 Mword
-Glibc_getchar::get_attributes() const
+Glibc_getchar::get_attributes() const override
 {
   return UX | IN;
 }

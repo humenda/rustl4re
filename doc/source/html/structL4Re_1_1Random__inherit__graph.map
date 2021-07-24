@@ -1,0 +1,8 @@
+<map id="L4Re::Random" name="L4Re::Random">
+<area shape="rect" id="node1" title="Low&#45;bandwidth interface for random number generators." alt="" coords="167,759,292,836"/>
+<area shape="rect" id="node2" href="$classL4_1_1Kobject__t.html" title=" " alt="" coords="139,603,319,709"/>
+<area shape="rect" id="node3" href="$classL4_1_1Icu.html" title="C++ Icu interface." alt="" coords="118,388,229,553"/>
+<area shape="rect" id="node4" href="$classL4_1_1Kobject__t.html" title=" " alt="" coords="5,204,221,325"/>
+<area shape="rect" id="node5" href="$classL4_1_1Irq__eoi.html" title="Interface for sending an acknowledge message to an object." alt="" coords="20,20,119,97"/>
+<area shape="rect" id="node6" href="$classL4_1_1Kobject__t.html" title="Helper class to create an L4Re interface class that is derived from a single base class." alt="" coords="163,5,371,112"/>
+</map>

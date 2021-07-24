@@ -1,3 +1,8 @@
 <map id="L4virtio::Virtqueue::setup" name="L4virtio::Virtqueue::setup">
-<area shape="rect" id="node2" href="$classL4virtio_1_1Svr_1_1Device__t.html#ab906b4cc61026fd815a8056f07bef10e" title="Enable/disable the specified queue. " alt="" coords="187,5,384,47"/>
+<area shape="rect" id="node1" title="Enable this queue." alt="" coords="483,71,625,112"/>
+<area shape="rect" id="node2" href="$classL4virtio_1_1Driver_1_1Virtqueue.html#a8b7ef703e8e55d889419f43dc28dd40e" title="Initialize this virtqueue." alt="" coords="244,5,435,47"/>
+<area shape="rect" id="node4" href="$classL4virtio_1_1Svr_1_1Device__t.html#ab906b4cc61026fd815a8056f07bef10e" title="Enable/disable the specified queue." alt="" coords="263,71,416,112"/>
+<area shape="rect" id="node5" href="$classL4virtio_1_1Virtqueue.html#a437c0ed2eb83201cc69c41d011503036" title="Enable this queue." alt="" coords="268,136,411,177"/>
+<area shape="rect" id="node3" href="$classL4virtio_1_1Driver_1_1Block__device.html#a688df51bdec4ba327a6c0b48a83a115a" title="Setup a connection to a device and set up shared memory." alt="" coords="17,5,184,47"/>
+<area shape="rect" id="node6" href="$classL4virtio_1_1Driver_1_1Virtqueue.html#a285bae271e6acfe9c5bfa3df388c6b17" title="Initialize this virtqueue." alt="" coords="5,136,196,177"/>
 </map>

@@ -8,7 +8,7 @@
  *
  * 1. Copyright Notice
  *
- * Some or all of this work - Copyright (c) 1999 - 2017, Intel Corp.
+ * Some or all of this work - Copyright (c) 1999 - 2019, Intel Corp.
  * All rights reserved.
  *
  * 2. License
@@ -111,6 +111,42 @@
  * other governmental approval, or letter of assurance, without first obtaining
  * such license, approval or letter.
  *
+ *****************************************************************************
+ *
+ * Alternatively, you may choose to be licensed under the terms of the
+ * following license:
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions, and the following disclaimer,
+ *    without modification.
+ * 2. Redistributions in binary form must reproduce at minimum a disclaimer
+ *    substantially similar to the "NO WARRANTY" disclaimer below
+ *    ("Disclaimer") and any redistribution must be conditioned upon
+ *    including a substantially similar Disclaimer requirement for further
+ *    binary redistribution.
+ * 3. Neither the names of the above-listed copyright holders nor the names
+ *    of any contributors may be used to endorse or promote products derived
+ *    from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+ * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * Alternatively, you may choose to be licensed under the terms of the
+ * GNU General Public License ("GPL") version 2 as published by the Free
+ * Software Foundation.
+ *
  *****************************************************************************/
 
 #define EXPORT_ACPI_INTERFACES
@@ -152,6 +188,7 @@ AcpiUpdateAllGpes (
     void)
 {
     ACPI_STATUS             Status;
+    BOOLEAN                 IsPollingNeeded = FALSE;
 
 
     ACPI_FUNCTION_TRACE (AcpiUpdateAllGpes);
@@ -168,7 +205,8 @@ AcpiUpdateAllGpes (
         goto UnlockAndExit;
     }
 
-    Status = AcpiEvWalkGpeList (AcpiEvInitializeGpeBlock, NULL);
+    Status = AcpiEvWalkGpeList (AcpiEvInitializeGpeBlock,
+        &IsPollingNeeded);
     if (ACPI_SUCCESS (Status))
     {
         AcpiGbl_AllGpesInitialized = TRUE;
@@ -176,6 +214,13 @@ AcpiUpdateAllGpes (
 
 UnlockAndExit:
     (void) AcpiUtReleaseMutex (ACPI_MTX_EVENTS);
+
+    if (IsPollingNeeded && AcpiGbl_AllGpesInitialized)
+    {
+        /* Poll GPEs to handle already triggered events */
+
+        AcpiEvGpeDetect (AcpiGbl_GpeXruptListHead);
+    }
     return_ACPI_STATUS (Status);
 }
 
@@ -222,7 +267,17 @@ AcpiEnableGpe (
         if (ACPI_GPE_DISPATCH_TYPE (GpeEventInfo->Flags) !=
             ACPI_GPE_DISPATCH_NONE)
         {
-            Status = AcpiEvAddGpeReference (GpeEventInfo);
+            Status = AcpiEvAddGpeReference (GpeEventInfo, TRUE);
+            if (ACPI_SUCCESS (Status) &&
+                ACPI_GPE_IS_POLLING_NEEDED (GpeEventInfo))
+            {
+                /* Poll edge-triggered GPEs to handle existing events */
+
+                AcpiOsReleaseLock (AcpiGbl_GpeLock, Flags);
+                (void) AcpiEvDetectGpe (
+                    GpeDevice, GpeEventInfo, GpeNumber);
+                Flags = AcpiOsAcquireLock (AcpiGbl_GpeLock);
+            }
         }
         else
         {
@@ -573,6 +628,16 @@ AcpiSetupGpeForWake (
         GpeEventInfo->Flags =
             (ACPI_GPE_DISPATCH_NOTIFY | ACPI_GPE_LEVEL_TRIGGERED);
     }
+    else if (GpeEventInfo->Flags & ACPI_GPE_AUTO_ENABLED)
+    {
+        /*
+         * A reference to this GPE has been added during the GPE block
+         * initialization, so drop it now to prevent the GPE from being
+         * permanently enabled and clear its ACPI_GPE_AUTO_ENABLED flag.
+         */
+        (void) AcpiEvRemoveGpeReference (GpeEventInfo);
+        GpeEventInfo->Flags &= ~~ACPI_GPE_AUTO_ENABLED;
+    }
 
     /*
      * If we already have an implicit notify on this GPE, add
@@ -812,6 +877,33 @@ ACPI_EXPORT_SYMBOL (AcpiGetGpeStatus)
 
 /*******************************************************************************
  *
+ * FUNCTION:    AcpiDispatchGpe
+ *
+ * PARAMETERS:  GpeDevice           - Parent GPE Device. NULL for GPE0/GPE1
+ *              GpeNumber           - GPE level within the GPE block
+ *
+ * RETURN:      INTERRUPT_HANDLED or INTERRUPT_NOT_HANDLED
+ *
+ * DESCRIPTION: Detect and dispatch a General Purpose Event to either a function
+ *              (e.g. EC) or method (e.g. _Lxx/_Exx) handler.
+ *
+ ******************************************************************************/
+
+UINT32
+AcpiDispatchGpe(
+    ACPI_HANDLE             GpeDevice,
+    UINT32                  GpeNumber)
+{
+    ACPI_FUNCTION_TRACE(acpi_dispatch_gpe);
+
+    return (AcpiEvDetectGpe (GpeDevice, NULL, GpeNumber));
+}
+
+ACPI_EXPORT_SYMBOL (AcpiDispatchGpe)
+
+
+/*******************************************************************************
+ *
  * FUNCTION:    AcpiFinishGpe
  *
  * PARAMETERS:  GpeDevice           - Namespace node for the GPE Block
@@ -820,9 +912,9 @@ ACPI_EXPORT_SYMBOL (AcpiGetGpeStatus)
  *
  * RETURN:      Status
  *
- * DESCRIPTION: Clear and conditionally reenable a GPE. This completes the GPE
+ * DESCRIPTION: Clear and conditionally re-enable a GPE. This completes the GPE
  *              processing. Intended for use by asynchronous host-installed
- *              GPE handlers. The GPE is only reenabled if the EnableForRun bit
+ *              GPE handlers. The GPE is only re-enabled if the EnableForRun bit
  *              is set in the GPE info.
  *
  ******************************************************************************/

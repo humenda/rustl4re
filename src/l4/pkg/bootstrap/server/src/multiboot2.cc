@@ -18,7 +18,7 @@
 #include <l4/sys/consts.h>
 #include <l4/cxx/minmax>
 
-#include <cstring>
+#include <string.h>
 
 #include <assert.h>
 #include <stddef.h>
@@ -62,7 +62,7 @@ public:
   // by some other tag type)
   void process_modules(l4util_mb2_tag_t *tag)
   {
-    std::size_t cnt = 0;
+    size_t cnt = 0;
 
     while (tag->type == L4UTIL_MB2_MODULE_INFO_TAG)
       {
@@ -146,8 +146,8 @@ public:
   void finalize()
   {
     assert(sizeof(_mbi) <= _size);
-    std::memcpy(_buf, &_mbi, sizeof(_mbi));
-    std::memset(_buf + sizeof(_mbi), 0, _size - sizeof(_mbi));
+    memcpy(_buf, &_mbi, sizeof(_mbi));
+    memset(_buf + sizeof(_mbi), 0, _size - sizeof(_mbi));
   }
 
 private:
@@ -157,25 +157,25 @@ private:
   {
     char buf[1024];
 
-    std::size_t size = l4_round_size(tag->size, L4UTIL_MB2_TAG_ALIGN_SHIFT);
+    size_t size = l4_round_size(tag->size, L4UTIL_MB2_TAG_ALIGN_SHIFT);
     l4util_mb2_tag_t *dst_tag =
       reinterpret_cast<l4util_mb2_tag_t *>(end() - size);
     char *_src = reinterpret_cast<char *>(tag);
 
     while (size)
       {
-        std::size_t copied = cxx::min(sizeof(buf), size);
+        size_t copied = cxx::min(sizeof(buf), size);
         char *_dst = end() - copied;
-        std::memcpy(buf, _src, copied);
-        std::memmove(_src, _src + copied, (end() - _src) - copied);
-        std::memcpy(_dst, buf, copied);
+        memcpy(buf, _src, copied);
+        memmove(_src, _src + copied, (end() - _src) - copied);
+        memcpy(_dst, buf, copied);
         size -= copied;
       }
 
     return dst_tag;
   }
 
-  void reserve_from_end(std::size_t size)
+  void reserve_from_end(size_t size)
   {
     size = l4_round_size(size, L4UTIL_MB2_TAG_ALIGN_SHIFT);
     assert(_size >= size);
@@ -183,8 +183,8 @@ private:
   }
 
   char *_buf;
-  std::size_t _size;
-  const std::size_t _total_size;
+  size_t _size;
+  const size_t _total_size;
 
   l4util_mb_info_t _mbi;
 };

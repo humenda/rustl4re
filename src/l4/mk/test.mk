@@ -12,6 +12,13 @@
 ifeq ($(origin _L4DIR_MK_TEST_MK),undefined)
 _L4DIR_MK_TEST_MK=y
 
+# Helper for qemu's smp flag
+ifneq ($(filter $(ARCH),x86 amd64),)
+qemu_smp = -smp $(1),cores=$(1)
+else
+qemu_smp = -smp $(1)
+endif
+
 # auto-fill TARGET with builds for test_*.c[c] if necessary
 # TARGETS_$(ARCH) - contains a list of tests specific for this architecture
 ifndef TARGET
@@ -61,28 +68,30 @@ CPPFLAGS += -DL4RE_ABS_SOURCE_DIR_PATH='"$(L4DIR_ABS)"'
 
 # variables that are forwarded to the test runner environment
 testvars_fix    := MODE ARCH NED_CFG REQUIRED_MODULES KERNEL_CONF L4LINUX_CONF \
-                    TEST_SETUP TEST_TARGET TEST_EXPECTED OBJ_BASE
+                    TEST_TARGET TEST_SETUP TEST_EXPECTED TEST_TAGS OBJ_BASE \
+                    TEST_ROOT_TASK TEST_DESCRIPTION TEST_KERNEL_ARGS
 testvars_conf   := TEST_TIMEOUT TEST_EXPECTED_REPEAT
-testvars_append := QEMU_ARGS MOE_ARGS
+testvars_append := QEMU_ARGS MOE_ARGS TEST_ROOT_TASK_ARGS BOOTSTRAP_ARGS
 
 # use either a target-specific value or the general version of a variable
 targetvar = $(or $($(1)_$(2)),$($(1)))
 
 # This is the same as INSTALLFILE_LIB_LOCAL
 INSTALLFILE_TEST_LOCAL = $(LN) -sf $(call absfilename,$(1)) $(2)
+DEFAULT_TEST_STARTER = $(L4DIR)/tool/bin/default-test-starter
 
 $(TEST_SCRIPTS):%.t: $(GENERAL_D_LOC)
 	$(VERBOSE)echo -e "#!/bin/bash\n\nset -a" > $@
+	$(VERBOSE)echo 'L4DIR="$(L4DIR)"' >> $@
 	$(VERBOSE)echo 'SEARCHPATH="$(if $(PRIVATE_LIBDIR),$(PRIVATE_LIBDIR):)$(INSTALLDIR_BIN_LOCAL):$(OBJ_BASE)/bin/$(ARCH)_$(CPU):$(OBJ_BASE)/bin/$(ARCH)_$(CPU)/$(BUILD_ABI):$(OBJ_BASE)/lib/$(ARCH)_$(CPU):$(OBJ_BASE)/lib/$(ARCH)_$(CPU)/$(BUILD_ABI):$(SRC_DIR):$(L4DIR)/conf/test"' >> $@
 	$(VERBOSE)$(foreach v,$(testvars_fix), echo '$(v)="$(call targetvar,$(v),$(notdir $*))"' >> $@;)
 	$(VERBOSE)$(foreach v,$(testvars_conf), echo ': $${$(v):=$(call targetvar,$(v),$(notdir $*))}' >> $@;)
 	$(VERBOSE)$(foreach v,$(testvars_append), echo '$(v)="$$$(v) $(call targetvar,$(v),$(notdir $*))"' >> $@;)
 	$(VERBOSE)echo ': $${BID_L4_TEST_HARNESS_ACTIVE:=1}' >> $@
-	$(VERBOSE)echo 'export TEST_TESTFILE=$$0' >> $@
-	$(VERBOSE)echo 'if [ -n "$$TEST_TMPDIR" ]; then GOT_TMPDIR=1; else TEST_TMPDIR=`mktemp -d`; fi' >> $@
-	$(VERBOSE)echo -e "set +a\n" >> $@
-	$(VERBOSE)echo -e 'trap "{ if [ x$$GOT_TMPDIR != x1 -a -d $$TEST_TMPDIR ]; then rm -r $$TEST_TMPDIR; fi; }" EXIT\n' >> $@
-	$(VERBOSE)echo '$(L4DIR)/tool/bin/tapper-wrapper $(call test_script,$(notdir $*)) "$$@"' >> $@
+	$(VERBOSE)echo 'TEST_TESTFILE="$$0"' >> $@
+	$(VERBOSE)echo ': $${TEST_STARTER:=$(DEFAULT_TEST_STARTER)}' >> $@
+	$(VERBOSE)echo 'set +a' >> $@
+	$(VERBOSE)echo 'exec $$TEST_STARTER "$$@"' >> $@
 	$(VERBOSE)chmod 755 $@
 	@$(BUILT_MESSAGE)
 	@$(call INSTALL_LOCAL_MESSAGE,$@)
@@ -95,7 +104,7 @@ all:: $(TEST_SCRIPTS_INST)
 
 # Install rule for the .t files
 $(TEST_SCRIPTS_INST):$(INSTALLDIR_TEST_LOCAL)/%: %
-	$(call create_dir,$(INSTALLDIR_TEST_LOCAL))
+	$(VERBOSE)$(call create_dir,$(INSTALLDIR_TEST_LOCAL))
 	$(VERBOSE)$(call INSTALLFILE_TEST_LOCAL,$<,$@)
 
 endif	# SYSTEM is defined, really build

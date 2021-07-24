@@ -1,7 +1,11 @@
 <map id="L4::Ipc_svr::Default_loop_hooks" name="L4::Ipc_svr::Default_loop_hooks">
-<area shape="rect" id="node2" href="$structL4_1_1Ipc__svr_1_1Ignore__errors.html" title="Mix in for LOOP_HOOKS to ignore IPC errors. " alt="" coords="5,307,143,399"/>
-<area shape="rect" id="node3" href="$structL4_1_1Ipc__svr_1_1Default__timeout.html" title="Mix in for LOOP_HOOKS to use a 0 send and a infinite receive timeout. " alt="" coords="167,307,307,399"/>
-<area shape="rect" id="node4" href="$structL4_1_1Ipc__svr_1_1Compound__reply.html" title="Mix in for LOOP_HOOKS to always use compound reply and wait. " alt="" coords="331,307,495,399"/>
-<area shape="rect" id="node5" href="$classL4_1_1Ipc__svr_1_1Br__manager__no__buffers.html" title="Empty implementation of Server_iface. " alt="" coords="519,263,695,443"/>
-<area shape="rect" id="node6" href="$classL4_1_1Ipc__svr_1_1Server__iface.html" title="Interface for server&#45;loop related functions. " alt="" coords="519,5,695,215"/>
+<area shape="rect" id="node1" title="Default LOOP_HOOKS." alt="" coords="261,493,407,585"/>
+<area shape="rect" id="node7" href="$classL4_1_1Server.html" title=" " alt="" coords="239,848,440,999"/>
+<area shape="rect" id="node9" href="$classL4_1_1Server.html" title="Basic server loop for handling client requests." alt="" coords="356,635,563,771"/>
+<area shape="rect" id="node2" href="$structL4_1_1Ipc__svr_1_1Ignore__errors.html" title="Mix in for LOOP_HOOKS to ignore IPC errors." alt="" coords="5,308,145,400"/>
+<area shape="rect" id="node3" href="$structL4_1_1Ipc__svr_1_1Default__timeout.html" title="Mix in for LOOP_HOOKS to use a 0 send and a infinite receive timeout." alt="" coords="170,308,317,400"/>
+<area shape="rect" id="node4" href="$structL4_1_1Ipc__svr_1_1Compound__reply.html" title="Mix in for LOOP_HOOKS to always use compound reply and wait." alt="" coords="341,308,511,400"/>
+<area shape="rect" id="node5" href="$classL4_1_1Ipc__svr_1_1Br__manager__no__buffers.html" title="Empty implementation of Server_iface." alt="" coords="535,264,717,444"/>
+<area shape="rect" id="node6" href="$classL4_1_1Ipc__svr_1_1Server__iface.html" title="Interface for server&#45;loop related functions." alt="" coords="535,5,717,215"/>
+<area shape="rect" id="node8" href="$classL4Re_1_1Util_1_1Registry__server.html" title="A server loop object which has a Object_registry included." alt="" coords="245,1048,434,1199"/>
 </map>

@@ -37,7 +37,7 @@ Jdb_space::Jdb_space()
 
 PUBLIC
 bool
-Jdb_space::show_kobject(Kobject_common *o, int lvl)
+Jdb_space::show_kobject(Kobject_common *o, int lvl) override
 {
   Task *t = cxx::dyn_cast<Task*>(o);
   show(t);
@@ -52,7 +52,7 @@ Jdb_space::show_kobject(Kobject_common *o, int lvl)
 
 PUBLIC
 void
-Jdb_space::show_kobject_short(String_buffer *buf, Kobject_common *o)
+Jdb_space::show_kobject_short(String_buffer *buf, Kobject_common *o, bool) override
 {
   Task *t = cxx::dyn_cast<Task*>(o);
   if (t == Kernel_task::kernel_task())
@@ -72,17 +72,27 @@ PRIVATE
 void
 Jdb_space::show(Task *t)
 {
-  printf("Space %p (Kobject*)%p\n", t, static_cast<Kobject*>(t));
+  Jdb::cursor(3, 1);
+  Jdb::line();
+  printf("\nSpace %p (Kobject*)%p%s\n",
+         t, static_cast<Kobject*>(t), Jdb::clear_to_eol_str());
 
   for (Space::Ku_mem_list::Const_iterator m = t->_ku_mem.begin(); m != t->_ku_mem.end();
        ++m)
-    printf("  utcb area: user_va=%p kernel_va=%p size=%x\n",
-           m->u_addr.get(), m->k_addr, m->size);
+    printf("  utcb area: user_va=%p kernel_va=%p size=%x%s\n",
+           m->u_addr.get(), m->k_addr, m->size, Jdb::clear_to_eol_str());
 
   unsigned long m = t->ram_quota()->current();
-  unsigned long l = t->ram_quota()->limit();
-  printf("  mem usage:  %lu (%luKB) of %lu (%luKB) @%p\n", 
-         m, m/1024, l, l/1024, t->ram_quota());
+  printf("  mem usage: %lu (%luKB) ", m, m/1024);
+  if (t->ram_quota()->unlimited())
+    printf("-- unlimited%s\n", Jdb::clear_to_eol_str());
+  else
+    {
+      unsigned long l = t->ram_quota()->limit();
+      printf("of %lu (%luKB) @%p%s\n",
+             l, l/1024, t->ram_quota(), Jdb::clear_to_eol_str());
+    }
+  Jdb::line();
 }
 
 static bool space_filter(Kobject_common const *o)
@@ -90,7 +100,7 @@ static bool space_filter(Kobject_common const *o)
 
 PUBLIC
 Jdb_module::Action_code
-Jdb_space::action(int cmd, void *&, char const *&, int &)
+Jdb_space::action(int cmd, void *&, char const *&, int &) override
 {
   if (cmd == 0)
     {
@@ -102,7 +112,7 @@ Jdb_space::action(int cmd, void *&, char const *&, int &)
 
 PUBLIC
 Jdb_module::Cmd const *
-Jdb_space::cmds() const
+Jdb_space::cmds() const override
 {
   static Cmd cs[] =
     {
@@ -113,7 +123,7 @@ Jdb_space::cmds() const
   
 PUBLIC
 int
-Jdb_space::num_cmds() const
+Jdb_space::num_cmds() const override
 { return 1; }
 
 static

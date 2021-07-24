@@ -23,7 +23,7 @@ PlayWithGnuEfiAppsDrv0Protocol(IN EFI_HANDLE DrvHandle) {
   Status = uefi_call_wrapper(BS->OpenProtocol, 6,
                              DrvHandle,
                              &GnuEfiAppsDrv0ProtocolGuid,
-                             &drv,
+                             (void**)&drv,
                              DrvHandle,
                              NULL,
                              EFI_OPEN_PROTOCOL_GET_PROTOCOL);
@@ -32,12 +32,12 @@ PlayWithGnuEfiAppsDrv0Protocol(IN EFI_HANDLE DrvHandle) {
     return Status;
   }
 
-  Status = uefi_call_wrapper(drv->SayHello, 2, drv, L"Sample UEFI Driver");
+  Status = uefi_call_wrapper(drv->SayHello, 2, L"Sample UEFI Driver");
   if (EFI_ERROR(Status)) {
     Print(L"Cannot call SayHello: %d\n", Status);
   }
 
-  Status = uefi_call_wrapper(drv->GetNumberOfHello, 2, drv, &NumberOfHello);
+  Status = uefi_call_wrapper(drv->GetNumberOfHello, 2, &NumberOfHello);
   if (EFI_ERROR(Status)) {
     Print(L"Cannot call GetNumberOfHello: %d\n", Status);
   } else {

@@ -1,0 +1,4 @@
+<map id="L4Re::Util::Event_buffer_t::attach" name="L4Re::Util::Event_buffer_t::attach">
+<area shape="rect" id="node1" title="Attach event buffer from address space." alt="" coords="5,5,180,47"/>
+<area shape="rect" id="node2" href="$namespaceL4_1_1Ipc.html#a71861fba8b1db3d4fb5768ba65c89d94" title="Make an L4::Ipc::Cap&lt;T&gt; for the given capability with L4_CAP_FPAGE_RW rights." alt="" coords="228,13,389,39"/>
+</map>

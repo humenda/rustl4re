@@ -1,15 +1,17 @@
 INTERFACE:
 
 #include "kobject.h"
+#include "kobject_helper.h"
 #include "thread.h"
 
-class Thread_object : public Thread
+class Thread_object : public Thread, public Kobject_helper_base
 {
 private:
   struct Remote_syscall
   {
     Thread *thread;
     L4_msg_tag result;
+    bool have_recv;
   };
 };
 
@@ -52,20 +54,13 @@ Obj_cap::deref(L4_fpage::Rights *rights = 0, bool dbg = false)
   if (EXPECT_FALSE(special()))
     {
       if (!self())
-	return 0;
+        return 0;
 
-      if (rights) *rights = L4_fpage::Rights::RWX();
+      if (rights) *rights = L4_fpage::Rights::CRWS();
       return current;
     }
 
   return current->space()->lookup_local(cap(), rights);
-}
-
-PUBLIC inline NEEDS["kobject.h"]
-bool
-Obj_cap::revalidate(Kobject_iface *o)
-{
-  return deref() == o;
 }
 
 PUBLIC explicit
@@ -77,7 +72,7 @@ Thread_object::Thread_object(Ram_quota *q, Context_mode_kernel k)
 
 PUBLIC virtual
 bool
-Thread_object::put()
+Thread_object::put() override
 { return dec_ref() == 0; }
 
 
@@ -88,7 +83,7 @@ Thread_object::operator delete(void *_t)
 {
   Thread_object * const t = nonull_static_cast<Thread_object*>(_t);
   Ram_quota * const q = t->_quota;
-  Kmem_alloc::allocator()->q_unaligned_free(q, Thread::Size, t);
+  Kmem_alloc::allocator()->q_free(q, Bytes(Thread::Size), t);
 
   LOG_TRACE("Kobject delete", "del", current(), Log_destroy,
       l->id = t->dbg_id();
@@ -100,17 +95,20 @@ Thread_object::operator delete(void *_t)
 
 PUBLIC
 void
-Thread_object::destroy(Kobject ***rl)
+Thread_object::destroy(Kobject ***rl) override
 {
   Kobject::destroy(rl);
   if (!is_invalid(false))
     check(kill());
+  else
+    unbind();
   assert(_magic == magic);
 }
 
 PUBLIC
 void
-Thread_object::invoke(L4_obj_ref /*self*/, L4_fpage::Rights rights, Syscall_frame *f, Utcb *utcb)
+Thread_object::invoke(L4_obj_ref self, L4_fpage::Rights rights,
+                      Syscall_frame *f, Utcb *utcb) override
 {
   L4_obj_ref::Operation op = f->ref().op();
   if (((op != 0) && !(op & L4_obj_ref::Ipc_send))
@@ -129,8 +127,7 @@ Thread_object::invoke(L4_obj_ref /*self*/, L4_fpage::Rights rights, Syscall_fram
           return;
         }
 
-      ct->do_ipc(f->tag(), partner, partner, have_rcv, sender,
-                 f->timeout(), f, rights);
+      ct->do_ipc(f->tag(), partner, have_rcv, sender, f->timeout(), f, rights);
       return;
     }
 
@@ -140,42 +137,47 @@ Thread_object::invoke(L4_obj_ref /*self*/, L4_fpage::Rights rights, Syscall_fram
       return;
     }
 
+  Utcb *out = self.have_recv() ? utcb : utcb_dummy();
+  L4_msg_tag tag;
   switch (utcb->values[0] & Opcode_mask)
     {
     case Op_control:
-      f->tag(sys_control(rights, f->tag(), utcb));
-      return;
+      tag = sys_control(rights, f->tag(), utcb, out);
+      break;
     case Op_ex_regs:
-      f->tag(sys_ex_regs(f->tag(), utcb));
-      return;
+      tag = sys_ex_regs(f->tag(), utcb, out);
+      break;
     case Op_switch:
-      f->tag(sys_thread_switch(f->tag(), utcb));
-      return;
+      tag = sys_thread_switch(f->tag(), utcb, out);
+      break;
     case Op_stats:
-      f->tag(sys_thread_stats(f->tag(), utcb));
-      return;
+      tag = sys_thread_stats(f->tag(), utcb, out);
+      break;
     case Op_vcpu_resume:
-      f->tag(sys_vcpu_resume(f->tag(), utcb));
-      return;
+      tag = sys_vcpu_resume(f->tag(), utcb, out);
+      break;
     case Op_register_del_irq:
-      f->tag(sys_register_delete_irq(f->tag(), utcb, utcb));
-      return;
+      tag = sys_register_delete_irq(f->tag(), utcb, out);
+      break;
     case Op_modify_senders:
-      f->tag(sys_modify_senders(f->tag(), utcb, utcb));
-      return;
+      tag = sys_modify_senders(f->tag(), utcb, out);
+      break;
     case Op_vcpu_control:
-      f->tag(sys_vcpu_control(rights, f->tag(), utcb));
-      return;
+      tag = sys_vcpu_control(rights, f->tag(), utcb, out);
+      break;
     default:
-      f->tag(invoke_arch(f->tag(), utcb));
-      return;
+      tag = invoke_arch(f->tag(), utcb, out);
+      break;
     }
+
+  if (self.have_recv() || tag.has_error())
+    f->tag(tag);
 }
 
 
 PRIVATE inline
 L4_msg_tag
-Thread_object::sys_vcpu_resume(L4_msg_tag const &tag, Utcb *utcb)
+Thread_object::sys_vcpu_resume(L4_msg_tag const &tag, Utcb const *utcb, Utcb *)
 {
   if (this != current() || !(state() & Thread_vcpu_enabled))
     return commit_result(-L4_err::EInval);
@@ -190,7 +192,7 @@ Thread_object::sys_vcpu_resume(L4_msg_tag const &tag, Utcb *utcb)
       Task *task = cxx::dyn_cast<Task*>(s->lookup_local(user_task.cap(),
                                                          &task_rights));
 
-      if (EXPECT_FALSE(task && !(task_rights & L4_fpage::Rights::W())))
+      if (EXPECT_FALSE(task && !(task_rights & L4_fpage::Rights::CS())))
         return commit_result(-L4_err::EPerm);
 
       if (task != vcpu_user_space())
@@ -235,35 +237,35 @@ Thread_object::sys_vcpu_resume(L4_msg_tag const &tag, Utcb *utcb)
       && (vcpu->sticky_flags & Vcpu_state::Sf_irq_pending))
     {
       assert(cpu_lock.test());
-      do_ipc(L4_msg_tag(), 0, 0, true, 0,
-	     L4_timeout_pair(L4_timeout::Zero, L4_timeout::Zero),
-	     &vcpu->_ipc_regs, L4_fpage::Rights::FULL());
+      do_ipc(L4_msg_tag(), 0, true, 0,
+             L4_timeout_pair(L4_timeout::Zero, L4_timeout::Zero),
+             &vcpu->_ipc_regs, L4_fpage::Rights::FULL());
 
       vcpu = vcpu_state().access(true);
 
       if (EXPECT_TRUE(!vcpu->_ipc_regs.tag().has_error()
-	              || this->utcb().access(true)->error.error() == L4_error::R_timeout))
-	{
-	  vcpu->_regs.set_ipc_upcall();
+                      || this->utcb().access(true)->error.error() == L4_error::R_timeout))
+        {
+          vcpu->_regs.set_ipc_upcall();
 
-	  Address sp;
+          Address sp;
 
-	  // tried to resume to user mode, so an IRQ enters from user mode
-	  if (vcpu->_saved_state & Vcpu_state::F_user_mode)
+          // tried to resume to user mode, so an IRQ enters from user mode
+          if (vcpu->_saved_state & Vcpu_state::F_user_mode)
             sp = vcpu->_entry_sp;
-	  else
+          else
             sp = vcpu->_regs.s.sp();
 
-	  LOG_TRACE("VCPU events", "vcpu", this, Vcpu_log,
-	      l->type = 4;
-	      l->state = vcpu->state;
-	      l->ip = vcpu->_entry_ip;
-	      l->sp = sp;
-	      l->space = static_cast<Task*>(_space.vcpu_aware())->dbg_id();
-	      );
+          LOG_TRACE("VCPU events", "vcpu", this, Vcpu_log,
+              l->type = 4;
+              l->state = vcpu->state;
+              l->ip = vcpu->_entry_ip;
+              l->sp = sp;
+              l->space = static_cast<Task*>(_space.vcpu_aware())->dbg_id();
+              );
 
-	  fast_return_to_user(vcpu->_entry_ip, sp, vcpu_state().usr().get());
-	}
+          fast_return_to_user(vcpu->_entry_ip, sp, vcpu_state().usr().get());
+        }
     }
 
   vcpu->state = vcpu->_saved_state;
@@ -278,10 +280,10 @@ Thread_object::sys_vcpu_resume(L4_msg_tag const &tag, Utcb *utcb)
       user_mode = true;
 
       if (!(vcpu->state & Vcpu_state::F_fpu_enabled))
-	{
-	  state_add_dirty(Thread_vcpu_fpu_disabled);
-	  Fpu::fpu.current().disable();
-	}
+        {
+          state_add_dirty(Thread_vcpu_fpu_disabled);
+          Fpu::fpu.current().disable();
+        }
       else
         state_del_dirty(Thread_vcpu_fpu_disabled);
 
@@ -328,14 +330,14 @@ Thread_object::sys_modify_senders(L4_msg_tag tag, Utcb const *in, Utcb * /*out*/
     {
       // this is kind of arbitrary
       for (int cnt = 50; c && cnt > 0; --cnt)
-	{
-	  Sender *s = Sender::cast(c);
-	  s->modify_label(&in->values[1], elems);
-	  c = sender_list()->next(c);
-	}
+        {
+          Sender *s = Sender::cast(c);
+          s->modify_label(&in->values[1], elems);
+          c = sender_list()->next(c);
+        }
 
       if (!c)
-	return Kobject_iface::commit_result(0);
+        return Kobject_iface::commit_result(0);
 
       sender_list()->cursor(c);
       Proc::preemption_point();
@@ -366,7 +368,7 @@ Thread_object::sys_register_delete_irq(L4_msg_tag tag, Utcb const *in, Utcb * /*
   if (!irq)
     return Kobject_iface::commit_result(-L4_err::EInval);
 
-  if (EXPECT_FALSE(!(irq_rights & L4_fpage::Rights::X())))
+  if (EXPECT_FALSE(!(irq_rights & L4_fpage::Rights::CW())))
     return Kobject_iface::commit_result(-L4_err::EPerm);
 
   register_delete_irq(irq);
@@ -376,7 +378,8 @@ Thread_object::sys_register_delete_irq(L4_msg_tag tag, Utcb const *in, Utcb * /*
 
 PRIVATE inline NOEXPORT
 L4_msg_tag
-Thread_object::sys_control(L4_fpage::Rights rights, L4_msg_tag tag, Utcb *utcb)
+Thread_object::sys_control(L4_fpage::Rights rights, L4_msg_tag tag,
+                           Utcb const *utcb, Utcb *out)
 {
   if (EXPECT_FALSE(!(rights & L4_fpage::Rights::CS())))
     return commit_result(-L4_err::EPerm);
@@ -428,22 +431,22 @@ Thread_object::sys_control(L4_fpage::Rights rights, L4_msg_tag tag, Utcb *utcb)
   if (res < 0)
     return commit_result(res);
 
-  if ((res = sys_control_arch(utcb)) < 0)
+  if ((res = sys_control_arch(utcb, out)) < 0)
     return commit_result(res);
 
   if (flags & Ctl_alien_thread)
     {
       if (utcb->values[4] & Ctl_alien_thread)
-	{
-	  add_state |= Thread_alien;
-	  del_state |= Thread_dis_alien;
-	}
+        {
+          add_state |= Thread_alien;
+          del_state |= Thread_dis_alien;
+        }
       else
-	del_state |= Thread_alien;
+        del_state |= Thread_alien;
     }
 
-  utcb->values[1] = _old_pager;
-  utcb->values[2] = _old_exc_handler;
+  out->values[1] = _old_pager;
+  out->values[2] = _old_exc_handler;
 
   if (del_state || add_state)
     if (xcpu_state_change(~del_state, add_state, true))
@@ -456,7 +459,7 @@ Thread_object::sys_control(L4_fpage::Rights rights, L4_msg_tag tag, Utcb *utcb)
 PRIVATE inline NOEXPORT
 L4_msg_tag
 Thread_object::sys_vcpu_control(L4_fpage::Rights, L4_msg_tag const &tag,
-                                Utcb *utcb)
+                                Utcb const *utcb, Utcb * /* out */)
 {
   if (!space())
     return commit_result(-L4_err::EInval);
@@ -567,7 +570,7 @@ Thread_object::ex_regs(Address ip, Address sp,
 
 PRIVATE inline NOEXPORT
 L4_msg_tag
-Thread_object::ex_regs(Utcb *utcb)
+Thread_object::ex_regs(Utcb const *utcb, Utcb *out)
 {
   Address ip = utcb->values[1];
   Address sp = utcb->values[2];
@@ -581,9 +584,9 @@ Thread_object::ex_regs(Utcb *utcb)
   if (!ex_regs(ip, sp, &ip, &sp, &flags, ops))
     return commit_result(-L4_err::EInval);
 
-  utcb->values[0] = flags;
-  utcb->values[1] = ip;
-  utcb->values[2] = sp;
+  out->values[0] = flags;
+  out->values[1] = ip;
+  out->values[2] = sp;
 
   return commit_result(0, 3);
 }
@@ -593,30 +596,34 @@ Context::Drq::Result
 Thread_object::handle_remote_ex_regs(Drq *, Context *self, void *p)
 {
   Remote_syscall *params = reinterpret_cast<Remote_syscall*>(p);
-  params->result = nonull_static_cast<Thread_object*>(self)->ex_regs(params->thread->utcb().access());
+  params->result = nonull_static_cast<Thread_object *>(self)->ex_regs(
+    params->thread->utcb().access(),
+    params->have_recv ? params->thread->utcb().access() : utcb_dummy());
   return params->result.proto() == 0 ? Drq::need_resched() : Drq::done();
 }
 
 PRIVATE inline NOEXPORT
 L4_msg_tag
-Thread_object::sys_ex_regs(L4_msg_tag const &tag, Utcb *utcb)
+Thread_object::sys_ex_regs(L4_msg_tag const &tag, Utcb *utcb, Utcb *out)
 {
   if (tag.words() != 3)
     return commit_result(-L4_err::EInval);
 
   if (current() == this)
-    return ex_regs(utcb);
+    return ex_regs(utcb, out);
 
   Remote_syscall params;
   params.thread = current_thread();
+  params.have_recv = (utcb == out);
 
-  drq(handle_remote_ex_regs, &params, Drq::Any_ctxt);
+  drq(handle_remote_ex_regs, &params);
   return params.result;
 }
 
 PRIVATE inline NOEXPORT NEEDS["timer.h"]
 L4_msg_tag
-Thread_object::sys_thread_switch(L4_msg_tag const &/*tag*/, Utcb *utcb)
+Thread_object::sys_thread_switch(L4_msg_tag const & /*tag*/, Utcb const * /*utcb*/,
+                                 Utcb *out)
 {
   Context *curr = current();
 
@@ -633,7 +640,7 @@ Thread_object::sys_thread_switch(L4_msg_tag const &/*tag*/, Utcb *utcb)
   if (curr != this && (state() & Thread_ready_mask))
     {
       curr->schedule_if(curr->switch_exec_locked(this, Not_Helping) != Switch::Ok);
-      reinterpret_cast<Utcb::Time_val*>(utcb->values)->t = 0; // Assume timeslice was used up
+      reinterpret_cast<Utcb::Time_val*>(out->values)->t = 0; // Assume timeslice was used up
       return commit_result(0, Utcb::Time_val::Words);
     }
 
@@ -644,7 +651,7 @@ Thread_object::sys_thread_switch(L4_msg_tag const &/*tag*/, Utcb *utcb)
       // Yield current global timeslice
       cs->owner()->switch_sched(cs->id() ? cs->next() : cs);
 #endif
-  reinterpret_cast<Utcb::Time_val*>(utcb->values)->t
+  reinterpret_cast<Utcb::Time_val*>(out->values)->t
     = timeslice_timeout.current()->get_timeout(Timer::system_clock());
   curr->schedule();
 
@@ -674,12 +681,12 @@ Thread_object::handle_sys_thread_stats_remote(Drq *, Context *self, void *data)
 
 PRIVATE inline NOEXPORT
 L4_msg_tag
-Thread_object::sys_thread_stats(L4_msg_tag const &/*tag*/, Utcb *utcb)
+Thread_object::sys_thread_stats(L4_msg_tag const &/*tag*/, Utcb const * /*utcb*/, Utcb *out)
 {
   Clock::Time value;
 
   if (home_cpu() != current_cpu())
-    drq(handle_sys_thread_stats_remote, &value, Drq::Any_ctxt);
+    drq(handle_sys_thread_stats_remote, &value);
   else
     {
       // Respect the fact that the consumed time is only updated on context switch
@@ -688,7 +695,7 @@ Thread_object::sys_thread_stats(L4_msg_tag const &/*tag*/, Utcb *utcb)
       value = consumed_time();
     }
 
-  reinterpret_cast<Utcb::Time_val *>(utcb->values)->t = value;
+  reinterpret_cast<Utcb::Time_val *>(out->values)->t = value;
 
   return commit_result(0, Utcb::Time_val::Words);
 }

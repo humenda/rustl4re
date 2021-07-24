@@ -21,6 +21,7 @@
 #
 # 'module' variants
 # - module file: add file
+# - module[uncompress] module name: uncompress module (gzip) before adding it
 # - module[glob] /some/path/*.foo: add all file matching
 # - module[perl] perl-code: Perl code returns array of files to include
 # - module[shell] shell-code: Return list of files to include
@@ -102,7 +103,7 @@ roottask moe rom/l4lx.cfg
 module l4lx.cfg
 module l4re
 module ned
-module vmlinuz
+module[uncompress] vmlinuz
 module[perl] "ramdisk-$ENV{ARCH}.rd"
 
 entry[arch=x86|amd64] L4Linux-mag
@@ -114,6 +115,32 @@ module fb-drv
 module mag
 module x86-legacy.devs
 module l4lx-x86.io
-module vmlinuz
+module[uncompress] vmlinuz
 module[perl] "ramdisk-$ENV{ARCH}.rd"
 
+entry[arch=arm|arm64] VM-basic
+moe vm-basic.cfg
+module l4re
+module ned
+module uvmm
+module dtb/virt-arm_virt-32.dtb
+module dtb/virt-arm_virt-64.dtb
+module[arch=arm,fname=linux]              https://l4re.org/download/Linux-kernel/arm32/Image-4.20-rc1
+module[arch=arm64,fname=linux]            https://l4re.org/download/Linux-kernel/arm64/Image-5.8.0-rc4-00381-g1df0d8960499
+module[arch=arm,fname=ramdisk-arm.rd]     https://os.inf.tu-dresden.de/~adam/dl/ramdisks/ramdisk-armv7.rd
+module[arch=arm64,fname=ramdisk-arm64.rd] https://os.inf.tu-dresden.de/~adam/dl/ramdisks/ramdisk-armv8-64.rd
+# TODO: Add x86 and MIPS
+
+entry[arch=arm|arm64] VM-multi
+moe vm-multi.cfg
+module l4re
+module ned
+module cons
+module uvmm
+module dtb/virt-arm_virt-32.dtb
+module dtb/virt-arm_virt-64.dtb
+module[arch=arm,fname=linux]              https://l4re.org/download/Linux-kernel/arm32/Image-4.20-rc1
+module[arch=arm64,fname=linux]            https://l4re.org/download/Linux-kernel/arm64/Image-5.8.0-rc4-00381-g1df0d8960499
+module[arch=arm,fname=ramdisk-arm.rd]     https://os.inf.tu-dresden.de/~adam/dl/ramdisks/ramdisk-armv7.rd
+module[arch=arm64,fname=ramdisk-arm64.rd] https://os.inf.tu-dresden.de/~adam/dl/ramdisks/ramdisk-armv8-64.rd
+# TODO: Add x86 and MIPS

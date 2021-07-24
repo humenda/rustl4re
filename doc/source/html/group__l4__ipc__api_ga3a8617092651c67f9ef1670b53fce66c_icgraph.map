@@ -1,6 +1,7 @@
 <map id="l4_ipc_receive" name="l4_ipc_receive">
-<area shape="rect" id="node2" href="$group__l4__ipc__api.html#gac3b4a3b13e77b799dc154c57a04cdd9b" title="Sleep for an amount of time. " alt="" coords="189,5,291,32"/>
-<area shape="rect" id="node4" href="$group__l4__thread__api.html#ga5e47131f486f920826b5f72dad82bafe" title="Yield current time slice. " alt="" coords="181,56,299,83"/>
-<area shape="rect" id="node5" href="$classL4_1_1Ipc_1_1Istream.html#aeefe739d106daa026a1d94ade34f1d97" title="Wait for an incoming message from any sender. " alt="" coords="167,107,313,133"/>
-<area shape="rect" id="node3" href="$group__l4util__api.html#ga3a74b4dee439a339ed5a6368845cad37" title="Go sleep and never wake up. " alt="" coords="361,5,489,32"/>
+<area shape="rect" id="node1" title="Wait for a message from a specific source." alt="" coords="355,56,469,83"/>
+<area shape="rect" id="node2" href="$group__l4__ipc__api.html#gac3b4a3b13e77b799dc154c57a04cdd9b" title="Sleep for an amount of time." alt="" coords="194,31,297,57"/>
+<area shape="rect" id="node5" href="$group__l4__thread__api.html#ga5e47131f486f920826b5f72dad82bafe" title="Yield current time slice." alt="" coords="184,81,307,108"/>
+<area shape="rect" id="node3" href="$group__l4util__api.html#ga3a74b4dee439a339ed5a6368845cad37" title="Go sleep and never wake up." alt="" coords="5,5,136,32"/>
+<area shape="rect" id="node4" href="$group__l4util__api.html#ga88934d990c73f40eebe52998d894ff69" title="Suspend thread for a period of us microseconds." alt="" coords="29,56,113,83"/>
 </map>

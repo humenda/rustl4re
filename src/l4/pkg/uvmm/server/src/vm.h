@@ -11,25 +11,32 @@
 #include "device.h"
 #include "device_repo.h"
 #include "guest.h"
-#include "ram_ds.h"
+#include "vm_ram.h"
 #include "virt_bus.h"
+#include "monitor/vm_cmd_handler.h"
+#include "pm.h"
 
 namespace Vmm {
 
 /**
  * The main instance of a hardware-virtualized guest.
  */
-class Vm : public Vdev::Device_lookup
+class Vm
+: public Vdev::Device_lookup,
+  public Monitor::Vm_cmd_handler<Monitor::Enabled, Vm>
 {
+  friend Vm_cmd_handler<Monitor::Enabled, Vm>;
+
 public:
   cxx::Ref_ptr<Vdev::Device>
-  device_from_node(Vdev::Dt_node const &node) const override
-  { return _devices.device_from_node(node); }
+  device_from_node(Vdev::Dt_node const &node,
+                   std::string *path = nullptr) const override
+  { return _devices.device_from_node(node, path); }
 
   Vmm::Guest *vmm() const override
   { return _vmm; }
 
-  cxx::Ref_ptr<Vmm::Ram_ds> ram() const override
+  cxx::Ref_ptr<Vmm::Vm_ram> ram() const override
   { return _ram; }
 
   cxx::Ref_ptr<Vmm::Virt_bus> vbus() const override
@@ -38,12 +45,9 @@ public:
   cxx::Ref_ptr<Vmm::Cpu_dev_array> cpus() const override
   { return _cpus; }
 
-  /**
-   * \see Device_lookup::get_or_create_ic_dev(Vdev::Dt_node const &node,
-   *                                          bool fatal)
-   */
-  cxx::Ref_ptr<Gic::Ic> get_or_create_ic_dev(Vdev::Dt_node const &node,
-                                             bool fatal) override;
+  cxx::Ref_ptr<Vmm::Pm> pm() const override
+  { return _pm; }
+
   /**
    * \see Device_lookup::get_or_create_ic(Vdev::Dt_node const &node,
    *                                      cxx::Ref_ptr<Gic::Ic> *ic_ptr)
@@ -51,36 +55,76 @@ public:
   Ic_error get_or_create_ic(Vdev::Dt_node const &node,
                             cxx::Ref_ptr<Gic::Ic> *ic_ptr) override;
 
-  void create_default_devices(l4_addr_t rambase)
+  /**
+   * \see Device_lookup::get_or_create_mc_dev()
+   */
+  cxx::Ref_ptr<Gic::Msix_controller>
+  get_or_create_mc_dev(Vdev::Dt_node const &node) override;
+
+  void create_default_devices()
   {
     _vmm = Vmm::Guest::create_instance();
+    _ram = Vdev::make_device<Vmm::Vm_ram>(Vmm::Guest::Boot_offset);
 
-    L4Re::Env const *e = L4Re::Env::env();
-
-    auto ram = L4Re::chkcap(e->get_cap<L4Re::Dataspace>("ram"),
-                            "ram dataspace cap", -L4_ENOENT);
-    _ram = Vdev::make_device<Vmm::Ram_ds>(ram, rambase,
-                                          Vmm::Guest::Boot_offset);
-    _vmm->add_mmio_device(Region::ss(_ram->vm_start(), _ram->size()),
-                          Vdev::make_device<Ds_handler>(_ram->ram(),
-                                                        _ram->local_start(),
-                                                        _ram->size()));
-
-    auto vbus_cap = e->get_cap<L4vbus::Vbus>("vbus");
-    _vbus = cxx::make_ref_obj<Vmm::Virt_bus>(vbus_cap);
+    auto vbus_cap = L4Re::Env::env()->get_cap<L4vbus::Vbus>("vbus");
+    _vbus = Vdev::make_device<Vmm::Virt_bus>(vbus_cap, _vmm->registry());
 
     _cpus = Vdev::make_device<Vmm::Cpu_dev_array>();
+
+    _pm = Vdev::make_device<Vmm::Pm>();
+
   }
 
   void add_device(Vdev::Dt_node const &node,
-                  cxx::Ref_ptr<Vdev::Device> dev) override
-  { _devices.add(node, dev); }
+                  cxx::Ref_ptr<Vdev::Device> dev,
+                  std::string const &path = std::string()) override
+  { _devices.add(node, dev, path); }
+
+  /**
+   * Find MSI parent of node.
+   *
+   * \param node  Node to find the MSI parent of.
+   *
+   * \return  The node of the MSI parent or an invalid node, if the 'msi-parent'
+   *          property is not specified or references an invalid node.
+   *
+   * \note  Currently, this function only returns the simple case of one
+   *        referenced MSI parent node in the device tree.
+   */
+  Vdev::Dt_node find_msi_parent(Vdev::Dt_node const &node) const
+  {
+    int size = 0;
+    auto *prop = node.get_prop<fdt32_t>("msi-parent", &size);
+
+    if (size > 1)
+      L4Re::chksys(-L4_EINVAL,
+                   "MSI parent is a single reference without sideband data.");
+
+    return (prop && size > 0) ? node.find_phandle(*prop)
+                              : Vdev::Dt_node();
+  }
+
+  /**
+   * Collect and instantiate all devices described in the device tree.
+   *
+   * \param dt  Device tree to scan.
+   *
+   * This function first instantiates all device for which a virtual
+   * implementation exists and then goes through the remaining devices
+   * and tries to assign any missing resources from the vbus (if existing).
+   */
+  void scan_device_tree(Vdev::Device_tree dt);
 
 private:
+  bool add_virt_device(Vdev::Dt_node const &node);
+  bool add_phys_device(Vdev::Dt_node const &node);
+  bool add_phys_device_by_vbus_id(Vdev::Dt_node const &node);
+
   Vdev::Device_repository _devices;
   Vmm::Guest *_vmm;
-  cxx::Ref_ptr<Vmm::Ram_ds> _ram;
+  cxx::Ref_ptr<Vmm::Vm_ram> _ram;
   cxx::Ref_ptr<Vmm::Virt_bus> _vbus;
   cxx::Ref_ptr<Vmm::Cpu_dev_array> _cpus;
+  cxx::Ref_ptr<Vmm::Pm> _pm;
 };
 }

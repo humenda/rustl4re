@@ -3,16 +3,16 @@ pc_file_dir = %:set-var(pc_file_dir %(l4obj)/pc)
 
 # options that take an extra argument
 link_arg_opts =
-  %:arg-option(L m z o h e -entry fini init -defsym)
+  %:arg-option(L m z o O h e -entry fini init -defsym)
   %:arg-option(b -format A -architecture y -trace-symbol MF)
-  %:arg-option(-hash-style)
+  %:arg-option(-hash-style -version-script)
   %:arg-option(T Tbss Tdata Ttext Ttext-segment Trodata-segment Tldata-segment)
   %:arg-option(dT)
 
 # options that are part of the output file list %o
 link_output_args =
   %:output-option(l* -whole-archive -no-whole-archive
-                  -start-group -end-group)
+                  -start-group -end-group u)
 
 
 l4libdir =
@@ -46,7 +46,7 @@ check_linker = %(linker:;:%:error(linker variable not defined))
 # options to pass to the linker (binutils ld)
 link_pass_opts = %:set-var(link_pass_opts
   %{M} %{-print-map} %{-trace-symbol*} %{y} %{-verbose}
-  %{-cref} %{-trace} %{r}
+  %{-cref} %{-trace} %{r} %{O*}
   %{m} %{-error-*} %{-warn-*&-no-warn-*}
   %{-sort-*} %{-unique*}
   %{-define-common&-no-define-common} %{B*}
@@ -56,9 +56,10 @@ link_pass_opts = %:set-var(link_pass_opts
   %{x} %{X} %{S} %{s} %{t} %{z} %{Z} %{n} %{N} %{init*} %{fini*}
   %{soname*} %{h} %{E} %{-export-dynamic&-no-export-dynamic}
   %{e} %{-entry*} %{-defsym*} %{b} %{-format*} %{A} %{-architecture*}
-  %{-gc-sections} %{gc-sections} %{-hash-style*}
+  %{-gc-sections} %{gc-sections} %{-no-gc-sections} %{-hash-style*}
   # we always set -nostlib below so drop it but use it to avoid an error
-  %{nostdlib:} %{no-pie:} %{pie})
+  %{nostdlib:} %{no-pie:} %{pie} %{-no-dynamic-linker} %{-version-script*})
+  %{-wrap*}
 
 # linker arguments
 link_args =
@@ -67,7 +68,7 @@ link_args =
   %{nocrt|r:;:%:read-pc-file(%(pc_file_dir) ldscripts)}
   %{o} -nostdlib %{static:-static;:--eh-frame-hdr} %{shared}
   %(link_pass_opts) %:foreach(%%{: -L%%*} %(l4libdir)) %{T*&L*}
-  %{!r:%{!dT:-dT %:search(main_%{static:stat;shared:rel;:dyn}.ld %(libdir))}}
+  %{!r:%{!dT:-dT %:search(main_%{static:stat;shared:rel;:dyn}.ld %(libdir));dT}}
   %{r|shared|static|-dynamic-linker*:;:--dynamic-linker=%(Link_DynLinker)
     %(Link_DynLinker:;:
       %:error(Link_DynLinker not specified, cannot link with shared libs.))}

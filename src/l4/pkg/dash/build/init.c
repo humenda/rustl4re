@@ -44,7 +44,7 @@
 #undef  RMESCAPE_HEAP
 #define RMESCAPE_HEAP	0x10	/* Malloc strings instead of stalloc */
 #undef  QUOTES_ESC
-#define QUOTES_ESC	(EXP_FULL | EXP_CASE | EXP_QPAT)
+#define QUOTES_ESC	(EXP_FULL | EXP_CASE)
 #undef  QUOTES_KEEPNUL
 #define QUOTES_KEEPNUL	EXP_TILDE
 #undef  MAXHISTLOOPS
@@ -134,27 +134,6 @@
 
 extern int loopnest;		/* current loop nesting level */
 
-struct strpush {
-	struct strpush *prev;	/* preceding string on stack */
-	char *prevstring;
-	int prevnleft;
-	struct alias *ap;	/* if push was associated with an alias */
-	char *string;		/* remember the string since it may change */
-};
-
-struct parsefile {
-	struct parsefile *prev;	/* preceding file on stack */
-	int linno;		/* current line */
-	int fd;			/* file descriptor (or -1 if string) */
-	int nleft;		/* number of chars left in this line */
-	int lleft;		/* number of chars left in this buffer */
-	char *nextc;		/* next char in buffer */
-	char *buf;		/* input buffer */
-	struct strpush *strpush; /* for pushing strings at this level */
-	struct strpush basestrpush; /* so pushing one is fast */
-};
-
-extern int parselleft;		/* copy of parsefile->lleft */
 extern struct parsefile basepf;	/* top level input file */
 extern char basebuf[IBUFSIZ];	/* buffer for top level input file */
 
@@ -166,6 +145,7 @@ struct redirtab {
 extern struct redirtab *redirlist;
 
 extern struct localvar_list *localvar_stack;
+extern char defoptindvar[];
 extern char **environ;
 
 
@@ -180,6 +160,7 @@ init() {
       /* from input.c: */
       {
 	      basepf.nextc = basepf.buf = basebuf;
+	      basepf.linno = 1;
       }
 
       /* from trap.c: */
@@ -210,7 +191,7 @@ init() {
 		      }
 	      }
 
-	      setvarint("OPTIND", 1, 0);
+	      setvareq(defoptindvar, VTEXTFIXED);
 
 	      fmtstr(ppid + 5, sizeof(ppid) - 5, "%ld", (long) getppid());
 	      setvareq(ppid, VTEXTFIXED);
@@ -238,6 +219,10 @@ reset() {
       {
 	      evalskip = 0;
 	      loopnest = 0;
+	      if (savestatus >= 0) {
+		      exitstatus = savestatus;
+		      savestatus = -1;
+	      }
       }
 
       /* from expand.c: */
@@ -247,14 +232,9 @@ reset() {
 
       /* from input.c: */
       {
-	      parselleft = parsenleft = 0;	/* clear input buffer */
+	      /* clear input buffer */
+	      basepf.lleft = basepf.nleft = 0;
 	      popallfiles();
-      }
-
-      /* from parser.c: */
-      {
-	      tokpushback = 0;
-	      checkkwd = 0;
       }
 
       /* from redir.c: */

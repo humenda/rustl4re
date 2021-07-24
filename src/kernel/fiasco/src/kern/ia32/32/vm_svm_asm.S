@@ -6,7 +6,7 @@
  * Note: To be called with interrupts disabled!
  */
 
-	.p2align(4)
+	.p2align 4
 	.globl	resume_vm_svm
 resume_vm_svm:
 
@@ -32,9 +32,9 @@ resume_vm_svm:
 	// TODO: Debugregs etc.
 
 	// eax used as implicit operand for vm* instructions
-	vmload
-	vmrun
-	vmsave
+	vmload %eax
+	vmrun  %eax
+	vmsave %eax
 
 	pushl %edx
 	movl 4(%esp), %edx     // get previously saved register struct pointer

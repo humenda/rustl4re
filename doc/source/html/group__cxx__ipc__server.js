@@ -1,6 +1,5 @@
 var group__cxx__ipc__server =
 [
-    [ "Ipc_svr", "namespaceL4_1_1Ipc__svr.html", null ],
     [ "Server_iface", "classL4_1_1Ipc__svr_1_1Server__iface.html", [
       [ "Demand", "classL4_1_1Ipc__svr_1_1Server__iface.html#a06e47dba2ba71662337758f0cbf37053", null ],
       [ "Server_iface", "classL4_1_1Ipc__svr_1_1Server__iface.html#aa17aa10ace494b229a3e0879599e23b9", null ],
@@ -36,6 +35,7 @@ var group__cxx__ipc__server =
       [ "reply_n_wait", "classL4_1_1Server.html#a4333dc750dee494087ee92ab058718a1", null ]
     ] ],
     [ "Server_object", "classL4_1_1Server__object.html", [
+      [ "dispatch", "classL4_1_1Server__object.html#a0908b0084f251057024850611e6a8763", null ],
       [ "dispatch", "classL4_1_1Server__object.html#a505f2d9c6fc2794613243764095b0cbe", null ]
     ] ],
     [ "Server_object_t", "structL4_1_1Server__object__t.html", [

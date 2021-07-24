@@ -8,7 +8,7 @@
  *
  * 1. Copyright Notice
  *
- * Some or all of this work - Copyright (c) 1999 - 2017, Intel Corp.
+ * Some or all of this work - Copyright (c) 1999 - 2019, Intel Corp.
  * All rights reserved.
  *
  * 2. License
@@ -111,6 +111,42 @@
  * other governmental approval, or letter of assurance, without first obtaining
  * such license, approval or letter.
  *
+ *****************************************************************************
+ *
+ * Alternatively, you may choose to be licensed under the terms of the
+ * following license:
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions, and the following disclaimer,
+ *    without modification.
+ * 2. Redistributions in binary form must reproduce at minimum a disclaimer
+ *    substantially similar to the "NO WARRANTY" disclaimer below
+ *    ("Disclaimer") and any redistribution must be conditioned upon
+ *    including a substantially similar Disclaimer requirement for further
+ *    binary redistribution.
+ * 3. Neither the names of the above-listed copyright holders nor the names
+ *    of any contributors may be used to endorse or promote products derived
+ *    from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+ * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * Alternatively, you may choose to be licensed under the terms of the
+ * GNU General Public License ("GPL") version 2 as published by the Free
+ * Software Foundation.
+ *
  *****************************************************************************/
 
 #include "examples.h"
@@ -176,9 +212,6 @@ RegionInit (
 static void
 ExecuteMAIN (void);
 
-static void
-ExecuteOSI (void);
-
 ACPI_STATUS
 InitializeAcpiTables (
     void);
@@ -227,7 +260,7 @@ main (
     ACPI_EXCEPTION   ((AE_INFO, AE_AML_OPERAND_TYPE,
         "Example ACPICA exception message"));
 
-    ExecuteOSI ();
+    ExecuteOSI (NULL, 0);
     ExecuteMAIN ();
     return (0);
 }
@@ -504,8 +537,10 @@ InstallHandlers (void)
  *
  *****************************************************************************/
 
-static void
-ExecuteOSI (void)
+ACPI_STATUS
+ExecuteOSI (
+    char                    *OsiString,
+    UINT64                  ExpectedResult)
 {
     ACPI_STATUS             Status;
     ACPI_OBJECT_LIST        ArgList;
@@ -533,7 +568,7 @@ ExecuteOSI (void)
     if (ACPI_FAILURE (Status))
     {
         ACPI_EXCEPTION ((AE_INFO, Status, "While executing _OSI"));
-        return;
+        return (AE_OK);
     }
 
     /* Ensure that the return object is large enough */
@@ -541,7 +576,7 @@ ExecuteOSI (void)
     if (ReturnValue.Length < sizeof (ACPI_OBJECT))
     {
         AcpiOsPrintf ("Return value from _OSI method too small, %.8X\n",
-            ReturnValue.Length);
+            (UINT32) ReturnValue.Length);
         goto ErrorExit;
     }
 
@@ -562,6 +597,7 @@ ErrorExit:
     /* Free a buffer created via ACPI_ALLOCATE_BUFFER */
 
     AcpiOsFree (ReturnValue.Pointer);
+    return (AE_OK);
 }
 
 

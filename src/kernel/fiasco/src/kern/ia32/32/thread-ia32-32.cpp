@@ -115,7 +115,7 @@ Thread::copy_utcb_to_ts(L4_msg_tag const &tag, Thread *snd, Thread *rcv,
   if (rcv == current())
     rcv->load_gdt_user_entries(rcv);
 
-  if (tag.transfer_fpu() && (rights & L4_fpage::Rights::W()))
+  if (tag.transfer_fpu() && (rights & L4_fpage::Rights::CS()))
     snd->transfer_fpu(rcv);
 
   bool ret = transfer_msg_items(tag, snd, snd_utcb,
@@ -146,27 +146,10 @@ Thread::copy_ts_to_utcb(L4_msg_tag const &, Thread *snd, Thread *rcv,
       else
         Mem::memcpy_mwords(&dst->s, ts, Ts::Words);
 
-      if (rcv_utcb->inherit_fpu() && (rights & L4_fpage::Rights::W()))
+      if (rcv_utcb->inherit_fpu() && (rights & L4_fpage::Rights::CS()))
         snd->transfer_fpu(rcv);
     }
   return true;
-}
-
-PRIVATE static inline
-bool
-Thread::check_known_inkernel_fault(Trap_state *ts)
-{
-  extern char in_slowtrap_exit_label_restore_gs[];
-  extern char in_slowtrap_exit_label_restore_fs[];
-  extern char in_slowtrap_exit_label_iret[];
-  extern char vcpu_resume_label_gs[];
-  extern char vcpu_resume_label_fs[];
-
-  return    ts->ip() == (Mword)in_slowtrap_exit_label_restore_gs
-         || ts->ip() == (Mword)in_slowtrap_exit_label_restore_fs
-         || ts->ip() == (Mword)in_slowtrap_exit_label_iret
-         || ts->ip() == (Mword)vcpu_resume_label_gs
-         || ts->ip() == (Mword)vcpu_resume_label_fs;
 }
 
 //----------------------------------------------------------------------------
@@ -273,11 +256,11 @@ IMPLEMENTATION [ia32]:
 
 PROTECTED inline NEEDS[Thread::sys_gdt_x86]
 L4_msg_tag
-Thread::invoke_arch(L4_msg_tag tag, Utcb *utcb)
+Thread::invoke_arch(L4_msg_tag tag, Utcb const *utcb, Utcb *out)
 {
   switch (utcb->values[0] & Opcode_mask)
     {
-    case Op_gdt_x86: return sys_gdt_x86(tag, utcb);
+    case Op_gdt_x86: return sys_gdt_x86(tag, utcb, out);
     default:
       return commit_result(-L4_err::ENosys);
     };
@@ -314,10 +297,7 @@ Thread::call_nested_trap_handler(Trap_state *ts)
   } p;
 
   if (!ntr)
-    {
-      LOG_MSG(current(), "===== enter jdb =====");
-      p.stack = dbg_stack.cpu(log_cpu).stack_top;
-    }
+    p.stack = dbg_stack.cpu(log_cpu).stack_top;
   else
     p.stack = 0;
 

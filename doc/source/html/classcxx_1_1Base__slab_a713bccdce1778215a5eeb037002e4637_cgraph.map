@@ -1,0 +1,5 @@
+<map id="cxx::Base_slab::free_objects" name="cxx::Base_slab::free_objects">
+<area shape="rect" id="node1" title="Get the number of objects which can be allocated before a new empty slab needs to be added to the sla..." alt="" coords="5,35,159,76"/>
+<area shape="rect" id="node2" href="$classcxx_1_1Bits_1_1Basic__list.html#af857846edcaf6cbc84827c585b45fd49" title="Return an iterator to the beginning of the list." alt="" coords="223,5,371,47"/>
+<area shape="rect" id="node3" href="$classcxx_1_1Bits_1_1Basic__list.html#a08f2ae0b9f0379ce1778ba1f2d163330" title="Return a const iterator to the end of the list." alt="" coords="207,71,387,98"/>
+</map>

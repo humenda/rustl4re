@@ -21,8 +21,8 @@ var group__l4__kip__api =
       [ "frequency_bus", "structl4__kernel__info__t.html#a2bac86bae43e65f105e96107d83f35cf", null ],
       [ "frequency_cpu", "structl4__kernel__info__t.html#aefa0ae674fe4f0acba147bf0853935a3", null ],
       [ "kip_sys_calls", "structl4__kernel__info__t.html#a8810367561755cf9d597e5a335006294", null ],
-      [ "magic", "structl4__kernel__info__t.html#a59c2d0b6c5d62c2736c6ae8b5f6a90dc", null ],
       [ "magic", "structl4__kernel__info__t.html#ac27caf559ed9e0b9bb49e8f8ff76a060", null ],
+      [ "magic", "structl4__kernel__info__t.html#a59c2d0b6c5d62c2736c6ae8b5f6a90dc", null ],
       [ "mem_info", "structl4__kernel__info__t.html#aea3250c08ad8c5016698832d90ad75ce", null ],
       [ "offset_version_strings", "structl4__kernel__info__t.html#a863b789c965784509393ddec232d85fb", null ],
       [ "root_eip", "structl4__kernel__info__t.html#a5eae68b54614be6824e6710828700a31", null ],
@@ -33,8 +33,8 @@ var group__l4__kip__api =
       [ "sigma1_eip", "structl4__kernel__info__t.html#a1baa61870008e76dbfd9160039022f6d", null ],
       [ "sigma1_esp", "structl4__kernel__info__t.html#ab2efabec3afb4195e56df80ed5181738", null ],
       [ "user_ptr", "structl4__kernel__info__t.html#a3656a424423c9842b9b4c0507e4f5932", null ],
-      [ "version", "structl4__kernel__info__t.html#ad76ae01198b628b8fe2aa41d1b75a8b5", null ],
       [ "version", "structl4__kernel__info__t.html#a35efca7111ebf803952d6017344c7aea", null ],
+      [ "version", "structl4__kernel__info__t.html#ad76ae01198b628b8fe2aa41d1b75a8b5", null ],
       [ "vhw_offset", "structl4__kernel__info__t.html#a6f194b599c4a2d069cf0e00cec5acf0d", null ]
     ] ],
     [ "Mem_desc", "classL4_1_1Kip_1_1Mem__desc.html", [
@@ -51,21 +51,15 @@ var group__l4__kip__api =
         [ "Bootloader", "classL4_1_1Kip_1_1Mem__desc.html#ac7fb06d56bc504ab5821bc05fe5be9fdaa90d8b5713daa2011ca31bc0d5501ad3", null ],
         [ "Arch", "classL4_1_1Kip_1_1Mem__desc.html#ac7fb06d56bc504ab5821bc05fe5be9fdaa0b56520f3bfa54df5d8ae513bd2a180", null ]
       ] ],
-      [ "Mem_desc", "classL4_1_1Kip_1_1Mem__desc.html#adff2cd50eed1439cfed8616cf52dfd64", null ],
-      [ "end", "classL4_1_1Kip_1_1Mem__desc.html#af468dc4c26599a9701556c7c305d4486", null ],
-      [ "is_virtual", "classL4_1_1Kip_1_1Mem__desc.html#aa8e456adea05d821e976dfd234cbad9c", null ],
-      [ "set", "classL4_1_1Kip_1_1Mem__desc.html#a3695785283c96f4adbed6e84b9511494", null ],
-      [ "size", "classL4_1_1Kip_1_1Mem__desc.html#a71301f8a16d4eadd788361179988ffe2", null ],
-      [ "start", "classL4_1_1Kip_1_1Mem__desc.html#a7473ff49395c3adf9be09a0db3785b13", null ],
-      [ "sub_type", "classL4_1_1Kip_1_1Mem__desc.html#a39b959cc6f90601c15e8c255678a9b48", null ],
-      [ "type", "classL4_1_1Kip_1_1Mem__desc.html#a99a508c2664ac430482dfe86d6a4a199", null ]
+      [ "Mem_desc", "classL4_1_1Kip_1_1Mem__desc.html#a90760b1f3a3d77903578c4404465a519", null ],
+      [ "end", "classL4_1_1Kip_1_1Mem__desc.html#a5fdbd66440b54a05ad1678fcb04ed9e4", null ],
+      [ "is_virtual", "classL4_1_1Kip_1_1Mem__desc.html#a8650b497b267247fe4ac1f73228dc006", null ],
+      [ "set", "classL4_1_1Kip_1_1Mem__desc.html#a48fd081bd276556acfbaae5f3f8f814b", null ],
+      [ "size", "classL4_1_1Kip_1_1Mem__desc.html#aed690d186404b5bc353e9e60a52d9d80", null ],
+      [ "start", "classL4_1_1Kip_1_1Mem__desc.html#a78a483ff068305e31dc15bcbf69c1b64", null ],
+      [ "sub_type", "classL4_1_1Kip_1_1Mem__desc.html#aff1218d26dec1c965e5270a2e7738ec2", null ],
+      [ "type", "classL4_1_1Kip_1_1Mem__desc.html#a0266dcbba78c48b9530128c4a16f9bd4", null ]
     ] ],
-    [ "L4_KERNEL_INFO_MAGIC", "group__l4__kip__api.html#ga2f628da69cbc2c40d624cc5f4cd0a182", null ],
-    [ "l4_kernel_info_t", "group__l4__kip__api.html#gae14900de6883f61519fd1a2f75cb75d0", null ],
-    [ "l4_kernel_info_t", "group__l4__kip__api.html#gae14900de6883f61519fd1a2f75cb75d0", null ],
-    [ "l4_kernel_info_version_offset", "group__l4__kip__api.html#ga354d662e429c4813404c75ee599e4989", null ],
-    [ "l4_kip_clock", "group__l4__kip__api.html#ga833b0dd3ac6cf62453707f89d695a96f", null ],
-    [ "l4_kip_clock_lw", "group__l4__kip__api.html#ga78120a2e636d1487f34ef52fcc77f161", null ],
-    [ "l4_kip_version", "group__l4__kip__api.html#ga3128484ffe0e01946d2f0f0b96b89143", null ],
-    [ "l4_kip_version_string", "group__l4__kip__api.html#gaa5021c42dc87b62969df704769fb24f9", null ]
+    [ "l4_kernel_info_t", "group__l4__kip__api.html#gab618f3bd23019ba3cc72b3d15d9bf187", null ],
+    [ "l4_kernel_info_t", "group__l4__kip__api.html#gab618f3bd23019ba3cc72b3d15d9bf187", null ]
 ];

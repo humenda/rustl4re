@@ -43,12 +43,12 @@ Timer::start_as_counter()
 {
   static_assert(Scu::Available, "No SCU available in this configuration");
 
+  Mword v = ~0UL;
+  Cpu::scu->write<Mword>(v, Timer_counter_reg);
+
   Cpu::scu->write<Mword>(Timer_control_prescaler | Timer_control_reload
                          | Timer_control_enable,
                          Timer_control_reg);
-
-  Mword v = ~0UL;
-  Cpu::scu->write<Mword>(v, Timer_counter_reg);
   return v;
 }
 
@@ -95,5 +95,5 @@ Timer::system_clock()
 {
   if (Config::Scheduler_one_shot)
     return 0;
-  return Kip::k()->clock;
+  return Kip::k()->clock();
 }

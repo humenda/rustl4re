@@ -32,6 +32,7 @@
 #define CR4_OSFXSR      0x00000200      // OS Supports FXSAVE/FXRSTOR
 #define CR4_OSXMMEXCPT  0x00000400      // OS Supports SIMD Exceptions
 #define CR4_VMXE        0x00002000      // VMX enable
+#define CR4_PCID        0x00020000      // Enable PCID
 #define CR4_OSXSAVE     0x00040000      // OS Support XSAVE
 #define CR4_SMEP        0x00100000      // Supervisor-Mode Execution Prevention
 
@@ -108,6 +109,12 @@
 
 #define FEATX_IA32_TSC_ADJUST 0x00000002 // IA32 TSC Adjust available
 #define FEATX_SMEP      0x00000080      // Supervisor-Mode Execution Prevention
+#define FEATX_INVPCID   0x00000400      // INVPCID
+
+#define FEATX_IBRS_IBPB 0x04000000      // IBRS and IBPB supported
+#define FEATX_STIBP     0x08000000      // STIBP supported
+#define FEATX_L1D_FLUSH 0x10000000      // L1D_FLUSH supported
+#define FEATX_IA32_ARCH_CAPABILITIES 0x20000000 // IA32_ARCH_CAPABILITIES supported
 
 // AMD: CPU Feature Flags, Fn80000001_ECX
 #define FEATA_SVM	0x00000004
@@ -127,6 +134,7 @@
 #define PF_ERR_WRITE    0x00000002      // PF: Page Is Write Protected
 #define PF_ERR_USERMODE 0x00000004      // PF: Caused By User Mode Code
 #define PF_ERR_RESERVED 0x00000008      // PF: Reserved Bit Set in PDIR
+#define PF_ERR_INSTFETCH 0x00000010     // PF: Instruction fetch
 #define PF_ERR_REMTADDR 0x40000000      // PF: In Remote Address Space
 #define PF_ERR_USERADDR 0x80000000      // PF: In User Address Space
 
@@ -134,6 +142,8 @@
 #define MSR_TSC              0x010      // Time Stamp Counter
 #define MSR_IA32_FEATURE_CONTROL 0x03a  // Control Features in Intel 64 Processor
 #define MSR_IA32_TSC_ADJUST  0x03b      // TSC adjust value
+#define MSR_IA32_ARCH_CAPABILITIES 0x10a // Enumeration of Architectural Features
+#define MSR_IA32_FLUSH_CMD   0x10b      // Flush L1D cache
 #define MSR_SYSENTER_CS      0x174      // Kernel Code Segment
 #define MSR_SYSENTER_ESP     0x175      // Kernel Syscall Entry
 #define MSR_SYSENTER_EIP     0x176      // Kernel Stack Pointer

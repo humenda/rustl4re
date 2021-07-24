@@ -61,7 +61,7 @@ public:
 class Pci_vroot_id : public Pci_vroot
 {
 public:
-  void add_child(Device *d);
+  void add_child(Device *d) override;
 
 };
 
@@ -134,6 +134,7 @@ Pci_vroot::cfg_read(L4::Ipc::Iostream &ios)
   ios << value;
   return L4_EOK;
 }
+
 int
 Pci_vroot::irq_enable(L4::Ipc::Iostream &ios)
 {
@@ -184,7 +185,9 @@ Pci_vroot::cfg_write(L4::Ipc::Iostream &ios)
   l4_uint32_t width;
 
   ios >> bus >> devfn >> reg >> value >> width;
-  // printf("cfg write: %02x:%02x.%1x: reg=%x w=%x v=%08x\n", bus, devfn >> 16, devfn & 0xffff, reg, width, value);
+  if (0)
+    printf("cfg write: %02x:%02x.%1x: reg=%x w=%x v=%08x\n",
+           bus, devfn >> 16, devfn & 0xffff, reg, width, value);
 
   if ((devfn >> 16) >= 32 || (devfn & 0xffff) >= 8)
     return L4_EOK;
@@ -224,13 +227,11 @@ Pci_vroot_id::add_child(Device *d)
 
   if (Pci_proxy_dev *proxy = dynamic_cast<Pci_proxy_dev*>(vp))
     {
-      Hw::Pci::Pci_pci_bridge_basic const *hw_br
-	= dynamic_cast<Hw::Pci::Pci_pci_bridge_basic const *>(proxy->hwf()->bus());
-
       unsigned dn = proxy->hwf()->device_nr() & (Bus::Devs-1);
       unsigned fn = proxy->hwf()->function_nr() & (Dev::Fns-1);
+      unsigned bus_num = proxy->hwf()->bus_nr();
 
-      if (!hw_br)
+      if (bus_num == 0)
 	{
 	  // MUST be a device on the root PCI bus
 	  _bus.dev(dn)->fn(fn, vp);
@@ -238,18 +239,17 @@ Pci_vroot_id::add_child(Device *d)
 	  return;
 	}
 
-      Pci_bridge *sw_br = find_bridge(hw_br->num);
+      Pci_bridge *sw_br = find_bridge(bus_num);
       if (!sw_br)
 	{
 	  Pci_to_pci_bridge *b = new Pci_to_pci_bridge();
 	  sw_br = b;
-	  sw_br->primary(hw_br->pri);
-	  sw_br->secondary(hw_br->num);
-	  sw_br->subordinate(hw_br->subordinate);
 
-	  unsigned dn = hw_br->device_nr() & (Bus::Devs-1);
-	  unsigned fn = hw_br->function_nr() & (Dev::Fns-1);
-	  _bus.dev(dn)->fn(fn, b);
+	  b->primary(0);
+	  b->secondary(bus_num);
+	  b->subordinate(bus_num);
+
+	  _bus.dev(31)->fn(0, b);
 	  Device::add_child(b);
 	}
 

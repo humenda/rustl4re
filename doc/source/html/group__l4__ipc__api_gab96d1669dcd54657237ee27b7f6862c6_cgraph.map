@@ -1,3 +1,4 @@
 <map id="l4_ipc_call" name="l4_ipc_call">
-<area shape="rect" id="node2" href="$group__l4__ipc__api.html#ga0e7e5b18d784b1d3439ea6e5b4bea4e2" title="Generic L4 object invocation. " alt="" coords="141,5,200,32"/>
+<area shape="rect" id="node1" title="Object call (usual invocation)." alt="" coords="5,5,96,32"/>
+<area shape="rect" id="node2" href="$group__l4__ipc__api.html#ga0e7e5b18d784b1d3439ea6e5b4bea4e2" title="Generic L4 object invocation." alt="" coords="144,5,204,32"/>
 </map>

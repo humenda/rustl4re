@@ -1,0 +1,7 @@
+<map id="l4_is_valid_cap" name="l4_is_valid_cap">
+<area shape="rect" id="node1" title="Test if a capability selector is a valid selector." alt="" coords="436,46,557,73"/>
+<area shape="rect" id="node2" href="$classL4Re_1_1Util_1_1Cap__alloc__base.html#afe4cbd695e9050e2827d17e7e960e67d" title="Free a capability slot." alt="" coords="232,5,388,47"/>
+<area shape="rect" id="node3" href="$classL4Re_1_1Util_1_1Counting__cap__alloc.html#a4f65c951a2cc3aae899c67e1ef325a8a" title="Free the capability." alt="" coords="235,71,385,112"/>
+<area shape="rect" id="node4" href="$classL4Re_1_1Util_1_1Smart__cap__auto.html#a4dfba4f2c4731689f1a53992c83371a6" title="Free operation for L4::Smart_cap." alt="" coords="13,37,176,79"/>
+<area shape="rect" id="node5" href="$classL4Re_1_1Util_1_1Object__registry.html#aeeea59583ffddfef4e7c1c3e6eed41b6" title="Remove a server object from the handler list." alt="" coords="5,103,184,144"/>
+</map>

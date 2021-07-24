@@ -1,0 +1,12 @@
+<map id="L4::Cap_base::is_valid" name="L4::Cap_base::is_valid">
+<area shape="rect" id="node1" title="Test whether the capability is a valid capability index (i.e., not L4_INVALID_CAP)." alt="" coords="439,163,605,189"/>
+<area shape="rect" id="node2" href="$classL4_1_1Cap__base.html#a1501f9852fda4c01a1591a7c53585d5f" title="Copy a capability." alt="" coords="230,5,377,32"/>
+<area shape="rect" id="node4" href="$classL4Re_1_1Smart__count__cap.html#a4f5fee6c54e153aba5b2cf33e4c5c5ec" title="Copy operation for L4::Smart_cap (increment ref count)." alt="" coords="216,57,391,98"/>
+<area shape="rect" id="node5" href="$classL4Re_1_1Util_1_1Smart__cap__auto.html#a4dfba4f2c4731689f1a53992c83371a6" title="Free operation for L4::Smart_cap." alt="" coords="222,122,385,163"/>
+<area shape="rect" id="node6" href="$classL4Re_1_1Util_1_1Smart__cap__auto.html#a19c486ceece95f48ce148fc3235ddca5" title="Invalidate operation for L4::Smart_cap." alt="" coords="222,187,385,229"/>
+<area shape="rect" id="node8" href="$classL4_1_1Cap__base.html#ab6cd8e73ebbdb5dfa45355b7c1fde1c2" title="Replace this capability with the contents of src." alt="" coords="227,253,380,280"/>
+<area shape="rect" id="node10" href="$classL4Re_1_1Video_1_1View.html#aac22679f4bbdd1d3fd9ed856c173dc03" title="Return whether this view is valid." alt="" coords="230,305,377,346"/>
+<area shape="rect" id="node3" href="$classL4_1_1Cap.html#a03750491e2cb888d26e2fbdfcc0b7dbc" title="Copy a capability to this cap slot." alt="" coords="32,5,141,32"/>
+<area shape="rect" id="node7" href="$classL4Re_1_1Util_1_1Smart__cap__auto.html#a5bd9db013c30e736b5cc2071589de771" title="Copy operation for L4::Smart_cap." alt="" coords="5,187,168,229"/>
+<area shape="rect" id="node9" href="$classL4_1_1Cap.html#ae097fe17d218b76dc368a5383372168f" title="Move a capability to this cap slot." alt="" coords="29,253,144,280"/>
+</map>

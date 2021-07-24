@@ -36,7 +36,14 @@
 
 %.efi: %.so
 	$(OBJCOPY) -j .text -j .sdata -j .data -j .dynamic -j .dynsym -j .rel \
-		   -j .rela -j .reloc --target=$(FORMAT) $*.so $@
+		    -j .rela -j .rel.* -j .rela.* -j .rel* -j .rela* \
+		    -j .reloc $(FORMAT) $*.so $@
+
+%.efi.debug: %.so
+	$(OBJCOPY) -j .debug_info -j .debug_abbrev -j .debug_aranges \
+		-j .debug_line -j .debug_str -j .debug_ranges \
+		-j .note.gnu.build-id \
+		$(FORMAT) $*.so $@
 
 %.so: %.o
 	$(LD) $(LDFLAGS) $^ -o $@ $(LOADLIBES)
@@ -44,12 +51,14 @@
 %.o: %.c
 	$(CC) $(INCDIR) $(CFLAGS) $(CPPFLAGS) -c $< -o $@
 
-%.S: %.c
+%.s: %.c
 	$(CC) $(INCDIR) $(CFLAGS) $(CPPFLAGS) -S $< -o $@
 
-# L4: added this rule to override BID defaults
-%.o: %.S
-	$(CC) $(INCDIR) $(CFLAGS) $(CPPFLAGS) -c -o $@ $<
+%.i: %.c
+	$(CC) $(INCDIR) $(CFLAGS) $(CPPFLAGS) -E $< -o $@
 
-%.E: %.c
+%.o: %.S
+	$(CC) $(INCDIR) $(CFLAGS) $(CPPFLAGS) -c $< -o $@
+
+%.s: %.S
 	$(CC) $(INCDIR) $(CFLAGS) $(CPPFLAGS) -E $< -o $@

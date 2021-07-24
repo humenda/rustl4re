@@ -47,7 +47,12 @@ Thread::fast_return_to_user(Mword ip, Mword sp, T arg)
      "mov %[flags], %%r11 \t\n"
      "jmp safe_sysret \t\n"
      :
-     : [cr3] "a" (p[0] | 0x1000),
+     // p[0] = CPU dir pa (if PCID: + bit63 + ASID 0)
+     // p[1] = KSP
+     // p[2] = EXIT flags
+     // p[3] = CPU dir pa + 0x1000 (if PCID: + bit63 + ASID)
+     // p[4] = kernel entry scratch register
+     : [cr3] "a" (p[3]),
        [flags] "i" (EFLAGS_IF), "c" (ip), [sp] "r" (sp), "D"(arg)
     );
   __builtin_trap();
@@ -58,37 +63,44 @@ IMPLEMENTATION [amd64]:
 
 PROTECTED inline NEEDS[Thread::sys_gdt_x86]
 L4_msg_tag
-Thread::invoke_arch(L4_msg_tag tag, Utcb *utcb)
+Thread::invoke_arch(L4_msg_tag tag, Utcb const *utcb, Utcb *out)
 {
   switch (utcb->values[0] & Opcode_mask)
     {
-    case Op_gdt_x86: return sys_gdt_x86(tag, utcb);
+    case Op_gdt_x86: return sys_gdt_x86(tag, utcb, out);
     case Op_set_segment_base_amd64:
-      if (tag.words() < 2)
-        return commit_result(-L4_err::EInval);
-      switch (utcb->values[0] >> 16)
-        {
-        case 0:
-          _fs = 0;
-          _fs_base = utcb->values[1];
-          if (current() == this)
-            Cpu::wrmsr(_fs_base, MSR_FS_BASE);
-          break;
+      {
+        if (tag.words() < 2)
+          return commit_result(-L4_err::EMsgtooshort);
 
-        case 1:
-          _gs = 0;
-          _gs_base = utcb->values[1];
-          if (current() == this)
-            Cpu::wrmsr(_gs_base, MSR_GS_BASE);
-          break;
+        Mword base = access_once(utcb->values + 1);
+        if (!Cpu::is_canonical_address(base))
+          return commit_result(-L4_err::EInval);
 
-        default: return commit_result(-L4_err::EInval);
-        }
-      return Kobject_iface::commit_result(0);
+        switch (utcb->values[0] >> 16)
+          {
+          case 0:
+            _fs = 0;
+            _fs_base = base;
+            if (current() == this)
+              Cpu::set_fs_base(&_fs_base);
+            break;
+
+          case 1:
+            _gs = 0;
+            _gs_base = base;
+            if (current() == this)
+              Cpu::set_gs_base(&_gs_base);
+            break;
+
+          default: return commit_result(-L4_err::EInval);
+          }
+        return Kobject_iface::commit_result(0);
+      }
     case Op_segment_info_amd64:
-      utcb->values[0] = Gdt::gdt_data_user   | Gdt::Selector_user; // user_ds32
-      utcb->values[1] = Gdt::gdt_code_user   | Gdt::Selector_user; // user_cs64
-      utcb->values[2] = Gdt::gdt_code_user32 | Gdt::Selector_user; // user_cs32
+      out->values[0] = Gdt::gdt_data_user   | Gdt::Selector_user; // user_ds32
+      out->values[1] = Gdt::gdt_code_user   | Gdt::Selector_user; // user_cs64
+      out->values[2] = Gdt::gdt_code_user32 | Gdt::Selector_user; // user_cs32
       return Kobject_iface::commit_result(0, 3);
     default:
       return commit_result(-L4_err::ENosys);
@@ -185,7 +197,7 @@ Thread::copy_utcb_to_ts(L4_msg_tag const &tag, Thread *snd, Thread *rcv,
   if (rcv == current())
     rcv->load_gdt_user_entries(rcv);
 
-  if (tag.transfer_fpu() && (rights & L4_fpage::Rights::W()))
+  if (tag.transfer_fpu() && (rights & L4_fpage::Rights::CS()))
     snd->transfer_fpu(rcv);
 
   bool ret = transfer_msg_items(tag, snd, snd_utcb,
@@ -224,7 +236,7 @@ Thread::copy_ts_to_utcb(L4_msg_tag const &, Thread *snd, Thread *rcv,
       else
         Mem::memcpy_mwords(&dst->s, ts, Ts::Words);
 
-      if (rcv_utcb->inherit_fpu() && (rights & L4_fpage::Rights::W()))
+      if (rcv_utcb->inherit_fpu() && (rights & L4_fpage::Rights::CS()))
         snd->transfer_fpu(rcv);
     }
   return true;
@@ -274,14 +286,6 @@ PRIVATE inline
 int
 Thread::check_trap13_kernel (Trap_state * /*ts*/)
 { return 1; }
-
-PRIVATE static inline
-bool
-Thread::check_known_inkernel_fault(Trap_state *ts)
-{
-  extern char in_slowtrap_exit_label_iret[];
-  return ts->ip() == (Mword)in_slowtrap_exit_label_iret;
-}
 
 //----------------------------------------------------------------------------
 IMPLEMENTATION [amd64 & (debug | kdb)]:
@@ -339,7 +343,7 @@ Thread::call_nested_trap_handler(Trap_state *ts)
      "je     1f			\n\t"
      "decq   %[recover]		\n\t"
      "1:			\n\t"
-     : [ret] "=&a"(ret), [d2] "=&r"(dummy2), [d1] "=&r"(dummy1), "=D"(scratch1),
+     : [ret] "=&a"(ret), [d2] "=&d"(dummy2), [d1] "=&c"(dummy1), "=D"(scratch1),
        "=S"(scratch2),
        [recover] "+m" (ntr)
      : [ts] "D" (ts),
@@ -349,7 +353,7 @@ Thread::call_nested_trap_handler(Trap_state *ts)
        [cpu] "S" (log_cpu),
        [stack] "r" (stack),
        [handler] "m" (nested_trap_handler)
-     : "rdx", "rcx", "r8", "r9", "r10", "r11", "memory");
+     : "r8", "r9", "r10", "r11", "memory");
 
   if (!ntr)
     Cpu_call::handle_global_requests();

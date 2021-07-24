@@ -1,5 +1,5 @@
 /*
- * (c) 2013 Alexander Warg <warg@os.inf.tu-dresden.de>
+ * (c) 2013-2020 Alexander Warg <warg@os.inf.tu-dresden.de>
  *     economic rights: Technische Universität Dresden (Germany)
  *
  * This file is part of TUD:OS and distributed under the terms of the
@@ -7,7 +7,7 @@
  * Please see the COPYING-GPL-2 file for details.
  */
 
-#include "pci.h"
+#include <pci-dev.h>
 
 #include "cfg.h"
 #include "debug.h"
@@ -37,7 +37,7 @@ private:
   l4_uint16_t data;
   l4_uint16_t control;
 
-  void _save(Config cap)
+  void _save(Config cap) override
   {
     cap.read(Control, &control);
     cap.read(Addr_lo, &addr_lo);
@@ -50,7 +50,7 @@ private:
       cap.read(Data_32, &data);
   }
 
-  void _restore(Config cap)
+  void _restore(Config cap) override
   {
     cap.write(Addr_lo, addr_lo);
     if (control & (1 << 7))
@@ -62,7 +62,6 @@ private:
       cap.write(Data_32, data);
     cap.write(Control, control);
   }
-
 };
 
 static unsigned _last_msi;
@@ -141,18 +140,20 @@ Msi_res::setup_cap(l4_uint16_t ctl, l4_uint16_t cmd)
   if (ctl & (1 << 7))
     msg_offs = 12;
 
+  auto c = _dev->config();
+
   // disable INTx if not already
   if (!(cmd & Dev::CC_int_disable))
-    _dev->cfg_write<l4_uint16_t>(Config::Command, cmd | Dev::CC_int_disable);
+    c.write<l4_uint16_t>(Config::Command, cmd | Dev::CC_int_disable);
 
-  _dev->cfg_write<l4_uint32_t>(_cap + 4, _msg.msi_addr);
+  c.write<l4_uint32_t>(_cap + 4, _msg.msi_addr);
 
   if (ctl & (1 << 7))
-    _dev->cfg_write<l4_uint32_t>(_cap + 8, _msg.msi_addr >> 32);
+    c.write<l4_uint32_t>(_cap + 8, _msg.msi_addr >> 32);
 
-  _dev->cfg_write<l4_uint16_t>(_cap + msg_offs, _msg.msi_data);
+  c.write<l4_uint16_t>(_cap + msg_offs, _msg.msi_data);
 
-  _dev->cfg_write<l4_uint16_t>(_cap + 2, ctl | 1);
+  c.write<l4_uint16_t>(_cap + 2, ctl | 1);
 
   d_printf(DBG_DEBUG2, "MSI: enable kernel PIN=%x hwpci=%02x:%02x.%x: reg=%03x msg=%llx:%x\n",
            pin(), _dev->bus_nr(), _dev->device_nr(), _dev->function_nr(),
@@ -177,8 +178,9 @@ Msi_res::bind(Triggerable const &irq, unsigned mode)
     }
 
   // MSI capability
-  l4_uint16_t ctl = _dev->cfg_read<l4_uint16_t>(_cap + 2);
-  setup_cap(ctl, _dev->cfg_read<l4_uint16_t>(Config::Command));
+  auto c = _dev->config();
+  l4_uint16_t ctl = c.read<l4_uint16_t>(_cap + 2);
+  setup_cap(ctl, c.read<l4_uint16_t>(Config::Command));
   return 0;
 }
 
@@ -186,9 +188,10 @@ int
 Msi_res::unbind(bool deleted)
 {
   // disable MSI
+  auto c = _dev->config(_cap);
   l4_uint16_t ctl;
-  ctl = _dev->cfg_read<l4_uint16_t>(_cap + 2);
-  _dev->cfg_write<l4_uint16_t>(_cap + 2, ctl & ~1);
+  ctl = c.read<l4_uint16_t>(2);
+  c.write<l4_uint16_t>(2, ctl & ~1);
 
   return Msi_resource::unbind(deleted);
 }
@@ -196,17 +199,18 @@ Msi_res::unbind(bool deleted)
 l4_uint32_t
 Msi_res::filter_cmd_read(l4_uint32_t cmd)
 {
+  auto c = _dev->config();
   if (!this->irq())
     {
       // disable INTx if not already
       if (!(cmd & Dev::CC_int_disable))
-        _dev->cfg_write<l4_uint16_t>(Config::Command, cmd | Dev::CC_int_disable);
+        c.write<l4_uint16_t>(Config::Command, cmd | Dev::CC_int_disable);
 
       // no transparent MSI bound, nothing to check
       return cmd;
     }
 
-  l4_uint16_t ctl = _dev->cfg_read<l4_uint16_t>(_cap + 2);
+  l4_uint16_t ctl = c.read<l4_uint16_t>(_cap + 2);
   if (!(cmd & Dev::CC_int_disable) || !(ctl & 1))
     // MSI was disabled, rewrite the MSI cap
     setup_cap(ctl, cmd);
@@ -223,14 +227,13 @@ Msi_res::filter_cmd_write(l4_uint16_t cmd, l4_uint16_t ocmd)
       return cmd;
     }
 
-  l4_uint16_t ctl = _dev->cfg_read<l4_uint16_t>(_cap + 2);
+  l4_uint16_t ctl = _dev->config(_cap).read<l4_uint16_t>(2);
   if (!(ocmd & Dev::CC_int_disable) || !(ctl & 1))
     // MSI was disabled, rewrite the MSI cap
     setup_cap(ctl, ocmd);
 
   cmd |= Dev::CC_int_disable;
   return cmd;
-
 }
 
 }
@@ -256,7 +259,7 @@ Dev::parse_msi_cap(Cfg_addr cap_ptr)
     }
 
   d_printf(DBG_DEBUG, "Use MSI PCI device %02x:%02x:%x: pin=%x\n",
-           bus()->num, host()->adr() >> 16, host()->adr() & 0xff, msi);
+           bus_nr(), host()->adr() >> 16, host()->adr() & 0xff, msi);
 
   auto *res = new Msi_res(msi, this, cap_ptr.reg());
   flags.msi() = true;

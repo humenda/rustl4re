@@ -29,8 +29,7 @@
 #define JDB_MODULE_INIT_PRIO	 DEPENDS_ON(JDB_CATEGORY_INIT_PRIO)
 
 #define WATCHDOG_INIT		 DEPENDS_ON(PERF_CNT_INIT_PRIO)
-#define KDB_INIT_PRIO		 DEPENDS_ON(JDB_MODULE_INIT_PRIO)
-#define JDB_INIT_PRIO		 DEPENDS_ON(KDB_INIT_PRIO)
+#define JDB_INIT_PRIO		 DEPENDS_ON(JDB_MODULE_INIT_PRIO)
 
 #define INIT_PRIORITY(a) __attribute__((init_priority(a)))
 
@@ -81,7 +80,7 @@ static static_init_##va __static_construction_of_##va##__ \
 #define STATIC_INITIALIZER_P(f, p) \
   __STATIC_INITIALIZER_P(f,func_##f,p)
 
-/// mark f as static initailizer
+/// mark f as static initializer
 #define STATIC_INITIALIZER(f) \
   __STATIC_INITIALIZER(f,func_##f)
 //@}

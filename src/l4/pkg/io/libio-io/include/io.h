@@ -125,19 +125,6 @@ L4_CV long L4_EXPORT
 l4io_release_iomem(l4_addr_t virt, unsigned long size);
 
 /**
- * \brief Search for a IO memory region.
- * \ingroup api_l4io
- * \param   phys   Physical address to look for
- * \param   size   Size of requested memory area
- * \retval  rstart Start address for region
- * \retval  rsize  Size of region in bytes
- * \return 0 if an IO region was found, <0 if not
- */
-L4_CV long L4_EXPORT
-l4io_search_iomem_region(l4_addr_t phys, l4_addr_t size,
-                         l4_addr_t *rstart, l4_addr_t *rsize);
-
-/**
  * \brief Request an IO port region.
  * \ingroup api_l4io
  * \param portnum  Start of port range to request

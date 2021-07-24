@@ -8,12 +8,12 @@ L4DIR	?= $(PKGDIR)/../..
 
 TARGET = include ddekit linux26 fbsd examples doc
 
-linux26: ddekit
-
 #DROPSCONF 				= y
 #DROPSCONF_CONFIG_MK		= $(OBJ_DIR)/Makeconf
 
 include $(L4DIR)/mk/subdir.mk
+
+linux26: ddekit
 
 .PHONY: include lib
 

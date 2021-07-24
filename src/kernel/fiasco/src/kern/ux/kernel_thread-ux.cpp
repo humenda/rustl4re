@@ -35,8 +35,8 @@ IMPLEMENT inline NEEDS [<unistd.h>, <sys/mman.h>, "mem_layout.h"]
 void
 Kernel_thread::free_initcall_section()
 {
-  munmap((void*)&Mem_layout::initcall_start,
-         &Mem_layout::initcall_end - &Mem_layout::initcall_start);
+  munmap(const_cast<char *>(Mem_layout::initcall_start),
+         Mem_layout::initcall_end - Mem_layout::initcall_start);
   free_initcall_section_done = 1;
 }
 
@@ -75,7 +75,7 @@ Kernel_thread::bootstrap_arch()
   Trap_state::base_handler = thread_handle_trap;
 
   if (Koptions::o()->opt(Koptions::F_jdb_cmd))
-    kdb_ke_sequence(Koptions::o()->jdb_cmd);
+    kdb_ke_sequence(Koptions::o()->jdb_cmd, strlen(Koptions::o()->jdb_cmd));
 
   atexit(ux_termination_handler);
   boot_app_cpus();

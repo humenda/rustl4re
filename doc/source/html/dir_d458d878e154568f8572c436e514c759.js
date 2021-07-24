@@ -6,9 +6,11 @@ var dir_d458d878e154568f8572c436e514c759 =
     [ "__kip-64bit.h", "____kip-64bit_8h_source.html", null ],
     [ "__ktrace-impl.h", "____ktrace-impl_8h.html", "____ktrace-impl_8h" ],
     [ "__l4_fpage.h", "____l4__fpage_8h_source.html", null ],
+    [ "__task-arm.h", "____task-arm_8h_source.html", null ],
     [ "__timeout.h", "____timeout_8h_source.html", null ],
     [ "__typeinfo.h", "____typeinfo_8h.html", "____typeinfo_8h" ],
     [ "__vcpu-arm.h", "____vcpu-arm_8h_source.html", null ],
+    [ "__vm-arm.h", "____vm-arm_8h.html", null ],
     [ "__vm-svm.h", "____vm-svm_8h_source.html", null ],
     [ "__vm-vmx.h", "____vm-vmx_8h_source.html", null ],
     [ "arm_smccc", "arm__smccc_source.html", null ],
@@ -47,7 +49,7 @@ var dir_d458d878e154568f8572c436e514c759 =
       [ "Irq", "classL4_1_1Irq.html", "classL4_1_1Irq" ],
       [ "Irq_mux", "structL4_1_1Irq__mux.html", "structL4_1_1Irq__mux" ],
       [ "Icu", "classL4_1_1Icu.html", "classL4_1_1Icu" ],
-      [ "Info", "classL4_1_1Icu_1_1Info.html", null ]
+      [ "Info", "classL4_1_1Icu_1_1Info.html", "classL4_1_1Icu_1_1Info" ]
     ] ],
     [ "irq.h", "l4_2sys_2irq_8h.html", "l4_2sys_2irq_8h" ],
     [ "kdebug.h", "kdebug_8h_source.html", null ],
@@ -85,7 +87,7 @@ var dir_d458d878e154568f8572c436e514c759 =
     [ "task", "task.html", [
       [ "Task", "classL4_1_1Task.html", "classL4_1_1Task" ]
     ] ],
-    [ "task.h", "task_8h.html", "task_8h" ],
+    [ "task.h", "l4_2sys_2task_8h.html", "l4_2sys_2task_8h" ],
     [ "thread", "sys_2thread.html", [
       [ "Thread", "classL4_1_1Thread.html", "classL4_1_1Thread" ],
       [ "Attr", "classL4_1_1Thread_1_1Attr.html", "classL4_1_1Thread_1_1Attr" ],
@@ -101,7 +103,5 @@ var dir_d458d878e154568f8572c436e514c759 =
     [ "vcon.h", "vcon_8h.html", "vcon_8h" ],
     [ "vcpu.h", "sys_2vcpu_8h_source.html", null ],
     [ "vhw.h", "vhw_8h.html", "vhw_8h" ],
-    [ "vm", "vm.html", [
-      [ "Vm", "classL4_1_1Vm.html", null ]
-    ] ]
+    [ "vm", "l4_2sys_2vm.html", null ]
 ];

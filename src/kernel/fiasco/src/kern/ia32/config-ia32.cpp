@@ -15,6 +15,11 @@ public:
     // can access user memory directly
     Access_user_mem = Access_user_mem_direct,
 #endif
+#ifdef CONFIG_IA32_PCID
+    Pcid_enabled = true,
+#else
+    Pcid_enabled = false,
+#endif
 
     /// Timer vector used with APIC timer or IOAPIC
     Apic_timer_vector = APIC_IRQ_BASE + 0,
@@ -73,9 +78,9 @@ public:
   {
     Pic_prio_modify = true,
 #ifdef CONFIG_SYNC_TSC
-    Kip_timer_uses_rdtsc = true,
+    Kip_clock_uses_rdtsc = true,
 #else
-    Kip_timer_uses_rdtsc = false,
+    Kip_clock_uses_rdtsc = false,
 #endif
   };
 
@@ -94,8 +99,6 @@ public:
   static const unsigned default_console_uart = 1;
   static const unsigned default_console_uart_baudrate = 115200;
 
-  static char const char_micro;
-
   static bool found_vmware;
 
   enum {
@@ -110,7 +113,6 @@ IMPLEMENTATION[ia32,amd64]:
 bool Config::hlt_works_ok = true;
 
 bool Config::found_vmware = false;
-char const Config::char_micro = '\265';
 bool Config::apic = false;
 unsigned Config::scheduler_irq_vector;
 
@@ -130,9 +132,6 @@ const char *const Config::kernel_warn_config_string =
 #endif
 #ifndef CONFIG_NO_FRAME_PTR
   "  CONFIG_NO_FRAME_PTR is off\n"
-#endif
-#ifdef CONFIG_LIST_ALLOC_SANITY
-  "  CONFIG_LIST_ALLOC_SANITY is on\n"
 #endif
 #ifdef CONFIG_BEFORE_IRET_SANITY
   "  CONFIG_BEFORE_IRET_SANITY is on\n"

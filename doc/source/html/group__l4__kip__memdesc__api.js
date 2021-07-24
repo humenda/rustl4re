@@ -1,7 +1,7 @@
 var group__l4__kip__memdesc__api =
 [
     [ "l4_kernel_info_mem_desc_t", "structl4__kernel__info__mem__desc__t.html", null ],
-    [ "l4_kernel_info_mem_desc_t", "group__l4__kip__memdesc__api.html#ga0b5d354cf17590df97138f7f8ed33378", null ],
+    [ "l4_kernel_info_mem_desc_t", "group__l4__kip__memdesc__api.html#gac2ed8842c9285f9781141050ab2de75c", null ],
     [ "l4_mem_info_sub_type_t", "group__l4__kip__memdesc__api.html#ga3e23431fa7b2cca1b0f5b99d4370d2a8", [
       [ "l4_mem_info_acpi_rsdp", "group__l4__kip__memdesc__api.html#gga3e23431fa7b2cca1b0f5b99d4370d2a8adfe99c5ff69ffe0b45e79fcf1797ee28", null ]
     ] ],

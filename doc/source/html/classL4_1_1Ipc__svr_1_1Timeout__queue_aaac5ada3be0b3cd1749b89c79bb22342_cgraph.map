@@ -1,0 +1,5 @@
+<map id="L4::Ipc_svr::Timeout_queue::timeout_expired" name="L4::Ipc_svr::Timeout_queue::timeout_expired">
+<area shape="rect" id="node1" title="Determine if a timeout has happened." alt="" coords="5,5,189,47"/>
+<area shape="rect" id="node2" href="$classL4_1_1Ipc__svr_1_1Timeout__queue.html#a4d3404d1f551f06f9ef98121bd150569" title="Get the time for the next timeout." alt="" coords="237,5,401,47"/>
+<area shape="rect" id="node3" href="$classcxx_1_1Bits_1_1Basic__list.html#afe4330106fdfcc338e7c01b1e32cdbac" title="Return the first element in the list." alt="" coords="449,5,597,47"/>
+</map>

@@ -45,7 +45,7 @@
 #define HAVE_MEMPCPY 1
 
 /* Define to 1 if you have the <paths.h> header file. */
-#undef HAVE_PATHS_H
+#define HAVE_PATHS_H 1
 
 /* Define to 1 if you have the `sigsetmask' function. */
 //#define HAVE_SIGSETMASK 1
@@ -80,6 +80,9 @@
 /* Define to 1 if you have the `strtoumax' function. */
 #define HAVE_STRTOUMAX 1
 
+/* Define if your `struct stat' has `st_mtim' */
+#define HAVE_ST_MTIM 1
+
 /* Define to 1 if you have the `sysconf' function. */
 #define HAVE_SYSCONF 1
 
@@ -88,6 +91,9 @@
 
 /* Define to 1 if you have the <sys/types.h> header file. */
 #define HAVE_SYS_TYPES_H 1
+
+/* Define if your faccessat tells root all files are executable */
+/* #undef HAVE_TRADITIONAL_FACCESSAT */
 
 /* Define to 1 if you have the <unistd.h> header file. */
 #define HAVE_UNISTD_H 1
@@ -102,7 +108,7 @@
 #define PACKAGE_NAME "dash"
 
 /* Define to the full name and version of this package. */
-#define PACKAGE_STRING "dash 0.5.5.1"
+#define PACKAGE_STRING "dash 0.5.10.2"
 
 /* Define to the one symbol short name of this package. */
 #define PACKAGE_TARNAME "dash"

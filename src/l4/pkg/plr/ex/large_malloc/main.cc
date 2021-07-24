@@ -18,7 +18,6 @@
 #include <string.h>
 
 #include <l4/util/util.h>
-#include <l4/util/reboot.h>
 #include <l4/util/rdtsc.h>
 #include <l4/re/env>
 #include <l4/re/mem_alloc>
@@ -137,7 +136,7 @@ static void rm_test()
 
 	attach1 = rdtsc1();
 	l4_addr_t a = 0;
-	error = L4Re::Env::env()->rm()->attach(&a, size, L4Re::Rm::Search_addr /* | L4Re::Rm::Eager_map*/, dscap,
+	error = L4Re::Env::env()->rm()->attach(&a, size, L4Re::Rm::F::Search_addr | L4Re::Rm::F::RW /* | L4Re::Rm::Eager_map*/, dscap,
 										   0, L4_SUPERPAGESHIFT);
 	//printf("Attached to %p\n", (void*)a);
 	attach2 = rdtsc2();
@@ -177,7 +176,7 @@ static void access_test()
 	}
 
 	l4_addr_t a = 0;
-	error = L4Re::Env::env()->rm()->attach(&a, size, L4Re::Rm::Search_addr /* | L4Re::Rm::Eager_map*/, dscap,
+	error = L4Re::Env::env()->rm()->attach(&a, size, L4Re::Rm::F::Search_addr | L4Re::Rm::F::RW /* | L4Re::Rm::Eager_map*/, dscap,
 	                                       0, L4_SUPERPAGESHIFT);
 
 	l4_touch_rw((void*)a, size);
@@ -267,8 +266,6 @@ int main(int argc, char **argv)
 		if (0) rm_test();
 		access_test();
 	}
-
-	//l4util_reboot();
 
 	return 0;
 }

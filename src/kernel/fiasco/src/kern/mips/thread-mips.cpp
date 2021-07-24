@@ -5,20 +5,14 @@ IMPLEMENTATION [mips]:
 #include "alternatives.h"
 #include "asm_mips.h"
 #include "cp0_status.h"
+#include "kip.h"
 #include "trap_state.h"
 #include "processor.h"
 #include "types.h"
 
-DEFINE_PER_CPU Per_cpu<Thread::Dbg_stack> Thread::dbg_stack;
-
-PUBLIC inline NEEDS ["trap_state.h"]
-bool
-Thread::send_exception_arch(Trap_state *)
-{ return true; }
-
 PROTECTED inline
 int
-Thread::sys_control_arch(Utcb *)
+Thread::sys_control_arch(Utcb const *, Utcb *)
 {
   return 0;
 }
@@ -58,7 +52,7 @@ Thread::cache_op(unsigned op, Address start, Address end)
 PROTECTED inline NEEDS["processor.h", Thread::sys_vz_save_state,
                        Thread::cache_op]
 L4_msg_tag
-Thread::invoke_arch(L4_msg_tag tag, Utcb *utcb)
+Thread::invoke_arch(L4_msg_tag tag, Utcb const *utcb, Utcb *)
 {
   switch (unsigned op = access_once(&utcb->values[0]) & Opcode_mask)
     {
@@ -95,9 +89,6 @@ IMPLEMENT inline Mword Thread::user_ip() const    { return regs()->ip(); }
 IMPLEMENT inline void  Thread::user_ip(Mword ip)  { regs()->ip(ip); }
 
 /** Constructor.
-    @param id user-visible thread ID of the sender
-    @param init_prio initial priority
-    @param mcp thread's maximum controlled priority
     @post state() != 0
  */
 IMPLEMENT
@@ -132,6 +123,8 @@ Thread::Thread(Ram_quota *q)
   memset(r, 0, sizeof(*r));
   r->status = Cp0_status::status_eret_to_user_ei(Cp0_status::read());
 
+  alloc_eager_fpu_state();
+
   state_add_dirty(Thread_dead, false);
   // ok, we're ready to go!
 }
@@ -164,6 +157,7 @@ Thread::user_invoke()
   // responsible for that
   //Mem_op::cache()->icache_invalidate_all();
 
+  do
     {
       extern char ret_from_user_invoke[];
       Mword register a0 __asm__("a0") = (Mword)ts;
@@ -176,6 +170,7 @@ Thread::user_invoke()
             [ts] "r" (a0),
             [cfs] "i" (ASM_WORD_BYTES * ASM_NARGSAVE));
     }
+  while (0);
 
   __builtin_unreachable();
   panic("should never be reached");
@@ -300,7 +295,10 @@ thread_handle_tlb_fault(Mword cause, Trap_state *ts, Mword pfa)
   bool need_probe = !(cause & 1);
   bool guest = ts->status & (1 << 3);
 
-  if (EXPECT_FALSE(!s->add_tlb_entry(Virt_addr(pfa), !PF::is_read_error(cause), need_probe, guest)))
+  if (EXPECT_FALSE(PF::is_tlb_rights_error(cause)
+                   || !s->add_tlb_entry(Virt_addr(pfa),
+                                        !PF::is_read_error(cause), need_probe,
+                                        guest)))
     {
       // TODO: Think about t->state_del(Thread_cancel); and sync with
       // at least ARM
@@ -394,7 +392,7 @@ Thread::copy_utcb_to_ts(L4_msg_tag const &tag, Thread *snd, Thread *rcv,
   if (rcv == current())
     Proc::set_ulr(rcv->_ulr);
 
-  if (tag.transfer_fpu() && (rights & L4_fpage::Rights::W()))
+  if (tag.transfer_fpu() && (rights & L4_fpage::Rights::CS()))
     snd->transfer_fpu(rcv);
 
   bool ret = transfer_msg_items(tag, snd, snd_utcb,
@@ -417,7 +415,7 @@ Thread::copy_ts_to_utcb(L4_msg_tag const &, Thread *snd, Thread *rcv,
     r->s = *ts;
     r->ulr = snd->_ulr;
 
-    if (rcv_utcb->inherit_fpu() && (rights & L4_fpage::Rights::W()))
+    if (rcv_utcb->inherit_fpu() && (rights & L4_fpage::Rights::CS()))
       {
         snd->save_fpu_state_to_utcb(ts, rcv_utcb);
         snd->transfer_fpu(rcv);
@@ -432,7 +430,7 @@ IMPLEMENTATION [mips && !mips_vz]:
 
 PRIVATE inline
 int
-Thread::sys_vz_save_state(L4_msg_tag, Utcb *)
+Thread::sys_vz_save_state(L4_msg_tag, Utcb const *)
 { return -L4_err::ENosys; }
 
 //----------------------------------------------------------
@@ -461,7 +459,7 @@ Thread::arch_init_vcpu_state(Vcpu_state *vcpu_state, bool ext)
 
 PRIVATE inline
 int
-Thread::sys_vz_save_state(L4_msg_tag tag, Utcb *utcb)
+Thread::sys_vz_save_state(L4_msg_tag tag, Utcb const *utcb)
 {
   if (tag.words() < 2)
     return -L4_err::EMsgtooshort;
@@ -711,7 +709,7 @@ public:
         // fake a trap-state for the nested_trap handler and set the cause to debug ipi
         Trap_state ts;
         Trap_state::Cause *cause = &reinterpret_cast<Trap_state::Cause &>(ts.cause);
-        cause->bp_spec() = 2;
+        cause->bp_spec() = 3;
         cause->exc_code() = 9;
         Thread::call_nested_trap_handler(&ts);
       }

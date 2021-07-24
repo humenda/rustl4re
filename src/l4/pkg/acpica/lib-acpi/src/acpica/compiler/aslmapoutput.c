@@ -8,7 +8,7 @@
  *
  * 1. Copyright Notice
  *
- * Some or all of this work - Copyright (c) 1999 - 2017, Intel Corp.
+ * Some or all of this work - Copyright (c) 1999 - 2019, Intel Corp.
  * All rights reserved.
  *
  * 2. License
@@ -111,6 +111,42 @@
  * other governmental approval, or letter of assurance, without first obtaining
  * such license, approval or letter.
  *
+ *****************************************************************************
+ *
+ * Alternatively, you may choose to be licensed under the terms of the
+ * following license:
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions, and the following disclaimer,
+ *    without modification.
+ * 2. Redistributions in binary form must reproduce at minimum a disclaimer
+ *    substantially similar to the "NO WARRANTY" disclaimer below
+ *    ("Disclaimer") and any redistribution must be conditioned upon
+ *    including a substantially similar Disclaimer requirement for further
+ *    binary redistribution.
+ * 3. Neither the names of the above-listed copyright holders nor the names
+ *    of any contributors may be used to endorse or promote products derived
+ *    from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+ * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * Alternatively, you may choose to be licensed under the terms of the
+ * GNU General Public License ("GPL") version 2 as published by the Free
+ * Software Foundation.
+ *
  *****************************************************************************/
 
 #include "acpi.h"
@@ -201,24 +237,24 @@ MpEmitMappingInfo (
 
     /* Mapfile option enabled? */
 
-    if (!Gbl_MapfileFlag)
+    if (!AslGbl_MapfileFlag)
     {
         return;
     }
 
-    if (!Gbl_GpioList)
+    if (!AslGbl_GpioList)
     {
         FlPrintFile (ASL_FILE_MAP_OUTPUT,
             "\nNo GPIO devices found\n");
     }
 
-    if (!Gbl_SerialList)
+    if (!AslGbl_SerialList)
     {
         FlPrintFile (ASL_FILE_MAP_OUTPUT,
             "\nNo Serial devices found (I2C/SPI/UART)\n");
     }
 
-    if (!Gbl_GpioList && !Gbl_SerialList)
+    if (!AslGbl_GpioList && !AslGbl_SerialList)
     {
         return;
     }
@@ -236,8 +272,8 @@ MpEmitMappingInfo (
 
     /* Clear the lists - no need to free memory here */
 
-    Gbl_SerialList = NULL;
-    Gbl_GpioList = NULL;
+    AslGbl_SerialList = NULL;
+    AslGbl_GpioList = NULL;
 }
 
 
@@ -271,7 +307,7 @@ MpEmitGpioInfo (
 
     /* Walk the GPIO descriptor list */
 
-    Info = Gbl_GpioList;
+    Info = AslGbl_GpioList;
     while (Info)
     {
         HidString = MpGetHidViaNamestring (Info->DeviceName);
@@ -404,7 +440,7 @@ MpEmitSerialInfo (
 
     /* Walk the constructed serial descriptor list */
 
-    Info = Gbl_SerialList;
+    Info = AslGbl_SerialList;
     while (Info)
     {
         Resource = Info->Resource;
@@ -605,7 +641,7 @@ MpXrefDevices (
 
     /* Walk the entire parse tree */
 
-    TrWalkParseTree (Gbl_ParseTreeRoot, ASL_WALK_VISIT_DOWNWARD,
+    TrWalkParseTree (AslGbl_ParseTreeRoot, ASL_WALK_VISIT_DOWNWARD,
         MpNamespaceXrefBegin, NULL, Info);
 
     if (!Info->References)
@@ -649,7 +685,7 @@ MpNamespaceXrefBegin (
      * are references to other objects within the namespace and the
      * parent objects of name declarations
      */
-    if (Op->Asl.CompileFlags & NODE_IS_NAME_DECLARATION)
+    if (Op->Asl.CompileFlags & OP_IS_NAME_DECLARATION)
     {
         return (AE_OK);
     }

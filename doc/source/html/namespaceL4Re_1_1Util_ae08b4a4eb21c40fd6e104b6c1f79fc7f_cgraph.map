@@ -1,3 +1,4 @@
 <map id="L4Re::Util::make_unique_cap" name="L4Re::Util::make_unique_cap">
-<area shape="rect" id="node2" href="$classL4Re_1_1Util_1_1Counting__cap__alloc.html#a74c8a55d97d844b8228d0a378ab48d34" title="Allocate a new capability slot. " alt="" coords="256,5,400,47"/>
+<area shape="rect" id="node1" title="Allocate a capability slot and wrap it in an Unique_cap." alt="" coords="5,13,216,39"/>
+<area shape="rect" id="node2" href="$classL4Re_1_1Util_1_1Counting__cap__alloc.html#a0ae2cdee30f100b8df9f5ea63fa2d31a" title="Allocate a new capability slot." alt="" coords="264,5,415,47"/>
 </map>

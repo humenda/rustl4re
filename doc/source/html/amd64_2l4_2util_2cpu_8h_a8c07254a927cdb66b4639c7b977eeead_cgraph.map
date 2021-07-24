@@ -1,0 +1,6 @@
+<map id="l4util_cpu_capabilities" name="l4util_cpu_capabilities">
+<area shape="rect" id="node1" title="Returns the CPU capabilities if the &quot;cpuid&quot; instruction is available." alt="" coords="5,42,172,69"/>
+<area shape="rect" id="node2" href="$amd64_2l4_2util_2cpu_8h.html#a7b371adca6d25b6c78978446e7c5d9d7" title="Returns the CPU capabilities." alt="" coords="220,5,387,47"/>
+<area shape="rect" id="node4" href="$amd64_2l4_2util_2cpu_8h.html#ae95607a69173331386af6f334be961ce" title="Check whether the CPU supports the &quot;cpuid&quot; instruction." alt="" coords="225,71,382,98"/>
+<area shape="rect" id="node3" href="$amd64_2l4_2util_2cpu_8h.html#a210ddb09b799c674102ae776eaa9e003" title="Generic CPUID access function." alt="" coords="435,13,561,39"/>
+</map>

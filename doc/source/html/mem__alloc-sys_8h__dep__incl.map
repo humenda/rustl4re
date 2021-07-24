@@ -1,3 +1,4 @@
 <map id="l4/re/mem_alloc&#45;sys.h" name="l4/re/mem_alloc&#45;sys.h">
-<area shape="rect" id="node2" href="$mem__alloc__impl_8h.html" title="Memory allocator client stub implementation. " alt="" coords="9,80,159,121"/>
+<area shape="rect" id="node1" title="Memory allocator protocol definitions." alt="" coords="5,5,172,32"/>
+<area shape="rect" id="node2" href="$mem__alloc__impl_8h.html" title="Memory allocator client stub implementation." alt="" coords="9,80,169,121"/>
 </map>

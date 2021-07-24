@@ -374,7 +374,8 @@ Mag_goos::Mag_goos(Core_api const *core)
   _ev_ds = L4Re::Util::make_unique_cap<L4Re::Dataspace>();
 
   chksys(e->mem_alloc()->alloc(L4_PAGESIZE, _ev_ds.get()));
-  chksys(e->rm()->attach(&_ev_ds_m, L4_PAGESIZE, L4Re::Rm::Search_addr,
+  chksys(e->rm()->attach(&_ev_ds_m, L4_PAGESIZE,
+                         L4Re::Rm::F::Search_addr | L4Re::Rm::F::RW,
                          L4::Ipc::make_cap_rw(_ev_ds.get())));
 
   _events = L4Re::Event_buffer(_ev_ds_m.get(), L4_PAGESIZE);
@@ -523,7 +524,7 @@ Mag_goos::op_set_view_info(Goos_rights, unsigned idx,
 
   Client_view *cv = _views[idx].get();
 
-  cxx::Weak_ptr<Client_buffer> cb(0);
+  cxx::Weak_ptr<Client_buffer> cb(nullptr);
   if (vi.has_set_buffer())
     {
       if (vi.buffer_index >= _buffers.size())
@@ -599,7 +600,8 @@ Client_buffer::Client_buffer(Core_api const *, unsigned long size)
 
   L4Re::chksys(L4Re::Env::env()->mem_alloc()->alloc(_size, _ds.get()));
   L4Re::chksys(L4Re::Env::env()->rm()
-                 ->attach(&dsa, _size, L4Re::Rm::Search_addr,
+                 ->attach(&dsa, _size,
+                          L4Re::Rm::F::Search_addr | L4Re::Rm::F::RW,
                           L4::Ipc::make_cap_rw(_ds.get())));
 
   _texture_mem = cxx::move(dsa);

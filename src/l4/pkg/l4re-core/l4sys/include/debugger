@@ -29,10 +29,24 @@
 namespace L4 {
 
 /**
- * C++ debugger interface.
+ * C++ kernel debugger API.
  *
  * \attention This API is subject to change! Do not rely on it in production
  *            code.
+ *
+ * This API is to be used for debugging exclusively.
+ *
+ * This is the API for accessing kernel-debugger functionality from user-level
+ * programs. Specifically, it provides functionality to enrich the kernel
+ * debugger with insights into the program. The purpose is to facilitate
+ * debugging with the kernel debugger. For instance, a developer might choose
+ * to name the threads of her program so that she can find them in the kernel
+ * debugger thread list.
+ *
+ * This API interacts with a kernel object that interfaces with the kernel
+ * debugger, the jdb-kernel object. The jdb-kernel object is fix and only
+ * available when the kernel debugger is built into the microkernel. The
+ * developer needs to pass the capability through to her program.
  *
  * \includefile{l4/sys/debugger}
  */
@@ -54,7 +68,7 @@ public:
    * \return System call return tag.
    */
   l4_msgtag_t set_object_name(const char *name,
-                              l4_utcb_t *utcb = l4_utcb()) throw()
+                              l4_utcb_t *utcb = l4_utcb()) noexcept
   { return l4_debugger_set_object_name_u(cap(), name, utcb); }
 
   /**
@@ -65,7 +79,7 @@ public:
    * \retval ~0UL  The capability is invalid.
    * \retval >=0   The global debugger id.
    */
-  unsigned long global_id(l4_utcb_t *utcb = l4_utcb()) throw()
+  unsigned long global_id(l4_utcb_t *utcb = l4_utcb()) noexcept
   { return l4_debugger_global_id_u(cap(), utcb); }
 
   /**
@@ -78,7 +92,7 @@ public:
    * \retval >=0   The globally unique id.
    */
   unsigned long kobj_to_id(l4_addr_t kobjp,
-                           l4_utcb_t *utcb = l4_utcb()) throw()
+                           l4_utcb_t *utcb = l4_utcb()) noexcept
   { return l4_debugger_kobj_to_id_u(cap(), kobjp, utcb); }
 
   /**
@@ -91,8 +105,8 @@ public:
    * \retval >=0  Id
    * \retval <0   Error
    */
-  int query_log_typeid(const char *name, unsigned idx,
-                      l4_utcb_t *utcb = l4_utcb()) throw()
+  long query_log_typeid(const char *name, unsigned idx,
+                        l4_utcb_t *utcb = l4_utcb()) noexcept
   { return l4_debugger_query_log_typeid_u(cap(), name, idx, utcb); }
 
   /**
@@ -110,10 +124,10 @@ public:
    * \retval 0   Success
    * \retval <0  Error
    */
-  int query_log_name(unsigned idx,
-                     char *name, unsigned namelen,
-                     char *shortname, unsigned shortnamelen,
-                     l4_utcb_t *utcb = l4_utcb()) throw()
+  long query_log_name(unsigned idx,
+                      char *name, unsigned namelen,
+                      char *shortname, unsigned shortnamelen,
+                      l4_utcb_t *utcb = l4_utcb()) noexcept
   {
     return l4_debugger_query_log_name_u(cap(), idx, name, namelen,
                                         shortname, shortnamelen, utcb);
@@ -128,7 +142,7 @@ public:
    * \return Syscall return tag
    */
   l4_msgtag_t switch_log(const char *name, unsigned on_off,
-                         l4_utcb_t *utcb = l4_utcb()) throw()
+                         l4_utcb_t *utcb = l4_utcb()) noexcept
   { return l4_debugger_switch_log_u(cap(), name, on_off, utcb); }
 
   /**
@@ -143,7 +157,7 @@ public:
    * \return Syscall return tag
    */
   l4_msgtag_t get_object_name(unsigned id, char *name, unsigned size,
-                       l4_utcb_t *utcb = l4_utcb()) throw()
+                       l4_utcb_t *utcb = l4_utcb()) noexcept
   { return l4_debugger_get_object_name_u(cap(), id, name, size, utcb); }
 };
 }

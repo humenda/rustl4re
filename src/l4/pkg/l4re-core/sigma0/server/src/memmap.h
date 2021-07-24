@@ -20,8 +20,7 @@
 
 extern Mem_man iomem;
 
-extern l4_kernel_info_t	*l4_info;
-extern l4_addr_t	tbuf_status;
+extern l4_kernel_info_t *l4_info;
 
 #ifdef __cplusplus
 extern "C" {

@@ -1,0 +1,21 @@
+<map id="L4::Cap_base::cap" name="L4::Cap_base::cap">
+<area shape="rect" id="node1" title="Return capability selector." alt="" coords="664,421,803,447"/>
+<area shape="rect" id="node2" href="$classL4vbus_1_1Vbus.html#a15085069054edbb9b221154e25db52b2" title="Assign an L4Re::Dma_space to a DMA domain." alt="" coords="449,5,607,47"/>
+<area shape="rect" id="node3" href="$classL4_1_1Icu.html#ada7541da586ea09b925b4d90d7dc357e" title="Bind an interrupt line of an interrupt controller to an interrupt object." alt="" coords="478,71,578,98"/>
+<area shape="rect" id="node7" href="$structL4_1_1Irq__mux.html#acfd63279449d20bef4226da9a01e5da9" title="Attach an IRQ to this multiplexer." alt="" coords="457,122,599,149"/>
+<area shape="rect" id="node8" href="$classL4Re_1_1Smart__count__cap.html#a4f5fee6c54e153aba5b2cf33e4c5c5ec" title="Copy operation for L4::Smart_cap (increment ref count)." alt="" coords="441,173,615,215"/>
+<area shape="rect" id="node9" href="$classL4Re_1_1Util_1_1Smart__count__cap.html#a5886f75acada6cddee1b8c3192476b93" title="Copy operation for L4::Smart_cap (increment ref count)." alt="" coords="441,239,615,280"/>
+<area shape="rect" id="node10" href="$classL4_1_1Factory.html#a014721aec27ad4877555d5f4b7204896" title="Create a new factory." alt="" coords="458,304,598,345"/>
+<area shape="rect" id="node11" href="$classL4_1_1Factory.html#aac0a160a20464a6917f2f614d5b86407" title="Create a new IPC gate." alt="" coords="440,370,616,397"/>
+<area shape="rect" id="node12" href="$classL4_1_1Factory.html#a741b67e7d11d552f3c17eccfd0d3bf88" title="Create a new IRQ." alt="" coords="446,421,610,447"/>
+<area shape="rect" id="node13" href="$classL4_1_1Factory.html#a5a2119bba3ea97bfb0f10897c1c64ecb" title="Create a new task." alt="" coords="441,471,615,498"/>
+<area shape="rect" id="node14" href="$classL4_1_1Factory.html#a0a5a8f18ac13a39f583c37ea42657246" title="Create a new thread." alt="" coords="458,523,598,564"/>
+<area shape="rect" id="node15" href="$classL4_1_1Factory.html#a664fad5aab28576190df9b3165f0b36a" title="Create a new virtual machine." alt="" coords="444,589,612,615"/>
+<area shape="rect" id="node16" href="$classL4Re_1_1Util_1_1Smart__cap__auto.html#a4dfba4f2c4731689f1a53992c83371a6" title="Free operation for L4::Smart_cap." alt="" coords="447,640,609,681"/>
+<area shape="rect" id="node17" href="$classL4Re_1_1Util_1_1Event__buffer__consumer__t.html#a4ed22b41ce4c7e6b93efae878b1415ef" title="Continuously wait for events and process them." alt="" coords="441,705,615,747"/>
+<area shape="rect" id="node18" href="$classL4_1_1Icu.html#aa34e56cdac798b1949fcc00553386b8b" title="Remove binding of an interrupt line from the interrupt controller object." alt="" coords="470,771,586,798"/>
+<area shape="rect" id="node19" href="$classL4vbus_1_1Icu.html#a836655616e1572d6e5453a566c6d6372" title="Request the L4::Icu capability for this Vbus ICU." alt="" coords="463,822,593,849"/>
+<area shape="rect" id="node4" href="$classL4virtio_1_1Driver_1_1Device.html#a1c9b791b723e7e8ad2eae927094b487d" title="Register a triggerable to receive notifications from the device." alt="" coords="220,32,392,73"/>
+<area shape="rect" id="node5" href="$classL4virtio_1_1Driver_1_1Device.html#a4f8b3d73188c3b6664755b81b80e441c" title="Contacts the device and starts the initial handshake." alt="" coords="220,97,392,139"/>
+<area shape="rect" id="node6" href="$classL4virtio_1_1Driver_1_1Block__device.html#a688df51bdec4ba327a6c0b48a83a115a" title="Setup a connection to a device and set up shared memory." alt="" coords="5,97,172,139"/>
+</map>

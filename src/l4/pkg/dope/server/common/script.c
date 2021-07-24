@@ -904,8 +904,12 @@ static int exec_attrib(INTERPRETER *ci, WIDGET *w, struct attrib *attrib, int to
 		ERR(ATTR_R_PERM, "attribute '%s' is not readable", attrib->name);
 
 	if (dope_streq(attrib->type, "float", 6)) {
-		float (*float_get)(WIDGET *w) = (float (*)(WIDGET *))attrib->get;
-		res.float_value = float_get(w);
+		union {
+			void *v;
+			float f;
+		} v;
+		v.v = attrib->get(w);
+		res.float_value = v.f;
 	} else {
 		res.pointer = attrib->get(w);
 	}

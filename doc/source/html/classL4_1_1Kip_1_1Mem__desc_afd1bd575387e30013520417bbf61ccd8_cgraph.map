@@ -1,4 +1,5 @@
 <map id="L4::Kip::Mem_desc::all" name="L4::Kip::Mem_desc::all">
-<area shape="rect" id="node2" href="$classL4_1_1Kip_1_1Mem__desc.html#a1382b73a9ee752f37223983adf231dca" title="Return number of memory descriptors stored in the kernel info page. " alt="" coords="212,5,357,47"/>
-<area shape="rect" id="node3" href="$classL4_1_1Kip_1_1Mem__desc.html#addce029013bedc997abe2d6799962150" title="Get first memory descriptor. " alt="" coords="212,71,357,112"/>
+<area shape="rect" id="node1" title="Return enumerable list of memory descriptors." alt="" coords="5,46,173,73"/>
+<area shape="rect" id="node2" href="$classL4_1_1Kip_1_1Mem__desc.html#af1dd05e45df7c0e16476f394ce9fb3dd" title="Return number of memory descriptors stored in the kernel info page." alt="" coords="221,5,373,47"/>
+<area shape="rect" id="node3" href="$classL4_1_1Kip_1_1Mem__desc.html#ad52dc6bb675e3c30b0f235021bbc1777" title="Get first memory descriptor." alt="" coords="221,71,373,112"/>
 </map>

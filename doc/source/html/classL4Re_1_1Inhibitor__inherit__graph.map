@@ -1,7 +1,8 @@
 <map id="L4Re::Inhibitor" name="L4Re::Inhibitor">
-<area shape="rect" id="node5" href="$structL4_1_1Kobject__3t.html" title="{L4::Kobject_3t\&lt; Vbus,\l L4Re::Dataspace, L4Re\l::Inhibitor, L4Re::Event \&gt;\n||+ operator Kobject const &amp;()\l+ dec_refcnt()\l# cap()\l# c()\l# __check_protocols__()\l}" alt="" coords="53,516,254,681"/>
-<area shape="rect" id="node2" href="$classL4_1_1Kobject__t.html" title="{L4::Kobject_t\&lt; Inhibitor,\l L4::Kobject, L4RE_PROTO\l_INHIBITOR \&gt;\n||# c()\l# __check_protocols__()\l}" alt="" coords="56,189,251,311"/>
-<area shape="rect" id="node3" href="$classL4_1_1Kobject.html" title="Base class for all kinds of kernel objects and remote objects, referenced by capabilities. " alt="" coords="5,13,117,105"/>
-<area shape="rect" id="node4" href="$classL4_1_1Kobject__t.html" title="Helper class to create an L4Re interface class that is derived from a single base class..." alt="" coords="141,5,352,112"/>
-<area shape="rect" id="node6" href="$classL4vbus_1_1Vbus.html" title="The virtual bus (Vbus) interface. " alt="" coords="66,731,241,867"/>
+<area shape="rect" id="node1" title="Set of inhibitor locks, which inhibit specific actions when held." alt="" coords="83,360,226,467"/>
+<area shape="rect" id="node5" href="$structL4_1_1Kobject__3t.html" title=" " alt="" coords="51,516,258,681"/>
+<area shape="rect" id="node2" href="$classL4_1_1Kobject__t.html" title=" " alt="" coords="60,189,249,311"/>
+<area shape="rect" id="node3" href="$classL4_1_1Kobject.html" title="Base class for all kinds of kernel objects and remote objects, referenced by capabilities." alt="" coords="5,13,120,105"/>
+<area shape="rect" id="node4" href="$classL4_1_1Kobject__t.html" title="Helper class to create an L4Re interface class that is derived from a single base class." alt="" coords="144,5,352,112"/>
+<area shape="rect" id="node6" href="$classL4vbus_1_1Vbus.html" title="The virtual bus (Vbus) interface." alt="" coords="64,731,245,896"/>
 </map>

@@ -43,10 +43,10 @@ void Romain::Region_ops::unmap(Region_handler const *h, l4_addr_t vaddr,
 
 void Romain::Region_ops::free(Region_handler const *h, l4_addr_t start, l4_umword_t size)
 {
-	if ((h->flags() & L4Re::Rm::Reserved))
+	if ((h->flags() & L4Re::Rm::F::Reserved))
 		return;
 
-	if (h->flags() & L4Re::Rm::Pager)
+	if (h->flags() & L4Re::Rm::F::Pager)
 		return;
 
 	L4::Cap<L4Re::Dataspace> ds(h->client_cap_idx());
@@ -165,7 +165,7 @@ Romain::Region_map::Region_map()
  */
 void *Romain::Region_map::attach_locally(void* addr, l4_umword_t size,
                                          Romain::Region_handler *hdlr,
-                                         l4_umword_t flags, l4_uint8_t align)
+                                         L4Re::Rm::Flags flags, l4_uint8_t align)
 {
 	(void)addr;
 	Romain::Region_handler::Dataspace const *ds = &hdlr->local_memory(0);
@@ -176,7 +176,7 @@ void *Romain::Region_map::attach_locally(void* addr, l4_umword_t size,
 	MSG() << PURPLE
 		  << "attaching DS " << std::hex << ds->cap()
 	      << ", addr = "     << addr
-	      << ", flags = "    << flags << " (" << dsstat.flags << ")"
+	      << ", flags = "    << flags.raw << " (" << dsstat.flags.raw << ")"
 	      << ", size = "     << size
 	      << ", align = "    << (l4_umword_t)align
 	      << NOCOLOR;
@@ -241,7 +241,7 @@ void *Romain::Region_map::attach_locally(void* addr, l4_umword_t size,
 	 * can instrument this memory even if the client should not get
 	 * it writable.
 	 */
-	if (!(dsstat.flags & L4Re::Dataspace::Map_rw)) {
+	if (!(dsstat.flags & L4Re::Dataspace::F::W)) {
 		//MSG() << "Copying to rw dataspace.";
 		L4::Cap<L4Re::Dataspace> mem;
 
@@ -249,7 +249,7 @@ void *Romain::Region_map::attach_locally(void* addr, l4_umword_t size,
 
 		mem->copy_in(0, *ds, page_base, hdlr->offset() + size);
 		ds        = &mem; // taking pointer to stack?? XXX
-		flags    &= ~L4Re::Rm::Read_only;
+		flags    |= L4Re::Rm::F::W;
 		page_base = 0;
 		/*
 		 * XXX: If we copied the dataspace above, what happens to the
@@ -265,7 +265,7 @@ void *Romain::Region_map::attach_locally(void* addr, l4_umword_t size,
 	 * a previously reserved region, then this is only valid for the replica's
 	 * rm::attach() call, but not for attaching our local version/copy of the DS.
 	 */
-	flags &= ~L4Re::Rm::In_area;
+	flags &= ~L4Re::Rm::F::In_area;
 
 	l4_addr_t a = Romain::Region_map::attach_aligned(ds, eff_size,
 	                                                 page_base, flags,
@@ -282,11 +282,11 @@ void *Romain::Region_map::attach_locally(void* addr, l4_umword_t size,
 
 void *Romain::Region_map::attach(void* addr, l4_umword_t size,
                                  Romain::Region_handler const &hdlr,
-                                 l4_umword_t flags, l4_uint8_t align, bool shared)
+                                 L4Re::Rm::Flags flags, l4_uint8_t align, bool shared)
 {
 	void *ret = 0;
 
-	MSG() << std::hex << addr << " " << size << " " << (int)align << " " << flags;
+	MSG() << std::hex << addr << " " << size << " " << (int)align << " " << flags.raw;
 	MSG() << "cap " << std::hex << hdlr.client_cap_idx();
 
 	/*
@@ -306,8 +306,8 @@ void *Romain::Region_map::attach(void* addr, l4_umword_t size,
 	 * Note, we can only do this if the Search_addr flag is set, otherwise
 	 * we might hurt the client's expectations about the mem region.
 	 */
-	if ((flags & L4Re::Rm::Search_addr) and 
-	    !(flags & L4Re::Rm::In_area) and
+	if ((flags & L4Re::Rm::F::Search_addr) and
+	    !(flags & L4Re::Rm::F::In_area) and
 	    (size > L4_SUPERPAGESIZE) and
 	    (align < L4_LOG2_SUPERPAGESIZE)) {
 		MSG() << "Forcing attach() with size " << std::hex << size
@@ -320,7 +320,7 @@ void *Romain::Region_map::attach(void* addr, l4_umword_t size,
 	ret = Base::attach(addr, size, _handler, flags, align);
 	MSG() << "Base::attach = " << std::hex << ret << " hdlr.offs: " << _handler.offset();
 	if (ret == (void*)~0UL) {
-		INFO() << std::hex << addr << " " << size << " " << (int)align << " " << flags;
+		INFO() << std::hex << addr << " " << size << " " << (int)align << " " << flags.raw;
 		enter_kdebug("Attach error");
 	}
 

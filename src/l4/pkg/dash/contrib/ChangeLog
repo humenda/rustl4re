@@ -1,3 +1,73 @@
+2014-11-17  Stéphane Aulery <saulery@free.fr>
+
+	* Correct typo in manual page.
+	* Document redirection file descriptor limitation.
+
+2014-10-30  Herbert Xu <herbert@gondor.apana.org.au>
+
+	* Catch variable length expansions on non-existant specials.
+
+2014-10-28  Herbert Xu <herbert@gondor.apana.org.au>
+
+	* Removed unnecessary pungetc on EOF from parser.
+	* Simplify EOF/newline handling in list parser.
+
+2014-10-27  Herbert Xu <herbert@gondor.apana.org.au>
+
+	* Add printf support for format string a, A, and F.
+	* Handle embedded NULs correctly in printf.
+	* Replace open-coded flushall in preadbuffer.
+	* Add likely tag in outmem.
+	* Add ifdefs around MEM_OUT handling in outmem.
+	* Remove unnecessary restoration of format string in printf.
+	* Remove getintmax in printf.
+	* Use error instead of warnx for fatal errors in printf.
+	* Optimise handling of backslash octals in printf.
+	* Simplify echo command.
+	* Handle -- in dotcmd.
+
+2014-10-13  Eric Blake <eblake@redhat.com>
+
+	* cd: support drive letters on Cygwin.
+
+2014-10-08  Herbert Xu <herbert@gondor.apana.org.au>
+
+	* Split unquoted $@/$* correctly when IFS is set but empty.
+	* Do not split quoted VSLENGTH and VSTRIM.
+	* Optimise nulonly away and just use quoted as before.
+
+2014-10-07  Herbert Xu <herbert@gondor.apana.org.au>
+
+	* Use setvareq to set OPTIND initially.
+
+2014-10-06  Herbert Xu <herbert@gondor.apana.org.au>
+
+	* Exit without arguments in a trap should use status outside traps.
+	* Do not allow break to break across function calls.
+	* Move common skipcount logic into skiploop.
+	* Allow return in loop conditional to set exit status.
+	* Return without arguments in a trap should use status outside traps.
+
+2014-10-03  Herbert Xu <herbert@gondor.apana.org.au>
+
+	* Do not clobber exitstatus in evalcommand.
+
+2014-10-02  Herbert Xu <herbert@gondor.apana.org.au>
+
+	* Fix use-after-free in dotrap/evalstring.
+	* Make sure evalskip is zero before running traps.
+	* Set exitstatus in onint.
+
+2014-09-29  Herbert Xu <herbert@gondor.apana.org.au>
+
+	* Kill pgetc_macro.
+	* Handle backslash newlines properly after dollar sign.
+	* Add nlprompt/nlnoprompt helpers.
+
+2014-09-28  Herbert Xu <herbert@gondor.apana.org.au>
+
+	* Correctly handle test ! ! = !.
+
 2014-09-26  Herbert Xu <herbert@gondor.apana.org.au>
 
 	* Small optimisation of command -pv change.

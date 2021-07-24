@@ -62,6 +62,8 @@ Revision History
         typedef unsigned char       uint8_t;
         typedef char                int8_t;
     #endif
+    typedef uint64_t            uintptr_t;
+    typedef int64_t             intptr_t;
 #elif defined(__GNUC__)
     #include <stdint.h>
 #endif
@@ -179,27 +181,33 @@ void __mf (void);
 #pragma intrinsic (__mf)  
 #define MEMORY_FENCE()    __mf()
 #endif
+
 //
 // When build similiar to FW, then link everything together as
-// one big module.
+// one big module. For the MSVC toolchain, we simply tell the
+// linker what our driver init function is using /ENTRY.
 //
-
-#define EFI_DRIVER_ENTRY_POINT(InitFunction)    \
-    UINTN                                       \
-    InitializeDriver (                          \
-        VOID    *ImageHandle,                   \
-        VOID    *SystemTable                    \
-        )                                       \
-    {                                           \
-        return InitFunction(ImageHandle,        \
-                SystemTable);                   \
-    }                                           \
-                                                \
-    EFI_STATUS efi_main(                        \
-        EFI_HANDLE image,                       \
-        EFI_SYSTEM_TABLE *systab                \
-        ) __attribute__((weak,                  \
-                alias ("InitializeDriver")));
+#if defined(_MSC_EXTENSIONS)
+    #define EFI_DRIVER_ENTRY_POINT(InitFunction) \
+        __pragma(comment(linker, "/ENTRY:" # InitFunction))
+#else
+    #define EFI_DRIVER_ENTRY_POINT(InitFunction)    \
+        UINTN                                       \
+        InitializeDriver (                          \
+            VOID    *ImageHandle,                   \
+            VOID    *SystemTable                    \
+            )                                       \
+        {                                           \
+            return InitFunction(ImageHandle,        \
+                    SystemTable);                   \
+        }                                           \
+                                                    \
+        EFI_STATUS efi_main(                        \
+            EFI_HANDLE image,                       \
+            EFI_SYSTEM_TABLE *systab                \
+            ) __attribute__((weak,                  \
+                    alias ("InitializeDriver")));
+#endif
 
 #define LOAD_INTERNAL_DRIVER(_if, type, name, entry)    \
         (_if)->LoadInternal(type, name, entry)
@@ -213,7 +221,7 @@ void __mf (void);
 #ifdef NO_INTERFACE_DECL
 #define INTERFACE_DECL(x)
 #else
-#ifdef __GNUC__
+#if defined(__GNUC__) || defined(_MSC_EXTENSIONS)
 #define INTERFACE_DECL(x) struct x
 #else
 #define INTERFACE_DECL(x) typedef struct x

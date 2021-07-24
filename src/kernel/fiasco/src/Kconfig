@@ -2,24 +2,11 @@
 
 mainmenu "Fiasco configuration"
 
-config KERNELVERSION
-	string
-	option env="KERNELVERSION"
-
-config INCLUDE_PPC32
-	bool
-	option env="INCLUDE_PPC32"
-	help
-	  Use "INCLUDE_PPC32=y make config" to include ppc32 options.
-
-config INCLUDE_SPARC
-	bool
-	option env="INCLUDE_SPARC"
-	help
-	  Use "INCLUDE_SPARC=y make config" to include sparc options.
-
 # generic options that might be selected by platforms etc.
 config HAS_FPU_OPTION
+	bool
+
+config HAS_LAZY_FPU
 	bool
 
 config HAS_VIRT_OBJ_SPACE_OPTION
@@ -58,6 +45,8 @@ config IA32
 	select HAS_VIRT_OBJ_SPACE_OPTION
 	select HAS_JDB_DISASM_OPTION
 	select HAS_JDB_GZIP_OPTION
+	select FPU
+	select HAS_LAZY_FPU
 
 config AMD64
 	bool "AMD64 processor family"
@@ -65,6 +54,8 @@ config AMD64
 	select HAS_JDB_DISASM_OPTION
 	select HAS_JDB_GZIP_OPTION
 	select BIT64
+	select FPU
+	select HAS_LAZY_FPU
 
 #  ARCH_CHOICE
 endchoice
@@ -182,10 +173,21 @@ config REGPARM3
 
 config FPU
 	bool "Enable FPU co-processor" if HAS_FPU_OPTION
-	depends on HAS_FPU_OPTION
-	default y
+	default y if HAS_FPU_OPTION
 	help
 	  Enable this if your platform has hardware floating point support.
+
+config LAZY_FPU
+	bool "Enable lazy FPU switching" if HAS_LAZY_FPU && FPU && !PF_UX
+	depends on FPU && HAS_LAZY_FPU
+	default y if !AMD64
+	help
+	  Enable this option to allow lazy context switching of FPU / SIMD
+          processor state. This removes the overhead incurred by eagerly
+          switching the FPU / SIMD state which is needed to mitigate the lazy
+          FPU restore side-channel attack found on Intel processors.
+
+          It is safe to enable this option on AMD CPUs.
 
 # PF_SECTION: TARGET
 
@@ -206,14 +208,6 @@ config MP_MAX_CPUS
 	default 4
 	help
 	  The maximum number of CPUs the kernel supports.
-
-#config ASSEMBLER_IPC_SHORTCUT
-#	bool "Assembler IPC shortcut"
-#	default y
-#	depends on (PF_PC || PF_UX) && !MP
-#	help
-#	  Use the assembler IPC shortcut to get even better short IPC
-#	  performance in the common case.
 
 config CONTEXT_8K
 	bool #"TCB size of 8k"
@@ -274,7 +268,7 @@ config UX_NET
 	  Enabling this option makes Fiasco-UX provide network support for
 	  L4 programs.
 
-choice 
+choice
 	prompt "Scheduler"
 	default SCHED_FIXED_PRIO
 
@@ -334,14 +328,33 @@ config KERNEL_ISOLATION
 	  Intel CPUs during speculative execution. However, there is the
 	  extra TLB penalty for each system call.
 
+config KERNEL_NX
+	bool "Enable support for kernel RO and non-executable mappings" if AMD64
+	depends on AMD64
+	help
+	  Make kernel mappings either writable or executable, but not
+	  writable and executable at the same time. This makes certain
+	  classes of programming errors more difficult to exploit by a potential
+	  attacker.
+
+config IA32_PCID
+	bool "Enable usage of Intel PCID feature"
+	depends on AMD64
+	depends on KERNEL_ISOLATION
+	help
+	  Use Intel PCID to implement address space IDs on x86. This should
+	  reduce the amount of TLB flushes needed during address space switches
+	  or user/kernel switches with kernel page table isolation.
+
 config CPU_LOCAL_MAP
-	bool "Enable CPU local page-tables for kernel mappings" if AMD64 && !KERNEL_ISOLATION
+	bool "Enable CPU local page-tables for kernel mappings" if AMD64 \
+		&& !KERNEL_ISOLATION && EXPERIMENTAL
 	depends on AMD64
 	help
 	  Enable to use per CPU page directories to allow CPU-local
 	  mapping of kernel memory. This is used for kernel isolation
 	  etc.
-	  
+
 	  If unsure say N.
 
 config INTEL_IA32_BRANCH_BARRIERS
@@ -412,17 +425,6 @@ config STACK_DEPTH
 	  lists'' scans the TCB for these magic numbers and shows the
 	  currently used depth of each thread.
 
-config LIST_ALLOC_SANITY
-	bool "Sanity checks in low level allocator"
-	help
-	  When this option is enabled the low level memory allocator does
-	  extra sanity checks on its data structures before and after every
-	  operation. This can help detect flaws like double frees or memory
-	  corruption by other means.
-
-	  These tests are very expensive so only enable them if a problem
-	  with memory allocation is expected.
-
 config BEFORE_IRET_SANITY
 	bool "Sanity checks at syscall entry/exit"
 	depends on PF_PC
@@ -467,6 +469,11 @@ config SERIAL
 	help
 	  This option enables support for input/output over serial interface.
 
+config UNIT_TEST
+	bool "Compile unit tests"
+	help
+	  Compile fiasco unit tests.
+
 menuconfig JDB
 	bool "JDB kernel debugger"
 	default y
@@ -490,7 +497,7 @@ config JDB_LOGGING
 
 config JDB_DISASM
 	bool "JDB disassembler" if HAS_JDB_DISASM_OPTION
-	default y if HAS_JDB_DISASM_OPTION
+	default y if HAS_JDB_DISASM_OPTION && !ARM && !MIPS
 	help
 	  Add support for disassembly. Increases memory foot-print, only
 	  enable when needed.
@@ -571,6 +578,9 @@ config HOST_CXX
 	default "g++"
 	help
 	  Use this option to override the default C++ host compiler (g++).
+
+config OPTIMIZE_FOR_SIZE
+	bool "Optimize for size (-Os)"
 
 config MAINTAINER_MODE
 	bool "Do additional checks at build time"

@@ -167,7 +167,7 @@ static const char* init()
   l4_addr_t sz = ev_ds->size();
   void* _buf = 0;
 
-  if (L4Re::Env::env()->rm()->attach(&_buf, sz, L4Re::Rm::Search_addr, ev_ds))
+  if (L4Re::Env::env()->rm()->attach(&_buf, sz, L4Re::Rm::F::Search_addr | L4Re::Rm::F::RW, ev_ds))
     return "Cannot attach event dataspace\n";
 
   ev_buffer = L4Re::Event_buffer(_buf, sz);

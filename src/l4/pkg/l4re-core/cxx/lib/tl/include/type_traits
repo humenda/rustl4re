@@ -45,7 +45,7 @@ typedef integral_constant<bool, false> false_type;
 
 template< typename T > struct remove_reference;
 
-template< typename T > struct idendity { typedef T type; };
+template< typename T > struct identity { typedef T type; };
 
 template< typename T1, typename T2 > struct is_same;
 
@@ -132,7 +132,7 @@ forward(typename cxx::remove_reference<T>::type &&t)
 
 template< typename T >
 inline typename cxx::remove_reference<T>::type &&
-move(T &t) { return static_cast<typename cxx::remove_reference<T>::type &&>(t); }
+move(T &&t) { return static_cast<typename cxx::remove_reference<T>::type &&>(t); }
 #else
 template< typename T >
 inline T move(T t) { return t; }

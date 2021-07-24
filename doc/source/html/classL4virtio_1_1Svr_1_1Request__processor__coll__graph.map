@@ -1,2 +1,3 @@
 <map id="L4virtio::Svr::Request_processor" name="L4virtio::Svr::Request_processor">
+<area shape="rect" id="node1" title="Encapsulate the state for processing a VIRTIO request." alt="" coords="5,5,167,156"/>
 </map>

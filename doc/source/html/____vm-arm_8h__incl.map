@@ -1,0 +1,28 @@
+<map id="l4/sys/__vm&#45;arm.h" name="l4/sys/__vm&#45;arm.h">
+<area shape="rect" id="node1" title="Virtualization interface." alt="" coords="53,5,195,32"/>
+<area shape="rect" id="node2" href="$task.html" title="Common task related definitions." alt="" coords="78,80,170,107"/>
+<area shape="rect" id="node3" href="$l4_2sys_2task_8h.html" title="Common task related definitions." alt="" coords="263,610,367,637"/>
+<area shape="rect" id="node14" href="$capability.html" title="L4::Cap related definitions." alt="" coords="171,155,299,181"/>
+<area shape="rect" id="node4" href="$l4_2sys_2types_8h.html" title="Common L4 ABI Data Types." alt="" coords="225,841,337,868"/>
+<area shape="rect" id="node11" href="$l4_2sys_2utcb_8h.html" title="UTCB definitions." alt="" coords="373,767,477,793"/>
+<area shape="rect" id="node12" href="$l4_2sys_2ipc_8h.html" title="Common IPC interface." alt="" coords="459,692,554,719"/>
+<area shape="rect" id="node5" href="$l4_2sys_2l4int_8h.html" title="Fixed sized integer types, generic version." alt="" coords="181,991,286,1017"/>
+<area shape="rect" id="node6" href="$compiler_8h.html" title="L4 compiler related defines." alt="" coords="559,991,691,1017"/>
+<area shape="rect" id="node8" href="$l4_2sys_2consts_8h.html" title="Common constants." alt="" coords="222,916,341,943"/>
+<area shape="rect" id="node9" href="$____l4__fpage_8h_source.html" title=" " alt="" coords="416,916,563,943"/>
+<area shape="rect" id="node10" href="$____timeout_8h_source.html" title=" " alt="" coords="5,916,147,943"/>
+<area shape="rect" id="node7" title=" " alt="" coords="564,1065,687,1092"/>
+<area shape="rect" id="node13" href="$err_8h.html" title="Error codes." alt="" coords="833,767,927,793"/>
+<area shape="rect" id="node15" href="$kobject_source.html" title=" " alt="" coords="435,379,546,405"/>
+<area shape="rect" id="node22" href="$sys_2meta.html" title="Meta interface for getting dynamic type information about objects behind capabilities." alt="" coords="533,229,632,256"/>
+<area shape="rect" id="node16" href="$kernel__object_8h.html" title="Kernel object system calls." alt="" coords="441,528,562,555"/>
+<area shape="rect" id="node18" href="$____typeinfo_8h.html" title="Type information handling." alt="" coords="529,453,631,480"/>
+<area shape="rect" id="node17" href="$____kernel__object__impl_8h.html" title="Low&#45;level kernel debugger functions." alt="" coords="441,603,607,644"/>
+<area shape="rect" id="node19" href="$types.html" title=" " alt="" coords="935,610,1020,637"/>
+<area shape="rect" id="node20" href="$ipc__basics_source.html" title=" " alt="" coords="795,528,911,555"/>
+<area shape="rect" id="node21" href="$capability_8h_source.html" title=" " alt="" coords="597,528,720,555"/>
+<area shape="rect" id="node23" href="$ipc__iface.html" title="Interface Definition Language." alt="" coords="593,379,700,405"/>
+<area shape="rect" id="node25" href="$ipc__string_source.html" title=" " alt="" coords="881,304,993,331"/>
+<area shape="rect" id="node24" href="$ipc__types.html" title=" " alt="" coords="707,453,861,480"/>
+<area shape="rect" id="node26" href="$ipc__array_source.html" title=" " alt="" coords="936,379,1019,405"/>
+</map>

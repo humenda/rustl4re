@@ -51,7 +51,7 @@ IMPLEMENTATION [arm && pf_imx_21]:
 
 IMPLEMENT
 Timer::Timer_imx21::Timer_imx21()
-: Mmio_register_block(Kmem::mmio_remap(Mem_layout::Timer_phys_base))
+: Mmio_register_block(Kmem::mmio_remap(Mem_layout::Timer_phys_base, 0x100))
 {
   write<Mword>(0, TCTL); // Disable
   write<Mword>(TCTL_SW_RESET, TCTL); // reset timer
@@ -91,8 +91,8 @@ Unsigned64
 Timer::system_clock()
 {
   if (Config::Scheduler_one_shot)
-    //return Kip::k()->clock + timer_to_us(Io::read<Unsigned32>(OSCR));
+    //return Kip::k()->clock() + timer_to_us(Io::read<Unsigned32>(OSCR));
     return 0;
   else
-    return Kip::k()->clock;
+    return Kip::k()->clock();
 }

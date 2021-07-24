@@ -73,29 +73,26 @@ public:
       }
   }
 
-  void bind_irq_source(unsigned, cxx::Ref_ptr<Irq_source> const &) override
+  void bind_eoi_handler(unsigned, Eoi_handler *) override
   {
     L4Re::chksys(-L4_ENOSYS, "unmask not supported for Core IC. "
                              "Use GIC for devices that require EOI via IC.");
   }
 
-  cxx::Ref_ptr<Irq_source> get_irq_source(unsigned) const override
+  Eoi_handler *get_eoi_handler(unsigned) const override
   { return nullptr; }
 
-  int dt_get_num_interrupts(Vdev::Dt_node const &node) override
+  int dt_get_interrupt(fdt32_t const *prop, int propsz, int *read) const override
   {
-    int size;
-    if (!node.get_prop<fdt32_t>("interrupts", &size))
-      return 0;
+    if (propsz < 1)
+      return -L4_ERANGE;
 
-    return size;
-  }
+    int irq = fdt32_to_cpu(prop[0]);
 
-  unsigned dt_get_interrupt(Vdev::Dt_node const &node, int irq) override
-  {
-    auto *prop = node.check_prop<fdt32_t>("interrupts", irq + 1);
+    if (read)
+      *read = 1;
 
-    return fdt32_to_cpu(prop[irq]);
+    return irq;
   }
 
   l4_uint32_t irq_vector()

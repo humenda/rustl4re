@@ -3,7 +3,6 @@ INTERFACE:
 #include "context.h"
 #include "kobject.h"
 #include "l4_types.h"
-#include "rcupdate.h"
 #include "space.h"
 #include "spin_lock.h"
 #include "unique_ptr.h"
@@ -11,10 +10,9 @@ INTERFACE:
 /**
  * \brief A task is a protection domain.
  *
- * A is derived from Space, which aggregates a set of address spaces.
- * Additionally to a space, a task provides initialization and
- * destruction functionality for a protection domain.
- * Task is also derived from Rcu_item to provide RCU shutdown of tasks.
+ * A task is derived from Space, which aggregates a set of address spaces.
+ * Additionally to a space, a task provides initialization and destruction
+ * functionality for a protection domain.
  */
 class Task :
   public cxx::Dyn_castable<Task, Kobject>,
@@ -29,11 +27,12 @@ private:
 public:
   enum Operation
   {
-    Map         = 0,
-    Unmap       = 1,
-    Cap_info    = 2,
-    Add_ku_mem  = 3,
-    Ldt_set_x86 = 0x11,
+    Map           = 0,
+    Unmap         = 1,
+    Cap_info      = 2,
+    Add_ku_mem    = 3,
+    Ldt_set_x86   = 0x11,
+    Vgicc_map_arm = 0x12,
   };
 
   virtual int resume_vcpu(Context *ctxt, Vcpu_state *vcpu, bool user_mode);
@@ -74,28 +73,30 @@ IMPLEMENT_DEFAULT
 int
 Task::resume_vcpu(Context *ctxt, Vcpu_state *vcpu, bool user_mode)
 {
-  Trap_state ts;
-  ctxt->copy_and_sanitize_trap_state(&ts, &vcpu->_regs.s);
+  // BAD: use the top-of the context stack area for the vcpu_resume
+  // return, otherwise exceptions during return to user are very
+  // ugly to handle.
+  Trap_state *ts = reinterpret_cast<Trap_state *>(ctxt->regs() + 1) - 1;
+  ctxt->copy_and_sanitize_trap_state(ts, &vcpu->_regs.s);
 
   // FIXME: UX is currently broken
   /* UX:ctxt->vcpu_resume_user_arch(); */
   if (user_mode)
     {
       ctxt->state_add_dirty(Thread_vcpu_user);
-      vcpu->state |= Vcpu_state::F_traps | Vcpu_state::F_exceptions
-                     | Vcpu_state::F_debug_exc;
+      vcpu->state |= Vcpu_state::F_traps | Vcpu_state::F_exceptions;
 
       ctxt->vcpu_pv_switch_to_user(vcpu, true);
     }
 
   ctxt->space_ref()->user_mode(user_mode);
   switchin_context(ctxt->space());
-  vcpu_resume(&ts, ctxt->regs());
+  vcpu_resume(ts, ctxt->regs());
 }
 
 PUBLIC virtual
 bool
-Task::put()
+Task::put() override
 { return dec_ref() == 0; }
 
 PRIVATE
@@ -105,7 +106,7 @@ Task::alloc_ku_mem_chunk(User<void>::Ptr u_addr, unsigned size, void **k_addr)
   assert ((size & (size - 1)) == 0);
 
   Kmem_alloc *const alloc = Kmem_alloc::allocator();
-  void *p = alloc->q_unaligned_alloc(ram_quota(), size);
+  void *p = alloc->q_alloc(ram_quota(), Bytes(size));
 
   if (EXPECT_FALSE(!p))
     return -L4_err::ENomem;
@@ -127,7 +128,7 @@ Task::alloc_ku_mem_chunk(User<void>::Ptr u_addr, unsigned size, void **k_addr)
     {
       Virt_addr kern_va = base + i;
       Virt_addr user_va = Virt_addr((Address)u_addr.get()) + i;
-      Mem_space::Phys_addr pa(pmem_to_phys(Virt_addr::val(kern_va)));
+      Mem_space::Phys_addr pa(pmem_to_phys(cxx::int_value<Virt_addr>(kern_va)));
 
       // must be valid physical address
       assert(pa != Mem_space::Phys_addr(~0UL));
@@ -140,18 +141,18 @@ Task::alloc_ku_mem_chunk(User<void>::Ptr u_addr, unsigned size, void **k_addr)
         {
         case Mem_space::Insert_ok: break;
         case Mem_space::Insert_err_nomem:
-          free_ku_mem_chunk(p, u_addr, size, Virt_size::val(i));
+          free_ku_mem_chunk(p, u_addr, size, cxx::int_value<Virt_size>(i));
           return -L4_err::ENomem;
 
         case Mem_space::Insert_err_exists:
-          free_ku_mem_chunk(p, u_addr, size, Virt_size::val(i));
+          free_ku_mem_chunk(p, u_addr, size, cxx::int_value<Virt_size>(i));
           return -L4_err::EExists;
 
         default:
           printf("UTCB mapping failed: va=%p, ph=%p, res=%d\n",
-              (void*)Virt_addr::val(user_va), (void*)Virt_addr::val(kern_va), res);
+                 (void *)user_va, (void *)kern_va, res);
           kdb_ke("BUG in utcb allocation");
-          free_ku_mem_chunk(p, u_addr, size, Virt_size::val(i));
+          free_ku_mem_chunk(p, u_addr, size, cxx::int_value<Virt_size>(i));
           return 0;
         }
     }
@@ -170,12 +171,15 @@ Task::alloc_ku_mem(L4_fpage ku_area)
 
   Mword sz = 1UL << ku_area.order();
 
+  if (ku_area.mem_address() > Virt_addr(Mem_layout::User_max - sz + 1))
+    return -L4_err::EInval;
+
   Ku_mem *m = new (ram_quota()) Ku_mem();
 
   if (!m)
     return -L4_err::ENomem;
 
-  User<void>::Ptr u_addr((void*)Virt_addr::val(ku_area.mem_address()));
+  User<void>::Ptr u_addr((void *)ku_area.mem_address());
 
   void *p = 0;
   if (int e = alloc_ku_mem_chunk(u_addr, sz, &p))
@@ -223,7 +227,7 @@ Task::free_ku_mem_chunk(void *k_addr, User<void>::Ptr u_addr, unsigned size,
       static_cast<Mem_space*>(this)->v_delete(user_va, page_size, L4_fpage::Rights::FULL());
     }
 
-  alloc->q_unaligned_free(ram_quota(), size, k_addr);
+  alloc->q_free(ram_quota(), Bytes(size), k_addr);
 }
 
 PRIVATE
@@ -235,14 +239,14 @@ Task::free_ku_mem()
 }
 
 
-/** Allocate space for the UTCBs of all threads in this task.
- *  @ return true on success, false if not enough memory for the UTCBs
+/** Allocate resources for this task (e.g. UTCBs, page/cap directories).
+ *  @ return true on success, false if not enough memory
  */
 PUBLIC
 bool
 Task::initialize()
 {
-  if (!Mem_space::initialize())
+  if (!Space::initialize())
     return false;
 
   // For UX, map the UTCB pointer page. For ia32, do nothing
@@ -286,11 +290,6 @@ Task::Task(Ram_quota *q, Mem_space::Dir_type* pdir, Caps c)
 
 // The allocator for tasks
 static Kmem_slab_t<Task> _task_allocator("Task");
-
-PROTECTED static
-Slab_cache*
-Task::allocator()
-{ return _task_allocator.slab(); }
 
 PUBLIC //inline
 void
@@ -371,7 +370,7 @@ Task::generic_factory(Ram_quota *q, Space *,
  */
 PUBLIC
 void
-Task::destroy(Kobject ***reap_list)
+Task::destroy(Kobject ***reap_list) override
 {
   Kobject::destroy(reap_list);
 
@@ -382,8 +381,9 @@ PRIVATE inline NOEXPORT
 L4_msg_tag
 Task::sys_map(L4_fpage::Rights rights, Syscall_frame *f, Utcb *utcb)
 {
-  LOG_TRACE("Task map", "map", ::current(), Log_unmap,
+  LOG_TRACE("Task map", "map", ::current(), Log_map_unmap,
       l->id = dbg_id();
+      l->map   = true;
       l->mask  = utcb->values[1];
       l->fpage = utcb->values[2]);
 
@@ -449,8 +449,9 @@ Task::sys_unmap(Syscall_frame *f, Utcb *utcb)
   Kobject::Reap_list rl;
   unsigned words = f->tag().words();
 
-  LOG_TRACE("Task unmap", "unm", ::current(), Log_unmap,
+  LOG_TRACE("Task unmap", "unm", ::current(), Log_map_unmap,
             l->id = dbg_id();
+            l->map   = false;
             l->mask  = utcb->values[1];
             l->fpage = utcb->values[2]);
 
@@ -495,12 +496,7 @@ Task::sys_cap_valid(Syscall_frame *, Utcb *utcb)
 
   Obj_space::Capability cap = lookup(obj.cap());
   if (EXPECT_TRUE(cap.valid()))
-    {
-      if (!(utcb->values[1] & 1))
-        return commit_result(1);
-      else
-        return commit_result(cap.obj()->map_root()->cap_ref_cnt());
-    }
+    return commit_result(1);
   else
     return commit_result(0);
 }
@@ -560,7 +556,7 @@ Task::sys_cap_info(Syscall_frame *f, Utcb *utcb)
 
 PUBLIC
 void
-Task::invoke(L4_obj_ref, L4_fpage::Rights rights, Syscall_frame *f, Utcb *utcb)
+Task::invoke(L4_obj_ref, L4_fpage::Rights rights, Syscall_frame *f, Utcb *utcb) override
 {
   if (EXPECT_FALSE(f->tag().proto() != L4_msg_tag::Label_task))
     {
@@ -620,11 +616,12 @@ INTERFACE [debug]:
 EXTENSION class Task
 {
 private:
-  struct Log_unmap : public Tb_entry
+  struct Log_map_unmap : public Tb_entry
   {
     Mword id;
     Mword mask;
     Mword fpage;
+    bool  map;
     void print(String_buffer *buf) const;
   };
 
@@ -637,9 +634,28 @@ IMPLEMENTATION [debug]:
 
 IMPLEMENT
 void
-Task::Log_unmap::print(String_buffer *buf) const
+Task::Log_map_unmap::print(String_buffer *buf) const
 {
   L4_fpage fp(fpage);
-  buf->printf("task=[U:%lx] mask=%lx fpage=[%u/%u]%lx",
-              id, mask, (unsigned)fp.order(), (unsigned)fp.type(), fpage);
+  buf->printf("task=[%c:%lx] %s=%lx fpage=[%u/",
+              map ? 'M' : 'U', id,
+              map ? "snd_base" : "mask", mask, (unsigned)fp.order());
+  switch (fp.type())
+    {
+    case L4_fpage::Special:
+      buf->printf("spc] fpage=%lx", fpage);
+      break;
+    case L4_fpage::Memory:
+      buf->printf("mem] addr=%lx", cxx::int_value<Virt_addr>(fp.mem_address()));
+      break;
+    case L4_fpage::Io:
+      buf->printf("io] port=%lx", cxx::int_value<Port_number>(fp.io_address()));
+      break;
+    case L4_fpage::Obj:
+      buf->printf("obj] cap=C:%lx", cxx::int_value<Cap_index>(fp.obj_index()));
+      break;
+    default:
+      buf->printf("???] fpage=%lx", fpage);
+      break;
+    }
 }

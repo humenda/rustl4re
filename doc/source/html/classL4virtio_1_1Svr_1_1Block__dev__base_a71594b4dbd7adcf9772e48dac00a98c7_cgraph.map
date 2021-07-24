@@ -1,0 +1,4 @@
+<map id="L4virtio::Svr::Block_dev_base::Block_dev_base" name="L4virtio::Svr::Block_dev_base::Block_dev_base">
+<area shape="rect" id="node1" title="Create a new virtio block device." alt="" coords="5,13,209,54"/>
+<area shape="rect" id="node2" href="$classL4virtio_1_1Svr_1_1Device__t.html#aedbe988112e98750e5409a8c92358dcf" title="Trigger reset for the configuration space for queue idx." alt="" coords="257,5,416,61"/>
+</map>

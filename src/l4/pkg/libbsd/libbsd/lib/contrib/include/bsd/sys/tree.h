@@ -30,7 +30,11 @@
 #ifndef LIBBSD_SYS_TREE_H
 #define LIBBSD_SYS_TREE_H
 
+#ifdef LIBBSD_OVERLAY
 #include <sys/cdefs.h>
+#else
+#include <bsd/sys/cdefs.h>
+#endif
 
 /*
  * This file defines data structures for different types of trees:

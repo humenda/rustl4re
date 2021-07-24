@@ -13,6 +13,12 @@
 
 namespace Moe {
 
+/**
+ * Dataspace with dynamic backing of physical memory.
+ *
+ * The dataspace is created in an empty state. Memory pages are allocated
+ * and freed dynamically as they are requested by the client.
+ */
 class Dataspace_noncont : public Dataspace
 {
 public:
@@ -46,20 +52,22 @@ public:
     { p = (p & ~Page_addr_mask) | ((unsigned long)a & Page_addr_mask); }
   };
 
-  bool is_static() const throw() { return false; }
+  bool is_static() const throw() override { return false; }
 
-  Dataspace_noncont(unsigned long size, unsigned long flags = Writable) throw()
-  : Dataspace(size, flags | Cow_enabled, L4_LOG2_PAGESIZE), _pages(0)
+  Dataspace_noncont(unsigned long size,
+                    Flags flags = L4Re::Dataspace::F::RWX) throw()
+  : Dataspace(size, flags | Flags(Cow_enabled), L4_LOG2_PAGESIZE), _pages(0)
   {}
 
   virtual ~Dataspace_noncont() {}
 
   Address address(l4_addr_t offset,
-                  Ds_rw rw = Writable, l4_addr_t hot_spot = 0,
-                  l4_addr_t min = 0, l4_addr_t max = ~0) const;
-  void unmap(bool ro = false) const throw();
+                  Flags flags = L4Re::Dataspace::F::RWX, l4_addr_t hot_spot = 0,
+                  l4_addr_t min = 0, l4_addr_t max = ~0) const override;
+  int copy_address(l4_addr_t offset, Flags flags, l4_addr_t *copy_addr,
+                   unsigned long *copy_size) const override;
 
-  int pre_allocate(l4_addr_t offset, l4_size_t size, unsigned rights);
+  int pre_allocate(l4_addr_t offset, l4_size_t size, unsigned rights) override;
 
   virtual Page &page(unsigned long offs) const throw() = 0;
   virtual Page &alloc_page(unsigned long offs) const = 0;
@@ -77,7 +85,7 @@ private:
   void page(unsigned idx, void *page, unsigned flags = 0) const
   {
     pages[idx] = (unsigned long)page & Page_addr_mask | flags
-      & ~Page_addr_mask; 
+      & ~Page_addr_mask;
   }
 #endif
 
@@ -85,10 +93,10 @@ private:
   void unmap_page(Page const &p, bool ro = false) const throw();
 
 public:
-  long clear(unsigned long offs, unsigned long size) const throw();
+  long clear(unsigned long offs, unsigned long size) const throw() override;
 
   static Dataspace_noncont *create(Q_alloc *q, unsigned long size,
-                                   unsigned long flags = Writable);
+                                   Flags flags = L4Re::Dataspace::F::RWX);
 
 protected:
   union
@@ -97,5 +105,7 @@ protected:
     Page _page;
   };
 
+private:
+  Address map_address(l4_addr_t offset, Flags flags) const;
 };
 };

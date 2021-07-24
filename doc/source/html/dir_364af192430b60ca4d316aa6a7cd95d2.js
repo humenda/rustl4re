@@ -8,7 +8,7 @@ var dir_364af192430b60ca4d316aa6a7cd95d2 =
     [ "vbus_gpio.h", "vbus__gpio_8h_source.html", null ],
     [ "vbus_i2c.h", "vbus__i2c_8h_source.html", null ],
     [ "vbus_inhibitor.h", "vbus__inhibitor_8h_source.html", null ],
-    [ "vbus_interfaces.h", "vbus__interfaces_8h_source.html", null ],
+    [ "vbus_interfaces.h", "vbus__interfaces_8h.html", "vbus__interfaces_8h" ],
     [ "vbus_mcspi.h", "vbus__mcspi_8h_source.html", null ],
     [ "vbus_pci", "vbus__pci_source.html", null ],
     [ "vbus_pci-ops.h", "vbus__pci-ops_8h_source.html", null ],

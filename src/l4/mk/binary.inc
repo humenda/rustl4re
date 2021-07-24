@@ -44,6 +44,8 @@ ifeq ($(SYSTEM),) # if we have no system yet, build the subdirs
 # our default systems
 SYSTEMS	?= $(SYSTEMS_ABI)
 
+DEPENDS_PKGS ?= $(if $(PKG_OPTIONAL),$(REQUIRES_LIBS))
+
 BID_MISSING_PCS := \
    $(strip $(if $(DEPENDS_PKGS), \
              $(strip $(foreach i,$(DEPENDS_PKGS),            \
@@ -112,7 +114,7 @@ SYSTEM_TO_ARCH = $(shell echo $(1)|$(SED) -e 's/[_-].*//')
 SYSTEM_TO_CPU = $(shell echo $(1)|$(SED) -ne 's/[^-_]*_\([^-]*\).*/\1/p')
 SYSTEM_TO_L4API = $(shell echo $(1)|$(SED) -ne 's/.*-\(.*\)/\1/p')
 
-$(foreach sys,$(TARGET_SYSTEMS),$(OBJ_DIR)/OBJ-$(sys)/$(BID_OBJ_Makefile)):$(OBJ_DIR)/OBJ-%/$(BID_OBJ_Makefile):$(OBJ_DIR)/.general.d
+$(foreach sys,$(TARGET_SYSTEMS),$(OBJ_DIR)/OBJ-$(sys)/$(BID_OBJ_Makefile)):$(OBJ_DIR)/OBJ-%/$(BID_OBJ_Makefile):$(OBJ_DIR)/.general.d $(L4DIR_ABS)/mk/binary.inc
 	@install -d $(dir $@)
 	@echo 'L4DIR=$(L4DIR_ABS)'>$@
 	@echo 'OBJ_BASE=$(OBJ_BASE)'>>$@
@@ -135,10 +137,11 @@ $(foreach sys,$(TARGET_SYSTEMS),$(OBJ_DIR)/OBJ-$(sys)/$(BID_OBJ_Makefile)):$(OBJ
 
 install relink scrub:: $(foreach arch,$(TARGET_SYSTEMS),\
                                           $(OBJ_DIR)/OBJ-$(arch)/$(BID_OBJ_Makefile))
-	$(if $(TARGET_SYSTEMS),  $(VERBOSE)set -e ; \
-	    for d in $(TARGET_SYSTEMS) ; do \
-	    	PWD=$OBJ-$$d $(MAKE) -C $(OBJ_DIR)/OBJ-$$d -f $(BID_OBJ_Makefile) \
-			$@ ; done )
+	$(if $^,\
+	    $(VERBOSE)set -e; \
+	    for d in $(^D); do \
+	        cd $$d; $(MAKE) -f $(BID_OBJ_Makefile) $@; \
+	    done )
 
 .PHONY: pre-obj
 pre-obj::
@@ -262,6 +265,15 @@ REQUIRES_LIBS += $(REQUIRES_LIBS_$(ARCH)) $(call BID_mode_var,REQUIRES_LIBS)
 LDFLAGS	+= $(strip $(LDFLAGS_$(OSYSTEM)) $(LDFLAGS_$@) $(LDFLAGS_$@_$(OSYSTEM)))
 CARCHFLAGS += $(CARCHFLAGS_$(ARCH)) $(CARCHFLAGS_$(ARCH)_$(CPU))
 
+CFLAGS        += $(CFLAGS-y)
+CXXFLAGS      += $(CXXFLAGS-y)
+CPPFLAGS      += $(CPPFLAGS-y)
+SRC_C         += $(SRC_C-y)
+SRC_CC        += $(SRC_CC-y)
+SRC_S         += $(SRC_S-y)
+DEFINES       += $(DEFINES-y)
+REQUIRES_LIBS += $(REQUIRES_LIBS-y)
+
 # ---------------------------------
 
 BID_MISSING_LIBS :=
@@ -279,12 +291,12 @@ BID_PKG_CONFIG =                                      \
                            $(if $(VERBOSE),--silence-errors)             \
 			   $(2) $(3) || echo __PKGCONFIG_FAILED__)
 
-BID_PKG_CONFIG_MISSING =                                        \
-     $(if $(strip $(3)),                                        \
-          $(shell PKG_CONFIG_LIBDIR=$(1)/pc                     \
-                  PKG_CONFIG_PATH= LANG=C $(L4_BID_PKG_CONFIG)  \
-                  --errors-to-stdout --print-errors $(2) $(3)   \
-                  | LANG=C grep ", not found"))
+BID_PKG_CONFIG_MISSING =                                         \
+     $(if $(strip $(3)),                                         \
+          $(shell PKG_CONFIG_LIBDIR=$(1)/pc                      \
+                  PKG_CONFIG_PATH= LC_ALL=C $(L4_BID_PKG_CONFIG) \
+                  --errors-to-stdout --print-errors $(2) $(3)    \
+                  | LC_ALL=C grep ", not found"))
 
 BID_PKG_CONFIG_FAILED = $(findstring __PKGCONFIG_FAILED__,$(1))
 
@@ -298,16 +310,18 @@ BID_BENDER_DEFINES = \
 bid_bender_default_vars = $(call BID_BENDER_DEFINES,$(OBJ_BASE),$(L4DIR),$(GCCSYSLIBDIRS),$(ARCH)_$(CPU),$(L4API))
 
 # linker for L4 libs and applications
-BID_LINK = $(L4DIR)/tool/bin/l4-bender -t ld $(bid_bender_default_vars) -Dlinker="$(LD)" \
+BID_LINK = $(L4DIR)/tool/bin/l4-bender $(if $(VERBOSE),,--trace-exec) \
+           -t ld $(bid_bender_default_vars) -Dlinker="$(LD)" \
            --spec=$(L4DIR)/mk/bid-bender.spec --
 
 # linker for host mode and l4linux mode
-BID_LINK_MODE_host = $(L4DIR)/tool/bin/l4-bender -t host-ld $(bid_bender_default_vars) -Dlinker="$(1)" \
+BID_LINK_MODE_host = $(L4DIR)/tool/bin/l4-bender $(if $(VERBOSE),,--trace-exec) \
+                     -t host-ld $(bid_bender_default_vars) -Dlinker="$(1)" \
                      --spec=$(L4DIR)/mk/bid-bender.spec --
 
-BID_link_deps_file = $(dir $(1)).$(notdir $(1)).pcs.d
+BID_link_deps_file = $(call BID_dot_fname,$1).pcs.d
 
-BID_LINK_DEPS = $(addprefix $(dir $(1)),$(addprefix .$(notdir $(1)),.d .pcs.d))
+BID_LINK_DEPS = $(call BID_dot_fname,$1).d $(call BID_link_deps_file,$1)
 
 ifeq ($(BID_MISSING_PCS),)
  ifneq ($(SYSTEM),)
@@ -372,15 +386,18 @@ endif
 endif
 
 bid_flag_variants = $($(1)_$(OSYSTEM)) $($(1)_$@) $($(1)_$(@D)) $($(1)_$<) \
+                    $($(1)_$(@D)/$(<F)) \
                     $($(1)_$(<F)) $($(1)_$(<D)) $($(1)_$(<F)_$(OSYSTEM))
 
-OPTS_DEBUG       ?= -g
+OPTS_DEBUG-$(CONFIG_BID_DEBUG_INFO) = -g
+OPTS_DEBUG       ?= $(OPTS_DEBUG-y)
 OPTS             ?= $(OPTS_DEBUG) -O2 -fno-strict-aliasing
 
 WARNINGS_MINIMAL ?= -Wall $(call bid_flag_variants,WARNINGS)
-WARNINGS_MEDIUM  ?= -Wall -Wstrict-prototypes -Wmissing-prototypes \
+WARNINGS_MEDIUM  ?= -Wall -Wstrict-prototypes $(CONDITIONAL_WARNINGS_MEDIUM) \
                     -Wmissing-declarations $(call bid_flag_variants,WARNINGS)
-WARNINGS_FULL    ?= -Wextra $(WARNINGS_MEDIUM)
+WARNINGS_FULL    ?= -Wextra -Wbad-function-cast -Wdouble-promotion \
+                    $(CONDITIONAL_WARNINGS_FULL) $(WARNINGS_MEDIUM)
 WARNINGS         ?= $(WARNINGS_FULL)
 
 ifeq ($(MODE),host)
@@ -430,6 +447,8 @@ default_reloc = $(if $(call default_reloc_base,$(1)),\
 		          $(shell printf "0x%x" $$(($(RAM_BASE) + $(call default_reloc_base,$(1))))), \
 			  $(call default_reloc_base,$(1))))
 
+CCXX_FLAGS += $(if $(CONFIG_FULL_PATH_NAMES_IN_BINARIES),,$(GCCPREFIXOPT))
+
 # can be overwritten to get the old mode
 CFLAGS_C99 ?= -std=gnu99
 
@@ -447,7 +466,6 @@ CFLAGS  += $(CFLAGS_C99)
 CFLAGS  += $(CFLAGS_L4_GENERIC)
 DEFINES += $(call bid_flag_variants,DEFINES)
 DEFINES += -DSYSTEM_$(subst -,_,$(SYSTEM)) -DARCH_$(ARCH) -DCPUTYPE_$(CPU) -DL4API_$(L4API)
-DEFINES += $(DEFINES-y)
 DEFINES += -D_GNU_SOURCE $(if $(L4API),,-DL4_MINIMAL_LIBC)
 ifdef DEBUG
 ifneq (,$(filter 0 n N, $(DEBUG)))
@@ -464,7 +482,7 @@ CPPFLAGS-DEBUG_MODE = \
 
 CPPFLAGS+= $(call bid_flag_variants,CPPFLAGS)
 CPPFLAGS+= $(DEFINES)
-CPPFLAGS+= $(addprefix -I, $(PRIVATE_INCDIR) $(PRIVATE_INCDIR_$(OSYSTEM)) $(PRIVATE_INCDIR_$@) $(PRIVATE_INCDIR_$@_$(OSYSTEM)))
+CPPFLAGS+= $(addprefix -I,  $(PRIVATE_INCDIR) $(call bid_flag_variants,PRIVATE_INCDIR))
 CPPFLAGS+= $(if $(CONTRIB_INCDIR),$(addprefix -I$(OBJ_BASE)/include/contrib/,$(CONTRIB_INCDIR)))
 CPPFLAGS+= $(BID_PKG_CONFIG_CFLAGS)
 #CPPFLAGS+= $(if $(CLIENTIDL)$(SERVERIDL)$(addprefix CLIENTIDL_,$(TARGET))$(addprefix SERVERIDL_,$(TARGET)),$(addprefix -I, $(IDL_PATH)))
@@ -489,8 +507,10 @@ endif
 
 CXXFLAGS+= $(if $(CONFIG_BID_GCC_OMIT_FP),-fomit-frame-pointer,-fno-omit-frame-pointer)
 CXXFLAGS+= $(call bid_flag_variants,CXXFLAGS)
-CXXFLAGS+= $(OPTS) $(filter-out -Wstrict-prototypes -Wmissing-prototypes,$(WARNINGS))
-CXXFLAGS+= $(CXXFLAGS-y)
+CXXFLAGS+= $(OPTS) $(filter-out $(foreach w,-Wbad-function-cast -Wstrict-prototypes -Wmissing-prototypes,\
+                                            $(w) $(patsubst -W%,-Wno-%,$(w))),\
+                                $(WARNINGS))
+CXXFLAGS+= $(GCCWNONOEXCEPTTYPE) $(GCCWNOPSABI)
 CXXFLAGS+= -fno-common
 CXXFLAGS+= $(CXXFLAGS_L4_GENERIC)
 
@@ -683,10 +703,9 @@ endef
 #
 # args: 1 - target name
 #       2 - object-file infix 1 (added after the source files base-name)
-#       3 - object-file infix 2 (added before the .o, only used for C++ files)
 #
 define make_per_target_vars_and_deps
-  $$(call make_per_target_vars,$(1),$(2),$(3))
+  $$(call make_per_target_vars,$(1),$(2))
   OBJS_$(1) := $$(call get_target_var,OBJS,$(1))
   $$(OBJS_$(1)): .general.d
   $(1): OBJS = $$(OBJS_$(1))
@@ -855,10 +874,10 @@ $(if $(BID_ALLOW_CPP_AS_CPLUSPLUS_FILE),$(eval $(call BID_GENERATE_S_MAKE_RULE,%
 	@$(BUILD_MESSAGE)
 	$(VERBOSE)$(MKDIR) $(@D)
 	$(VERBOSE)$(CPP) $(CFLAGS) $(addprefix -I, $(PRIVATE_INCDIR)) -x assembler-with-cpp -Wp,-MD,$(@D)/.$(@F).d,-MT$@,-MP -nostdinc -o $@.pre $<
-	$(VERBOSE)$(DTC) $(DTC_FLAGS) $(addprefix -i , $(PRIVATE_INCDIR)) -i $(dir $<) -d $(@D)/.$(@F).d-x -O dtb -b 0 -o $@ $@.pre
-	$(VERBOSE)$(SED) -e "s|$@.pre|$<|" $(@D)/.$(@F).d-x | \
+	$(VERBOSE)$(DTC) $(DTC_FLAGS) $(addprefix -i , $(PRIVATE_INCDIR)) -i $(dir $<) -d $(call BID_dot_fname,$@).d-x -O dtb -b 0 -o $@ $@.pre
+	$(VERBOSE)$(SED) -e "s|$@.pre|$<|" $(call BID_dot_fname,$@).d-x | \
 		perl -ne 'print "$$_\n"; if (/^.*:\s*(.*)$$/) { print "$$_:\n" foreach (split(/ /,$$1)); }' >> $(@D)/.$(@F).d
-	$(VERBOSE)$(RM) $(@D)/.$(@F).d-x $@.pre
+	$(VERBOSE)$(RM) $(call BID_dot_fname,$@).d-x $@.pre
 
 define bin_to_asm_recipe
 	echo -e ".section .rodata, \"a\"\n"    \
@@ -878,9 +897,8 @@ $(addsuffix .bin.S,$(SRC_DATA)): %.bin.S: % $(GENERAL_D_LOC)
 	$(VERBOSE)$(MKDIR) $(@D)
 	$(VERBOSE)$(call bin_to_asm_recipe,$<,$@,$(subst -,_,$(subst /,_,$(subst .,_,$(strip $(*F))))))
 
-DEPS	+= $(foreach file,$(ALLOBJS), $(dir $(file)).$(notdir $(file)).d)
-DEPS	+= $(foreach file,$(ALLDPI), $(dir $(file)).$(notdir $(file)).d)
-DEPS	+= $(foreach file,$(filter %.dtb, $(INSTALL_TARGET)), $(dir $(file)).$(notdir $(file)).d)
+DEPS	+= $(foreach file,$(ALLOBJS), $(call BID_dot_fname,$(file)).d)
+DEPS	+= $(foreach file,$(ALLDPI), $(call BID_dot_fname,$(file)).d)
 
 # Common clean Rules
 
@@ -893,7 +911,8 @@ clean cleanall::
 # clean: delete all temporary editor files, objects, binaries
 #        and most generated files
 cleanall::
-	$(VERBOSE)$(RM) $(TARGET) $(wildcard .*.d) $(wildcard $(BID_OBJ_Makefile).inc)
+	$(VERBOSE)$(RM) $(TARGET) $(addsuffix .*.d,$(sort $(dir $(ALLOBJS)))) \
+		$(wildcard $(BID_OBJ_Makefile).inc)
 
 .PHONY: scrub clean cleanall disasm
 

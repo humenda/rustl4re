@@ -1,3 +1,4 @@
 <map id="L4Re::Video::Pixel_info::has_alpha" name="L4Re::Video::Pixel_info::has_alpha">
-<area shape="rect" id="node2" href="$classL4Re_1_1Video_1_1Color__component.html#a68a69675b5ce76aba3ebdec992b297b5" title="Return the number of bits used by the component. " alt="" coords="188,5,327,47"/>
+<area shape="rect" id="node1" title="Return whether the pixel has an alpha channel." alt="" coords="5,5,144,47"/>
+<area shape="rect" id="node2" href="$classL4Re_1_1Video_1_1Color__component.html#a68a69675b5ce76aba3ebdec992b297b5" title="Return the number of bits used by the component." alt="" coords="192,5,333,47"/>
 </map>

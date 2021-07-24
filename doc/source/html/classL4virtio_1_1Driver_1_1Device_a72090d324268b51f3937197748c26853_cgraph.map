@@ -1,0 +1,6 @@
+<map id="L4virtio::Driver::Device::send" name="L4virtio::Driver::Device::send">
+<area shape="rect" id="node1" title="Send a request to the device." alt="" coords="5,39,177,80"/>
+<area shape="rect" id="node2" href="$classL4virtio_1_1Driver_1_1Virtqueue.html#a20a030dd769eddf44b6cb0bb07b84ee8" title="Enqueue a descriptor in the available ring." alt="" coords="225,5,416,47"/>
+<area shape="rect" id="node3" href="$classL4virtio_1_1Virtqueue.html#ad478e575bf6023866e8bd4ea6b5b0200" title="Get the no notify flag of this queue." alt="" coords="249,71,392,112"/>
+<area shape="rect" id="node4" href="$structL4virtio_1_1Virtqueue_1_1Used_1_1Flags.html#ac3ce47fc7d1ceb8cbe209a71d898bc6e" title="Get the no_notify bits ( 0 to 0 ) of raw." alt="" coords="464,71,639,112"/>
+</map>

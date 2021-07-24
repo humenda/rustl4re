@@ -111,7 +111,7 @@ int Nand_ctrl::done_read(Read_op *op)
   assert(chip->state() == Nand_chip::Reading);
 
   for (unsigned i = 0; i < op->transfer->num; ++i)
-    rd_dat((u8 *)(*op->transfer)[i].addr, (*op->transfer)[i].size);
+    rd_dat((*op->transfer)[i].addr, (*op->transfer)[i].size);
 
   chip->set_state(Nand_chip::Ready);
   return 0;

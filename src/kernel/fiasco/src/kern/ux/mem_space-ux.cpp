@@ -91,7 +91,8 @@ Mem_space::page_map(Address phys, Address virt, Address size, Attr attr)
 
   *(trampoline + 1) = virt;
   *(trampoline + 2) = size;
-  *(trampoline + 3) = PROT_READ | (attr.rights & Page::Rights::W() ? PROT_WRITE : 0);
+  *(trampoline + 3) = PROT_READ | (attr.rights & Page::Rights::W() ? PROT_WRITE : 0)
+                                | (attr.rights & Page::Rights::X() ? PROT_EXEC : 0);
   *(trampoline + 4) = MAP_SHARED | MAP_FIXED;
   *(trampoline + 5) = Boot_info::fd();
 
@@ -124,7 +125,8 @@ Mem_space::page_protect(Address virt, Address size, unsigned attr)
   auto guard = lock_guard(cpu_lock);
 
   Trampoline::syscall(pid(), __NR_mprotect, virt, size,
-                      PROT_READ | (attr & Page_writable ? PROT_WRITE : 0));
+                      PROT_READ | (attr & Page_writable ? PROT_WRITE : 0)
+                                | (attr & Pt_entry::XD ? 0 : PROT_EXEC));
 }
 
 
@@ -157,7 +159,7 @@ Mem_space::user_to_kernel(T const *addr, bool write)
           // See if we want to write and are not allowed to
           // Generic check because INTEL_PTE_WRITE == INTEL_PDE_WRITE
           if (!write || (attr.rights & Page::Rights::W()))
-            return (T*)Mem_layout::phys_to_pmem(Phys_addr::val(phys));
+            return (T*)Mem_layout::phys_to_pmem(cxx::int_value<Phys_addr>(phys));
 
           error |= PF_ERR_PRESENT;
         }
@@ -175,7 +177,7 @@ Mem_space::user_to_kernel(T const *addr, bool write)
       // Pretend open interrupts, we restore the current state afterwards.
       Cpu_lock::Status was_locked = cpu_lock.test();
 
-      thread_page_fault(Virt_addr::val(virt), error, 0, Proc::processor_state() | EFLAGS_IF, 0);
+      thread_page_fault(cxx::int_value<Virt_addr>(virt), error, 0, Proc::processor_state() | EFLAGS_IF, 0);
 
       cpu_lock.set (was_locked);
     }

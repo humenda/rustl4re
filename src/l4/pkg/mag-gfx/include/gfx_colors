@@ -462,6 +462,7 @@ public:
     operator Pixel () const { return Pixel(_c); }
 
     Color operator + (Color const &o) const { return Color(_c + o._c); }
+    Color &operator =(const Color &) = default;
   };
 
   /** Blend color with alpha value (0-255).

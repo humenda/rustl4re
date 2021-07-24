@@ -9,9 +9,9 @@ var classcxx_1_1String =
     [ "end", "classcxx_1_1String.html#a21ab9dc0ee0f3971d9f858c54dcec286", null ],
     [ "eof", "classcxx_1_1String.html#a5368753551d0792f7a6688831f11c8ea", null ],
     [ "find", "classcxx_1_1String.html#a79dc825fbf4b77b860cc0292ebe4bf81", null ],
+    [ "find", "classcxx_1_1String.html#ad921ef10ca12ac37e7b5639ef8091fe8", null ],
     [ "find", "classcxx_1_1String.html#ab386657d1b6adb9709f4f8019f960f2d", null ],
     [ "find", "classcxx_1_1String.html#a9fd970cab64f6ba9531da238f33ff75d", null ],
-    [ "find", "classcxx_1_1String.html#ad921ef10ca12ac37e7b5639ef8091fe8", null ],
     [ "find_match", "classcxx_1_1String.html#a8de10a732522f2065974e3448eb5c531", null ],
     [ "from_dec", "classcxx_1_1String.html#aac6be707bbccd6ceca800a91d622499d", null ],
     [ "from_hex", "classcxx_1_1String.html#a313732e3babe0af919d52c269a0f3421", null ],
@@ -21,13 +21,13 @@ var classcxx_1_1String =
     [ "len", "classcxx_1_1String.html#a398f5a0f1a5ca3faedbd923c3931225f", null ],
     [ "operator!=", "classcxx_1_1String.html#aad2a0d5e7ed3dc296934591850092edc", null ],
     [ "operator==", "classcxx_1_1String.html#a330429e4e2b79ce768f6894d698c0cc7", null ],
-    [ "operator[]", "classcxx_1_1String.html#accbcb5e21e68dc44e86947330db66e10", null ],
-    [ "operator[]", "classcxx_1_1String.html#adad19eb08c2f07677eb9be2a3cdf77de", null ],
     [ "operator[]", "classcxx_1_1String.html#a1929b0d8d8ec7400ed657b00cc78a603", null ],
+    [ "operator[]", "classcxx_1_1String.html#adad19eb08c2f07677eb9be2a3cdf77de", null ],
+    [ "operator[]", "classcxx_1_1String.html#accbcb5e21e68dc44e86947330db66e10", null ],
     [ "rfind", "classcxx_1_1String.html#ab841c15b8e96d7c153962ad67fb726c3", null ],
     [ "start", "classcxx_1_1String.html#a101fd26cc3e799be32f027cd52a5da90", null ],
     [ "start", "classcxx_1_1String.html#abde47cddc7b4c30561240335c46800bf", null ],
     [ "starts_with", "classcxx_1_1String.html#ad519bb907167fe695cd0ddfc7b8563cc", null ],
-    [ "substr", "classcxx_1_1String.html#a6f501d9ccb1c93cf26db6c33c847b5a3", null ],
-    [ "substr", "classcxx_1_1String.html#aec45ef479a03d9924891a4fd60668e76", null ]
+    [ "substr", "classcxx_1_1String.html#aec45ef479a03d9924891a4fd60668e76", null ],
+    [ "substr", "classcxx_1_1String.html#a6f501d9ccb1c93cf26db6c33c847b5a3", null ]
 ];

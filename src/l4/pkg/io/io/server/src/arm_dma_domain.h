@@ -1,12 +1,12 @@
 #pragma once
 
+#include <l4/drivers/hw_mmio_register_block>
 #include <l4/re/env>
 #include <l4/sys/iommu>
 #include <l4/re/error_helper>
 #include <cassert>
 #include "dma_domain.h"
 #include "hw_device.h"
-#include "hw_mmio_register_block.h"
 
 namespace Hw {
 
@@ -113,13 +113,19 @@ private:
     if (!reg_base)
       return;
 
-    auto reg_block = Hw::Mmio_register_block<32>(reg_base->map_iomem());
+    auto reg_block = L4drivers::Mmio_register_block<32>(reg_base->map_iomem());
     reg_block.write(sid, offset);
   }
 
 public:
   Arm_dma_domain *create(Hw::Device * /* bridge */, Hw::Device *dev) override
   {
+    // `dev == nullptr` is a request for a DMA domain for all devices downstream
+    // of `bridge`. This happens only in context of PCI and was not yet
+    // observed on ARM. See also Device::dma_domain_for().
+    if (!dev)
+      return nullptr;
+
     Int_property *iommu = dynamic_cast<Int_property*>(dev->property("iommu"));
     if (!iommu)
       // not an ARM DMA device, not supported

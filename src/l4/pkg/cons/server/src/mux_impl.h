@@ -46,6 +46,7 @@ class Mux_i : public Mux, private Pbuf::Sink
 {
 public:
   explicit Mux_i(Controller *ctl, char const *name);
+  ~Mux_i() { delete _self_client; }
 
   void write_tag(Client *client);
   void write(Client *tag, const char *msg, unsigned len_msg);
@@ -68,6 +69,8 @@ public:
   char const *name() const { return _name; }
 
 private:
+  Mux_i(Mux_i const &) = delete;
+  Mux_i &operator = (Mux_i const &) = delete;
   typedef cxx::H_list<Frontend> Fe_list;
   typedef Fe_list::Iterator Fe_iter;
   typedef Fe_list::Const_iterator Const_fe_iter;

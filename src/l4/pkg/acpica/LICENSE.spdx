@@ -1,0 +1,22 @@
+## This file states the license of this package and possibly its subpackages
+## in machine and human readable format. The PackageName refers to the package
+## whose license is defined by PackageLicenseConcluded.
+## For more information about this file format visit the SPDX website at
+## https://spdx.org
+
+SPDXVersion: SPDX-2.1
+DataLicense: CC0-1.0
+SPDXID: SPDXRef-Document
+DocumentNamespace: spdx:kernkonzept/acpica-0556455a-e7e7-11e8-856f-28d24461b5b9
+DocumentName: LICENSE.spdx
+
+Creator: Organization: Kernkonzept GmbH (info@kernkonzept.com)
+
+## Package Information
+PackageName: acpica
+PackageOriginator: Organization: Kernkonzept GmbH (info@kernkonzept.com)
+PackageLicenseDeclared: (GPL-2.0-only OR BSD-3-Clause OR Intel-ACPI)
+PackageLicenseConcluded: (GPL-2.0-only OR BSD-3-Clause OR Intel-ACPI)
+FilesAnalyzed: false
+PackageCopyrightText: NOASSERTION
+PackageDownloadLocation: NOASSERTION

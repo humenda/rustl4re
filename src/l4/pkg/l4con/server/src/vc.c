@@ -397,7 +397,7 @@ vc_open_out(struct l4con_vc *vc)
 	}
       vc->vfb = 0;
       if ((error = l4re_rm_attach((void**)&vc->vfb, vc->vfb_size,
-                                  L4RE_RM_SEARCH_ADDR,
+                                  L4RE_RM_F_SEARCH_ADDR | L4RE_RM_F_RW,
                                   vc->vfb_ds, 0, L4_SUPERPAGESHIFT)))
 	{
 	  printf("Error %d attaching vc dataspace\n", error);
@@ -1037,7 +1037,7 @@ con_vc_graph_mapfb_component(CORBA_Object _dice_corba_obj,
 {
   struct l4con_vc *this_vc = (struct l4con_vc *)(_dice_corba_env->user_data);
   l4_addr_t base = l4_trunc_superpage(vis_vmem);
-  l4_offs_t offs = (l4_addr_t)vis_vmem - base;
+  l4_addr_t offs = (l4_addr_t)vis_vmem - base;
 
   /* deliver offset in any case! */
   *page_offset = fb_offset == 0 ? offs : 0;

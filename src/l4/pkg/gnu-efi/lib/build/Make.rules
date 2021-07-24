@@ -4,6 +4,7 @@ L4DIR   ?= $(PKGDIR)/../..
 
 EFI_ARCH-x86   = ia32
 EFI_ARCH-amd64 = x86_64
+EFI_ARCH-arm64 = aarch64
 EFI_ARCH       = $(EFI_ARCH-$(ARCH))
 EFILDSCRIPT    = elf_$(EFI_ARCH)_efi.lds
 INSTALL_TARGET = libefi.a libgnuefi.a crt0-efi-$(EFI_ARCH).o crt0-gnuefi.o $(EFILDSCRIPT)
@@ -19,14 +20,14 @@ libefi.a: FORCE
 	$(VERBOSE)$(MKDIR) lib
 	$(VERBOSE) CFLAGS="-Wno-unused-but-set-variable -Wno-int-to-pointer-cast" $(MAKE) -C lib -f $(SRC_DIR)/../contrib/lib/Makefile \
 	                  ARCH3264=$(ARCH3264) ARCH=$(EFI_ARCH) \
-			  SRCDIR=$(SRC_DIR)/../contrib/lib ARCH=$(EFI_ARCH)
+			  SRCDIR=$(SRC_DIR)/../contrib/lib ARCH=$(EFI_ARCH) CC="$(CC)" AS="$(AS)" LD="$(LD)" AR="$(AR)" RANLIB="$(RANLIB)" OBJCOPY="$(OBJCOPY)"
 	$(VERBOSE)$(LN) -sf lib/$@
 
 gnuefi/libgnuefi.a: FORCE
 	$(VERBOSE)$(MKDIR) gnuefi
 	$(VERBOSE) CFLAGS="-Wno-unused-but-set-variable -Wno-int-to-pointer-cast" $(MAKE) -C gnuefi -f $(SRC_DIR)/../contrib/gnuefi/Makefile \
 	                  ARCH3264=$(ARCH3264) ARCH=$(EFI_ARCH) \
-	                  SRCDIR=$(SRC_DIR)/../contrib/gnuefi ARCH=$(EFI_ARCH)
+	                  SRCDIR=$(SRC_DIR)/../contrib/gnuefi ARCH=$(EFI_ARCH) CC="$(CC)" AS="$(AS)" LD="$(LD)" AR="$(AR)" RANLIB="$(RANLIB)" OBJCOPY="$(OBJCOPY)"
 
 libgnuefi.a: gnuefi/libgnuefi.a
 	$(VERBOSE)$(LN) -sf gnuefi/$@

@@ -1,5 +1,7 @@
 <map id="l4/re/error_helper" name="l4/re/error_helper">
-<area shape="rect" id="node2" href="$server_2l4virtio_source.html" title="l4/l4virtio/server\l/l4virtio" alt="" coords="5,80,128,121"/>
-<area shape="rect" id="node4" href="$mem__alloc__impl_8h.html" title="Memory allocator client stub implementation. " alt="" coords="153,80,303,121"/>
-<area shape="rect" id="node3" href="$virtio-block_source.html" title="l4/l4virtio/server\l/virtio&#45;block" alt="" coords="5,169,128,211"/>
+<area shape="rect" id="node1" title="Error helper." alt="" coords="151,5,285,32"/>
+<area shape="rect" id="node2" href="$client_2virtio-block_source.html" title=" " alt="" coords="5,80,129,121"/>
+<area shape="rect" id="node3" href="$server_2l4virtio_source.html" title=" " alt="" coords="153,80,283,121"/>
+<area shape="rect" id="node5" href="$mem__alloc__impl_8h.html" title="Memory allocator client stub implementation." alt="" coords="307,80,467,121"/>
+<area shape="rect" id="node4" href="$server_2virtio-block_source.html" title=" " alt="" coords="153,169,283,211"/>
 </map>

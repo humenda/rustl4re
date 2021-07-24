@@ -1,0 +1,7 @@
+<map id="cxx::Base_slab::free" name="cxx::Base_slab::free">
+<area shape="rect" id="node1" title="Free the given object (_o)." alt="" coords="427,64,580,91"/>
+<area shape="rect" id="node2" href="$classcxx_1_1Base__slab.html#a48ac5e888c4292fc5b1662b3a5e01997" title="Allocate a new object." alt="" coords="218,35,377,61"/>
+<area shape="rect" id="node5" href="$classcxx_1_1Base__slab__static.html#ac373452de268f7dfb05cc73f51bfd8ce" title="Free the given object (p)." alt="" coords="216,86,379,127"/>
+<area shape="rect" id="node3" href="$classcxx_1_1Slab.html#a18f3fa63befc64e1f89b4c566069ed60" title="Allocate an object of type Type." alt="" coords="27,5,147,32"/>
+<area shape="rect" id="node4" href="$classcxx_1_1Base__slab__static.html#ac14d1b49aa4cae0545c3965f63bb9892" title="Allocate an object." alt="" coords="5,57,168,98"/>
+</map>

@@ -1,0 +1,4 @@
+<map id="cxx::S_list::pop_front" name="cxx::S_list::pop_front">
+<area shape="rect" id="node1" title="Remove and return the head element of the list." alt="" coords="5,20,164,47"/>
+<area shape="rect" id="node2" href="$classcxx_1_1Bits_1_1Basic__list.html#afe4330106fdfcc338e7c01b1e32cdbac" title="Return the first element in the list." alt="" coords="212,5,407,61"/>
+</map>

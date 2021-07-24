@@ -1,0 +1,7 @@
+<map id="cxx::Base_slab_static::free" name="cxx::Base_slab_static::free">
+<area shape="rect" id="node1" title="Free the given object (p)." alt="" coords="5,23,168,65"/>
+<area shape="rect" id="node2" href="$classcxx_1_1Base__slab.html#af7f8144a14030567ab8f83e88b9cf20b" title="Free the given object (_o)." alt="" coords="216,31,369,57"/>
+<area shape="rect" id="node3" href="$classcxx_1_1H__list.html#afa48e56b417c420b88b7494ce3e791d6" title="Add element to the front of the list." alt="" coords="417,5,584,32"/>
+<area shape="rect" id="node5" href="$classcxx_1_1H__list.html#abc13d604f76c1da4ea72c30c1302835d" title="Remove the given element from its list." alt="" coords="427,56,575,83"/>
+<area shape="rect" id="node4" href="$classcxx_1_1H__list.html#a95a4b614aadeeb364d01693d2f594ace" title="Add element to the front of the list." alt="" coords="632,5,755,32"/>
+</map>

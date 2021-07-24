@@ -1,0 +1,5 @@
+<map id="L4virtio::Svr::Device_t::init_mem_info" name="L4virtio::Svr::Device_t::init_mem_info">
+<area shape="rect" id="node1" title="Initialize the memory region list to the given maximum." alt="" coords="5,5,159,47"/>
+<area shape="rect" id="node2" href="$classL4virtio_1_1Svr_1_1Driver__mem__list__t.html#a8b6a1e1abadf68d73ceb813ac4cbc703" title="Make a fresh list with capacity max." alt="" coords="207,5,355,47"/>
+<area shape="rect" id="node3" href="$group__cxx__api.html#ga1d7a566ab5b06016155d693f91a7ee2d" title="Get the maximum of a and b." alt="" coords="403,13,485,39"/>
+</map>

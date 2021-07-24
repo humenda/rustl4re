@@ -1,5 +1,9 @@
 var amd64_2l4_2sys_2segment_8h =
 [
+    [ "L4_sys_segment", "amd64_2l4_2sys_2segment_8h.html#a11cb575da60a64bac2b763d3b3e1421c", [
+      [ "L4_AMD64_SEGMENT_FS", "amd64_2l4_2sys_2segment_8h.html#a11cb575da60a64bac2b763d3b3e1421cad1cd1a4a7ab90e328dc29b74171268d4", null ],
+      [ "L4_AMD64_SEGMENT_GS", "amd64_2l4_2sys_2segment_8h.html#a11cb575da60a64bac2b763d3b3e1421caa82186838d1f6df9c3df4422a79bc896", null ]
+    ] ],
     [ "L4_task_ldt_x86_consts", "amd64_2l4_2sys_2segment_8h.html#a2525b884dbf1dabbc1f0b11ad5105949", [
       [ "L4_TASK_LDT_X86_ENTRY_SIZE", "amd64_2l4_2sys_2segment_8h.html#a2525b884dbf1dabbc1f0b11ad5105949ad4c2541bab0d031ef72302935adbe6e0", null ],
       [ "L4_TASK_LDT_X86_MAX_ENTRIES", "amd64_2l4_2sys_2segment_8h.html#a2525b884dbf1dabbc1f0b11ad5105949a9b96f3b886294fa16bd6a5d59db0af0f", null ],

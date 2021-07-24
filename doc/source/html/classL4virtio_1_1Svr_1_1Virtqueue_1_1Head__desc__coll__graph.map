@@ -1,2 +1,3 @@
 <map id="L4virtio::Svr::Virtqueue::Head_desc" name="L4virtio::Svr::Virtqueue::Head_desc">
+<area shape="rect" id="node1" title="VIRTIO request, essentially a descriptor from the available ring." alt="" coords="5,5,197,156"/>
 </map>

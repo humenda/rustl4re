@@ -8,7 +8,7 @@
  *
  * 1. Copyright Notice
  *
- * Some or all of this work - Copyright (c) 1999 - 2017, Intel Corp.
+ * Some or all of this work - Copyright (c) 1999 - 2019, Intel Corp.
  * All rights reserved.
  *
  * 2. License
@@ -111,6 +111,42 @@
  * other governmental approval, or letter of assurance, without first obtaining
  * such license, approval or letter.
  *
+ *****************************************************************************
+ *
+ * Alternatively, you may choose to be licensed under the terms of the
+ * following license:
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions, and the following disclaimer,
+ *    without modification.
+ * 2. Redistributions in binary form must reproduce at minimum a disclaimer
+ *    substantially similar to the "NO WARRANTY" disclaimer below
+ *    ("Disclaimer") and any redistribution must be conditioned upon
+ *    including a substantially similar Disclaimer requirement for further
+ *    binary redistribution.
+ * 3. Neither the names of the above-listed copyright holders nor the names
+ *    of any contributors may be used to endorse or promote products derived
+ *    from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+ * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * Alternatively, you may choose to be licensed under the terms of the
+ * GNU General Public License ("GPL") version 2 as published by the Free
+ * Software Foundation.
+ *
  *****************************************************************************/
 
 #include "acpi.h"
@@ -118,6 +154,7 @@
 #include "acparser.h"
 #include "amlcode.h"
 #include "acdebug.h"
+#include "acconvert.h"
 
 
 #define _COMPONENT          ACPI_CA_DEBUGGER
@@ -243,27 +280,27 @@ AcpiDmCheckForSymbolicOpcode (
 
     /* Logical operators, no target */
 
-    case AML_LAND_OP:
+    case AML_LOGICAL_AND_OP:
         OperatorSymbol = " && ";
         break;
 
-    case AML_LEQUAL_OP:
+    case AML_LOGICAL_EQUAL_OP:
         OperatorSymbol = " == ";
         break;
 
-    case AML_LGREATER_OP:
+    case AML_LOGICAL_GREATER_OP:
         OperatorSymbol = " > ";
         break;
 
-    case AML_LLESS_OP:
+    case AML_LOGICAL_LESS_OP:
         OperatorSymbol = " < ";
         break;
 
-    case AML_LOR_OP:
+    case AML_LOGICAL_OR_OP:
         OperatorSymbol = " || ";
         break;
 
-    case AML_LNOT_OP:
+    case AML_LOGICAL_NOT_OP:
         /*
          * Check for the LNOT sub-opcodes. These correspond to
          * LNotEqual, LLessEqual, and LGreaterEqual. There are
@@ -271,15 +308,15 @@ AcpiDmCheckForSymbolicOpcode (
          */
         switch (Argument1->Common.AmlOpcode)
         {
-        case AML_LEQUAL_OP:
+        case AML_LOGICAL_EQUAL_OP:
             OperatorSymbol = " != ";
             break;
 
-        case AML_LGREATER_OP:
+        case AML_LOGICAL_GREATER_OP:
             OperatorSymbol = " <= ";
             break;
 
-        case AML_LLESS_OP:
+        case AML_LOGICAL_LESS_OP:
             OperatorSymbol = " >= ";
             break;
 
@@ -315,7 +352,7 @@ AcpiDmCheckForSymbolicOpcode (
         if ((Argument1->Common.AmlOpcode == AML_STRING_OP)  ||
             (Argument1->Common.AmlOpcode == AML_BUFFER_OP)  ||
             (Argument1->Common.AmlOpcode == AML_PACKAGE_OP) ||
-            (Argument1->Common.AmlOpcode == AML_VAR_PACKAGE_OP))
+            (Argument1->Common.AmlOpcode == AML_VARIABLE_PACKAGE_OP))
         {
             Op->Common.DisasmFlags |= ACPI_PARSEOP_CLOSING_PAREN;
             return (FALSE);
@@ -546,11 +583,11 @@ AcpiDmCheckForSymbolicOpcode (
         case AML_BIT_AND_OP:
         case AML_BIT_OR_OP:
         case AML_BIT_XOR_OP:
-        case AML_LAND_OP:
-        case AML_LEQUAL_OP:
-        case AML_LGREATER_OP:
-        case AML_LLESS_OP:
-        case AML_LOR_OP:
+        case AML_LOGICAL_AND_OP:
+        case AML_LOGICAL_EQUAL_OP:
+        case AML_LOGICAL_GREATER_OP:
+        case AML_LOGICAL_LESS_OP:
+        case AML_LOGICAL_OR_OP:
 
             Op->Common.DisasmFlags |= ACPI_PARSEOP_ASSIGNMENT;
             AcpiOsPrintf ("(");
@@ -797,12 +834,14 @@ AcpiDmCloseOperator (
     if (!AcpiGbl_CstyleDisassembly)
     {
         AcpiOsPrintf (")");
+        ASL_CV_PRINT_ONE_COMMENT (Op, AML_COMMENT_END_NODE, NULL, 0);
         return;
     }
 
     if (Op->Common.DisasmFlags & ACPI_PARSEOP_LEGACY_ASL_ONLY)
     {
         AcpiOsPrintf (")");
+        ASL_CV_PRINT_ONE_COMMENT (Op, AML_COMMENT_END_NODE, NULL, 0);
         return;
     }
 
@@ -820,16 +859,17 @@ AcpiDmCloseOperator (
     case AML_BIT_AND_OP:
     case AML_BIT_OR_OP:
     case AML_BIT_XOR_OP:
-    case AML_LAND_OP:
-    case AML_LEQUAL_OP:
-    case AML_LGREATER_OP:
-    case AML_LLESS_OP:
-    case AML_LOR_OP:
+    case AML_LOGICAL_AND_OP:
+    case AML_LOGICAL_EQUAL_OP:
+    case AML_LOGICAL_GREATER_OP:
+    case AML_LOGICAL_LESS_OP:
+    case AML_LOGICAL_OR_OP:
 
         /* Emit paren only if this is not a compound assignment */
 
         if (Op->Common.DisasmFlags & ACPI_PARSEOP_COMPOUND_ASSIGNMENT)
         {
+            ASL_CV_PRINT_ONE_COMMENT (Op, AML_COMMENT_END_NODE, NULL, 0);
             return;
         }
 
@@ -849,15 +889,17 @@ AcpiDmCloseOperator (
         {
             AcpiOsPrintf (")");
         }
+        ASL_CV_PRINT_ONE_COMMENT (Op, AML_COMMENT_END_NODE, NULL, 0);
         return;
 
     /* No need for parens for these */
 
     case AML_DECREMENT_OP:
     case AML_INCREMENT_OP:
-    case AML_LNOT_OP:
+    case AML_LOGICAL_NOT_OP:
     case AML_BIT_NOT_OP:
     case AML_STORE_OP:
+        ASL_CV_PRINT_ONE_COMMENT (Op, AML_COMMENT_END_NODE, NULL, 0);
         return;
 
     default:
@@ -867,6 +909,9 @@ AcpiDmCloseOperator (
     }
 
     AcpiOsPrintf (")");
+    ASL_CV_PRINT_ONE_COMMENT (Op, AML_COMMENT_END_NODE, NULL, 0);
+
+    return;
 }
 
 
@@ -1030,7 +1075,7 @@ AcpiDmIsValidTarget (
  *
  * DESCRIPTION: Determine if the Target duplicates the operand, in order to
  *              detect if the expression can be converted to a compound
- *              assigment. (+=, *=, etc.)
+ *              assignment. (+=, *=, etc.)
  *
  ******************************************************************************/
 
@@ -1086,7 +1131,7 @@ AcpiDmIsTargetAnOperand (
         }
     }
 
-    /* Supress the duplicate operand at the top-level */
+    /* Suppress the duplicate operand at the top-level */
 
     if (TopLevel)
     {

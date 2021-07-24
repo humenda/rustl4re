@@ -83,7 +83,7 @@ namespace L4_drivers
     printf("  Detecting hardware ...\n");
     int i = -1;
 
-    for(phandle_t node = 0; prom_next_node(&node) && i < MAX_OF_DEVICES;)
+    for(phandle_t node = 0; prom_next_node(&node) && i < MAX_OF_DEVICES-1;)
       {
         if (prom_getprop(node, "device_type", &(dev[i+1].type),
                          sizeof(dev[i].type)) < 0)

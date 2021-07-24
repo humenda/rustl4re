@@ -10,7 +10,7 @@
 //#include <linux/pci.h>
 
 #include <stdio.h>
-#include <l4/io/pciids.h>
+#include "pciids.h"
 
 struct pci_device_info {
 	unsigned short device;
@@ -38,17 +38,28 @@ struct pci_vendor_info {
 #define DEVICE( vendor, device, name ) 	static char __devicestr_##vendor##device[] __devinitdata = name;
 #include "devlist.h"
 
+#undef VENDOR
+#undef ENDVENDOR
+#undef DEVICE
 
 #define VENDOR( vendor, name )		static struct pci_device_info __devices_##vendor[] __devinitdata = {
 #define ENDVENDOR()			};
 #define DEVICE( vendor, device, name )	{ 0x##device, 0, __devicestr_##vendor##device },
 #include "devlist.h"
 
+#undef VENDOR
+#undef ENDVENDOR
+#undef DEVICE
+
 static struct pci_vendor_info __devinitdata pci_vendor_list[] = {
 #define VENDOR( vendor, name )		{ 0x##vendor, sizeof(__devices_##vendor) / sizeof(struct pci_device_info), __vendorstr_##vendor, __devices_##vendor },
 #define ENDVENDOR()
 #define DEVICE( vendor, device, name )
 #include "devlist.h"
+
+#undef VENDOR
+#undef ENDVENDOR
+#undef DEVICE
 };
 
 #define VENDORS (sizeof(pci_vendor_list)/sizeof(struct pci_vendor_info))

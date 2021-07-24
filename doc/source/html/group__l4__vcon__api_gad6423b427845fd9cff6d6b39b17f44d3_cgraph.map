@@ -1,4 +1,5 @@
 <map id="l4_vcon_set_attr" name="l4_vcon_set_attr">
-<area shape="rect" id="node2" href="$group__l4__utcb__api.html#gadc099b4a59e1d99638c72c11a8c8b644" title="Get the UTCB address. " alt="" coords="218,5,285,32"/>
-<area shape="rect" id="node3" href="$group__l4__vcon__api.html#ga17f827c7d5f96b36a7c552af8d61a0e5" title="Set the attributes of this virtual console. " alt="" coords="180,56,323,83"/>
+<area shape="rect" id="node1" title="Set attributes of a Vcon." alt="" coords="5,31,135,57"/>
+<area shape="rect" id="node2" href="$group__l4__utcb__api.html#gadc099b4a59e1d99638c72c11a8c8b644" title="Get the UTCB address." alt="" coords="220,5,289,32"/>
+<area shape="rect" id="node3" href="$group__l4__vcon__api.html#ga17f827c7d5f96b36a7c552af8d61a0e5" title="Set the attributes of this virtual console." alt="" coords="183,56,327,83"/>
 </map>

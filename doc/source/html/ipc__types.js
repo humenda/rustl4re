@@ -1,6 +1,5 @@
 var ipc__types =
 [
-    [ "Out", "structL4_1_1Ipc_1_1Out.html", null ],
     [ "In_out", "structL4_1_1Ipc_1_1In__out.html", null ],
     [ "As_value", "structL4_1_1Ipc_1_1As__value.html", null ],
     [ "Opt", "structL4_1_1Ipc_1_1Opt.html", "structL4_1_1Ipc_1_1Opt" ],
@@ -11,8 +10,8 @@ var ipc__types =
     [ "Cap", "classL4_1_1Ipc_1_1Cap.html", "classL4_1_1Ipc_1_1Cap" ],
     [ "Rcv_fpage", "ipc__types.html#a6452f912e9d39ed9e47bb7709280e528", null ],
     [ "Snd_fpage", "ipc__types.html#a56d906845bd62ce43e53bd7f52b64569", null ],
-    [ "make_cap", "ipc__types.html#a312e3c96f771bf1e74b3ece6d50445e1", null ],
-    [ "make_cap_full", "ipc__types.html#ac9fc8ab1571be4a1e7811d19a8caf916", null ],
-    [ "make_cap_rw", "ipc__types.html#a1beb107cf1e6be1f43b0861dacf48969", null ],
-    [ "make_cap_rws", "ipc__types.html#afe88cc036b9de8ccc63df6395076db94", null ]
+    [ "make_cap", "ipc__types.html#a2a4c77885533efd2c8cfa9c9ddd8dd7b", null ],
+    [ "make_cap_full", "ipc__types.html#adbf4d4604dff1525843c975cb5071e8a", null ],
+    [ "make_cap_rw", "ipc__types.html#a71861fba8b1db3d4fb5768ba65c89d94", null ],
+    [ "make_cap_rws", "ipc__types.html#a435c8bc5c73a7e33639a90734217e9fc", null ]
 ];

@@ -6,8 +6,10 @@
 # ARCHSELECT:     FPU if CPU_VIRT
 # ARCHSELECT:     ARM_LPAE if CPU_VIRT || BIT64
 # ARCHSELECT:     HAS_SERIAL_OPTION
+# ARCHSELECT:     HAS_JDB_DISASM_OPTION
 # ARCHSELECT:     HAS_JDB_GZIP_OPTION
 # ARCHSELECT:     HAS_VIRT_OBJ_SPACE_OPTION if ARM_V6PLUS && !CPU_VIRT && !ARM_1176_CACHE_ALIAS_FIX
+# ARCHSELECT:     HAS_LAZY_FPU
 #
 # ARCHDEFAULTPF: PF_INTEGRATOR
 
@@ -55,6 +57,9 @@ config CAN_ARM_CPU_CORTEX_A15
 config CAN_ARM_CACHE_L2CXX0
 	bool
 
+config CAN_ARM_CPU_CORTEX_A35
+	bool
+
 config CAN_ARM_CPU_CORTEX_A53
 	bool
 
@@ -83,8 +88,20 @@ config ARM_V6PLUS
 config ARM_V7PLUS
 	def_bool y if ARM_V7 || ARM_V8
 
+config ARM_V8PLUS
+	def_bool y if ARM_V8
+
 config ARM_V8
 	bool
+
+config ARM_GIC
+	bool
+
+config HAVE_ARM_GICV2
+        bool
+
+config HAVE_ARM_GICV3
+        bool
 
 # SECTION: CPU
 
@@ -129,6 +146,7 @@ config ARM_CORTEX_A7
 	bool "ARM Cortex-A7 CPU"
 	depends on CAN_ARM_CPU_CORTEX_A7
 	select HAS_MP_OPTION
+	select HAS_CPU_VIRT if ARM_GIC
 
 config ARM_CORTEX_A8
 	bool "ARM Cortex-A8 CPU"
@@ -143,14 +161,22 @@ config ARM_CORTEX_A15
 	bool "ARM Cortex-A15 CPU"
 	depends on CAN_ARM_CPU_CORTEX_A15
 	select HAS_MP_OPTION
-	select HAS_CPU_VIRT
+	select HAS_CPU_VIRT if ARM_GIC
+
+config ARM_CORTEX_A35
+	bool "ARM Cortex-A35 CPU"
+	depends on CAN_ARM_CPU_CORTEX_A35
+	select ARM_V8
+	select HAS_MP_OPTION
+	select HAS_CPU_VIRT if ARM_GIC
+	select HAS_64BIT
 
 config ARM_CORTEX_A53
 	bool "ARM Cortex-A53 CPU"
 	depends on CAN_ARM_CPU_CORTEX_A53
 	select ARM_V8
 	select HAS_MP_OPTION
-	select HAS_CPU_VIRT
+	select HAS_CPU_VIRT if ARM_GIC
 	select HAS_64BIT
 
 config ARM_CORTEX_A57
@@ -158,7 +184,7 @@ config ARM_CORTEX_A57
 	depends on CAN_ARM_CPU_CORTEX_A57
 	select ARM_V8
 	select HAS_MP_OPTION
-	select HAS_CPU_VIRT
+	select HAS_CPU_VIRT if ARM_GIC
 	select HAS_64BIT
 
 config ARM_CORTEX_A72
@@ -166,7 +192,7 @@ config ARM_CORTEX_A72
 	depends on CAN_ARM_CPU_CORTEX_A72
 	select ARM_V8
 	select HAS_MP_OPTION
-	select HAS_CPU_VIRT
+	select HAS_CPU_VIRT if ARM_GIC
 	select HAS_64BIT
 
 endchoice
@@ -201,14 +227,14 @@ config ARM_EM_STD
 
 config ARM_EM_NS
 	bool "TrustZone normal side"
-	depends on ARM_1176 || ARM_CORTEX_A7 || ARM_CORTEX_A8 || ARM_CORTEX_A9 || ARM_CORTEX_A15
+	depends on ARM_1176 || ARM_CORTEX_A7 || ARM_CORTEX_A8 || ARM_CORTEX_A9 || ARM_CORTEX_A15 || ARM_CORTEX_A35 || ARM_CORTEX_A53 || ARM_CORTEX_A57 || ARM_CORTEX_A72
 	help
 	  In a system with ARM TrustZone extension, run on the normal side.
 
 config ARM_EM_TZ
 	bool "TrustZone secure side"
-	depends on !CPU_VIRT
-	depends on ARM_1176 || ARM_CORTEX_A7 || ARM_CORTEX_A8 || ARM_CORTEX_A9 || ARM_CORTEX_A15
+	depends on !CPU_VIRT && BIT32
+	depends on ARM_1176 || ARM_CORTEX_A7 || ARM_CORTEX_A8 || ARM_CORTEX_A9 || ARM_CORTEX_A15 || ARM_CORTEX_A35 || ARM_CORTEX_A53 || ARM_CORTEX_A57 || ARM_CORTEX_A72
 	help
 	  In a system with ARM TrustZone extension, run on the secure side,
 	  and allow monitor services.
@@ -234,11 +260,12 @@ endchoice
 
 config ARM_SMC_USER
 	bool "Enable SMC user interface"
+	depends on !ARM_EM_TZ
 	help
-	  When enabled then Fiasco offers an interface that allows user threads
-	  to talk to Trusted Applications and a Trusted OS on the secure-side.
-	  Fiasco only allows service calls in the range 0x30000000 to 0x3f000000.
-	  All other SMC calls will be blocked.
+	  When enabled then Fiasco offers an interface that allows user
+	  threads to talk to Trusted Applications and a Trusted OS on the
+	  secure-side. Fiasco only allows service calls in the range
+	  0x30000000 to 0x3f000000. All other SMC calls will be blocked.
 
 config BIT64_CHOICE
 	bool "Run Fiasco in 64bit processor mode"
@@ -250,7 +277,7 @@ config ARM_CACHE_L2CXX0
 	bool "Enable L2 Cache"
 	default y
 	depends on CAN_ARM_CACHE_L2CXX0
-	help 
+	help
 	  Enable L2 cache functionality.
 
 config ARM_ENABLE_SWP
@@ -269,27 +296,35 @@ config ARM_LPAE
 config HAS_ARM_PSCI
         bool
 
+config FORCE_ARM_PSCI_SMC
+        bool
+
+config FORCE_ARM_PSCI_HVC
+        bool
+
 config ARM_PSCI
         bool "Use PSCI"
         depends on HAS_ARM_PSCI
         help
           Use the "Power State Coordination Interface" (PSCI) for system
-          functions such as booting CPUs.
+          functions such as booting CPUs and system reset.
 
 choice
         prompt "PSCI call method"
         depends on ARM_PSCI
-        default ARM_PSCI_SMC
+        default ARM_PSCI_SMC if !FORCE_ARM_PSCI_HVC || CPU_VIRT
+        default ARM_PSCI_HVC if FORCE_ARM_PSCI_HVC && !CPU_VIRT
 
 config ARM_PSCI_SMC
         bool "SMC"
+        depends on !FORCE_ARM_PSCI_HVC || CPU_VIRT
         help
           Choose this if the platform uses SMC as a conduit to
           access PSCI functions.
 
 config ARM_PSCI_HVC
         bool "HVC"
-        depends on HAS_CPU_VIRT
+        depends on HAS_CPU_VIRT && !CPU_VIRT && !FORCE_ARM_PSCI_SMC
         help
           Choose this if the platform uses HVC as a conduit to
           access PSCI functions.

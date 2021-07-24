@@ -146,7 +146,6 @@ leave_by_vcpu_upcall:
 	ldr	sp, [sp, #(RF(USR_SP, 0))]
 	mov	pc, lr
 
-
 3:	.word call_nested_trap_handler
 #else
 	mov	pc, lr
@@ -155,23 +154,27 @@ leave_by_vcpu_upcall:
 
 
 .macro GEN_DEBUGGER_ENTRIES
-	.global	kern_kdebug_entry
+	.global	kern_kdebug_cstr_entry
 	.align 4
-kern_kdebug_entry:
+kern_kdebug_cstr_entry:
 	DEBUGGER_ENTRY 0
+
+	.global	kern_kdebug_nstr_entry
+	.align 4
+kern_kdebug_nstr_entry:
+	DEBUGGER_ENTRY 1
 
 	.global	kern_kdebug_sequence_entry
 	.align 4
 kern_kdebug_sequence_entry:
-	DEBUGGER_ENTRY 1
-
+	DEBUGGER_ENTRY 2
 
 #ifdef CONFIG_MP
 	.section ".text"
 	.global	kern_kdebug_ipi_entry
 	.align 4
 kern_kdebug_ipi_entry:
-	DEBUGGER_ENTRY 2
+	DEBUGGER_ENTRY 3
 	.previous
 #endif
 
@@ -233,4 +236,15 @@ leave_by_trigger_exception:
 	str	r0, [r1, #(OFS__THREAD__EXCEPTION_IP)]
 
 	enter_slowtrap_w_stack GET_HSR(0x3e)
+.endm
+
+.macro GEN_LEAVE_AND_KILL_MYSELF
+.align 4
+.global leave_and_kill_myself
+
+leave_and_kill_myself:
+        // make space for a dummy Return_frame accessible by the callee
+        sub     sp, sp, #RF_SIZE
+        bl      thread_do_leave_and_kill_myself
+        // does never return
 .endm

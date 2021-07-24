@@ -64,7 +64,7 @@ static SHAREDMEM *shm_alloc(long size)
     }
 
   n->addr = 0;
-  if (l4re_rm_attach(&n->addr, size, L4RE_RM_SEARCH_ADDR | L4RE_RM_EAGER_MAP, n->ds, 0,
+  if (l4re_rm_attach(&n->addr, size, L4RE_RM_F_SEARCH_ADDR | L4RE_RM_F_EAGER_MAP | L4RE_RM_F_RW, n->ds, 0,
                      L4_PAGESHIFT))
     {
       l4re_util_cap_free_um(n->ds);

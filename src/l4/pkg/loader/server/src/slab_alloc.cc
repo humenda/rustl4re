@@ -44,7 +44,7 @@ public:
            "backend storage data space");
 
     chksys(Env::env()->rm()
-             ->attach(&_blob, size, Rm::Search_addr,
+             ->attach(&_blob, size, Rm::F::Search_addr | Rm::F::RW,
                       L4::Ipc::make_cap_rw(_mem)),
            "attaching backend storage data space");
   }

@@ -430,7 +430,7 @@ l4io_release_irq(int irqnum, l4_cap_idx_t /*irq_cap*/)
     return -L4_ENOENT;
 
   l4_task_unmap(L4_BASE_TASK_CAP,
-                l4_obj_fpage(res->d2(), 0, L4_FPAGE_RWX),
+                l4_obj_fpage(res->d2(), 0, L4_CAP_FPAGE_RWS),
                 L4_FP_ALL_SPACES);
 
   Res::del(res);
@@ -476,7 +476,7 @@ handle_anonram(__internal_res *res, l4_addr_t *virt,
                unsigned long size, unsigned search_virt_address)
 {
   long r;
-  unsigned long flags = 0;
+  L4Re::Rm::Flags flags = L4Re::Rm::F::RW;
   int shift = (size & ~L4_SUPERPAGEMASK) ? L4_PAGESHIFT : L4_SUPERPAGESHIFT;
 
   if (search_virt_address)
@@ -486,7 +486,7 @@ handle_anonram(__internal_res *res, l4_addr_t *virt,
         {
           L4::Cap<L4Re::Dataspace> d(res->ram_cap);
           r = L4Re::Env::env()->rm()->attach(&res->virt, size,
-	                                     flags | L4Re::Rm::Search_addr,
+                                             flags | L4Re::Rm::F::Search_addr,
                                              L4::Ipc::make_cap_rw(d), 0, shift);
           if (r)
             {
@@ -537,7 +537,7 @@ l4io_request_iomem(l4_addr_t phys, unsigned long size, int flags,
   if (!is_anon_ram(res))
     {
       r = L4Re::Env::env()->rm()->reserve_area(virt, size,
-                                               L4Re::Rm::Search_addr);
+                                               L4Re::Rm::F::Search_addr);
       if (r)
         return r;
 
@@ -612,26 +612,6 @@ l4io_release_iomem(l4_addr_t virt, unsigned long size)
 
   return 0;
 }
-
-
-long
-l4io_search_iomem_region(l4_addr_t phys, l4_addr_t size,
-                         l4_addr_t *rstart, l4_addr_t *rsize)
-{
-  (void) size;
-  if (!_internal._sigma0)
-    return -L4_ENOENT;
-
-  // for the direct mode, we just have regions of superpages,
-  // the real thing would have to search through the descriptors
-  // lets hope this approximation is ok for now, otherwise we need to do
-  // some trickier thing
-  *rstart = phys & L4_SUPERPAGEMASK;
-  *rsize  = L4_SUPERPAGESIZE;
-  return 0;
-}
-
-
 
 
 /***********************************************************************

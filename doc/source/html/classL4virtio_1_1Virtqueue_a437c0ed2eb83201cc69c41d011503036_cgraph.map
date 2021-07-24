@@ -1,3 +1,8 @@
 <map id="L4virtio::Virtqueue::setup_simple" name="L4virtio::Virtqueue::setup_simple">
-<area shape="rect" id="node2" href="$group__l4__memory__api.html#gae8aa66c17956ac2dfc2a6d5788fd97a9" title="Round value up to the next alignment with bits size. " alt="" coords="187,13,297,39"/>
+<area shape="rect" id="node1" title="Enable this queue." alt="" coords="5,123,148,164"/>
+<area shape="rect" id="node2" href="$classL4virtio_1_1Virtqueue.html#a962767a117dad07184f59191d399f9ce" title="Calculate the size of the available ring for num entries." alt="" coords="196,5,339,47"/>
+<area shape="rect" id="node3" href="$classL4virtio_1_1Virtqueue.html#af61e3e4e436b93f37f22243a1c0ffe0e" title=" " alt="" coords="387,101,565,127"/>
+<area shape="rect" id="node4" href="$classL4virtio_1_1Virtqueue.html#a19410c09db5499023cb4b9f11742cd26" title="Calculate the size of the descriptor table for num entries." alt="" coords="196,123,339,164"/>
+<area shape="rect" id="node5" href="$group__l4__memory__api.html#gae876a4c6e0f21b2ecbf17863dc7d11e4" title="Round value up to the next alignment with bits size." alt="" coords="212,189,323,215"/>
+<area shape="rect" id="node6" href="$classL4virtio_1_1Virtqueue.html#a109ea5677dd074df1d2c6a06056c7d82" title="Enable this queue." alt="" coords="196,240,339,281"/>
 </map>

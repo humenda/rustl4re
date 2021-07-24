@@ -42,6 +42,22 @@ Jdb::wfi_leave()
 {}
 
 // ------------------------------------------------------------------------
+IMPLEMENTATION [arm && pic_gic && serial]:
+
+PRIVATE static inline
+void
+Jdb::kernel_uart_irq_ack()
+{ Kernel_uart::uart()->irq_ack(); }
+
+// ------------------------------------------------------------------------
+IMPLEMENTATION [arm && pic_gic && !serial]:
+
+PRIVATE static inline
+void
+Jdb::kernel_uart_irq_ack()
+{}
+
+// ------------------------------------------------------------------------
 IMPLEMENTATION [arm && pic_gic]:
 
 #include "gic.h"
@@ -62,10 +78,10 @@ Jdb::wfi_enter()
   Timer_tick *tt = Timer_tick::boot_cpu_timer_tick();
   Gic *g = static_cast<Gic*>(tt->chip());
 
-  wfi_gic.orig_tt_prio = g->irq_prio(tt->pin());
-  wfi_gic.orig_pmr     = g->pmr();
-  g->pmr(0x20);
-  g->irq_prio(tt->pin(), 0x10);
+  wfi_gic.orig_tt_prio = g->irq_prio_bootcpu(tt->pin());
+  wfi_gic.orig_pmr     = g->get_pmr();
+  g->set_pmr(0x90);
+  g->irq_prio_bootcpu(tt->pin(), 0x00);
 
   Timer_tick::enable(Cpu_number::boot_cpu());
 }
@@ -76,8 +92,8 @@ Jdb::wfi_leave()
 {
   Timer_tick *tt = Timer_tick::boot_cpu_timer_tick();
   Gic *g = static_cast<Gic*>(tt->chip());
-  g->irq_prio(tt->pin(), wfi_gic.orig_tt_prio);
-  g->pmr(wfi_gic.orig_pmr);
+  g->irq_prio_bootcpu(tt->pin(), wfi_gic.orig_tt_prio);
+  g->set_pmr(wfi_gic.orig_pmr);
 }
 
 PRIVATE static
@@ -87,10 +103,10 @@ Jdb::_wait_for_input()
   Proc::halt();
 
   Timer_tick *tt = Timer_tick::boot_cpu_timer_tick();
-  unsigned i = static_cast<Gic*>(tt->chip())->pending();
+  unsigned i = static_cast<Gic*>(tt->chip())->get_pending();
   if (i == tt->pin())
     {
-      tt->chip()->ack(i);
+      kernel_uart_irq_ack();
       tt->ack();
     }
   else
@@ -99,6 +115,8 @@ Jdb::_wait_for_input()
 
 // ------------------------------------------------------------------------
 IMPLEMENTATION [arm]:
+
+#include "timer.h"
 
 // disable interrupts before entering the kernel debugger
 IMPLEMENT
@@ -130,15 +148,15 @@ Jdb::restore_irqs(Cpu_number cpu)
   Proc::sti_restore(jdb_irq_state.cpu(cpu));
 }
 
-IMPLEMENT inline
+IMPLEMENT inline NEEDS["timer.h"]
 void
 Jdb::enter_trap_handler(Cpu_number)
-{}
+{ Timer::switch_freq_jdb(); }
 
-IMPLEMENT inline
+IMPLEMENT inline NEEDS["timer.h"]
 void
 Jdb::leave_trap_handler(Cpu_number)
-{}
+{ Timer::switch_freq_system(); }
 
 IMPLEMENT inline
 bool
@@ -167,8 +185,10 @@ Jdb::handle_debug_traps(Cpu_number cpu)
       && bp_test_break)
     return bp_test_break(cpu, &error_buffer.cpu(cpu));
 
-  if (ef->debug_entry_kernel())
-    error_buffer.cpu(cpu).printf("%s",(char const *)ef->r[0]);
+  if (ef->debug_entry_kernel_str())
+    error_buffer.cpu(cpu).printf("%s", ef->text());
+  else if (ef->debug_entry_user_str())
+    error_buffer.cpu(cpu).printf("user \"%.*s\"", ef->textlen(), ef->text());
   else if (ef->debug_ipi())
     error_buffer.cpu(cpu).printf("IPI ENTRY");
   else
@@ -182,22 +202,14 @@ bool
 Jdb::handle_user_request(Cpu_number cpu)
 {
   Jdb_entry_frame *ef = Jdb::entry_frame.cpu(cpu);
-  const char *str = (char const *)ef->r[0];
-  Space * task = get_task(cpu);
-  char tmp;
 
   if (ef->debug_ipi())
     return cpu != Cpu_number::boot_cpu();
 
-  if (ef->error_code == ((0x33UL << 26) | 1))
-    return execute_command_ni(task, str);
+  if (ef->debug_entry_kernel_sequence())
+    return execute_command_ni(ef->text(), ef->textlen());
 
-  if (!str || !peek(str, task, tmp) || tmp != '*')
-    return false;
-  if (!str || !peek(str+1, task, tmp) || tmp != '#')
-    return false;
-
-  return execute_command_ni(task, str+2);
+  return false;
 }
 
 IMPLEMENT inline
@@ -227,38 +239,39 @@ Jdb::init()
 
 
 PRIVATE static
-void *
-Jdb::access_mem_task(Address virt, Space * task)
+unsigned char *
+Jdb::access_mem_task(Jdb_address addr, bool write)
 {
-  // align
-  virt &= ~(sizeof(Mword) - 1);
+  if (!Cpu::is_canonical_address(addr.addr()))
+    return 0;
 
   Address phys;
 
-  if (Mem_layout::in_kernel(virt))
+  if (addr.is_kmem())
     {
-      auto p = Kmem::kdir->walk(Virt_addr(virt));
+      auto p = Kmem::kdir->walk(Virt_addr(addr.addr()));
       if (!p.is_valid())
         return 0;
 
-      phys = p.page_addr() | cxx::get_lsb(virt, p.page_order());
+      phys = p.page_addr() | cxx::get_lsb(addr.addr(), p.page_order());
     }
-  else if (task)
+  else if (!addr.is_phys())
     {
-      phys = Address(task->virt_to_phys_s0((void*)virt));
+      phys = Address(addr.space()->virt_to_phys_s0(addr.virt()));
 
       if (phys == (Address)-1)
         return 0;
     }
   else
-    phys = virt;
+    phys = addr.phys();
 
-  unsigned long addr = Mem_layout::phys_to_pmem(phys);
-  if (addr != (Address)-1)
+  unsigned long kaddr = Mem_layout::phys_to_pmem(phys);
+  if (kaddr != (Address)-1)
     {
-      auto pte = Kmem::kdir->walk(Virt_addr(addr));
-      if (pte.is_valid())
-        return (void *)addr;
+      auto pte = Kmem::kdir->walk(Virt_addr(kaddr));
+      if (pte.is_valid()
+          && (!write || pte.attribs().rights & Page::Rights::W()))
+        return (unsigned char *)kaddr;
     }
 
   Mem_unit::flush_vdcache();
@@ -285,66 +298,16 @@ Jdb::access_mem_task(Address virt, Space * task)
 
   Mem_unit::kernel_tlb_flush();
 
-  return (void *)(Mem_layout::Jdb_tmp_map_area
-                  + (phys & (Config::SUPERPAGE_SIZE - 1)));
-}
-
-PUBLIC static
-Space *
-Jdb::translate_task(Address addr, Space * task)
-{
-  return (Kmem::is_kmem_page_fault(addr, 0)) ? 0 : task;
+  return (unsigned char *)(Mem_layout::Jdb_tmp_map_area
+                           + (phys & (Config::SUPERPAGE_SIZE - 1)));
 }
 
 PUBLIC static
 int
-Jdb::peek_task(Address virt, Space * task, void *value, int width)
-{
-  void const *mem = access_mem_task(virt, task);
-  if (!mem)
-    return -1;
-
-  switch (width)
-    {
-    case 1:
-        {
-          Mword dealign = (virt & (sizeof(Mword) - 1)) * 8;
-          *(Mword*)value = (*(Mword*)mem & (0xff << dealign)) >> dealign;
-        }
-	break;
-    case 2:
-        {
-          Mword dealign = ((virt & (sizeof(Mword) - 2)) >> 1) * 16;
-          *(Mword*)value = (*(Mword*)mem & (0xffff << dealign)) >> dealign;
-        }
-	break;
-    case 4:
-    case 8:
-      memcpy(value, mem, width);
-    }
-
-  return 0;
-}
-
-PUBLIC static
-int
-Jdb::is_adapter_memory(Address, Space *)
+Jdb::is_adapter_memory(Jdb_address)
 {
   return 0;
 }
-
-PUBLIC static
-int
-Jdb::poke_task(Address virt, Space * task, void const *val, int width)
-{
-  void *mem = access_mem_task(virt, task);
-  if (!mem)
-    return -1;
-
-  memcpy(mem, val, width);
-  return 0;
-}
-
 
 PRIVATE static
 void
@@ -370,16 +333,17 @@ void
 Jdb::leave_getchar()
 {}
 
-PUBLIC static
+IMPLEMENT_OVERRIDE
 void
 Jdb::write_tsc_s(String_buffer *buf, Signed64 tsc, bool sign)
 {
-  if (sign)
-    buf->printf("%c", (tsc < 0) ? '-' : (tsc == 0) ? ' ' : '+');
-  buf->printf("%lld c", tsc);
+  if (sign && tsc != 0)
+    buf->printf("%+lld c", tsc);
+  else
+    buf->printf("%lld c", tsc);
 }
 
-PUBLIC static
+IMPLEMENT_OVERRIDE
 void
 Jdb::write_tsc(String_buffer *buf, Signed64 tsc, bool sign)
 {
@@ -415,4 +379,18 @@ Jdb::monitor_address(Cpu_number, T volatile const *addr)
 {
   asm volatile("wfe");
   return *addr;
+}
+
+IMPLEMENT_OVERRIDE
+void
+Jdb::other_cpu_halt_in_jdb()
+{
+  Proc::halt();
+}
+
+IMPLEMENT_OVERRIDE
+void
+Jdb::wakeup_other_cpus_from_jdb(Cpu_number c)
+{
+  Ipi::send(Ipi::Debug, Cpu_number::first(), c);
 }

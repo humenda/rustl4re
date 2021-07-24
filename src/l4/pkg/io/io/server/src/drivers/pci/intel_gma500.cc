@@ -1,5 +1,5 @@
 /*
- * (c) 2010-2014 Adam Lackorzynski <adam@os.inf.tu-dresden.de>,
+ * (c) 2010-2020 Adam Lackorzynski <adam@os.inf.tu-dresden.de>,
  *               Alexander Warg <alexander.warg@kernkonzept.com>
  *               Steffen Liebergeld <steffen.liebergeld@kernkonzept.com>
  *
@@ -9,7 +9,7 @@
  */
 #include "cfg.h"
 #include "debug.h"
-#include "pci.h"
+#include <pci-driver.h>
 
 namespace {
 

@@ -17,9 +17,13 @@ void
 Kernel_thread::free_initcall_section()
 {
   // just fill up with invalid opcodes
-  for (unsigned short *i = (unsigned short *) &Mem_layout::initcall_start;   
-                       i < (unsigned short *) &Mem_layout::initcall_end; i++)
-    *i = 0x0b0f;	// UD2 opcode
+  for (char *i = const_cast<char *>(Mem_layout::initcall_start);
+       i + 1 < const_cast<char *>(Mem_layout::initcall_end); i += 2)
+    {
+      // UD2
+      i[0] = 0x0f;
+      i[1] = 0x0b;
+    }
 }
 
 
@@ -100,11 +104,6 @@ PUBLIC
 static void
 Kernel_thread::boot_app_cpus()
 {
-  // sending (INIT-)IPIs on non-MP systems might not work
-  if (   Cpu::boot_cpu()->vendor() == Cpu::Vendor_amd
-      && Cpu::amd_cpuid_mnc() < 2)
-    return;
-
   // where to start the APs for detection of the APIC-IDs
   extern char _tramp_mp_entry[];
 
@@ -123,6 +122,7 @@ Kernel_thread::boot_app_cpus()
   Address tramp_page;
 
   _realmode_startup_pdbr = Kmem::get_realmode_startup_pdbr();
+
   _tramp_mp_startup_cr4 = Cpu::get_cr4();
   _tramp_mp_startup_cr0 = Cpu::get_cr0();
   _tramp_mp_startup_gdt_pdesc

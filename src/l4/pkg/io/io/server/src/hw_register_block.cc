@@ -6,12 +6,13 @@
  * Please see the COPYING-GPL-2 file for details.
  */
 
-#include "hw_register_block.h"
+#include <l4/drivers/hw_register_block>
+
 #include "debug.h"
 
 namespace {
 
-struct Register_block_dummy : Hw::Register_block_impl<Register_block_dummy, 64>
+struct Register_block_dummy : L4drivers::Register_block_impl<Register_block_dummy, 64>
 {
   template< typename T >
   T read(l4_addr_t reg) const
@@ -33,4 +34,4 @@ static Register_block_dummy _dummy;
 
 }
 
-Hw::Register_block<64> Hw::dummy_register_block(&_dummy);
+L4drivers::Register_block<64> dummy_register_block(&_dummy);

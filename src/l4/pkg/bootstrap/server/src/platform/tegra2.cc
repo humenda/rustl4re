@@ -72,6 +72,10 @@ class Platform_arm_tegra2 : public Platform_single_region_ram
     kuart.base_baud    = 13478400;
     kuart.baud         = 115200;
     kuart.irqno        = 122;
+    kuart.access_type  = L4_kernel_options::Uart_type_mmio;
+    kuart_flags       |=   L4_kernel_options::F_uart_base
+                         | L4_kernel_options::F_uart_baud
+                         | L4_kernel_options::F_uart_irq;
     static L4::Uart_16550 _uart(kuart.base_baud, 0, 0, 0, 0);
     setup_16550_mmio_uart(&_uart);
  }

@@ -150,7 +150,7 @@ static void resize_win_elements(WIDGET *elem,s32 elem_mask,
 
 	while (elem) {
 
-		switch ((unsigned long)elem->gen->get_context(elem)) {
+		switch (elem->gen->get_context(elem)) {
 
 		case WE_L:
 			elem->gen->set_h(elem, height - bsize - bsize);
@@ -209,7 +209,7 @@ static void set_win_state(WIDGET *elem,s32 state) {
 
 static void set_win_title(WIDGET *elem,char *new_title) {
 	while (elem) {
-		if ((unsigned long)elem->gen->get_context(elem) == WE_TITLE) {
+		if (elem->gen->get_context(elem) == WE_TITLE) {
 			((BUTTON *)elem)->but->set_text((BUTTON *)elem,new_title);
 			((BUTTON *)elem)->gen->update((WIDGET *)elem);
 			return;
@@ -222,7 +222,7 @@ static void set_win_title(WIDGET *elem,char *new_title) {
 static char *get_win_title(WIDGET *elem) {
 
 	while (elem) {
-		if ((unsigned long)elem->gen->get_context(elem) == WE_TITLE) {
+		if (elem->gen->get_context(elem) == WE_TITLE) {
 			return ((BUTTON *)elem)->but->get_text((BUTTON *)elem);
 		}
 		elem=elem->gen->get_next(elem);

@@ -1,4 +1,5 @@
 <map id="l4_irq_detach" name="l4_irq_detach">
-<area shape="rect" id="node2" href="$group__l4__irq__api.html#ga52ad27a5a0d6a21bc7449a69a820db71" title="Detach from this interrupt. " alt="" coords="161,5,284,32"/>
-<area shape="rect" id="node3" href="$group__l4__utcb__api.html#gadc099b4a59e1d99638c72c11a8c8b644" title="Get the UTCB address. " alt="" coords="189,56,256,83"/>
+<area shape="rect" id="node1" title="Detach from an interrupt source." alt="" coords="5,31,115,57"/>
+<area shape="rect" id="node2" href="$group__l4__irq__api.html#ga52ad27a5a0d6a21bc7449a69a820db71" title="Detach from this interrupt." alt="" coords="163,5,287,32"/>
+<area shape="rect" id="node3" href="$group__l4__utcb__api.html#gadc099b4a59e1d99638c72c11a8c8b644" title="Get the UTCB address." alt="" coords="190,56,259,83"/>
 </map>

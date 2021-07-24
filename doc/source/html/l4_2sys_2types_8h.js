@@ -1,7 +1,7 @@
 var l4_2sys_2types_8h =
 [
     [ "l4_cap_idx_t", "group__l4__cap__api.html#ga1445e923ce73029130d569d6e69a4dd8", null ],
-    [ "l4_msgtag_t", "group__l4__msgtag__api.html#ga05eb6ccb839e1686f5a1c474430de788", null ],
+    [ "l4_msgtag_t", "group__l4__msgtag__api.html#gad2c28384485a82490cab17ac929f05e9", null ],
     [ "l4_msgtag_flags", "group__l4__msgtag__api.html#ga65d15ec03a90046ba12ba0d3ca9dae15", [
       [ "L4_MSGTAG_ERROR", "group__l4__msgtag__api.html#gga65d15ec03a90046ba12ba0d3ca9dae15aad1669664171cc979970b1e2300bd463", null ],
       [ "L4_MSGTAG_TRANSFER_FPU", "group__l4__msgtag__api.html#gga65d15ec03a90046ba12ba0d3ca9dae15aea4fd67d2f81b00e6949ddcdc7beb5f9", null ],

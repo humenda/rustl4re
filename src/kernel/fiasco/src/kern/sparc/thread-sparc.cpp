@@ -21,8 +21,6 @@ enum {
   FSR_PERMISSION  = 0x0d,
 };
 
-DEFINE_PER_CPU Per_cpu<Thread::Dbg_stack> Thread::dbg_stack;
-
 PRIVATE static
 void
 Thread::print_page_fault_error(Mword e)
@@ -158,9 +156,6 @@ extern "C"
 IMPLEMENTATION [sparc]:
 
 /** Constructor.
-    @param id user-visible thread ID of the sender
-    @param init_prio initial priority
-    @param mcp thread's maximum controlled priority
     @post state() != 0
  */
 IMPLEMENT
@@ -233,14 +228,6 @@ Thread::user_ip(Mword ip)
     }
 }
 
-PUBLIC inline NEEDS ["trap_state.h"]
-int
-Thread::send_exception_arch(Trap_state * /*ts*/)
-{
-  NOT_IMPL_PANIC;
-  return 1;      // We did it
-}
-
 PROTECTED inline
 void
 Thread::vcpu_resume_user_arch()
@@ -281,14 +268,14 @@ Thread::copy_ts_to_utcb(L4_msg_tag const &, Thread * /*snd*/, Thread * /*rcv*/,
 
 PROTECTED inline
 L4_msg_tag
-Thread::invoke_arch(L4_msg_tag /*tag*/, Utcb * /*utcb*/)
+Thread::invoke_arch(L4_msg_tag /*tag*/, Utcb const * /*utcb*/, Utcb * /*out*/)
 {
   return commit_result(-L4_err::ENosys);
 }
 
 PROTECTED inline
 int
-Thread::sys_control_arch(Utcb *)
+Thread::sys_control_arch(Utcb const *, Utcb *)
 {
   return 0;
 }

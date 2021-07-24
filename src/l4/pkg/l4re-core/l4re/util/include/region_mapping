@@ -38,63 +38,89 @@ private:
   l4_addr_t _start, _end;
 
 public:
-  Region() throw() : _start(~0UL), _end(~0UL) {}
-  Region(l4_addr_t addr) throw() : _start(addr), _end(addr) {}
-  Region(l4_addr_t start, l4_addr_t end) throw()
+  Region() noexcept : _start(~0UL), _end(~0UL) {}
+  Region(l4_addr_t addr) noexcept : _start(addr), _end(addr) {}
+  Region(l4_addr_t start, l4_addr_t end) noexcept
     : _start(start), _end(end) {}
-  l4_addr_t start() const throw() { return _start; }
-  l4_addr_t end() const throw() { return _end; }
-  unsigned long size() const throw() { return end() - start() + 1; }
-  bool invalid() const throw() { return _start == ~0UL && _end == ~0UL; }
-  bool operator < (Region const &o) const throw()
+  l4_addr_t start() const noexcept { return _start; }
+  l4_addr_t end() const noexcept { return _end; }
+  unsigned long size() const noexcept { return end() - start() + 1; }
+  bool invalid() const noexcept { return _start == ~0UL && _end == ~0UL; }
+  bool operator < (Region const &o) const noexcept
   { return end() < o.start(); }
-  bool contains(Region const &o) const throw()
+  bool contains(Region const &o) const noexcept
   { return o.start() >= start() && o.end() <= end(); }
-  bool operator == (Region const &o) const throw()
+  bool operator == (Region const &o) const noexcept
   { return o.start() == start() && o.end() == end(); }
-  ~Region() throw() {}
+  ~Region() noexcept {}
 };
 
 template< typename DS, typename OPS >
 class Region_handler
 {
 private:
-  l4_addr_t _offs;
+  L4Re::Rm::Offset _offs;
   DS _mem;
   l4_cap_idx_t _client_cap = L4_INVALID_CAP;
-  unsigned short _flags;
+  L4Re::Rm::Region_flags _flags;
 
 public:
   typedef DS Dataspace;
   typedef OPS Ops;
   typedef typename OPS::Map_result Map_result;
 
-  Region_handler() throw() : _offs(0), _mem(), _flags() {}
+  Region_handler() noexcept : _offs(0), _mem(), _flags() {}
   Region_handler(Dataspace const &mem, l4_cap_idx_t client_cap,
-      l4_addr_t offset = 0, unsigned flags = 0) throw()
+      L4Re::Rm::Offset offset = 0,
+      L4Re::Rm::Region_flags flags = L4Re::Rm::Region_flags(0)) noexcept
     : _offs(offset), _mem(mem), _client_cap(client_cap), _flags(flags)
   {}
-  Dataspace const &memory() const throw() { return _mem; }
-  l4_cap_idx_t client_cap_idx() const throw() { return _client_cap; }
-  l4_addr_t offset() const throw() { return _offs; }
-  l4_addr_t is_ro() const throw() { return _flags & L4Re::Rm::Read_only; }
-  unsigned long caching() const throw() { return _flags & L4Re::Rm::Caching; }
-  unsigned flags() const throw() { return _flags; }
 
-  Region_handler operator + (long offset) const throw()
-  { Region_handler n = *this; n._offs += offset; return n; }
+  Dataspace const &memory() const noexcept
+  {
+    return _mem;
+  }
 
-  void unmap(l4_addr_t va, l4_addr_t ds_offs, unsigned long size) const throw()
-  { Ops::unmap(this, va, ds_offs, size); }
+  l4_cap_idx_t client_cap_idx() const noexcept
+  {
+    return _client_cap;
+  }
 
-  void free(l4_addr_t start, unsigned long size) const throw()
-  { Ops::free(this, start, size); }
+  L4Re::Rm::Offset offset() const noexcept
+  {
+    return _offs;
+  }
 
-  void take() const    { Ops::take(this); }
-  void release() const { Ops::release(this); }
+  constexpr bool is_ro() const noexcept
+  {
+    return !(_flags & L4Re::Rm::F::W);
+  }
 
-  int map(l4_addr_t addr, Region const &r, bool writable, Map_result *result) const
-  { return Ops::map(this, addr, r, writable, result); }
+  L4Re::Rm::Region_flags caching() const noexcept
+  {
+    return _flags & L4Re::Rm::F::Caching_mask;
+  }
+
+  L4Re::Rm::Region_flags flags() const noexcept
+  {
+    return _flags;
+  }
+
+  Region_handler operator + (l4_int64_t offset) const noexcept
+  {
+    Region_handler n = *this; n._offs += offset; return n;
+  }
+
+  void free(l4_addr_t start, unsigned long size) const noexcept
+  {
+    Ops::free(this, start, size);
+  }
+
+  int map(l4_addr_t addr, Region const &r, bool writable,
+          Map_result *result) const
+  {
+    return Ops::map(this, addr, r, writable, result);
+  }
 
 };
 
@@ -112,7 +138,7 @@ private:
   l4_addr_t _end;
 
 protected:
-  void set_limits(l4_addr_t start, l4_addr_t end) throw()
+  void set_limits(l4_addr_t start, l4_addr_t end) noexcept
   {
     _start = start;
     _end = end;
@@ -129,31 +155,24 @@ public:
   typedef typename Tree::Rev_iterator Rev_iterator;
   typedef typename Tree::Const_rev_iterator Const_rev_iterator;
 
-  Iterator begin() throw() { return _rm.begin(); }
-  Const_iterator begin() const throw() { return _rm.begin(); }
-  Iterator end() throw() { return _rm.end(); }
-  Const_iterator end() const throw() { return _rm.end(); }
+  Iterator begin() noexcept { return _rm.begin(); }
+  Const_iterator begin() const noexcept { return _rm.begin(); }
+  Iterator end() noexcept { return _rm.end(); }
+  Const_iterator end() const noexcept { return _rm.end(); }
 
-  Iterator area_begin() throw() { return _am.begin(); }
-  Const_iterator area_begin() const throw() { return _am.begin(); }
-  Iterator area_end() throw() { return _am.end(); }
-  Const_iterator area_end() const throw() { return _am.end(); }
-  Node area_find(Key_type const &c) const throw() { return _am.find_node(c); }
+  Iterator area_begin() noexcept { return _am.begin(); }
+  Const_iterator area_begin() const noexcept { return _am.begin(); }
+  Iterator area_end() noexcept { return _am.end(); }
+  Const_iterator area_end() const noexcept { return _am.end(); }
+  Node area_find(Key_type const &c) const noexcept { return _am.find_node(c); }
 
-  enum Attach_flags
-  {
-    None      = 0,
-    Search    = L4Re::Rm::Search_addr,
-    In_area   = L4Re::Rm::In_area,
-  };
-
-  l4_addr_t min_addr() const throw() { return _start; }
-  l4_addr_t max_addr() const throw() { return _end; }
+  l4_addr_t min_addr() const noexcept { return _start; }
+  l4_addr_t max_addr() const noexcept { return _end; }
 
 
-  Region_map(l4_addr_t start, l4_addr_t end) throw() : _start(start), _end(end) {}
+  Region_map(l4_addr_t start, l4_addr_t end) noexcept : _start(start), _end(end) {}
 
-  Node find(Key_type const &key) const throw()
+  Node find(Key_type const &key) const noexcept
   {
     Node n = _rm.find_node(key);
     if (!n)
@@ -168,21 +187,21 @@ public:
     return n;
   }
 
-  Node lower_bound(Key_type const &key) const throw()
+  Node lower_bound(Key_type const &key) const noexcept
   {
     Node n = _rm.lower_bound_node(key);
     return n;
   }
 
-  Node lower_bound_area(Key_type const &key) const throw()
+  Node lower_bound_area(Key_type const &key) const noexcept
   {
     Node n = _am.lower_bound_node(key);
     return n;
   }
 
   l4_addr_t attach_area(l4_addr_t addr, unsigned long size,
-                        unsigned flags = None,
-                        unsigned char align = L4_PAGESHIFT) throw()
+                        L4Re::Rm::Flags flags = L4Re::Rm::Flags(0),
+                        unsigned char align = L4_PAGESHIFT) noexcept
   {
     if (size < 2)
       return L4_INVALID_ADDR;
@@ -190,7 +209,7 @@ public:
 
     Region c;
 
-    if (!(flags & Search))
+    if (!(flags & L4Re::Rm::F::Search_addr))
       {
 	c = Region(addr, addr + size - 1);
 	Node r = _am.find_node(c);
@@ -198,7 +217,7 @@ public:
 	  return L4_INVALID_ADDR;
       }
 
-    while (flags & Search)
+    while (flags &  L4Re::Rm::F::Search_addr)
       {
 	if (addr < min_addr() || (addr + size - 1) > max_addr())
 	  addr = min_addr();
@@ -217,13 +236,13 @@ public:
 	addr = r->first.end() + 1;
       }
 
-    if (_am.insert(c, Hdlr(typename Hdlr::Dataspace(), 0, flags)).second == 0)
+    if (_am.insert(c, Hdlr(typename Hdlr::Dataspace(), 0, 0, flags.region_flags())).second == 0)
       return addr;
 
     return L4_INVALID_ADDR;
   }
 
-  bool detach_area(l4_addr_t addr) throw()
+  bool detach_area(l4_addr_t addr) noexcept
   {
     if (_am.remove(addr))
       return false;
@@ -232,7 +251,8 @@ public:
   }
 
   void *attach(void *addr, unsigned long size, Hdlr const &hdlr,
-               unsigned flags = None, unsigned char align = L4_PAGESHIFT) throw()
+               L4Re::Rm::Flags flags = L4Re::Rm::Flags(0),
+               unsigned char align = L4_PAGESHIFT) noexcept
   {
     if (size < 2)
       return L4_INVALID_PTR;
@@ -240,23 +260,24 @@ public:
     l4_addr_t end = max_addr();
     l4_addr_t beg = (l4_addr_t)addr;
 
-    if (flags & In_area)
+    if (flags & L4Re::Rm::F::In_area)
       {
 	Node r = _am.find_node(Region(beg, beg + size - 1));
-	if (!r || (r->second.flags() & L4Re::Rm::Reserved))
+	if (!r || (r->second.flags() & L4Re::Rm::F::Reserved))
 	  return L4_INVALID_PTR;
 
 	end = r->first.end();
       }
 
-    if (flags & Search)
+    if (flags & L4Re::Rm::F::Search_addr)
       {
-	beg = find_free(beg, end, size, align, flags);
-	if (beg == L4_INVALID_ADDR)
-	  return L4_INVALID_PTR;
+        beg = find_free(beg, end, size, align, flags);
+        if (beg == L4_INVALID_ADDR)
+          return L4_INVALID_PTR;
       }
 
-    if (!(flags & (Search | In_area)) && _am.find_node(Region(beg, beg + size - 1)))
+    if (!(flags & (L4Re::Rm::F::Search_addr | L4Re::Rm::F::In_area))
+        && _am.find_node(Region(beg, beg + size - 1)))
       return L4_INVALID_PTR;
 
     if (beg < min_addr() || beg + size -1 > end)
@@ -269,7 +290,7 @@ public:
   }
 
   int detach(void *addr, unsigned long sz, unsigned flags,
-             Region *reg, Hdlr *hdlr) throw()
+             Region *reg, Hdlr *hdlr) noexcept
   {
     Region dr((l4_addr_t)addr, (l4_addr_t)addr + sz - 1);
     Region res(~0UL,0);
@@ -286,7 +307,7 @@ public:
 	if (_rm.remove(g))
 	  return -L4_ENOENT;
 
-	if (!(flags & L4Re::Rm::Detach_keep) && (h.flags() & L4Re::Rm::Detach_free))
+	if (!(flags & L4Re::Rm::Detach_keep) && (h.flags() & L4Re::Rm::F::Detach_free))
 	  h.free(0, g.size());
 
 	if (hdlr) *hdlr = h;
@@ -301,7 +322,7 @@ public:
       {
 	// move the start of a region
 
-	if (!(flags & L4Re::Rm::Detach_keep) && (h.flags() & L4Re::Rm::Detach_free))
+	if (!(flags & L4Re::Rm::Detach_keep) && (h.flags() & L4Re::Rm::F::Detach_free))
 	  h.free(0, dr.end() + 1 - g.start());
 
 	unsigned long sz = dr.end() + 1 - g.start();
@@ -319,7 +340,7 @@ public:
       {
 	// move the end of a region
 
-	if (!(flags & L4Re::Rm::Detach_keep) && (h.flags() & L4Re::Rm::Detach_free))
+	if (!(flags & L4Re::Rm::Detach_keep) && (h.flags() & L4Re::Rm::F::Detach_free))
 	  h.free(dr.start() - g.start(), g.end() + 1 - dr.start());
 
 	Item *cn = const_cast<Item*>((Item const*)r);
@@ -336,7 +357,7 @@ public:
       {
 	// split a single region that contains the new region
 
-	if (!(flags & L4Re::Rm::Detach_keep) && (h.flags() & L4Re::Rm::Detach_free))
+	if (!(flags & L4Re::Rm::Detach_keep) && (h.flags() & L4Re::Rm::F::Detach_free))
 	  h.free(dr.start() - g.start(), dr.size());
 
 	// first move the end off the existing region before the new one
@@ -359,7 +380,7 @@ public:
   }
 
   l4_addr_t find_free(l4_addr_t start, l4_addr_t end, l4_addr_t size,
-                      unsigned char align, unsigned flags) const throw();
+                      unsigned char align, L4Re::Rm::Flags flags) const noexcept;
 
 };
 
@@ -367,7 +388,7 @@ public:
 template< typename Hdlr, template<typename T> class Alloc >
 l4_addr_t
 Region_map<Hdlr, Alloc>::find_free(l4_addr_t start, l4_addr_t end,
-    unsigned long size, unsigned char align, unsigned flags) const throw()
+    unsigned long size, unsigned char align, L4Re::Rm::Flags flags) const noexcept
 {
   l4_addr_t addr = start;
 
@@ -387,7 +408,7 @@ Region_map<Hdlr, Alloc>::find_free(l4_addr_t start, l4_addr_t end,
 
       if (!r)
 	{
-	  if (!(flags & In_area) && (r = _am.find_node(c)))
+	  if (!(flags & L4Re::Rm::F::In_area) && (r = _am.find_node(c)))
 	    {
 	      if (r->first.end() > end - size)
 		return L4_INVALID_ADDR;

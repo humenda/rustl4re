@@ -1,9 +1,4 @@
 <map id="L4::Ipc_svr::Server_iface::rcv_cap" name="L4::Ipc_svr::Server_iface::rcv_cap">
-<area shape="rect" id="node2" href="$classL4_1_1Cap__base.html#a6181bad79c41cdbf5c030877b94e25bf" title="Return capability selector. " alt="" coords="197,5,334,32"/>
-<area shape="rect" id="node3" href="$classL4_1_1Ipc__svr_1_1Server__iface.html#a6d3b3d591214378fdc8af857f6eceeb1" title="Get capability slot allocated to the given receive buffer. " alt="" coords="398,26,542,67"/>
-<area shape="rect" id="node4" href="$classL4_1_1Ipc__svr_1_1Server__iface.html#aa17aa10ace494b229a3e0879599e23b9" title="Make a server interface. " alt="" coords="192,151,339,193"/>
-<area shape="rect" id="node5" href="$classL4_1_1Ipc__svr_1_1Server__iface.html#ae37a0cf49bd7a6731bfba6140a0a30b8" title="Tells the server to allocate buffers for the given demand. " alt="" coords="401,92,539,148"/>
-<area shape="rect" id="node6" href="$classL4_1_1Ipc__svr_1_1Server__iface.html#a188d4ff607f72e84f3149de3351aea5c" title="Allocate a new capability for the given receive buffer. " alt="" coords="387,173,553,214"/>
-<area shape="rect" id="node7" href="$classL4_1_1Ipc__svr_1_1Server__iface.html#a7bd56bcdfd81c0be0654492e3016d7eb" title="Add a timeout to the server internal timeout queue. " alt="" coords="399,238,541,279"/>
-<area shape="rect" id="node8" href="$classL4_1_1Ipc__svr_1_1Server__iface.html#a8eb77524e90f6561eca9ccc29a97095a" title="Remove the given timeout from the timer queue. " alt="" coords="387,303,553,345"/>
+<area shape="rect" id="node1" title="Get receive cap with the given index as generic (void) type." alt="" coords="5,5,147,47"/>
+<area shape="rect" id="node2" href="$classL4_1_1Ipc__svr_1_1Server__iface.html#a6d3b3d591214378fdc8af857f6eceeb1" title="Get capability slot allocated to the given receive buffer." alt="" coords="195,5,341,47"/>
 </map>

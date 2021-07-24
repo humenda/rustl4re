@@ -1,29 +1,21 @@
 // vi:ft=cpp
+/* SPDX-License-Identifier: GPL-2.0-only or License-Ref-kk-custom */
 /*
- * (c) 2014 Alexander Warg <warg@os.inf.tu-dresden.de>
+ * Copyright (C) 2014-2020 Kernkonzept GmbH.
+ * Author(s): Alexander Warg <alexander.warg@kernkonzept.com>
  *
- * This file is part of TUD:OS and distributed under the terms of the
- * GNU General Public License 2.
- * Please see the COPYING-GPL-2 file for details.
- *
- * As a special exception, you may use this file as part of a free software
- * library without restriction.  Specifically, if other files instantiate
- * templates or use macros or inline functions from this file, or you compile
- * this file and link it with other files to produce an executable, this
- * file does not by itself cause the resulting executable to be covered by
- * the GNU General Public License.  This exception does not however
- * invalidate any other reasons why the executable file might be covered by
- * the GNU General Public License.
  */
 #pragma once
 
 #include <limits.h>
 
 #include <l4/re/dataspace>
+#include <l4/re/util/debug>
 #include <l4/re/env>
 #include <l4/re/error_helper>
 #include <l4/re/rm>
 #include <l4/re/util/cap_alloc>
+#include <l4/re/util/shared_cap>
 #include <l4/re/util/unique_cap>
 
 #include <l4/sys/types.h>
@@ -61,18 +53,37 @@ public:
 
 private:
   typedef L4Re::Rm::Unique_region< l4virtio_config_hdr_t*> Cfg_region;
-  typedef L4Re::Util::Unique_cap<L4Re::Dataspace> Cfg_cap;
+  typedef L4Re::Util::Shared_cap<L4Re::Dataspace> Cfg_cap;
 
   l4_uint32_t _vendor, _device, _qoffset, _nqueues;
   l4_uint32_t _host_features[sizeof(l4virtio_config_hdr_t::dev_features_map)
                              / sizeof(l4_uint32_t)];
   Cfg_cap _ds;
   Cfg_region _config;
+  l4_addr_t _ds_offset = 0;
 
-  Status _status; // status shadow, can be trusted by the device model
+  Status _status{0}; // status shadow, can be trusted by the device model
 
   static l4_uint32_t align(l4_uint32_t x)
   { return (x + 0xfU) & ~0xfU; }
+
+  void attach_n_init_cfg(Cfg_cap const &cfg, l4_addr_t offset)
+  {
+    L4Re::chksys(L4Re::Env::env()->rm()->attach(&_config, L4_PAGESIZE,
+                                                L4Re::Rm::F::Search_addr | L4Re::Rm::F::RW,
+                                                L4::Ipc::make_cap_rw(cfg.get()),
+                                                offset),
+                 "Attach config space to local address space.");
+
+    _config->generation = 0;
+    memset(_config->driver_features_map, 0, sizeof(_config->driver_features_map));
+    memset(_host_features, 0, sizeof(_host_features));
+    set_host_feature(L4VIRTIO_FEATURE_VERSION_1);
+    reset_hdr();
+
+    _ds = cfg;
+    _ds_offset = offset;
+  }
 
 protected:
   void volatile *get_priv_config() const
@@ -83,7 +94,8 @@ protected:
 public:
 
   /**
-   * \brief Setup/Create a L4-Virtio config data space.
+   * Create a L4-Virtio config data space.
+   *
    * \param vendor      The vendor ID to store in config header.
    * \param device      The device ID to store in config header.
    * \param cfg_size    The size of the device-specific config data in bytes.
@@ -103,9 +115,6 @@ public:
     using L4Re::chkcap;
     using L4Re::chksys;
 
-    //if (_cfg_offset + align(cfg_size) >= L4_PAGESIZE)
-      // hm what to do
-
     if (sizeof(l4virtio_config_queue_t) * _nqueues + _qoffset > L4_PAGESIZE)
       {
         // too many queues does not fit into our page
@@ -113,18 +122,38 @@ public:
         _nqueues = 0;
       }
 
-    typedef L4Re::Util::Unique_cap<L4Re::Dataspace> Cfg_cap;
-    Cfg_cap cfg = chkcap(L4Re::Util::make_unique_cap<Dataspace>());
+    auto cfg = chkcap(L4Re::Util::make_shared_cap<Dataspace>());
     chksys(L4Re::Env::env()->mem_alloc()->alloc(L4_PAGESIZE, cfg.get()));
-    chksys(L4Re::Env::env()->rm()->attach(&_config, L4_PAGESIZE,
-                                          L4Re::Rm::Search_addr,
-                                          L4::Ipc::make_cap_rw(cfg.get())));
-    _ds = cxx::move(cfg);
-    _config->generation = 0;
-    memset(_config->driver_features_map, 0, sizeof (_config->driver_features_map));
-    memset(_host_features, 0, sizeof(_host_features));
-    _host_features[1] = 1; // virtio 1
-    reset_hdr();
+
+    attach_n_init_cfg(cfg, 0);
+  }
+
+  /**
+   * Setup an L4-Virtio config space in an existing data space.
+   *
+   * \param cfg         Dataspace that should hold the L4-Virtio configuration.
+   * \param cfg_offset  Offset into the dataspace where the configuration starts.
+   * \param vendor      The vendor ID to store in config header.
+   * \param device      The device ID to store in config header.
+   * \param cfg_size    The size of the device-specific config data in bytes.
+   * \param num_queues  The number of queues provided by the device.
+   *
+   */
+  Dev_config(Cfg_cap const &cfg, l4_addr_t cfg_offset,
+             l4_uint32_t vendor, l4_uint32_t device,
+             unsigned cfg_size, l4_uint32_t num_queues = 0)
+  : _vendor(vendor), _device(device),
+    _qoffset(0x100 + align(cfg_size)),
+    _nqueues(num_queues)
+  {
+    if (sizeof(l4virtio_config_queue_t) * _nqueues + _qoffset > L4_PAGESIZE)
+      {
+        // too many queues does not fit into our page
+        _qoffset = 0;
+        _nqueues = 0;
+      }
+
+    attach_n_init_cfg(cfg, cfg_offset);
   }
 
   void set_host_feature(unsigned feature)
@@ -135,6 +164,9 @@ public:
 
   bool get_host_feature(unsigned feature)
   { return l4virtio_get_feature(_host_features, feature); }
+
+  bool get_guest_feature(unsigned feature)
+  { return l4virtio_get_feature(_config->driver_features_map, feature); }
 
   l4_uint32_t &host_features(unsigned idx)
   { return _host_features[idx]; }
@@ -155,6 +187,20 @@ public:
    */
   l4_uint32_t guest_features(unsigned idx) const
   { return _config->driver_features_map[idx]; }
+
+  /**
+   * Compute a specific set of negotiated features.
+   *
+   * \param idx  Index into the guest/host features array.
+   *
+   * \retval  The selected set of negotiated features.
+   *
+   * This function returns a specific 32-bit set of features negotiated by the
+   * guest/driver and host/device. `idx` is the index in the guest/host features
+   * array, resp. the 32-bit set to return.
+   */
+  l4_uint32_t negotiated_features(unsigned idx) const
+  { return _config->driver_features_map[idx] & _host_features[idx]; }
 
   /**
    * \brief Get current device status (trusted).
@@ -201,14 +247,14 @@ public:
   }
 
   /**
-   * \brief Set device status failed bit.
+   * Set DEVICE_NEEDS_RESET bit in device status register.
    *
    * This function sets the internal status register and also the status
-   * register in the shared memory to \a status.
+   * register in the shared memory to DEVICE_NEEDS_RESET.
    */
-  void set_failed()
+  void set_device_needs_reset()
   {
-    _status.failed() = 1;
+    _status.device_needs_reset() = 1;
     const_cast<l4_uint32_t volatile &>(hdr()->status) = _status.raw;
   }
 
@@ -270,7 +316,7 @@ public:
   /**
    * \brief Reset queue config for the given queue.
    * \param index    The index of the queue to reset.
-   * \param num_max  The maximum number of descriptor supported by this queue.
+   * \param num_max  The maximum number of descriptors supported by this queue.
    * \param inc_generation The config generation will be incremented when
    *                       this is true.
    * \return true on success, or false when \a index is out of range.
@@ -306,6 +352,13 @@ public:
    * \return Capability for the shared config data space.
    */
   L4::Cap<L4Re::Dataspace> ds() const { return _ds.get(); }
+
+  /**
+   * Return the offset into the config dataspace where the device
+   * configuration starts.
+   */
+  l4_addr_t ds_offset() const
+  { return _ds_offset; }
 };
 
 
@@ -317,7 +370,8 @@ public:
   typedef PRIV_CONFIG Priv_config;
 
   /**
-   * \brief Setup/Create a L4-Virtio config data space.
+   * Create and set up a L4-Virtio config data space.
+   *
    * \param vendor      The vendor ID to store in config header.
    * \param device      The device ID to store in config header.
    * \param num_queues  The number of queues provided by the device.
@@ -329,6 +383,23 @@ public:
   Dev_config_t(l4_uint32_t vendor, l4_uint32_t device,
                l4_uint32_t num_queues = 0)
   : Dev_config(vendor, device, sizeof(PRIV_CONFIG), num_queues)
+  {}
+
+  /**
+   * Setup an L4-Virtio config space in an existing data space.
+   *
+   * \param cfg         Dataspace that should hold the L4-Virtio configuration.
+   * \param cfg_offset  Offset into the dataspace where the configuration starts.
+   * \param vendor      The vendor ID to store in config header.
+   * \param device      The device ID to store in config header.
+   * \param num_queues  The number of queues provided by the device.
+   *
+   */
+  Dev_config_t(L4Re::Util::Shared_cap<L4Re::Dataspace> const &cfg,
+               l4_addr_t cfg_offset, l4_uint32_t vendor, l4_uint32_t device,
+               l4_uint32_t num_queues = 0)
+  : Dev_config(cfg, cfg_offset, vendor, device, sizeof(PRIV_CONFIG),
+               num_queues)
   {}
 
   /**
@@ -435,7 +506,7 @@ public:
         if ((ULLONG_MAX - size) < _drv_base)
           chksys(-L4_EINVAL, "invalid size");
 
-        _flags.rw() = ds_info.flags & L4Re::Dataspace::Map_rw;
+        _flags.rw() = (ds_info.flags & L4Re::Dataspace::F::W).raw != 0;
       }
     else if (err == -L4_ENOSYS)
       {
@@ -446,9 +517,12 @@ public:
         chksys(err, "getting data-space infos");
       }
 
+    auto f = L4Re::Rm::F::Search_addr | L4Re::Rm::F::R;
+    if (_flags.rw())
+      f |= L4Re::Rm::F::W;
+
     // use a big alignment to save PT/TLB entries and kernel memory resources!
-    chksys(Env::env()->rm()->attach(&_local_base, size,
-                                    L4Re::Rm::Search_addr | (_flags.rw() ? 0 : L4Re::Rm::Read_only),
+    chksys(Env::env()->rm()->attach(&_local_base, size, f,
                                     L4::Ipc::make_cap(ds.get(), _flags.rw()
                                                                 ? L4_CAP_FPAGE_RW
                                                                 : L4_CAP_FPAGE_RO),
@@ -688,7 +762,22 @@ private:
 typedef Driver_mem_list_t<No_custom_data> Driver_mem_list;
 
 /**
- * \brief Server-side L4-VIRTIO device stub.
+ * Server-side L4-VIRTIO device stub.
+ *
+ * This stub supports old-style device registration with single IRQs
+ * (via register_iface()) and new-style multi-event registration
+ * (using get_device_config(), bind() and get_device_notification_irq()).
+ *
+ * In their default implementation the callbacks provide a wrapper
+ * from old-style to new-style functions, so that legacy devices
+ * provide both interfaces without any changes to their implementation.
+ *
+ * New devices should always implement the new-style interface. If required,
+ * they can also provide a backward-compatibility mode by implementing
+ * the old-style interface as well.
+ *
+ * The old-style interface is considered deprecated and will be
+ * removed at some point.
  */
 template<typename DATA>
 class Device_t
@@ -710,17 +799,61 @@ public:
   /// reset callback, called for doing a device reset
   virtual void reset() = 0;
 
+  /// callback for checking the subset of accepted features
+  virtual bool check_features()
+  { return true; }
+
   /// callback for checking if the queues at DRIVER_OK transition
   virtual bool check_queues() = 0;
 
   /// callback for client queue-config request
   virtual int reconfig_queue(unsigned idx) = 0;
 
-  /// callback for registering a single guest IRQ for all queues
-  virtual void register_single_driver_irq() = 0;
+  /// callback for registering a single guest IRQ for all queues (old-style)
+  virtual void register_single_driver_irq()
+  { L4Re::chksys(-L4_ENOSYS, "Legacy single IRQ interface not implemented."); }
 
-  /// callback to gather the device notification IRQ
-  virtual L4::Cap<L4::Irq> device_notify_irq() const = 0;
+  /// callback for triggering configuration change notification IRQ
+  virtual void trigger_driver_config_irq() const = 0;
+
+  /// callback to gather the device notification IRQ (old-style)
+  virtual L4::Cap<L4::Irq> device_notify_irq() const
+  {
+    L4Re::chksys(-L4_ENOSYS, "Legacy single IRQ interface not implemented.");
+    return L4::Cap<L4::Irq>();
+  }
+
+  /**
+   * Callback for registering an notification IRQ (multi IRQ).
+   *
+   * The default implementation maps to the implementation for
+   * single IRQ notification points.
+   */
+  virtual void register_driver_irq(unsigned idx)
+  {
+    if (idx != 0)
+      L4Re::chksys(-L4_ENOSYS, "Multi IRQ interface not implemented.");
+
+    register_single_driver_irq();
+  }
+
+  /**
+   * Callback to gather the device notification IRQ (multi IRQ).
+   *
+   * The default implementation maps to the implementation for
+   * single IRQ notification points.
+   */
+  virtual L4::Cap<L4::Irq> device_notify_irq(unsigned idx)
+  {
+    if (idx != 0)
+      L4Re::chksys(-L4_ENOSYS, "Multi IRQ interface not implemented.");
+
+    return device_notify_irq();
+  }
+
+  /// Return the highest notification index supported.
+  virtual unsigned num_events_supported() const
+  { return 1; }
 
   virtual L4::Ipc_svr::Server_iface *server_iface() const = 0;
 
@@ -743,10 +876,7 @@ public:
   long op_config_queue(L4virtio::Device::Rights, unsigned queue)
   {
     Dev_config::Status status = _device_config->status();
-    if (status.failed())
-      return -L4_EIO;
-
-    if (!status.acked() || !status.driver())
+    if (status.fail_state() || !status.acked() || !status.driver())
       return -L4_EIO;
 
     return reconfig_queue(queue);
@@ -756,8 +886,9 @@ public:
                       L4::Ipc::Snd_fpage ds_cap_fp, l4_uint64_t ds_base,
                       l4_umword_t offset, l4_umword_t sz)
   {
-    printf("Registering dataspace from 0x%llx with %lu KiB, offset 0x%lx\n",
-           ds_base, sz >> 10, offset);
+    L4Re::Util::Dbg()
+      .printf("Registering dataspace from 0x%llx with %lu KiB, offset 0x%lx\n",
+              ds_base, sz >> 10, offset);
 
     _check_n_init_shm(ds_cap_fp, ds_base, sz, offset);
 
@@ -769,18 +900,89 @@ public:
                          L4::Ipc::Cap<L4::Triggerable> &host_irq,
                          L4::Ipc::Cap<L4Re::Dataspace> &config_ds)
   {
+    // If a dataspace with offset is used, the old-style registration
+    // interface cannot be supported.
+    if (_device_config->ds_offset() != 0)
+      return -L4_ENOSYS;
+
     if (!irq_cap_fp.cap_received())
       return -L4_EINVAL;
 
     register_single_driver_irq();
 
-    printf("register client: host IRQ: %lx config DS: %lx\n",
-           device_notify_irq().cap(), _device_config->ds().cap());
+    L4Re::Util::Dbg()
+      .printf("register client: host IRQ: %lx config DS: %lx\n",
+              device_notify_irq().cap(), _device_config->ds().cap());
 
     host_irq = L4::Ipc::make_cap(device_notify_irq(), L4_CAP_FPAGE_RO);
     config_ds = L4::Ipc::make_cap(_device_config->ds(), L4_CAP_FPAGE_RW);
     return 0;
   }
+
+  long op_device_config(L4virtio::Device::Rights,
+                        L4::Ipc::Cap<L4Re::Dataspace> &config_ds,
+                        l4_addr_t &ds_offset)
+  {
+    L4Re::Util::Dbg()
+      .printf("register client: host IRQ: %lx config DS: %lx\n",
+              device_notify_irq().cap(), _device_config->ds().cap());
+
+    config_ds = L4::Ipc::make_cap(_device_config->ds(), L4_CAP_FPAGE_RW);
+    ds_offset = _device_config->ds_offset();
+    return 0;
+  }
+
+  long op_device_notification_irq(L4virtio::Device::Rights,
+                                  unsigned idx,
+                                  L4::Ipc::Cap<L4::Triggerable> &irq)
+  {
+    auto cap = device_notify_irq(idx);
+
+    if (!cap.is_valid())
+      return -L4_EINVAL;
+
+    irq = L4::Ipc::make_cap(cap, L4_CAP_FPAGE_RO);
+    return L4_EOK;
+  }
+
+  int op_bind(L4::Icu::Rights, l4_umword_t idx, L4::Ipc::Snd_fpage irq_cap_fp)
+  {
+    if (idx >= num_events_supported())
+      return -L4_ERANGE;
+
+    if (!irq_cap_fp.cap_received())
+      return -L4_EINVAL;
+
+    register_driver_irq(idx);
+
+    return L4_EOK;
+  }
+
+  int op_unbind(L4::Icu::Rights, l4_umword_t, L4::Ipc::Snd_fpage)
+  {
+    return -L4_ENOSYS;
+  }
+
+  int op_info(L4::Icu::Rights, L4::Icu::_Info &info)
+  {
+    info.features = 0;
+    info.nr_irqs = num_events_supported();
+    info.nr_msis = 0;
+
+    return L4_EOK;
+  }
+
+  int op_msi_info(L4::Icu::Rights, l4_umword_t, l4_uint64_t, l4_icu_msi_info_t &)
+  { return -L4_ENOSYS; }
+
+  int op_mask(L4::Icu::Rights, l4_umword_t)
+  { return -L4_ENOSYS; }
+
+  int op_unmask(L4::Icu::Rights, l4_umword_t)
+  { return -L4_ENOREPLY; }
+
+  int op_set_mode(L4::Icu::Rights, l4_umword_t, l4_umword_t)
+  { return -L4_ENOSYS; }
 
   /**
    * \brief Trigger reset for the configuration space for queue \a idx.
@@ -791,7 +993,7 @@ public:
    *
    * This function resets the driver-readable configuration space for the
    * queue with the given index. The queue configuration is reset to all 0,
-   * name num_max to the given value.
+   * and the maximum number of entries in the queue is set to \a num_max.
    */
   void reset_queue_config(unsigned idx, unsigned num_max,
                           bool inc_generation = false)
@@ -809,17 +1011,24 @@ public:
   }
 
   /**
-   * \brief Transition device into failed state.
-   * \note Callers should trigger a guest config IRQ
-   *       after calling this function.
+   * Transition device into DEVICE_NEEDS_RESET state.
    *
-   * This function does a full reset, (calls reset()) and sets the
-   * failed bit in the device status register.
+   * This function does a full reset, sets the DEVICE_NEEDS_RESET bit in the
+   * device status register, triggering a guest config IRQ if necessary. The
+   * driver still needs to perform its own reset and initialization sequence.
    */
   void device_error()
   {
     reset();
-    _device_config->set_failed();
+    _device_config->set_device_needs_reset();
+
+    // the device MUST NOT notify the driver before DRIVER_OK.
+    if (_device_config->status().driver_ok())
+      {
+        // we do not care about this anywhere, so skip
+        // _dev_config->irq_status |= 1;
+        trigger_driver_config_irq();
+      }
   }
 
   /**
@@ -839,6 +1048,8 @@ public:
   {
     l4virtio_config_queue_t volatile const *qc;
     qc = _device_config->qconfig(qn);
+    if (L4_UNLIKELY(qc == 0))
+      return false;
 
     if (!qc->ready)
       {
@@ -884,29 +1095,32 @@ public:
     if (L4_UNLIKELY(!used_info || !used_info->is_writable()))
       return false;
 
-    printf("shm=[%llx-%llx] local=[%lx-%lx] desc=[%llx-%llx] (%p-%p)\n",
-           desc_info->drv_base(), desc_info->drv_base() + desc_info->size() - 1,
-           (unsigned long)desc_info->local_base(),
-           (unsigned long)desc_info->local_base() + desc_info->size() - 1,
-           desc, desc + Virtqueue::desc_size(num),
-           desc_info->local(Ptr<char>(desc)),
-           desc_info->local(Ptr<char>(desc)) + Virtqueue::desc_size(num));
+    L4Re::Util::Dbg()
+      .printf("shm=[%llx-%llx] local=[%lx-%lx] desc=[%llx-%llx] (%p-%p)\n",
+              desc_info->drv_base(), desc_info->drv_base() + desc_info->size() - 1,
+              (unsigned long)desc_info->local_base(),
+              (unsigned long)desc_info->local_base() + desc_info->size() - 1,
+              desc, desc + Virtqueue::desc_size(num),
+              desc_info->local(Ptr<char>(desc)),
+              desc_info->local(Ptr<char>(desc)) + Virtqueue::desc_size(num));
 
-    printf("shm=[%llx-%llx] local=[%lx-%lx] avail=[%llx-%llx] (%p-%p)\n",
-           avail_info->drv_base(), avail_info->drv_base() + avail_info->size() - 1,
-           (unsigned long)avail_info->local_base(),
-           (unsigned long)avail_info->local_base() + avail_info->size() - 1,
-           avail, avail + Virtqueue::avail_size(num),
-           avail_info->local(Ptr<char>(avail)),
-           avail_info->local(Ptr<char>(avail)) + Virtqueue::avail_size(num));
+    L4Re::Util::Dbg()
+      .printf("shm=[%llx-%llx] local=[%lx-%lx] avail=[%llx-%llx] (%p-%p)\n",
+              avail_info->drv_base(), avail_info->drv_base() + avail_info->size() - 1,
+              (unsigned long)avail_info->local_base(),
+              (unsigned long)avail_info->local_base() + avail_info->size() - 1,
+              avail, avail + Virtqueue::avail_size(num),
+              avail_info->local(Ptr<char>(avail)),
+              avail_info->local(Ptr<char>(avail)) + Virtqueue::avail_size(num));
 
-    printf("shm=[%llx-%llx] local=[%lx-%lx] used=[%llx-%llx] (%p-%p)\n",
-           used_info->drv_base(), used_info->drv_base() + used_info->size() - 1,
-           (unsigned long)used_info->local_base(),
-           (unsigned long)used_info->local_base() + used_info->size() - 1,
-           used, used + Virtqueue::used_size(num),
-           used_info->local(Ptr<char>(used)),
-           used_info->local(Ptr<char>(used)) + Virtqueue::used_size(num));
+    L4Re::Util::Dbg()
+      .printf("shm=[%llx-%llx] local=[%lx-%lx] used=[%llx-%llx] (%p-%p)\n",
+              used_info->drv_base(), used_info->drv_base() + used_info->size() - 1,
+              (unsigned long)used_info->local_base(),
+              (unsigned long)used_info->local_base() + used_info->size() - 1,
+              used, used + Virtqueue::used_size(num),
+              used_info->local(Ptr<char>(used)),
+              used_info->local(Ptr<char>(used)) + Virtqueue::used_size(num));
 
     q->setup(num, desc_info->local(Ptr<void>(desc)),
              avail_info->local(Ptr<void>(avail)),
@@ -921,11 +1135,12 @@ public:
       L4Re::chksys(-L4_ENOMEM);
 
     auto const *i = _mem_info.add(base, size, offset, cxx::move(shm));
-    printf("PORT[%p]: DMA guest [%llx-%llx]  local [%lx-%lx]  offset %lx\n",
-           this, i->drv_base(), i->drv_base() + i->size() - 1,
-           (unsigned long)i->local_base(),
-           (unsigned long)i->local_base() + i->size() - 1,
-           i->ds_offset());
+    L4Re::Util::Dbg()
+      .printf("PORT[%p]: DMA guest [%llx-%llx]  local [%lx-%lx]  offset %lx\n",
+              this, i->drv_base(), i->drv_base() + i->size() - 1,
+              (unsigned long)i->local_base(),
+              (unsigned long)i->local_base() + i->size() - 1,
+              i->ds_offset());
   }
 
   /**
@@ -976,24 +1191,135 @@ private:
     check_n_init_shm(cxx::move(ds), base, size, offset);
   }
 
-  int _set_status(unsigned _status)
+  bool check_features_internal()
   {
-    Dev_config::Status status(_status);
+    static_assert(sizeof(l4virtio_config_hdr_t::driver_features_map)
+                    == sizeof(l4virtio_config_hdr_t::dev_features_map),
+                  "Driver and device feature maps must be of the same size");
 
-    if (_status == 0)
+    // From the Virtio 1.0 specification 6.1 Driver Requirements and 6.2 Device
+    // Requirements: A driver MUST accept VIRTIO_F_VERSION_1 if it is offered.
+    // A device MUST offer VIRTIO_F_VERSION_1. A device MAY fail to operate
+    // further if VIRTIO_F_VERSION_1 is not accepted.
+    //
+    // The L4virtio implementation does not support legacy interfaces so we
+    // fail here if the Virtio 1.0 feature was not accepted.
+    if (!_device_config->get_guest_feature(L4VIRTIO_FEATURE_VERSION_1))
+      return false;
+
+    for (auto i = 0u;
+         i < sizeof(l4virtio_config_hdr_t::driver_features_map)
+               / sizeof(l4virtio_config_hdr_t::driver_features_map[0]);
+         i++)
       {
-        printf("Resetting device\n");
-        reset();
+        // Driver must not accept features that were not offered by device
+        if (_device_config->guest_features(i)
+            & ~_device_config->host_features(i))
+          return false;
+      }
+    return check_features();
+  }
+
+  /**
+   * Process the VIRTIO status, determine and update the new value.
+   *
+   * \param status  New status register value to evaluate.
+   *
+   * May call the virtual methods check_features() and check_queues() which may
+   * change the device state.
+   *
+   * From the Virtio 1.0 specification 2.1.2 Device Requirements: Device Status
+   * Field: If DRIVER_OK is set, after it sets DEVICE_NEEDS_RESET, the device
+   * MUST send a device configuration change notification to the driver.
+   *
+   * We understand this to mean a configuration change notification is required
+   * when DEVICE_NEEDS_RESET is set when DRIVER_OK is also set.
+   *
+   * Here no notification is required because check_status() is intended to be
+   * used during initialization where the driver should be checking
+   * fail_state(). When a failure state is detected we avoid transitioning to
+   * DRIVER_OK in cases where we've needed to set DEVICE_NEEDS_RESET by
+   * updating the current status instead of applying the new status.
+   */
+  void check_and_update_status(Dev_config::Status status)
+  {
+    // snapshot of current status
+    Dev_config::Status current_status = _device_config->status();
+
+    // handle reset
+    if (!status.raw)
+      {
+        _device_config->set_status(status);
+        return;
       }
 
-    // do nothing if 'failed' is set
-    if (status.failed())
-      return 0;
+    // Do no further processing in case of driver or device failure. If FAILED
+    // or DEVICE_NEEDS_RESET are set only these fail_state bits will be set in
+    // addition to the current status bits already set.
+    if (current_status.fail_state() || status.fail_state())
+      {
+        if (current_status.fail_state() != status.fail_state())
+          {
+            current_status.fail_state() =
+              current_status.fail_state() | status.fail_state();
+            _device_config->set_status(current_status);
+          }
+        return;
+      }
 
+    // Enforce init sequence ACKNOWLEDGE, DRIVER, FEATURES_OK, DRIVER_OK.
+    // We do not enforce that only one additional new bit is set per call.
+    if ((!status.acked() && status.driver())
+        || (!status.driver() && status.features_ok())
+        || (!status.features_ok() && status.driver_ok()))
+      {
+        current_status.device_needs_reset() = 1;
+        _device_config->set_status(current_status);
+        return;
+      }
+
+    // only check feature compatibility before DRIVER_OK is set
+    if (status.features_ok() && !status.driver_ok()
+          && !check_features_internal())
+      status.features_ok() = 0;
+
+    // Note that if FEATURES_OK and DRIVER_OK are both updated to being set
+    // at the same time the above check_features_internal() is skipped; this is
+    // considered undefined behaviour but it is not prevented.
     if (status.running() && !check_queues())
-      status.failed() = 1;
+      {
+        current_status.device_needs_reset() = 1;
+        _device_config->set_status(current_status);
+        return;
+      }
 
     _device_config->set_status(status);
+  }
+
+  /**
+   * Process the new status transition and conditionally write the status word
+   * to the VIRTIO status register in shared memory.
+   *
+   * \param new_status  Status word to write to the VIRTIO status.
+   *
+   * \retval 0 on success.
+   *
+   * Although DEVICE_NEEDS_RESET may be set using this method, calling
+   * set_device_needs_reset() is the preferred usage since it will send a
+   * configuration change notification if required.
+   */
+  int _set_status(unsigned new_status)
+  {
+    if (new_status == 0)
+      {
+        L4Re::Util::Dbg().printf("Resetting device\n");
+        reset();
+        _device_config->reset_hdr(true);
+      }
+
+    Dev_config::Status status(new_status);
+    check_and_update_status(status);
+
     return 0;
   }
 

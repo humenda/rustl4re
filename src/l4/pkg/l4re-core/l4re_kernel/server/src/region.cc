@@ -22,7 +22,7 @@
 #include "dispatcher.h"
 #include "debug.h"
 
-#include <cstdio>
+#include <stdio.h>
 
 using L4Re::Rm;
 using L4Re::Dataspace;
@@ -51,7 +51,7 @@ Region_map::init()
 	  set_limits(start, end);
 	  break;
 	case L4::Kip::Mem_desc::Reserved:
-	  attach_area(start, end - start + 1, L4Re::Rm::Reserved);
+	  attach_area(start, end - start + 1, L4Re::Rm::F::Reserved);
 	  break;
 	default:
 	  break;
@@ -68,85 +68,45 @@ Region_ops::map(Region_handler const *h, l4_addr_t local_addr,
                 Region const &r, bool writable, l4_umword_t *result)
 {
   *result = 0;
-  if ((h->flags() & Rm::Reserved) || !h->memory().is_valid())
+  auto r_flags = h->flags();
+  if (!writable)
+    r_flags = r_flags & ~L4Re::Rm::F::W;
+
+  if ((r_flags & Rm::F::Reserved) || !h->memory().is_valid())
     return -L4_ENOENT;
 
-  if (h->flags() & Rm::Pager)
+  if (r_flags & Rm::F::Pager)
     {
-      l4_mword_t result;
       L4::Ipc::Snd_fpage rfp;
       L4::cap_reinterpret_cast<L4::Pager>(h->memory())
-        ->page_fault((local_addr | (writable ? 2 : 0)), -3UL, result,
+        ->page_fault(local_addr, -3UL,
                      L4::Ipc::Rcv_fpage::mem(0, L4_WHOLE_ADDRESS_SPACE, 0),
                      rfp);
       return L4_EOK;
     }
   else
     {
+      // align to 16byte, some DS implementations are too picky about
+      // possible r/w etc. bits in the offset
+      local_addr &= ~0x0fUL;
       l4_addr_t offset = local_addr - r.start() + h->offset();
       L4::Cap<L4Re::Dataspace> ds = L4::cap_cast<L4Re::Dataspace>(h->memory());
-      unsigned flags = writable | (h->caching() >> Rm::Caching_ds_shift);
+      L4Re::Dataspace::Flags flags = map_flags(r_flags);
       return ds->map(offset, flags, local_addr, r.start(), r.end());
     }
-}
-
-void Region_ops::unmap(Region_handler const *h, l4_addr_t vaddr,
-                       l4_addr_t offs, unsigned long size)
-{
-  (void)h; (void)vaddr; (void)offs; (void)size;
-#if 0
-  for (l4_addr_t a = vaddr; a < vaddr + size; a += L4_PAGESIZE)
-    l4_task_unmap(L4Re::This_task,
-                  l4_fpage(a, L4_LOG2_PAGESIZE, L4_FPAGE_RWX),
-                  L4_FP_ALL_SPACES);
-
-  if (h->flags() & (Rm::Pager | Rm::Reserved))
-    return;
-
-  if (!(h->flags() & Rm::No_alias))
-    return;
-
-  L4::Cap<L4Re::Dataspace> ds = L4::cap_cast<L4Re::Dataspace>(h->memory());
-
-  // swipe out memory pages if they are not aliasd somewhere else
-  // the DSM may free thoses pages
-  ds->clear(offs, size);
-#endif
 }
 
 void
 Region_ops::free(Region_handler const *h, l4_addr_t start, unsigned long size)
 {
-  if ((h->flags() & Rm::Reserved) || !h->memory().is_valid())
+  if ((h->flags() & Rm::F::Reserved) || !h->memory().is_valid())
     return;
 
-  if (h->flags() & Rm::Pager)
+  if (h->flags() & Rm::F::Pager)
     return;
 
   L4::Cap<L4Re::Dataspace> ds = L4::cap_cast<L4Re::Dataspace>(h->memory());
   ds->clear(h->offset() + start, size);
-}
-
-void
-Region_ops::take(Region_handler const * /*h*/)
-{
-#if 0
-  if (h->flags() & (Rm::Pager | Rm::Reserved))
-    return;
-
-  L4::cap_cast<L4Re::Dataspace>(h->memory())->take();
-#endif
-}
-
-void
-Region_ops::release(Region_handler const * /*h*/)
-{
-#if 0
-  if (h->flags() & (Rm::Pager | Rm::Reserved))
-    return;
-
-  L4::cap_cast<L4Re::Dataspace>(h->memory())->release();
-#endif
 }
 
 void
@@ -160,7 +120,7 @@ Region_map::debug_dump(unsigned long /*function*/) const
 	   i->second.flags());
   printf(" Region map:\n");
   for (Region_map::Const_iterator i = begin(); i != end(); ++i)
-    printf("  [%10lx-%10lx] -> (offs=%lx, ds=%lx, flags=%x)\n",
+    printf("  [%10lx-%10lx] -> (offs=%llx, ds=%lx, flags=%x)\n",
            i->first.start(), i->first.end(),
 	   i->second.offset(), i->second.memory().cap(),
 	   i->second.flags());
@@ -171,7 +131,7 @@ Region_map::op_exception(L4::Exception::Rights, l4_exc_regs_t &u,
                          L4::Ipc::Opt<L4::Ipc::Snd_fpage> &)
 {
   Dbg w(Dbg::Warn);
-  w.printf("%s: Unhandled exception: PC=0x%lx PFA=%lx LdrFlgs=%lx\n",
+  w.printf("%s: Unhandled exception: PC=0x%lx PFA=0x%lx LdrFlgs=0x%lx\n",
            Global::l4re_aux->binary, l4_utcb_exc_pc(&u), l4_utcb_exc_pfa(&u),
            Global::l4re_aux->ldr_flags);
 
@@ -181,12 +141,10 @@ Region_map::op_exception(L4::Exception::Rights, l4_exc_regs_t &u,
 long
 Region_map::op_io_page_fault(L4::Io_pager::Rights,
                              l4_fpage_t io_pfa, l4_umword_t pc,
-                             L4::Ipc::Opt<l4_mword_t> &result,
                              L4::Ipc::Opt<L4::Ipc::Snd_fpage> &)
 {
   Err().printf("IO-port-fault: port=0x%lx size=%d pc=0x%lx\n",
                l4_fpage_ioport(io_pfa), 1 << l4_fpage_size(io_pfa), pc);
-  result = ~0;
-  return -1;
+  return -L4_ENOMEM;
 }
 

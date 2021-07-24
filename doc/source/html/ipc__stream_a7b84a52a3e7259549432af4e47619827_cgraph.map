@@ -1,4 +1,6 @@
 <map id="operator&gt;&gt;" name="operator&gt;&gt;">
-<area shape="rect" id="node2" href="$classL4_1_1Ipc_1_1Istream.html#af4d28aa64235c822f624891154109a0c" title="Copy out an array of type T with size elements. " alt="" coords="167,5,309,32"/>
-<area shape="rect" id="node3" href="$classL4_1_1Ipc_1_1Istream.html#a8087f571b556efae9b7738741f6dc3e0" title="Check whether a value of type T can be obtained from the stream. " alt="" coords="145,56,331,83"/>
+<area shape="rect" id="node1" title="Extract an array of T elements from the stream s." alt="" coords="5,31,104,57"/>
+<area shape="rect" id="node2" href="$classL4_1_1Ipc_1_1Istream.html#af4d28aa64235c822f624891154109a0c" title="Copy out an array of type T with size elements." alt="" coords="174,5,325,32"/>
+<area shape="rect" id="node3" href="$classL4_1_1Ipc_1_1Istream.html#a8087f571b556efae9b7738741f6dc3e0" title="Check whether a value of type T can be obtained from the stream." alt="" coords="152,56,347,83"/>
+<area shape="rect" id="node4" href="$structl4__msgtag__t.html#a98577ea730d9abcd938b89d5c7adb18c" title="Get the number of untyped words." alt="" coords="395,56,544,83"/>
 </map>

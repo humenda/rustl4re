@@ -237,7 +237,7 @@ void Romain::InstanceManager::configure_logbuf(l4_mword_t sizeMB)
 	L4::Cap<L4Re::Dataspace> ds;
 
 	l4_addr_t addr = Romain::Region_map::allocate_and_attach(&ds, size_in_bytes,
-															 0, 0, L4_SUPERPAGESHIFT);
+															 0, L4Re::Rm::Flags(0), L4_SUPERPAGESHIFT);
     INFO() << "Log buffer attached to 0x" << std::hex << addr;
 
     memset((void*)addr, 0, size_in_bytes);

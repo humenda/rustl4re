@@ -58,8 +58,9 @@ var l4_2sys_2consts_8h =
       [ "L4_FP_DELETE_OBJ", "group__l4__task__api.html#gga3c24e67b976870a3e911c43c83382f66a49114f3e6952b9448fe776f2ab18813f", null ],
       [ "L4_FP_OTHER_SPACES", "group__l4__task__api.html#gga3c24e67b976870a3e911c43c83382f66af5f4ec77edcf5a85ecd79b0ae24e31f0", null ]
     ] ],
+    [ "l4_bytes_to_mwords", "group__l4__memory__api.html#ga2be30f4e5dde3c85d115d2a9c77f6215", null ],
     [ "l4_round_page", "group__l4__memory__api.html#ga96e3b2d8e69308aecbb11d1d24f61662", null ],
-    [ "l4_round_size", "group__l4__memory__api.html#gae8aa66c17956ac2dfc2a6d5788fd97a9", null ],
+    [ "l4_round_size", "group__l4__memory__api.html#gae876a4c6e0f21b2ecbf17863dc7d11e4", null ],
     [ "l4_trunc_page", "group__l4__memory__api.html#ga70b72ae96c18cb49a3445198711bba0d", null ],
     [ "l4_trunc_size", "group__l4__memory__api.html#ga792959ba1e87fecf90018876f32d7bc9", null ]
 ];

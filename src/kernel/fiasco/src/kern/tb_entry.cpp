@@ -134,13 +134,13 @@ public:
   typedef T const *Const_ptr;
   typedef T *Ptr;
 
-  void print(String_buffer *buf, Tb_entry const *e) const
+  void print(String_buffer *buf, Tb_entry const *e) const override
   { static_cast<Const_ptr>(e)->print(buf); }
 
-  Group_order has_partner(Tb_entry const *e) const
+  Group_order has_partner(Tb_entry const *e) const override
   { return static_cast<Const_ptr>(e)->has_partner(); }
 
-  Group_order is_pair(Tb_entry const *e, Tb_entry const *n) const
+  Group_order is_pair(Tb_entry const *e, Tb_entry const *n) const override
   {
     //assert (get_fmt(e) == &singleton);
 
@@ -149,7 +149,7 @@ public:
     return Tb_entry::Group_order::none();
   }
 
-  Mword partner(Tb_entry const *e) const
+  Mword partner(Tb_entry const *e) const override
   { return static_cast<Const_ptr>(e)->partner(); }
 
   static Tb_entry_formatter_t const singleton;
@@ -344,7 +344,7 @@ Tb_entry::set_global(char type, Context const *ctx, Address ip)
   _type   = type;
   _ctx    = ctx;
   _ip     = ip;
-  _kclock = (Unsigned32)Kip::k()->clock;
+  _kclock = (Unsigned32)Kip::k()->clock();
   _cpu    = cxx::int_value<Cpu_number>(current_cpu());
 }
 

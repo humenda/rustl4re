@@ -66,7 +66,7 @@ class App_model : public Ldr::Base_app_model<Romain::App_stack>
 		 *                         Types needed by Ldr::*                           *
 		 ****************************************************************************/
 
-		typedef L4::Cap<L4Re::Dataspace> const Const_dataspace;
+		typedef L4::Cap<L4Re::Dataspace> Const_dataspace;
 		typedef L4::Cap<L4Re::Dataspace> Dataspace;
 
 
@@ -83,13 +83,13 @@ class App_model : public Ldr::Base_app_model<Romain::App_stack>
 
 		void *       prog_attach_ds(l4_addr_t addr, l4_umword_t size,
 		                            Const_dataspace ds, l4_umword_t offset,
-		                            l4_umword_t flags, char const *what, l4_addr_t local_start = 0,
+		                            L4Re::Rm::Flags flags, char const *what, l4_addr_t local_start = 0,
 		                            bool shared = false);
 		l4_addr_t    local_attach_ds(Const_dataspace ds, l4_umword_t size,
 		                             l4_umword_t offset, l4_umword_t address_hint = 0) const;
 		void         local_detach_ds(l4_addr_t addr, l4_umword_t /*size*/) const;
 		l4_mword_t   prog_reserve_area(l4_addr_t *start, l4_umword_t size,
-		                               l4_umword_t flags, l4_uint8_t align);
+		                               L4Re::Rm::Flags flags, l4_uint8_t align);
 
 		Dataspace    alloc_app_stack();
 		void         prog_attach_stack(Dataspace app_stack);

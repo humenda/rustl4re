@@ -1,3 +1,4 @@
 <map id="l4_vm_vmx_read_32" name="l4_vm_vmx_read_32">
-<area shape="rect" id="node2" href="$group__l4__vm__vmx__api.html#ga5e63642b705c86cb3d28cb26aae5b2c8" title="Read any VMCS field. " alt="" coords="207,5,336,32"/>
+<area shape="rect" id="node1" title="Read a 32bit VMCS field." alt="" coords="188,5,345,32"/>
+<area shape="rect" id="node2" href="$group__l4__vm__vmx__api.html#ga5e63642b705c86cb3d28cb26aae5b2c8" title="Read any VMCS field." alt="" coords="5,5,140,32"/>
 </map>

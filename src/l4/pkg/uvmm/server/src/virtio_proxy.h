@@ -17,7 +17,6 @@
 #include <l4/re/env>
 #include <l4/re/error_helper>
 #include <l4/re/rm>
-#include <l4/re/util/cap_alloc>
 #include <l4/re/util/unique_cap>
 
 #include <l4/l4virtio/l4virtio>
@@ -28,6 +27,7 @@
 #include "mmio_device.h"
 #include "virtio_event_connector.h"
 #include "vm_ram.h"
+#include "monitor/virtio_cmd_handler.h"
 
 namespace L4virtio { namespace Driver {
 
@@ -54,26 +54,34 @@ public:
    */
   void driver_connect(L4::Cap<L4::Irq> guest_irq)
   {
-    _host_irq = L4Re::chkcap(L4Re::Util::make_unique_cap<L4::Irq>(),
-                             "Allocating cap for host irq");
+    auto vicu = L4::cap_dynamic_cast<L4::Icu>(_device);
+
+    if (!vicu.is_valid())
+      L4Re::chksys(-L4_ENOSYS,
+                   "ICU protocol not supported by virtio device. Legacy interface?");
+
+    l4_icu_info_t icu_info;
+    L4Re::chksys(vicu->info(&icu_info));
 
     _config_cap = L4Re::chkcap(L4Re::Util::make_unique_cap<L4Re::Dataspace>(),
                                "Allocating cap for config dataspace");
 
-    L4Re::chksys(_device->register_iface(guest_irq, _host_irq.get(),
-                                         _config_cap.get()),
-                 "Registering interface with device");
+    l4_addr_t ds_offset;
+    L4Re::chksys(_device->device_config(_config_cap.get(), &ds_offset),
+                 "Request device config page");
 
     L4Re::Dataspace::Stats stats;
-    L4Re::chksys(_config_cap->info(&stats),
-                 "Determining size of virtio config page");
-    if (stats.size < _config_page_size)
+    auto ret = _config_cap->info(&stats);
+    if ((ret != -L4_ENOSYS)
+         && (ret != L4_EOK || stats.size < _config_page_size + ds_offset))
       L4Re::chksys(-L4_ENODEV, "Virtio config space too small");
 
     auto *e = L4Re::Env::env();
     L4Re::chksys(e->rm()->attach(&_config, _config_page_size,
-                                 L4Re::Rm::Search_addr | L4Re::Rm::Eager_map,
-                                 L4::Ipc::make_cap_rw(_config_cap.get())),
+                                 L4Re::Rm::F::Search_addr | L4Re::Rm::F::Eager_map
+                                 | L4Re::Rm::F::RW,
+                                 L4::Ipc::make_cap_rw(_config_cap.get()),
+                                 ds_offset),
                  "Attaching config dataspace");
 
     if (memcmp(&_config->magic, "virt", 4) != 0)
@@ -81,6 +89,23 @@ public:
 
     if (_config->version != 2)
       L4Re::chksys(-L4_ENODEV, "Require virtio version of 2");
+
+    _host_irq = L4Re::chkcap(L4Re::Util::make_unique_cap<L4::Irq>(),
+                             "Allocating cap for host irq");
+
+    _config->cfg_driver_notify_index = 0;
+
+    if (icu_info.nr_irqs > 0)
+      L4Re::chksys(vicu->bind(0, guest_irq),
+                   "Send notification IRQ to device");
+
+    ret = _device->device_notification_irq(_config->cfg_device_notify_index,
+                                           _host_irq.get());
+
+    if (ret != L4_EOK && ret != -L4_ENOSYS)
+      L4Re::chksys(ret, "Receive notification IRQ from device");
+
+    _queue_irqs.resize(_config->num_queues);
   }
 
 
@@ -102,13 +127,30 @@ public:
     return _device->register_ds(L4::Ipc::make_cap_rw(ds), devaddr, offset, size);
   }
 
-  int config_queue(int num)
+  int config_queue(unsigned num)
   {
     if (l4virtio_get_feature(_config->dev_features_map,
                              L4VIRTIO_FEATURE_CMD_CONFIG))
       return _config->config_queue(num, _host_irq.get(), _guest_irq.get());
+
+    _config->queues()[num].driver_notify_index = 0;
+
+    if (_queue_irqs.size() <= num)
+      _queue_irqs.resize(num + 1);
     else
-      return _device->config_queue(num);
+      _queue_irqs[num].reset();
+
+    int ret = _device->config_queue(num);
+
+    if (ret >= 0 && _config->queues()[num].ready)
+      {
+        l4_uint16_t irq = _config->queues()[num].device_notify_index;
+        auto cap = L4Re::Util::make_unique_cap<L4::Irq>();
+        if (_device->device_notification_irq(irq, cap.get()) >= 0)
+          _queue_irqs[num] = std::move(cap);
+      }
+
+    return ret;
   }
 
   L4virtio::Device::Config_hdr *device_config() const
@@ -123,8 +165,11 @@ public:
   L4virtio::Device::Config_queue *queue_config(int num) const
   { return &_config->queues()[num]; }
 
-  void virtio_queue_notify(unsigned)
-  { _host_irq->trigger(); }
+  void virtio_queue_notify(unsigned num)
+  {
+    if (num < _queue_irqs.size())
+      _queue_irqs[num]->trigger();
+  }
 
   void set_status(l4_uint32_t status)
   {
@@ -149,12 +194,6 @@ public:
       return;
 
     set_status(0); // reset
-    for (l4_uint32_t i = 0; i < _config->num_queues; ++i)
-      {
-        _config->queues()[i].num = 0;
-        _config->queues()[i].ready = 0;
-        config_queue(i);
-      }
   }
 
   l4_uint32_t irq_status() const { return _config->irq_status; }
@@ -165,6 +204,7 @@ protected:
   L4Re::Util::Unique_cap<L4::Irq> _guest_irq;
 
 private:
+  std::vector<L4Re::Util::Unique_cap<L4::Irq> > _queue_irqs;
   L4Re::Util::Unique_cap<L4::Irq> _host_irq;
   L4Re::Util::Unique_cap<L4Re::Dataspace> _config_cap;
 
@@ -178,7 +218,8 @@ namespace Vdev {
 template <typename DEV>
 class Virtio_proxy
 : public L4::Irqep_t<Virtio_proxy<DEV>>,
-  public Device
+  public Device,
+  public Monitor::Virtio_proxy_cmd_handler<Monitor::Enabled, Virtio_proxy<DEV>>
 {
 private:
   /**
@@ -194,12 +235,15 @@ private:
 
 public:
   Virtio_proxy(L4::Cap<L4virtio::Device> device, l4_size_t config_size,
-               unsigned nnq_id, Vmm::Ram_ds *ram)
+               unsigned nnq_id, Vmm::Vm_ram *ram)
   : _nnq_id(nnq_id), _dev(device, config_size)
   {
-    L4Re::chksys(_dev.register_ds(ram->ram(), 0, ram->size(),
-                                  ram->vm_start()),
-                 "Registering RAM for virtio proxy");
+    ram->foreach_region([this](Vmm::Ram_ds const &r)
+      {
+        L4Re::chksys(_dev.register_ds(r.ds(), r.ds_offset(), r.size(),
+                                      r.vm_start().get()),
+                     "Registering RAM for virtio proxy");
+      });
   }
 
   int init_irqs(Vdev::Device_lookup *devs, Vdev::Dt_node const &self)
@@ -211,6 +255,9 @@ public:
                                               "Registering guest IRQ in proxy");
 
     _dev.driver_connect(guest_irq);
+
+    // Unmask it, this might be a hardware interrupt.
+    guest_irq->unmask();
   }
 
   void handle_irq()
@@ -304,7 +351,8 @@ class Virtio_proxy_mmio
   public Virtio::Mmio_connector<Virtio_proxy_mmio>
 {
 public:
-  Virtio_proxy_mmio(L4::Cap<L4virtio::Device> device, l4_size_t config_size, unsigned nnq_id, Vmm::Ram_ds *ram)
+  Virtio_proxy_mmio(L4::Cap<L4virtio::Device> device, l4_size_t config_size,
+                    unsigned nnq_id, Vmm::Vm_ram *ram)
   : Virtio_proxy<Virtio_proxy_mmio>(device, config_size, nnq_id, ram)
   {}
 

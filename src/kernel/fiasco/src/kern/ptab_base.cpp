@@ -8,7 +8,7 @@ namespace Ptab
 
   struct Null_alloc
   {
-    static void *alloc(unsigned long) { return 0; }
+    static void *alloc(Bytes) { return 0; }
     static void free(void *) {}
     static bool valid() { return false; }
     static unsigned to_phys(void *) { return 0; }
@@ -306,7 +306,7 @@ namespace Ptab
     template< typename _Alloc >
     Next *alloc_next(PTE_PTR e, _Alloc &&a, bool force_write_back)
     {
-      Next *n = (Next*)a.alloc(sizeof(Next));
+      Next *n = (Next*)a.alloc(Bytes(sizeof(Next)));
       if (EXPECT_FALSE(!n))
         return 0;
 
@@ -436,7 +436,7 @@ namespace Ptab
           if (Depth >= start_level)
             {
               //printf("destroy: %*.sfree: %p: %p(%zd)\n", Depth*2, "            ", this, n, sizeof(Next));
-              alloc.free(n, sizeof(Next));
+              alloc.free(n, Bytes(sizeof(Next)));
             }
         }
     }
@@ -581,7 +581,7 @@ namespace Ptab
     enum { Shift = SHIFT };
     typedef N Value_type;
     static typename N::Value val(N a)
-    { return N::val(a); }
+    { return cxx::int_value<N>(a); }
 
     static typename Value_type::Diff_type::Value
     val(typename Value_type::Diff_type a)
@@ -633,6 +633,42 @@ namespace Ptab
     PTE_PTR walk(Va virt, unsigned level = Depth, MEM &&mem = MEM()) const
     { return const_cast<Walk&>(_base).walk(_Addr::val(virt), level, false, Null_alloc(), cxx::forward<MEM>(mem)); }
 
+    /**
+     * Sync a range within this page table hierarchy from another
+     * page table hierarchy.
+     *
+     * A page table hierarchy can be thought of as a tree that grows upwards:
+     * - The root page table is below the first-level page tables.
+     * - The second-level page tables are above the first-level page tables.
+     * - ...
+     *
+     * After the sync all page tables above the given level are shared between
+     * source and destination page table hierarchy, whereas all page tables at
+     * or below the given level are allocated to each page table hierarchy
+     * separately.
+     *
+     * Assuming a four-level page table, where level zero is the root page
+     * table, and a given level of two:
+     * - The third-level page tables are shared.
+     * - The root, first-level and second-level page tables are not shared.
+     *
+     * \pre The sync range must not contain leaf pages below the given level.
+     * In the case that this assumption does not apply, sync() exhibits
+     * undefined behavior.
+     *
+     * \param l_addr The start address of the sync range in the destination
+     *               page table.
+     * \param _r The page table to sync from.
+     * \param r_addr The start address of the sync range in the source
+     *               page table.
+     * \param size The size of the range to sync.
+     * \param level The level to sync at.
+     *
+     * \retval -1 if page table allocation failed.
+     * \retval  1 if a previously valid page table entry was changed
+     *            during sync.
+     * \retval  0 otherwise
+     */
     template< typename OPTE_PTR, typename _Alloc = Null_alloc, typename MEM = MEM_DFLT >
     int sync(Va l_addr, Base<OPTE_PTR, _Traits, _Addr, MEM_DFLT> const *_r,
              Va r_addr, Vs size, unsigned level = Depth,

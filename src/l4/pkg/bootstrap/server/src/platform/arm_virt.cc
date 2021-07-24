@@ -25,6 +25,11 @@ class Platform_arm_virt : public Platform_single_region_ram
     kuart.base_address = 0x09000000;
     kuart.base_baud    = 23990400;
     kuart.irqno        = 33;
+    kuart.access_type  = L4_kernel_options::Uart_type_mmio;
+    kuart_flags       |=   L4_kernel_options::F_uart_base
+                         | L4_kernel_options::F_uart_baud
+                         | L4_kernel_options::F_uart_irq;
+
     static L4::Io_register_block_mmio r(kuart.base_address);
     static L4::Uart_pl011 _uart(kuart.base_baud);
     _uart.startup(&r);
@@ -33,10 +38,7 @@ class Platform_arm_virt : public Platform_single_region_ram
 
   void reboot()
   {
-    printf("ARM Virtual Platform reboot not implemented\n");
-
-    while (1)
-      ;
+    reboot_psci();
   }
 };
 }

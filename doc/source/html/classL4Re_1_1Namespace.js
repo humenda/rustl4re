@@ -13,8 +13,8 @@ var classL4Re_1_1Namespace =
       [ "Link", "classL4Re_1_1Namespace.html#ae5f20a069f7a29fd6ad0d4d3dd24e4d6ab372476d92e0c1f40cae5b2de4f7f29a", null ],
       [ "Overwrite", "classL4Re_1_1Namespace.html#ae5f20a069f7a29fd6ad0d4d3dd24e4d6a4844221832511ef714b566d3c57d212a", null ]
     ] ],
-    [ "query", "classL4Re_1_1Namespace.html#a3d23e9c9ea5dbcf5b0b10b27e99e9f55", null ],
-    [ "query", "classL4Re_1_1Namespace.html#a55ff8a6f4d6e39d2ce005fa08c2cfcba", null ],
-    [ "register_obj", "classL4Re_1_1Namespace.html#a6c1d0b9f60aabfc532f9713ec49a1267", null ],
+    [ "query", "classL4Re_1_1Namespace.html#a42cfa87488784ad7557aa5562a8b5cd8", null ],
+    [ "query", "classL4Re_1_1Namespace.html#a6dae58f856b548bd7bd99c7c7307ea6b", null ],
+    [ "register_obj", "classL4Re_1_1Namespace.html#a703b85671fa74d9deea39374c76e5a1b", null ],
     [ "unlink", "classL4Re_1_1Namespace.html#aaacbcd047be202eca6e795eb54878803", null ]
 ];

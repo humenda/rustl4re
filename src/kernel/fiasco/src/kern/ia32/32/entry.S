@@ -63,7 +63,7 @@ entry_\name:
 	btrl	$17, OFS__THREAD__STATE (%ebx) /* Thread_dis_alien */
 	jc	1f
 	RESTORE_STATE
-	sub	$2, 4(%esp)                /* Correct EIP to point to insn */
+	subl	$2, 4(%esp)                /* Correct EIP to point to insn */
 	popl 	%eax
 	pushl	$(0x30 << 3 | 2)
 	pushl	$(0xd)
@@ -90,15 +90,15 @@ EXCEPTION	0x00, vec00_zero_div
 #ifdef CONFIG_PF_UX
 EXCEPTION	0x01, vec01_debug
 #else
-/* IA32 has to handle breakpoint exceptions if occured exactly at
+/* IA32 has to handle breakpoint exceptions if occurred exactly at
    entry_sys_fast_ipc -- see ia32/entry-ia32.S */
 GATE_ENTRY	0x01, entry_vec01_debug, (ACC_PL_K | ACC_INTR_GATE)
 #endif
-/* XXX IA32 has to handle NMI occured exactly at entry_sys_fast_ipc */
-EXCEP_USR	0x02, vec02_nmi
+/* XXX IA32 has to handle NMI occurred exactly at entry_sys_fast_ipc */
+EXCEPTION	0x02, vec02_nmi
 EXCEP_USR	0x03, vec03_breakpoint
-EXCEP_USR	0x04, vec04_into
-EXCEP_USR	0x05, vec05_bounds
+EXCEPTION	0x04, vec04_into
+EXCEPTION	0x05, vec05_bounds
 EXCEPTION	0x06, vec06_invop
 # EXCEPTION	0x07, nofpu
 #ifdef CONFIG_PF_UX
@@ -137,7 +137,9 @@ slowtraps:
 #endif
 
 	pushl	REG_FS		/* we save the segment regs in the trap   */
+.Lslowtrap_push_gs:
 	pushl	REG_GS		/* state, but we do not restore them.  We */
+.Lslowtrap_push_ds:
 	pushl	%ds		/* rather reload them using               */
 	pushl	%es		/* RESET_{KERNEL,USER}_SEGMENTS           */
 
@@ -155,24 +157,16 @@ slowtraps:
 	   thread.  That's OK, because it is still atomic -- we never
 	   enable IRQs (sti) before that point. */
 
+.Lenter_slowtrap_after_fixup:
 	movl	%esp,%eax		/* ARG1: address of trap_state */
 	xorl	%edx,%edx		/* ARG2: default CPU = 0 */
-#ifndef CONFIG_NO_FRAME_PTR
-	pushl	OFS__TRAP_STATE__IP(%esp)       /* create artificial stack frame */
-	pushl	%ebp
-	leal	(%esp),%ebp
-#endif
 
         /* Call the C handler function if one has been installed.  */
 	movl	BASE_TRAP_HANDLER, %ecx
 	orl	%ecx,%ecx
-	jz	.Lunexpected_trap_pop
+	jz	.Lunexpected_trap
 	call	*%ecx
 in_slowtrap:
-
-#ifndef CONFIG_NO_FRAME_PTR
-	leal	8(%esp),%esp
-#endif
 
 	/* If the handler function returned zero (success),
 	   then resume execution as if the trap never happened.
@@ -183,17 +177,51 @@ in_slowtrap:
 	CHECK_SANITY 60(%esp)		/* scratches ecx */
 
 	addl	$4*2,%esp		/* Pop ds, es segment registers */
-	MAY_FAULT(popl REG_GS, in_slowtrap_exit_label_restore_gs)
-	MAY_FAULT(popl REG_FS, in_slowtrap_exit_label_restore_fs) /* Restore segment registers */
+1:	popl REG_GS
+2:	popl REG_FS
 	popa
 	addl	$4*2,%esp		/* Pop trap number and error code */
-	MAY_FAULT(iret, in_slowtrap_exit_label_iret)
+3:	iret
 
-.Lunexpected_trap_pop:
-#ifndef CONFIG_NO_FRAME_PTR
-	leal	8(%esp), %esp
-#endif
+	/* set fixups for segment pops */
+	ASM_KEX 1b, 11f
+	ASM_KEX 2b, 22f
+	ASM_KEX 3b, 0, .Liret_exception_handler
 
+	.section .fixup, "ax?", @progbits
+	.align 4
+11:	movl	$13, (10 * 4)(%esp) /* GP as trap number */
+	mov	%gs, (11 * 4)(%esp) /* segment selector as error code */
+	jmp .Lslowtrap_push_ds
+
+	.align 4
+22:	movl	$13, ( 9 * 4)(%esp) /* GP as trap number */
+	mov	%fs, (10 * 4)(%esp) /* segment selector as error code */
+	jmp .Lslowtrap_push_gs
+
+	/* write new return address below trap state.
+	 * So when we return from the slowtrap handlers
+	 * we can fix the extra stack offset from the
+	 * original stack frame */
+	.align 4
+.Liret_exception_handler:
+	movl	$.Liret_exception_stack_fix, -4(%edx)
+	mov	$1, %eax
+	ret
+
+	.align 4
+.Liret_exception_stack_fix:
+	mov	$14, %ecx
+	lea	(13 * 4)(%esp), %esi
+	lea	(16 * 4)(%esp), %edi
+	std
+	rep movsl	%ds:(%esi), %es:(%edi)
+	cld
+	add	$(3 * 4), %esp
+	jmp	.Lenter_slowtrap_after_fixup
+	.previous
+
+	.align 4
 .Lunexpected_trap:
 	movw	%ss,%ax
 	movw	%ax,%ds
@@ -412,6 +440,7 @@ INTERRUPT	0x28, int8
  * address of an Irq_base object that is later attached to
  * the corresponding IDT vector.
  */
+	.section ".entry.text.irqs", "ax", @progbits
 	.global idt_irq_vector_stubs
 	.align 64
 idt_irq_vector_stubs:
@@ -420,6 +449,7 @@ idt_irq_vector_stubs:
 	mov	$0, %eax
 	jmp	__generic_irq_entry
 .endr
+        .previous
 
 
 	.p2align 4
@@ -497,7 +527,6 @@ in_slow_ipc4:
 #endif // CONFIG_JDB
 
         // these labels help show_tcb to guess the thread state
-	.globl	in_syscall
 	.globl	in_slowtrap
 	.globl	in_page_fault
 	.globl	in_handle_fputrap
@@ -505,36 +534,6 @@ in_slow_ipc4:
 	.globl	in_timer_interrupt
 	.globl	in_timer_interrupt_slow
 
-.macro	SYSTEM_CALL int, name
-	GATE_ENTRY	\int, entry_\name, (ACC_PL_U | ACC_INTR_GATE)
-	.p2align 3
-entry_\name:
-	pushl	%eax
-	movl	$(syscall_table+4*(\int-0x30)), %eax
-	jmp	.Lall_syscalls
-.endm
-
-	.p2align 4
-	.type	.Lall_syscalls,@function
-.Lall_syscalls:
-	SAVE_STATE						;\
-	cld
-	RESET_KERNEL_SEGMENTS_FORCE_DS_ES
-	ESP_TO_TCB_AT %ebx
-	testl	$VAL__Thread_alien_or_vcpu_user, OFS__THREAD__STATE (%ebx)
-	jnz	.Lalien_sys_call
-	RESET_THREAD_CANCEL_AT %ebx
-	call	*(%eax)			/* interrupts enabled in wrappers */
-in_syscall:
-
-ret_from_syscall:
-	CHECK_SANITY $3			/* scratches ecx */
-	RESTORE_STATE
-	popl	%eax
-	iret
-
-
-SYSTEM_CALL	0x32, sys_invoke_debug
 
 #ifndef CONFIG_PF_UX
 /* these functions are implemented in entry-native.S */
@@ -564,43 +563,10 @@ GATE_INITTAB_END
 	POST_ALIEN_IPC
 #endif
 
-/*
- * input:  eax: address to syscall function
- * output: eax: error code
- */
-.macro SC_ADDR_TO_ERR val
-	sub 	$syscall_table , %eax	/* eax = byte offset to syscall */
-	shr	$2, %eax		/* convert eax to syscall nr */
-	add 	$0x30, %eax		/* convert eax to syscall int nr */
-	shl	$3, %eax		/* construct error code */
-	orl	$\val, %eax		/* -"- */
-.endm
-
-.Lalien_sys_call:
-	btrl	$17, OFS__THREAD__STATE (%ebx) /* Thread_dis_alien */
-	jc	1f
-	RESTORE_STATE
-	sub	$2, 4(%esp)		/* Correct EIP to point to insn */
-	SC_ADDR_TO_ERR 2
-2:	pushl	$0xd
-	xchgl	4(%esp), %eax
-	pusha
-	jmp	.L_slowtraps
-
-1:	/* do alien syscall and trap afterwards */
-	RESET_THREAD_CANCEL_AT %ebx
-	pushl 	%eax
-	call	*(%eax)			/* call with ENABLED interrupts */
-	cli
-	CHECK_SANITY $3			/* scratches ecx */
-	popl	%eax
-	RESTORE_STATE
-	SC_ADDR_TO_ERR 6
-	jmp	2b
 
 #define OFS__VCPU_STATE__REGS_IRET (VAL__SIZEOF_TRAP_STATE - 20 + OFS__VCPU_STATE__TREX)
 
-	.p2align
+	.p2align 3
 	.globl	leave_by_trigger_exception
 leave_by_trigger_exception:
 	subl	$12,%esp		/* clean up stack from previous
@@ -613,7 +579,7 @@ leave_by_trigger_exception:
 	pusha
 	jmp	.L_slowtraps
 
-	.p2align
+	.p2align 3
 	.globl	leave_by_vcpu_upcall
 leave_by_vcpu_upcall:
 	subl	$12,%esp		/* clean up stack from previous
@@ -665,15 +631,15 @@ leave_by_vcpu_upcall:
 	movl $EFLAGS_IF, 8(%esp)
 	iret
 	
-	.p2align
+	.p2align 3
 	.globl	vcpu_resume
 vcpu_resume:
 	mov %eax, %esp
 	addl $(2*4), %esp // skip es and ds for now
 	//popl %es
 	//popl %ds
-	MAY_FAULT(popl REG_GS, vcpu_resume_label_gs)
-	MAY_FAULT(popl REG_FS, vcpu_resume_label_fs)
+	popl REG_GS
+	popl REG_FS
 	popa
 	addl $(2*4), %esp
 	iret
@@ -688,7 +654,11 @@ fast_ret_from_irq:
 	andl	$0x7f, 4(%esp)			// if entered using sysenter
 	iret
 
-
-
-
+        .p2align 3
+        .globl  leave_and_kill_myself
+leave_and_kill_myself:
+        // make space for a dummy Return_frame accessible by the callee
+        subl    $(5*4),%esp                     // sizeof(Return_frame)
+        call    thread_do_leave_and_kill_myself
+        // does never return
 

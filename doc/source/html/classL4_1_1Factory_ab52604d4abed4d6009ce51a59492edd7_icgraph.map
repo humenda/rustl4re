@@ -1,0 +1,4 @@
+<map id="L4::Factory::create" name="L4::Factory::create">
+<area shape="rect" id="node1" title="Generic create call to the factory." alt="" coords="225,5,365,32"/>
+<area shape="rect" id="node2" href="$classL4Re_1_1Mem__alloc.html#a44b301573ae859e8406400338cc8e924" title="Allocate anonymous memory." alt="" coords="5,5,177,32"/>
+</map>

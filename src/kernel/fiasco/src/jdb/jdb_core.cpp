@@ -272,10 +272,9 @@ int Jdb_core::set_prompt_color(char x)
 IMPLEMENT
 Jdb_core::Cmd Jdb_core::has_cmd(char const *cmd)
 {
-  for (Jdb_module::List::Const_iterator m = Jdb_module::modules.begin();
-       m != Jdb_module::modules.end(); ++m)
+  for (auto const &&m: Jdb_module::modules)
     {
-      Cmd c(*m);
+      Cmd c(m);
       c.cmd = m->has_cmd(cmd, short_mode);
       if (c.cmd)
         return c;
@@ -302,8 +301,8 @@ Jdb_core::print_alternatives(char const *prefix)
 {
   unsigned prefix_len = 0;
   char const *match = 0;
-  typedef Jdb_module::List::Const_iterator Iter;
-  for (Iter m = Jdb_module::modules.begin(); m != Jdb_module::modules.end(); ++m)
+
+  for (auto const &&m: Jdb_module::modules)
     {
       unsigned sc_max = m->num_cmds();
       Jdb_module::Cmd const *cmds = m->cmds();
@@ -329,10 +328,10 @@ PUBLIC static
 Jdb_core::Cmd
 Jdb_core::complete_cmd(char const *prefix, bool &multi_match)
 {
-  Cmd match(0,0);
+  Cmd match(0, 0);
   multi_match = false;
-  typedef Jdb_module::List::Const_iterator Iter;
-  for (Iter m = Jdb_module::modules.begin(); m != Jdb_module::modules.end(); ++m)
+
+  for (auto const &&m: Jdb_module::modules)
     {
       unsigned sc_max = m->num_cmds();
       Jdb_module::Cmd const *cmds = m->cmds();
@@ -344,7 +343,7 @@ Jdb_core::complete_cmd(char const *prefix, bool &multi_match)
 	  if (match.cmd)
 	    multi_match = true;
 	  else
-	    match = Cmd(*m, cmds + sc);
+	    match = Cmd(m, cmds + sc);
 	}
     }
 
@@ -443,7 +442,7 @@ int Jdb_core::exec_cmd(Cmd const cmd, char const *str, int push_next_char = -1)
 
 	if(*(f++))
 	  {
-	    int long_fmt = sizeof(long long int) == sizeof(void*);
+	    int long_fmt = 0; // default to 'int'
 	    bool negative = false;
 	    long long int val = 0;
 	    max_len = 0;
@@ -490,7 +489,7 @@ int Jdb_core::exec_cmd(Cmd const cmd, char const *str, int push_next_char = -1)
 		    long_fmt = 0;
 		  else if(sizeof(long int)==sizeof(void*))
 		    long_fmt = 1;
-		  else //if(sizeof(long long int)==sizeof(void*))
+		  else if(sizeof(long long int)==sizeof(void*))
 		    long_fmt = 2;
 		  goto input_num;
 
@@ -536,7 +535,7 @@ int Jdb_core::exec_cmd(Cmd const cmd, char const *str, int push_next_char = -1)
 		      if(c==KEY_ESC)
 			return 3;
 		      
-		      if(c==KEY_BACKSPACE && num_pos>0)
+		      if((c==KEY_BACKSPACE || c==KEY_BACKSPACE_2) && num_pos>0)
 			{
 			  putstr("\b \b");
 			  if(num_pos == 1 && negative)
@@ -639,7 +638,7 @@ int Jdb_core::exec_cmd(Cmd const cmd, char const *str, int push_next_char = -1)
 		      if(c==KEY_ESC)
 			return 3;
 
-		      if(c==KEY_BACKSPACE && num_pos)
+		      if((c==KEY_BACKSPACE || c==KEY_BACKSPACE_2) && num_pos)
 			{
 			  putstr("\b \b");
 			  num_pos--;
@@ -819,19 +818,20 @@ Go_m::Go_m()
 {}
 
 PUBLIC
-Jdb_module::Action_code Go_m::action( int, void *&, char const *&, int & )
+Jdb_module::Action_code Go_m::action( int, void *&, char const *&, int & ) override
 {
+  putchar('\n');
   return LEAVE;
 }
 
 PUBLIC
-int Go_m::num_cmds() const
+int Go_m::num_cmds() const override
 { 
   return 1;
 }
 
 PUBLIC
-Jdb_module::Cmd const * Go_m::cmds() const
+Jdb_module::Cmd const * Go_m::cmds() const override
 {
   static Cmd cs[] =
     { 
@@ -861,7 +861,7 @@ static Help_m help_m INIT_PRIORITY(JDB_MODULE_INIT_PRIO);
 
 
 PUBLIC
-Jdb_module::Action_code Help_m::action( int, void *&, char const *&, int & )
+Jdb_module::Action_code Help_m::action(int, void *&, char const *&, int &) override
 {
   size_t const tab_width = 27;
 
@@ -874,14 +874,12 @@ Jdb_module::Action_code Help_m::action( int, void *&, char const *&, int & )
   unsigned line = 0;
 
   puts("");
-  for (Jdb_category::List::Const_iterator c = Jdb_category::categories.begin();
-       c != Jdb_category::categories.end(); ++c)
+  for (auto const &&c: Jdb_category::categories)
     {
       bool first = true;
-      for (Jdb_module::List::Const_iterator m = Jdb_module::modules.begin();
-           m != Jdb_module::modules.end(); ++m)
+      for (auto const &&m: Jdb_module::modules)
 	{
-          if (m->category() != *c)
+          if (m->category() != c)
             continue;
 
 	  if(first)
@@ -951,13 +949,13 @@ Jdb_module::Action_code Help_m::action( int, void *&, char const *&, int & )
 }
 
 PUBLIC
-int Help_m::num_cmds() const
+int Help_m::num_cmds() const override
 { 
   return 2;
 }
 
 PUBLIC
-Jdb_module::Cmd const * Help_m::cmds() const
+Jdb_module::Cmd const * Help_m::cmds() const override
 {
   static Cmd cs[] =
     {
@@ -973,7 +971,8 @@ Help_m::Help_m()
   : Jdb_module("GENERAL")
 {}
 
-#define CAT(n, x...) static Jdb_category INIT_PRIORITY(JDB_CATEGORY_INIT_PRIO) n(x)
+#define CAT(n, x...) \
+  static Jdb_category INIT_PRIORITY(JDB_CATEGORY_INIT_PRIO) jdb_cat_ ## n(x)
 CAT(a, "GENERAL",    "general debugger commands",      0);
 CAT(b, "INFO",       "information about kernel state", 1);
 CAT(c, "MONITORING", "monitoring kernel events",       2);

@@ -25,10 +25,12 @@ public:
 private:
   static Mword pagenum;
   static char  subcmd;
+  static char  dump_tag[21];
 };
 
-char  Jdb_mapdb::subcmd;
 Mword Jdb_mapdb::pagenum;
+char  Jdb_mapdb::subcmd;
+char  Jdb_mapdb::dump_tag[21];
 
 static
 const char*
@@ -62,11 +64,11 @@ Jdb_mapdb::show_tree(Treemap* pages, Mapping::Pcnt offset, Mdb_types::Order base
 
   Page       page = pages->trunc_to_page(offset);
   Physframe*    f = pages->frame(page);
-  Mapping_tree* t = f->tree.get();
+  Mapping_tree* t = f->tree();
   unsigned      i;
   int           c;
 
-  if (! t)
+  if (!t || !*t->begin())
     {
       printf(" no mapping tree registered for frame number 0x%lx\033[K\n",
              cxx::int_value<Mapping::Page>(page));
@@ -77,83 +79,53 @@ Jdb_mapdb::show_tree(Treemap* pages, Mapping::Pcnt offset, Mdb_types::Order base
   printf(" mapping tree for %s-page %012llx of task %lx - header at "
          L4_PTR_FMT "\033[K\n",
          size_str(1ULL << cxx::int_value<Mdb_types::Order>(pages->_page_shift + base_size)),
-         val(pages->vaddr(t->mappings()), base_size),
-         Kobject_dbg::pointer_to_id(t->mappings()[0].space()),
+         val(pages->vaddr(*t->begin()), base_size),
+         Kobject_dbg::pointer_to_id(t->begin()->space()),
          (Address)t);
-#ifdef NDEBUG
-  // If NDEBUG is active, t->_empty_count is undefined
-  printf(" header info: "
-         "entries used: %u  free: --  total: %u  lock=%u\033[K\n",
-         t->_count, t->number_of_entries(),
-         f->lock.test());
 
-  if (t->_count > t->number_of_entries())
-    {
-      printf("\033[K\n"
-             "\033[K\n"
-             "  seems to be a wrong tree ! ...exiting");
-      // clear rest of page
-      for (i=6; i<Jdb_screen::height(); i++)
-        printf("\033[K\n");
-      return false;
-    }
-#else
-  printf(" header info: "
-         "entries used: %u  free: %u  total: %u  lock=%d\033[K\n",
-         t->_count, t->_empty_count, t->number_of_entries(),
-         f->lock.test());
+  printf(" header info: lock=%u\033[K\n", f->lock.test());
 
-  if (unsigned (t->_count) + t->_empty_count > t->number_of_entries())
-    {
-      printf("\033[K\n"
-             "\033[K\n"
-             "  seems to be a wrong tree ! ...exiting");
-      // clear rest of page
-      for (i=6; i<Jdb_screen::height(); i++)
-        printf("\033[K\n");
-      return false;
-    }
-#endif
-
-  Mapping* m = t->mappings();
+  auto m = t->begin();
 
   screenline += 2;
 
   unsigned empty = 0;
-  for(i=0; i < t->_count + empty; i++, m++)
+  unsigned c_depth = 0;
+  for(i=0; *m; i++, ++m)
     {
       Kconsole::console()->getchar_chance();
 
-      if (m->depth() == Mapping::Depth_submap)
+      if (m->submap())
         printf("%*u: %lx  subtree@" L4_PTR_FMT,
-               indent + m->parent()->depth() > 10
-                 ? 0 : (int)(indent + m->parent()->depth()),
-               i+1, (Address) m->data(), (Mword) m->submap());
+               indent + c_depth > 10
+                 ? 0 : (int)(indent + c_depth),
+               i+1, (Address) *m, (Mword) m->submap());
       else
         {
+          c_depth = m->depth();
           printf("%*u: %lx  va=%012llx  task=%lx  depth=",
-                 indent + m->depth() > 10 ? 0 : (int)(indent + m->depth()),
-                 i+1, (Address) m->data(),
-                 val(pages->vaddr(m), base_size),
+                 indent + c_depth > 10 ? 0 : (int)(indent + c_depth),
+                 i+1, (Address) *m,
+                 val(pages->vaddr(*m), base_size),
                  Kobject_dbg::pointer_to_id(m->space()));
 
-          if (m->depth() == Mapping::Depth_root)
+          if (m->is_root())
             printf("root");
-          else if (m->depth() == Mapping::Depth_empty)
+          else if (m->unused())
             {
               printf("empty");
               ++empty;
             }
-          else if (m->depth() == Mapping::Depth_end)
+          else if (m->is_end_tag())
             printf("end");
           else
-            printf("%lu", static_cast<unsigned long>(m->depth()));
+            printf("%u", c_depth);
         }
 
       puts("\033[K");
       screenline++;
 
-      if (screenline >= (m->depth() == Mapping::Depth_submap
+      if (screenline >= (m->submap()
                          ? Jdb_screen::height() - 3
                          : Jdb_screen::height()))
         {
@@ -167,12 +139,12 @@ Jdb_mapdb::show_tree(Treemap* pages, Mapping::Pcnt offset, Mdb_types::Order base
           Jdb::cursor(3, 1);
         }
 
-      if (m->depth() == Mapping::Depth_submap)
+      if (m->submap())
         {
           if (! Jdb_mapdb::show_tree(m->submap(),
                                      cxx::get_lsb(offset, pages->_page_shift),
                                      base_size,
-                                     screenline, indent + m->parent()->depth()))
+                                     screenline, indent + c_depth))
             return false;
         }
     }
@@ -184,7 +156,7 @@ static
 Address
 Jdb_mapdb::end_address (Mapdb* mapdb)
 {
-  return cxx::int_value<Mdb_types::Pfn>(mapdb->_treemap->end_addr());
+  return cxx::int_value<Mdb_types::Pfn>(mapdb->dbg_treemap()->end_addr());
 }
 
 static
@@ -235,7 +207,7 @@ Jdb_mapdb::show(Mapping::Pfn page, char which_mapdb)
 
       j = 3;
 
-      if (! Jdb_mapdb::show_tree(mapdb->_treemap, page - Mapping::Pfn(0), base_size, j))
+      if (! Jdb_mapdb::show_tree(mapdb->dbg_treemap(), page - Mapping::Pfn(0), base_size, j))
         return;
 
       for (; j<Jdb_screen::height(); j++)
@@ -300,13 +272,16 @@ Jdb_mapdb::show(Mapping::Pfn page, char which_mapdb)
 
 PUBLIC
 Jdb_module::Action_code
-Jdb_mapdb::action(int cmd, void *&args, char const *&fmt, int &next_char)
+Jdb_mapdb::action(int cmd, void *&args, char const *&fmt, int &next_char) override
 {
   static char which_mapdb = 'm';
 
   if (cmd == 1)
     {
-      dump_all_cap_trees();
+      const char *tag = nullptr;
+      if (args == (void*) dump_tag)
+        tag = dump_tag;
+      dump_all_obj_mappings(tag);
       return NOTHING;
     }
 
@@ -359,22 +334,22 @@ Jdb_mapdb::action(int cmd, void *&args, char const *&fmt, int &next_char)
 
 PUBLIC
 Jdb_module::Cmd const *
-Jdb_mapdb::cmds() const
+Jdb_mapdb::cmds() const override
 {
   static Cmd cs[] =
     {
-        { 0, "m", "mapdb", "%c",
-          "m[i]<addr>\tshow [I/O] mapping database starting at address",
+        { 0, "m", "mapdb", "%C",
+          "m[i]<pfn>\tshow [I/O] mapping database for PFN [port]",
           &subcmd },
-        { 1, "", "dumpmapdbobjs", "",
-          "dumpmapdbobjs\tDump complete object mapping database", 0 },
+        { 1, "", "dumpmapdbobjs", "%20s",
+          "dumpmapdbobjs\tDump complete object mapping database", dump_tag },
     };
   return cs;
 }
 
 PUBLIC
 int
-Jdb_mapdb::num_cmds() const
+Jdb_mapdb::num_cmds() const override
 {
   return 2;
 }
@@ -392,7 +367,9 @@ static Jdb_mapdb jdb_mapdb INIT_PRIORITY(JDB_MODULE_INIT_PRIO);
 class Jdb_kobject_mapdb_hdl : public Jdb_kobject_handler
 {
 public:
-  virtual bool show_kobject(Kobject_common *, int) { return true; }
+  bool show_kobject(Kobject_common *, int) override
+  { return true; }
+
   virtual ~Jdb_kobject_mapdb_hdl() {}
 };
 
@@ -406,7 +383,7 @@ Jdb_kobject_mapdb_hdl::init()
 
 PUBLIC
 bool
-Jdb_kobject_mapdb_hdl::handle_key(Kobject_common *o, int keycode)
+Jdb_kobject_mapdb_hdl::handle_key(Kobject_common *o, int keycode) override
 {
   if (keycode == 'm')
     {
@@ -418,60 +395,49 @@ Jdb_kobject_mapdb_hdl::handle_key(Kobject_common *o, int keycode)
     return false;
 }
 
+PUBLIC
+char const *
+Jdb_kobject_mapdb_hdl::help_text(Kobject_common *) const override
+{
+  return "m=mappings";
+}
 
 
 STATIC_INITIALIZE(Jdb_kobject_mapdb_hdl);
-
-#if 0 // keep this for reanimation
-static
-void
-Jdb_mapdb::dump_all_cap_trees()
-{
-  printf("========= OBJECT DUMP BEGIN ===================\n");
-  Kobject *f = static_cast<Kobject*>(Kobject::_jdb_head.get_unused());
-  for (; f; f = static_cast<Kobject*>(f->_next))
-    {
-      char s[130];
-
-      Jdb_kobject::obj_description(s, sizeof(s), true, f);
-      s[sizeof(s) - 1] = 0;
-      printf("%s", s);
-
-      Mapping_tree *t = f->tree.get();
-
-      if (!t)
-        {
-          printf("\n");
-          continue;
-        }
-
-      Mapping *m = t->mappings();
-
-      printf(" intask=");
-      for (int i = 0; i < t->_count; i++, m++)
-        {
-          if (m->depth() == Mapping::Depth_submap)
-            printf("%s[subtree]", i ? "," : "");
-          else
-            printf("%s[%lx:%d]",
-                   i ? "," : "", Kobject::pointer_to_id(m->space()),
-                   m->depth());
-        }
-      printf("\n");
-
-      if (m->depth() == Mapping::Depth_submap)
-        {
-          printf("not good, submap in simple mapping tree\n");
-        }
-    }
-  printf("========= OBJECT DUMP END ===================\n");
-}
-#endif
 
 // --------------------------------------------------------------------------
 IMPLEMENTATION:
 
 #include "dbg_page_info.h"
+
+static
+void
+Jdb_mapdb::print_obj_mapping(Obj::Mapping *m)
+{
+  Obj::Entry *e = static_cast<Obj::Entry*>(m);
+  Dbg_page_info *pi = Dbg_page_info::table()[Virt_addr(e)];
+
+  Mword space_id = ~0UL;
+  Address cap_idx = ((Address)e % Config::PAGE_SIZE) / sizeof(Obj::Entry);
+
+  String_buf<20> task_descr;
+  if (pi)
+    {
+      Kobject_dbg *o =
+        static_cast<Task*>(pi->info<Obj::Cap_page_dbg_info>()->s)->dbg_info();
+      space_id = o->dbg_id();
+      Jdb_kobject_name *n =
+        Jdb_kobject_extension::find_extension<Jdb_kobject_name>(Kobject::from_dbg(o));
+      if (n)
+        task_descr.printf("(%.*s)", n->max_len(), n->name());
+      cap_idx += pi->info<Obj::Cap_page_dbg_info>()->offset;
+    }
+
+  printf(L4_PTR_FMT "[C:%lx]: space=D:%lx%.*s rights=%x flags=%lx obj=%p",
+         (Address)m, cap_idx, space_id, task_descr.length(), task_descr.begin(),
+         (unsigned)cxx::int_value<Obj::Attr>(e->rights()),
+         (unsigned long)e->_flags, e->obj());
+}
 
 static
 bool
@@ -483,13 +449,14 @@ Jdb_mapdb::show_simple_tree(Kobject_common *f, unsigned indent = 1)
   unsigned      screenline = 0;
   int           c;
 
-  puts(Jdb_screen::Line);
+  putchar('\r');
+  Jdb::line();
   if (!f || f->map_root()->_root.empty())
     {
       printf(" no mapping tree registered for frame number 0x%lx\033[K\n",
              (unsigned long) f);
       screenline++;
-      puts(Jdb_screen::Line);
+      Jdb::line();
       return true;
     }
 
@@ -498,33 +465,12 @@ Jdb_mapdb::show_simple_tree(Kobject_common *f, unsigned indent = 1)
 
   screenline += 2;
 
-  for (Obj::Mapping::List::Iterator m = f->map_root()->_root.begin();
-       m != f->map_root()->_root.end(); ++m)
+  for (auto const &&m: f->map_root()->_root)
     {
       Kconsole::console()->getchar_chance();
 
-      Obj::Entry *e = static_cast<Obj::Entry*>(*m);
-      Dbg_page_info *pi = Dbg_page_info::table()[Virt_addr(e)];
-
-      Mword space_id = ~0UL;
-      Address cap_idx = ((Address)e % Config::PAGE_SIZE) / sizeof(Obj::Entry);
-
-      String_buf<16> task_descr;
-      if (pi)
-        {
-          Kobject_dbg *o =  static_cast<Task*>(pi->info<Obj::Cap_page_dbg_info>()->s)->dbg_info();
-          space_id = o->dbg_id();
-          Jdb_kobject_name *n = Jdb_kobject_extension::find_extension<Jdb_kobject_name>(Kobject::from_dbg(o));
-          if (n)
-            task_descr.printf("(%.*s)", n->max_len(), n->name());
-          cap_idx += pi->info<Obj::Cap_page_dbg_info>()->offset;
-        }
-
-      printf("  " L4_PTR_FMT "[C:%lx]: space=D:%lx%.*s rights=%x flags=%lx obj=%p",
-             (Address)*m, cap_idx, space_id, task_descr.length(), task_descr.begin(),
-             (unsigned)cxx::int_value<Obj::Attr>(e->rights()), e->_flags,
-             e->obj());
-
+      printf("  ");
+      print_obj_mapping(m);
       puts("\033[K");
       screenline++;
 
@@ -541,16 +487,37 @@ Jdb_mapdb::show_simple_tree(Kobject_common *f, unsigned indent = 1)
         }
     }
 
-  puts(Jdb_screen::Line);
+  Jdb::line();
   return true;
 }
 
 static
 void
-Jdb_mapdb::dump_all_cap_trees()
+Jdb_mapdb::dump_all_obj_mappings(char const *arg)
 {
-  printf("========= OBJECT DUMP BEGIN ===================\n");
+  if (!Kconsole::console()->find_console(Console::GZIP))
+    return;
+
+  int len = arg ? __builtin_strlen(arg) : 0;
+
+  Kconsole::console()->start_exclusive(Console::GZIP);
+  printf("========= OBJECT DUMP BEGIN ===================\n"
+         "dump format version number: 0\n"
+         "user space tag:%s%.*s\n", len ? " " : "", len, len ? arg : "");
+  for (auto *d: Kobject_dbg::_kobjects)
+    {
+      Kobject *f = Kobject::from_dbg(d);
+      String_buf<130> s;
+
+      Jdb_kobject::obj_description(&s, NULL, true, d);
+      printf("%.*s ref_cnt=%ld\n", s.length(), s.begin(), f->map_root()->_cnt);
+      for (auto const &&m: f->map_root()->_root)
+        {
+          printf("\t");
+          print_obj_mapping(m);
+          printf("\n");
+        }
+    }
   printf("========= OBJECT DUMP END ===================\n");
+  Kconsole::console()->end_exclusive(Console::GZIP);
 }
-
-

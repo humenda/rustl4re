@@ -1,9 +1,13 @@
 <map id="L4::Ipc_svr::Server_iface" name="L4::Ipc_svr::Server_iface">
-<area shape="rect" id="node2" href="$classL4_1_1Ipc__svr_1_1Br__manager__no__buffers.html" title="Empty implementation of Server_iface. " alt="" coords="5,271,181,451"/>
-<area shape="rect" id="node4" href="$classL4_1_1Ipc__svr_1_1Timeout__queue__hooks.html" title="Loop hooks mixin for integrating a timeout queue into the server loop. " alt="" coords="205,279,384,444"/>
-<area shape="rect" id="node5" href="$classL4_1_1Ipc__svr_1_1Timeout__queue__hooks.html" title="{L4::Ipc_svr::Timeout\l_queue_hooks\&lt; Br_manager\l_timeout_hooks, Br_manager \&gt;\n|+ queue\l|+ timeout()\l+ setup_wait()\l+ before_reply()\l+ add_timeout()\l+ remove_timeout()\l}" alt="" coords="204,536,423,701"/>
-<area shape="rect" id="node7" href="$classL4Re_1_1Util_1_1Br__manager.html" title="Buffer&#45;register (BR) manager for L4::Server. " alt="" coords="459,264,635,459"/>
-<area shape="rect" id="node3" href="$structL4_1_1Ipc__svr_1_1Default__loop__hooks.html" title="Default LOOP_HOOKS. " alt="" coords="23,573,163,665"/>
-<area shape="rect" id="node6" href="$structL4Re_1_1Util_1_1Br__manager__timeout__hooks.html" title="Predefined server&#45;loop hooks for a server with using the Br_manager and a timeout queue..." alt="" coords="230,751,397,843"/>
-<area shape="rect" id="node8" href="$structL4Re_1_1Util_1_1Br__manager__hooks.html" title="Predefined server&#45;loop hooks for a server loop using the Br_manager. " alt="" coords="463,573,630,665"/>
+<area shape="rect" id="node1" title="Interface for server&#45;loop related functions." alt="" coords="136,5,319,215"/>
+<area shape="rect" id="node2" href="$classL4_1_1Ipc__svr_1_1Timeout__queue__hooks.html" title=" " alt="" coords="5,824,233,989"/>
+<area shape="rect" id="node4" href="$classL4_1_1Ipc__svr_1_1Br__manager__no__buffers.html" title="Empty implementation of Server_iface." alt="" coords="249,308,432,488"/>
+<area shape="rect" id="node9" href="$classL4_1_1Ipc__svr_1_1Timeout__queue__hooks.html" title="Loop hooks mixin for integrating a timeout queue into the server loop." alt="" coords="121,581,302,747"/>
+<area shape="rect" id="node10" href="$classL4Re_1_1Util_1_1Br__manager.html" title="Buffer&#45;register (BR) manager for L4::Server." alt="" coords="475,264,657,532"/>
+<area shape="rect" id="node3" href="$structL4Re_1_1Util_1_1Br__manager__timeout__hooks.html" title="Predefined server&#45;loop hooks for a server with using the Br_manager and a timeout queue." alt="" coords="33,1096,205,1188"/>
+<area shape="rect" id="node5" href="$structL4_1_1Ipc__svr_1_1Default__loop__hooks.html" title="Default LOOP_HOOKS." alt="" coords="326,618,473,710"/>
+<area shape="rect" id="node6" href="$classL4_1_1Server.html" title=" " alt="" coords="321,1067,523,1217"/>
+<area shape="rect" id="node8" href="$classL4_1_1Server.html" title="Basic server loop for handling client requests." alt="" coords="413,839,620,975"/>
+<area shape="rect" id="node7" href="$classL4Re_1_1Util_1_1Registry__server.html" title="A server loop object which has a Object_registry included." alt="" coords="327,1267,517,1417"/>
+<area shape="rect" id="node11" href="$structL4Re_1_1Util_1_1Br__manager__hooks.html" title="Predefined server&#45;loop hooks for a server loop using the Br_manager." alt="" coords="497,618,669,710"/>
 </map>

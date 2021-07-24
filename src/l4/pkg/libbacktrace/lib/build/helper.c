@@ -5,7 +5,6 @@
 
 #include <cxxabi.h>
 #include <stdlib.h>
-#include <errno.h>
 
 static char *demangle(const char *function)
 {
@@ -48,7 +47,7 @@ void libbacktrace_do_local_backtrace(void)
 {
   struct backtrace_state *state;
 
-  state = backtrace_create_state(program_invocation_name, 0, bt_err, NULL);
+  state = backtrace_create_state(NULL, 0, bt_err, NULL);
 
   if (!state)
     {

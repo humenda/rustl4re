@@ -8,7 +8,7 @@
  *
  * 1. Copyright Notice
  *
- * Some or all of this work - Copyright (c) 1999 - 2017, Intel Corp.
+ * Some or all of this work - Copyright (c) 1999 - 2019, Intel Corp.
  * All rights reserved.
  *
  * 2. License
@@ -111,6 +111,42 @@
  * other governmental approval, or letter of assurance, without first obtaining
  * such license, approval or letter.
  *
+ *****************************************************************************
+ *
+ * Alternatively, you may choose to be licensed under the terms of the
+ * following license:
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions, and the following disclaimer,
+ *    without modification.
+ * 2. Redistributions in binary form must reproduce at minimum a disclaimer
+ *    substantially similar to the "NO WARRANTY" disclaimer below
+ *    ("Disclaimer") and any redistribution must be conditioned upon
+ *    including a substantially similar Disclaimer requirement for further
+ *    binary redistribution.
+ * 3. Neither the names of the above-listed copyright holders nor the names
+ *    of any contributors may be used to endorse or promote products derived
+ *    from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+ * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * Alternatively, you may choose to be licensed under the terms of the
+ * GNU General Public License ("GPL") version 2 as published by the Free
+ * Software Foundation.
+ *
  *****************************************************************************/
 
 #define DEFINE_ACPIXTRACT_GLOBALS
@@ -140,10 +176,12 @@ DisplayUsage (
     ACPI_USAGE_HEADER ("acpixtract [option] <InputFile>");
 
     ACPI_OPTION ("-a",                  "Extract all tables, not just DSDT/SSDT");
+    ACPI_OPTION ("-f",                  "Force extraction, even if there are errors");
     ACPI_OPTION ("-l",                  "List table summaries, do not extract");
     ACPI_OPTION ("-m",                  "Extract multiple DSDT/SSDTs to a single file");
     ACPI_OPTION ("-s <signature>",      "Extract all tables with <signature>");
     ACPI_OPTION ("-v",                  "Display version information");
+    ACPI_OPTION ("-vd",                 "Display build date and time");
 
     ACPI_USAGE_TEXT ("\nExtract binary ACPI tables from text acpidump output\n");
     ACPI_USAGE_TEXT ("Default invocation extracts the DSDT and all SSDTs\n");
@@ -158,7 +196,7 @@ DisplayUsage (
  *
  ******************************************************************************/
 
-int
+int ACPI_SYSTEM_XFACE
 main (
     int                     argc,
     char                    *argv[])
@@ -171,6 +209,7 @@ main (
 
     Gbl_TableCount = 0;
     Gbl_TableListHead = NULL;
+    Gbl_ForceExtraction = FALSE;
     AxAction = AX_EXTRACT_AML_TABLES; /* Default: DSDT & SSDTs */
 
     ACPI_DEBUG_INITIALIZE (); /* For debug version only */
@@ -192,6 +231,11 @@ main (
         AxAction = AX_EXTRACT_ALL;          /* Extract all tables found */
         break;
 
+    case 'f':
+
+        Gbl_ForceExtraction = TRUE;           /* Ignore errors */
+        break;
+
     case 'l':
 
         AxAction = AX_LIST_ALL;             /* List tables only, do not extract */
@@ -207,9 +251,25 @@ main (
         AxAction = AX_EXTRACT_SIGNATURE;    /* Extract only tables with this sig */
         break;
 
-    case 'v': /* -v: (Version): signon already emitted, just exit */
+    case 'v':
 
-        return (0);
+        switch (AcpiGbl_Optarg[0])
+        {
+        case '^':  /* -v: (Version): signon already emitted, just exit */
+
+            exit (0);
+
+        case 'd':
+
+            printf (ACPI_COMMON_BUILD_TIME);
+            return (0);
+
+        default:
+
+            printf ("Unknown option: -v%s\n", AcpiGbl_Optarg);
+            return (-1);
+        }
+        break;
 
     case 'h':
     default:
@@ -243,7 +303,7 @@ main (
 
     case AX_LIST_ALL:
 
-        Status = AxListTables (Filename);
+        Status = AxListAllTables (Filename);
         break;
 
     case AX_EXTRACT_SIGNATURE:

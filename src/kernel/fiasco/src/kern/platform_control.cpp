@@ -9,12 +9,15 @@ public:
   static bool cpu_shutdown_available();
   static int cpu_allow_shutdown(Cpu_number cpu, bool allow);
   static int system_suspend(Mword extra);
+  static void system_off();
+  static void system_reboot();
 };
 
 // ------------------------------------------------------------------------
 IMPLEMENTATION:
 
 #include "l4_types.h"
+#include "reset.h"
 
 IMPLEMENT_DEFAULT inline
 void
@@ -36,3 +39,14 @@ int
 Platform_control::cpu_allow_shutdown(Cpu_number, bool)
 { return -L4_err::ENodev; }
 
+IMPLEMENT_DEFAULT inline
+void
+Platform_control::system_off()
+{}
+
+IMPLEMENT_DEFAULT inline NEEDS["reset.h"]
+void
+Platform_control::system_reboot()
+{
+  platform_reset();
+}

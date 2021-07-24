@@ -23,7 +23,7 @@ public:
 class Trap_state : public Trap_state_regs, public Return_frame
 {
 public:
-  typedef int (*Handler)(Trap_state*, unsigned cpu);
+  typedef int (*Handler)(Trap_state*, Cpu_number cpu);
   bool exclude_logging() { return false; }
 };
 
@@ -89,11 +89,6 @@ PUBLIC inline
 bool
 Trap_state::exception_is_undef_insn() const
 { return esr.ec() == 0; }
-
-PUBLIC inline
-bool
-Trap_state::is_debug_exception() const
-{ return esr.ec() == 0x24 && esr.pf_fsc() == 0x22; }
 
 PUBLIC
 void

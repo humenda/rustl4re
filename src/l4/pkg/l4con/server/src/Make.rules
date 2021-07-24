@@ -15,7 +15,7 @@ LIBS	       += -L$(OBJ_DIR)/con_yuv2rgb/OBJ-$(ARCH)_$(CPU) \
 		  -L$(OBJ_DIR)/con_hw/OBJ-$(SYSTEM) \
 		  -lcon_yuv2rgb $(LIBS_$(ARCH)) -lcon_hw
 SRC_C		= main.c pslim.c ev.c vc.c gmode.c gmode-arch.c
-SRC_CC          = server.cc
+SRC_CC          = server.cc object_registry_gc.cc
 CPPFLAGS	+= -DDEBUG
 
 all::

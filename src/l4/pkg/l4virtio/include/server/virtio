@@ -1,22 +1,10 @@
 // vi:ft=cpp
+/* SPDX-License-Identifier: GPL-2.0-only or License-Ref-kk-custom */
 /*
- * (c) 2014 Alexander Warg <warg@os.inf.tu-dresden.de>
+ * Copyright (C) 2014-2020 Kernkonzept GmbH.
+ * Author(s): Alexander Warg <alexander.warg@kernkonzept.com>
  *
- * This file is part of TUD:OS and distributed under the terms of the
- * GNU General Public License 2.
- * Please see the COPYING-GPL-2 file for details.
- *
- * As a special exception, you may use this file as part of a free software
- * library without restriction.  Specifically, if other files instantiate
- * templates or use macros or inline functions from this file, or you compile
- * this file and link it with other files to produce an executable, this
- * file does not by itself cause the resulting executable to be covered by
- * the GNU General Public License.  This exception does not however
- * invalidate any other reasons why the executable file might be covered by
- * the GNU General Public License.
  */
-
-
 #pragma once
 
 #include <l4/sys/types.h>
@@ -49,19 +37,22 @@ struct Dev_status
   /// Make Status from raw value.
   explicit Dev_status(l4_uint32_t v) : raw(v) {}
 
-  CXX_BITFIELD_MEMBER( 0,  0, acked, raw);
-  CXX_BITFIELD_MEMBER( 1,  1, driver, raw);
-  CXX_BITFIELD_MEMBER( 2,  2, driver_ok, raw);
-  CXX_BITFIELD_MEMBER( 3,  3, features_ok, raw);
-  CXX_BITFIELD_MEMBER( 7,  7, failed, raw);
+  CXX_BITFIELD_MEMBER(0,  0, acked, raw);
+  CXX_BITFIELD_MEMBER(1,  1, driver, raw);
+  CXX_BITFIELD_MEMBER(2,  2, driver_ok, raw);
+  CXX_BITFIELD_MEMBER(3,  3, features_ok, raw);
+  CXX_BITFIELD_MEMBER(6,  7, fail_state, raw);
+  CXX_BITFIELD_MEMBER(6,  6, device_needs_reset, raw);
+  CXX_BITFIELD_MEMBER(7,  7, failed, raw);
 
   /**
-   * \brief Check if the device is in running state.
+   * Check if the device is in running state.
+   *
    * \return true if the device is in running state.
    *
-   * The device is in running state when acked(), driver(),
-   * features_ok(), and driver_ok() return true,
-   * and failed() returns false.
+   * The device is in running state when acked(), driver(), features_ok(), and
+   * driver_ok() return true, and device_needs_reset() and failed() return
+   * false.
    */
   bool running() const
   {
@@ -90,6 +81,8 @@ struct Dev_features
  *
  * This class represents a single virtqueue, with a local running available
  * index.
+ *
+ * \note The Virtqueue implementation is not thread-safe.
  */
 class Virtqueue : public L4virtio::Virtqueue
 {
@@ -155,7 +148,7 @@ public:
 
   /**
    * \brief Test for available descriptors.
-   * \return true if there are descriptors availabale, false if not.
+   * \return true if there are descriptors available, false if not.
    * \pre The queue must be in working state.
    */
   bool desc_avail() const
@@ -418,7 +411,7 @@ public:
   /**
    * Start processing a new request.
    *
-   * \tparam DESCM_MAN  Type of descriptor manager (implicit).
+   * \tparam DESC_MAN   Type of descriptor manager (implicit).
    * \param  dm         Descriptor manager that is used to translate VIRTIO
    *                    descriptor addresses.
    * \param  ring       VIRTIO ring of the request.
@@ -455,7 +448,7 @@ public:
 
   /**
    * \brief Start processing a new request.
-   * \tparam DESCM_MAN  Type of descriptor manager (implicit).
+   * \tparam DESC_MAN  Type of descriptor manager (implicit).
    * \param dm       Descriptor manager that is used to translate VIRTIO descriptor addresses.
    * \param request  VIRTIO request from Virtqueue::next_avail()
    * \param args     Extra arguments passed to dm->load_desc()
@@ -476,7 +469,7 @@ public:
   { return _current.flags; }
 
   /**
-   * \brief Are there more chained descriptors ?
+   * \brief Are there more chained descriptors?
    * \return true if there are more chained descriptors in the current request.
    */
   bool has_more() const
@@ -485,7 +478,7 @@ public:
   /**
    * Switch to the next descriptor in a descriptor chain.
    *
-   * \tparam DESCM_MAN  Type of descriptor manager (implicit).
+   * \tparam DESC_MAN   Type of descriptor manager (implicit).
    * \param  dm         Descriptor manager that is used to translate VIRTIO
    *                    descriptor addresses.
    * \param  args       Extra arguments passed to dm->load_desc()
@@ -518,4 +511,3 @@ public:
 
 }
 }
-

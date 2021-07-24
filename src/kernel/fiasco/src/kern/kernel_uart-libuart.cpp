@@ -20,15 +20,17 @@ union Regs
   Static_object<L4::Io_register_block_mmio_fixed_width<Unsigned16> > mem16;
 };
 
-static bool
-setup_uart_io_port(Regs *regs, Address base, int irq)
-{
-  regs->io.construct(base);
-  return Kernel_uart::uart()->startup(regs->io.get(), irq,
-                                      Koptions::o()->uart.base_baud);
 }
 
+PRIVATE bool
+Kernel_uart::setup_uart_io_port(void *r, Address base, int irq)
+{
+  Regs *regs = static_cast<Regs *>(r);
+  regs->io.construct(base);
+  return this->Uart::startup(regs->io.get(), irq,
+                             Koptions::o()->uart.base_baud);
 }
+
 
 //------------------------------------------------------------------------
 IMPLEMENTATION [libuart && serial && !io]:
@@ -44,12 +46,12 @@ union Regs
   Static_object<L4::Io_register_block_mmio_fixed_width<Unsigned16> > mem16;
 };
 
-static bool
-setup_uart_io_port(Regs *, Address, int)
-{
-  panic ("cannot use IO-Port based uart\n");
 }
 
+PRIVATE bool
+Kernel_uart::setup_uart_io_port(void *, Address, int)
+{
+  panic ("cannot use IO-Port based uart\n");
 }
 
 //------------------------------------------------------------------------
@@ -82,22 +84,24 @@ bool Kernel_uart::startup(unsigned, int irq)
             {
               L4::Io_register_block *r = 0;
 
+              // Koptions doesn't pass the UART size so take a sound guess.
+              Address const size = 0x1000 - (base & 0xfff);
               switch (Koptions::o()->uart.reg_shift)
                 {
                 case 0: // no shift use natural access width
-                  r = regs.mem.construct(Kmem::mmio_remap(base),
+                  r = regs.mem.construct(Kmem::mmio_remap(base, size),
                                          Koptions::o()->uart.reg_shift);
                   break;
                 case 1: // 1 bit shift, assume fixed 16bit access width
-                  r = regs.mem16.construct(Kmem::mmio_remap(base),
+                  r = regs.mem16.construct(Kmem::mmio_remap(base, size),
                                            Koptions::o()->uart.reg_shift);
                   break;
                 case 2: // 2 bit shift, assume fixed 32bit access width
-                  r = regs.mem32.construct(Kmem::mmio_remap(base),
+                  r = regs.mem32.construct(Kmem::mmio_remap(base, size),
                                            Koptions::o()->uart.reg_shift);
                   break;
                 case 3: // 3 bit shift, assume fixed 64bit access width
-                  r = regs.mem32.construct(Kmem::mmio_remap(base),
+                  r = regs.mem32.construct(Kmem::mmio_remap(base, size),
                                            Koptions::o()->uart.reg_shift);
                   break;
                 default:
@@ -105,7 +109,7 @@ bool Kernel_uart::startup(unsigned, int irq)
                         Koptions::o()->uart.reg_shift);
                   break;
                 }
-              return uart()->startup(r, irq, Koptions::o()->uart.base_baud);
+              return this->Uart::startup(r, irq, Koptions::o()->uart.base_baud);
             }
         default:
           return false;

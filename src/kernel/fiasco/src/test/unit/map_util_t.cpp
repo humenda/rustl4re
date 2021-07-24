@@ -50,7 +50,7 @@ class Sigma0_space : public Test_space
 {
 public:
   explicit Sigma0_space(Ram_quota *q) : Test_space(q, "s0") {}
-  bool is_sigma0() const { return true; }
+  bool is_sigma0() const override { return true; }
 };
 
 
@@ -58,7 +58,7 @@ PUBLIC
 bool
 Sigma0_space::v_fabricate(Mem_space::Vaddr address,
                           Mem_space::Phys_addr *phys, Mem_space::Page_order *size,
-                          Mem_space::Attr *attribs = 0)
+                          Mem_space::Attr *attribs = 0) override
 {
   // special-cased because we don't do ptab lookup for sigma0
   *size = static_cast<Mem_space const &>(*this).largest_page_size();
@@ -72,7 +72,7 @@ Sigma0_space::v_fabricate(Mem_space::Vaddr address,
 
 PUBLIC inline
 Page_number
-Sigma0_space::mem_space_map_max_address() const
+Sigma0_space::mem_space_map_max_address() const override
 { return Page_number(1UL << (MWORD_BITS - Mem_space::Page_shift)); }
 
 class Timeout;
@@ -149,7 +149,6 @@ int main()
   Phys_addr phys;
   Page_order order;
   Attr page_attribs;
-  Mapping *m;
   Mapdb::Frame frame;
 
   cout << "[UTEST] s0 [0x10000] -> server [0x1000]" << endl;
@@ -169,9 +168,9 @@ int main()
   assert (phys == Phys_addr(0x10000));
   assert (page_attribs.rights == L4_fpage::Rights::URWX());
 
-  assert (mapdb->lookup(sigma0, to_pfn(0x10000), to_pfn(0x10000), &m, &frame));
-  print_node (m, frame);
-  mapdb->free (frame);
+  assert (mapdb->lookup(sigma0, to_pfn(0x10000), to_pfn(0x10000), &frame));
+  print_node (frame);
+  frame.clear();
 
   cout << "[UTEST] s0 [0/superpage] -> server [0] -> should map many 4K pages and "
           "overmap previous mapping" << endl;
@@ -191,9 +190,9 @@ int main()
   assert (phys == Phys_addr(0));
   assert (page_attribs.rights == L4_fpage::Rights::URX());
 
-  assert (mapdb->lookup(sigma0, to_pfn(0), to_pfn(0), &m, &frame));
-  print_node (m, frame);
-  mapdb->free (frame);
+  assert (mapdb->lookup(sigma0, to_pfn(0), to_pfn(0), &frame));
+  print_node (frame);
+  frame.clear();
 
   // previous mapping still there?
 
@@ -209,9 +208,9 @@ int main()
 
   // mapdb entry -- tree should now contain another mapping 
   // s0 [0x10000] -> server [0x10000]
-  assert (mapdb->lookup(sigma0, to_pfn(0x10000), to_pfn(0x10000), &m, &frame));
-  print_node (m, frame, 0x10000, 0x11000);
-  mapdb->free (frame);
+  assert (mapdb->lookup(sigma0, to_pfn(0x10000), to_pfn(0x10000), &frame));
+  print_node (frame, 0x10000, 0x11000);
+  frame.clear();
 
   cout << "[UTEST] Partially unmap superpage s0 [0/superpage]" << endl;
 
@@ -225,9 +224,9 @@ int main()
 	      Test_fpage::mem(0x100000, Config::SUPERPAGE_SHIFT - 2, L4_fpage::Rights::URWX()),
 	      L4_map_mask(0) /*full unmap, not me too)*/, reap.list());
   
-  assert (mapdb->lookup(sigma0, to_pfn(0x0), to_pfn(0x0), &m, &frame));
-  print_node (m, frame);
-  mapdb->free (frame);
+  assert (mapdb->lookup(sigma0, to_pfn(0x0), to_pfn(0x0), &frame));
+  print_node (frame);
+  frame.clear();
 
   assert (! ms(server)->v_lookup(to_vaddr(0x101000), &phys, &order, &page_attribs));
 
@@ -249,9 +248,9 @@ int main()
   assert (phys == Virt_addr(0x400000));
   assert (page_attribs.rights == L4_fpage::Rights::URWX());
 
-  assert (mapdb->lookup(sigma0, to_pfn(0x400000), to_pfn(0x400000), &m, &frame));
-  print_node (m, frame);
-  mapdb->free (frame);
+  assert (mapdb->lookup(sigma0, to_pfn(0x400000), to_pfn(0x400000), &frame));
+  print_node (frame);
+  frame.clear();
 
   // 
   // server [8M+4K] -> client [8K]
@@ -274,9 +273,9 @@ int main()
   // Previously, the 4K submapping is attached to the Sigma0 parent.
   // Not any more.
 
-  assert (mapdb->lookup(sigma0, to_pfn(0x400000), to_pfn(0x400000), &m, &frame));
-  print_node (m, frame);
-  mapdb->free (frame);
+  assert (mapdb->lookup(sigma0, to_pfn(0x400000), to_pfn(0x400000), &frame));
+  print_node (frame);
+  frame.clear();
 
   //
   // Overmap a read-only page.  The writable attribute should not be
@@ -311,9 +310,9 @@ int main()
   assert (page_attribs == (Mem_space::Page_writable 
 			   | Mem_space::Page_user_accessible));  
 
-  assert (mapdb->lookup (sigma0, 0x400000, 0x400000, &m, &frame));
-  print_node (m, frame);
-  mapdb->free (frame);
+  assert (mapdb->lookup (sigma0, 0x400000, 0x400000, &frame));
+  print_node (frame);
+  frame.clear(true);
 
   fpage_unmap (server,
 	       Test_fpage (false, true, Config::PAGE_SHIFT, 0x801000),
@@ -330,9 +329,9 @@ int main()
   assert (page_attribs == (Mem_space::Page_writable 
 			   | Mem_space::Page_user_accessible));  
 
-  assert (mapdb->lookup (sigma0->id(), 0x400000, 0x400000, &m, &frame));
-  print_node (m, frame);
-  mapdb->free (frame);
+  assert (mapdb->lookup (sigma0->id(), 0x400000, 0x400000, &frame));
+  print_node (frame);
+  frame.clear(true);
 #endif
 
 
@@ -424,35 +423,35 @@ std::ostream &operator << (std::ostream &s, Space const &sp)
 }
 
 
-static void print_node(Mapping* node, const Mapdb::Frame& frame,
+static void print_node(const Mapdb::Frame& frame,
 		       Address va_begin = 0, Address va_end = ~0UL)
 {
-  assert (node);
+  auto node = frame.m;
+  Space *n_space = frame.pspace();
 
-  Mapdb::Order size = Mapdb::shift(frame, node);
+  if (!*node)
+    node = frame.frame->first();
 
-  cout << "space="  << *node->space()
-       << " vaddr=0x" << node->pfn(size)
+  assert (*node);
+
+  Mapdb::Order size = frame.treemap->page_shift();
+
+  cout << "space="  << *n_space
+       << " vaddr=0x" << frame.pvaddr()
        << " size=0x" << (Mapdb::Pfn(1) << size)
        << endl;
 
-  Mapdb::foreach_mapping(frame, node, to_pfn(va_begin), to_pfn(va_end),
+  Mapdb::foreach_mapping(frame, to_pfn(va_begin), to_pfn(va_end),
     [](Mapping *node, Mapdb::Order order)
     {
       cout << "[UTEST] ";
-      for (int d = node->depth(); d != 0; d--)
+      for (int d = node->depth() + 1; d != 0; d--)
         cout << ' ';
 
       cout << setbase(16)
 	   << "space="  << *node->space()
 	   << " vaddr=0x" << node->pfn(order)
 	   << " size=0x" << (Mapdb::Pfn(1) << order);
-
-      if (Mapping* p = node->parent())
-	{
-	  cout << " parent=" << *p->space()
-	       << " p.vaddr=0x" << p->pfn(order);
-	}
 
       cout << endl;
     });

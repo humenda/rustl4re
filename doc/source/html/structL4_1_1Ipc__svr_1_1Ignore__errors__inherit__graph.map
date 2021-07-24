@@ -1,5 +1,9 @@
 <map id="L4::Ipc_svr::Ignore_errors" name="L4::Ipc_svr::Ignore_errors">
-<area shape="rect" id="node2" href="$structL4_1_1Ipc__svr_1_1Default__loop__hooks.html" title="Default LOOP_HOOKS. " alt="" coords="5,145,145,237"/>
-<area shape="rect" id="node3" href="$structL4Re_1_1Util_1_1Br__manager__hooks.html" title="Predefined server&#45;loop hooks for a server loop using the Br_manager. " alt="" coords="169,145,336,237"/>
-<area shape="rect" id="node4" href="$structL4Re_1_1Util_1_1Br__manager__timeout__hooks.html" title="Predefined server&#45;loop hooks for a server with using the Br_manager and a timeout queue..." alt="" coords="360,145,527,237"/>
+<area shape="rect" id="node1" title="Mix in for LOOP_HOOKS to ignore IPC errors." alt="" coords="215,5,355,97"/>
+<area shape="rect" id="node2" href="$structL4_1_1Ipc__svr_1_1Default__loop__hooks.html" title="Default LOOP_HOOKS." alt="" coords="27,147,174,239"/>
+<area shape="rect" id="node6" href="$structL4Re_1_1Util_1_1Br__manager__hooks.html" title="Predefined server&#45;loop hooks for a server loop using the Br_manager." alt="" coords="199,147,371,239"/>
+<area shape="rect" id="node7" href="$structL4Re_1_1Util_1_1Br__manager__timeout__hooks.html" title="Predefined server&#45;loop hooks for a server with using the Br_manager and a timeout queue." alt="" coords="395,147,567,239"/>
+<area shape="rect" id="node3" href="$classL4_1_1Server.html" title=" " alt="" coords="5,501,207,652"/>
+<area shape="rect" id="node5" href="$classL4_1_1Server.html" title="Basic server loop for handling client requests." alt="" coords="123,288,329,424"/>
+<area shape="rect" id="node4" href="$classL4Re_1_1Util_1_1Registry__server.html" title="A server loop object which has a Object_registry included." alt="" coords="11,701,201,852"/>
 </map>

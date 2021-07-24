@@ -1,0 +1,8 @@
+<map id="L4virtio::Driver::Device::bind_notification_irq" name="L4virtio::Driver::Device::bind_notification_irq">
+<area shape="rect" id="node1" title="Register a triggerable to receive notifications from the device." alt="" coords="5,74,177,115"/>
+<area shape="rect" id="node2" href="$classL4_1_1Icu.html#ada7541da586ea09b925b4d90d7dc357e" title="Bind an interrupt line of an interrupt controller to an interrupt object." alt="" coords="225,56,325,83"/>
+<area shape="rect" id="node6" href="$group__l4__ipc__err__api.html#ga05c11e3e10b6c2aa941396ac2018899f" title="Return error code of a system call return message tag or the tag label." alt="" coords="239,107,311,133"/>
+<area shape="rect" id="node3" href="$classL4_1_1Cap__base.html#a90ff089ca2442b128c2b2b0e1c22c6d7" title="Return capability selector." alt="" coords="373,5,512,32"/>
+<area shape="rect" id="node4" href="$classL4_1_1Kobject.html#a4f2117ae76762f4084e6a1adb915863c" title="Return capability selector." alt="" coords="381,56,505,83"/>
+<area shape="rect" id="node5" href="$group__l4__icu__api.html#ga29217a67f405c5d860002dd902bf71e4" title="Bind an interrupt line of an interrupt controller to an interrupt object." alt="" coords="387,107,498,133"/>
+</map>

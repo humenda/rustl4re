@@ -10,7 +10,7 @@ TEMPLDIR	:= src/templates
 MAKEFILETEMPL	:= $(TEMPLDIR)/Makefile.builddir.templ
 MANSUBDIRS	:= man
 INSTALLSUBDIRS	:= $(MANSUBDIRS)
-CLEANSUBDIRS	:= $(MANSUBDIRS) $(wildcard $(DFLBUILDDIR))
+CLEANSUBDIRS	:= $(wildcard $(MANSUBDIRS) $(DFLBUILDDIR))
 CONFIG_FILE	:= $(TEMPLDIR)/globalconfig.out
 TEST_TEMPLATES	:= $(patsubst $(CONFIG_FILE).%,%,$(wildcard $(CONFIG_FILE).*))
 TEST_TEMPLATES  := $(if $(TEMPLATE_FILTER),$(filter $(TEMPLATE_FILTER),$(TEST_TEMPLATES)),$(TEST_TEMPLATES))
@@ -34,6 +34,7 @@ builddir:
 	@if [ -f "$(TEMPLDIR)/globalconfig.out.$(T)" ]; then		\
 		echo "Copying template configuration $(T)";		\
 		cp $(TEMPLDIR)/globalconfig.out.$(T) $(BUILDDIR)/globalconfig.out;		\
+		$(MAKE) -C $(BUILDDIR) olddefconfig;			\
 	fi
 	@echo "done."
 endif
@@ -237,9 +238,10 @@ randcheckagainstop:
 
 randcheckstat:
 	@find $(RANDBUILDDIR) -name 'ok-*' | tool/configstat
-	@echo "Building: $$(ls $(RANDBUILDDIR) | grep -c b-)    " \
-	      "Ok: $$(ls $(RANDBUILDDIR) | grep -c ok-)    "      \
-	      "Failed: $$(ls $(RANDBUILDDIR) | grep -c failed-)"
+	@echo "Building: $$(ls $(RANDBUILDDIR) | grep -c b-)    "    \
+	      "Ok: $$(ls $(RANDBUILDDIR) | grep -c ok-)    "         \
+	      "Failed: $$(ls $(RANDBUILDDIR) | grep -c failed-)    " \
+	      "Warnings: $$(ls $(RANDBUILDDIR) | grep -c warnings-)"
 
 randcheckstatloop:
 	@while true; do \

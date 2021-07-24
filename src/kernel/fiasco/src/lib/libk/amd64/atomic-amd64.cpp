@@ -16,28 +16,28 @@ atomic_mp_or(Mword *l, Mword value)
 
 inline
 void
-atomic_mp_add (Mword *l, Mword value)
+atomic_mp_add(Mword *l, Mword value)
 {
   asm volatile ("lock; addq %1, %2" : "=m"(*l) : "ir"(value), "m"(*l));
 }
 
 inline
 void
-atomic_add (Mword *l, Mword value)
+atomic_add(Mword *l, Mword value)
 {
   asm volatile ("addq %1, %2" : "=m"(*l) : "ir"(value), "m"(*l));
 }
 
 inline
 void
-atomic_and (Mword *l, Mword mask)
+atomic_and(Mword *l, Mword mask)
 {
   asm volatile ("andq %1, %2" : "=m"(*l) : "ir"(mask), "m"(*l));
 }
 
 inline
 void
-atomic_or (Mword *l, Mword bits)
+atomic_or(Mword *l, Mword bits)
 {
   asm volatile ("orq %1, %2" : "=m"(*l) : "ir"(bits), "m"(*l));
 }
@@ -49,7 +49,7 @@ atomic_or (Mword *l, Mword bits)
 
 inline
 bool
-cas_unsafe (Mword *ptr, Mword oldval, Mword newval)
+cas_unsafe(Mword *ptr, Mword oldval, Mword newval)
 {
   Mword tmp;
 
@@ -64,7 +64,7 @@ cas_unsafe (Mword *ptr, Mword oldval, Mword newval)
 
 inline
 bool
-mp_cas_arch (Mword *ptr, Mword oldval, Mword newval)
+mp_cas_arch(Mword *ptr, Mword oldval, Mword newval)
 {
   Mword tmp;
 
@@ -76,4 +76,3 @@ mp_cas_arch (Mword *ptr, Mword oldval, Mword newval)
 
   return tmp == oldval;
 }
-

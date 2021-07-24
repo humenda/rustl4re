@@ -12,11 +12,17 @@
 #include <l4/vbus/vbus>
 #include <l4/vbus/vbus_gpio.h>
 
+/**
+ * \addtogroup api_l4re_vbus
+ *
+ * \includefile{l4/vbus/vbus_gpio}
+ */
+
 namespace L4vbus {
 
 /**
  * \brief A GPIO pin
- * \ingroup l4vbus_gpio_module
+ * \ingroup api_l4re_vbus
  *
  */
 class Gpio_pin : public Device
@@ -124,7 +130,7 @@ protected:
 
 /**
  * \brief A Gpio_module groups multiple GPIO pins together
- * \ingroup l4vbus_gpio_module
+ * \ingroup api_l4re_vbus
  */
 class Gpio_module : public Device
 {

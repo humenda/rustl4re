@@ -1,9 +1,10 @@
 <map id="l4/cxx/avl_tree" name="l4/cxx/avl_tree">
-<area shape="rect" id="node2" href="$std__ops_source.html" title="std_ops" alt="" coords="5,80,77,107"/>
-<area shape="rect" id="node3" href="$pair.html" title="Pair implementation. " alt="" coords="102,80,149,107"/>
-<area shape="rect" id="node4" href="$bst_8h.html" title="AVL tree. " alt="" coords="173,80,249,107"/>
-<area shape="rect" id="node8" href="$bst__iter_8h.html" title="AVL tree. " alt="" coords="247,155,326,181"/>
-<area shape="rect" id="node5" href="$type__traits_source.html" title="../type_traits" alt="" coords="73,155,172,181"/>
-<area shape="rect" id="node7" href="$bst__base_8h.html" title="AVL tree. " alt="" coords="225,229,314,256"/>
-<area shape="rect" id="node6" href="$type__traits_8h_source.html" title="bits/type_traits.h" alt="" coords="61,229,185,256"/>
+<area shape="rect" id="node1" title="AVL tree." alt="" coords="110,5,229,32"/>
+<area shape="rect" id="node2" href="$std__ops_source.html" title=" " alt="" coords="5,80,77,107"/>
+<area shape="rect" id="node3" href="$pair.html" title="Pair implementation." alt="" coords="102,80,149,107"/>
+<area shape="rect" id="node4" href="$bst_8h.html" title="AVL tree." alt="" coords="173,80,256,107"/>
+<area shape="rect" id="node8" href="$bst__iter_8h.html" title="AVL tree." alt="" coords="252,155,335,181"/>
+<area shape="rect" id="node5" href="$type__traits_source.html" title=" " alt="" coords="73,155,177,181"/>
+<area shape="rect" id="node7" href="$bst__base_8h.html" title="AVL tree." alt="" coords="231,229,323,256"/>
+<area shape="rect" id="node6" href="$type__traits_8h_source.html" title=" " alt="" coords="59,229,191,256"/>
 </map>

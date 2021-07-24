@@ -1,9 +1,9 @@
 <map id="arm/l4/util" name="arm/l4/util">
 <area shape="rect" id="node1" href="dir_104381561ccad4fec756e0be1aef6253.html" title="util" alt="" coords="27,52,99,100"/>
-<area shape="rect" id="node2" href="dir_1f581fa1f88782a0973f05f5fe437b46.html" title="l4" alt="" coords="27,244,99,292"/>
-<area shape="rect" id="edge1-headlabel" href="dir_000026_000011.html" title="2" alt="" coords="59,217,68,232"/>
-<area shape="rect" id="node3" href="dir_d979004d17f5223e5cbcd0eb3b9cd5ac.html" title="x86" alt="" coords="64,148,136,196"/>
-<area shape="rect" id="edge2-headlabel" href="dir_000026_000008.html" title="1" alt="" coords="87,121,97,135"/>
-<area shape="rect" id="edge3-headlabel" href="dir_000008_000011.html" title="34" alt="" coords="78,223,95,238"/>
+<area shape="rect" id="node2" href="dir_1f581fa1f88782a0973f05f5fe437b46.html" title="l4" alt="" coords="25,244,97,292"/>
+<area shape="rect" id="edge1-headlabel" href="dir_000054_000039.html" title="1" alt="" coords="58,217,67,232"/>
+<area shape="rect" id="node3" href="dir_d979004d17f5223e5cbcd0eb3b9cd5ac.html" title="x86" alt="" coords="63,148,135,196"/>
+<area shape="rect" id="edge2-headlabel" href="dir_000054_000036.html" title="1" alt="" coords="87,121,96,135"/>
+<area shape="rect" id="edge3-headlabel" href="dir_000036_000039.html" title="32" alt="" coords="76,223,94,238"/>
 <area shape="rect" id="clust1" href="dir_803382d759928ec492adccfc96fc3562.html" title="l4" alt="" coords="16,16,109,111"/>
 </map>

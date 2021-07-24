@@ -1,8 +1,9 @@
 <map id="L4Re::Util::Video::Goos_svr" name="L4Re::Util::Video::Goos_svr">
-<area shape="rect" id="node2" href="$structL4Re_1_1Video_1_1View_1_1Info.html" title="Information structure of a view. " alt="" coords="5,639,200,936"/>
-<area shape="rect" id="node3" href="$classL4Re_1_1Video_1_1Pixel__info.html" title="Pixel information. " alt="" coords="73,352,239,576"/>
-<area shape="rect" id="node4" href="$structL4Re_1_1Video_1_1Goos_1_1Info.html" title="Information structure of a goos. " alt="" coords="224,690,403,885"/>
-<area shape="rect" id="node5" href="$classL4_1_1Cap.html" title="{L4::Cap\&lt; L4Re::Dataspace \&gt;\n||+ Cap()\l+ Cap()\l+ Cap()\l+ Cap()\l+ Cap()\l+ move()\l+ copy()\l+ operator&#45;\&gt;()\l}" alt="" coords="427,697,629,877"/>
-<area shape="rect" id="node6" href="$classL4_1_1Cap__base.html" title="Base class for all kinds of capabilities. " alt="" coords="419,5,651,303"/>
-<area shape="rect" id="node7" href="$classL4_1_1Cap.html" title="C++ interface for capabilities. " alt="" coords="542,374,653,554"/>
+<area shape="rect" id="node1" title="Goos server class." alt="" coords="214,999,437,1237"/>
+<area shape="rect" id="node2" href="$structL4Re_1_1Video_1_1View_1_1Info.html" title="Information structure of a view." alt="" coords="5,639,208,936"/>
+<area shape="rect" id="node3" href="$classL4Re_1_1Video_1_1Pixel__info.html" title="Pixel information." alt="" coords="117,352,288,576"/>
+<area shape="rect" id="node4" href="$structL4Re_1_1Video_1_1Goos_1_1Info.html" title="Information structure of a goos." alt="" coords="233,690,418,885"/>
+<area shape="rect" id="node5" href="$classL4_1_1Cap.html" title=" " alt="" coords="442,697,651,877"/>
+<area shape="rect" id="node6" href="$classL4_1_1Cap__base.html" title="Base class for all kinds of capabilities." alt="" coords="418,5,657,303"/>
+<area shape="rect" id="node7" href="$classL4_1_1Cap.html" title="C++ interface for capabilities." alt="" coords="559,374,678,554"/>
 </map>

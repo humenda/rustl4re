@@ -101,8 +101,7 @@ ALL = $(foreach subsys, $(SUBSYSTEMS), $($(subsys)) $($(subsys)_EXTRA))
 $(foreach m, $(GENERATED_MODULES), auto/stamp-$(m).ready): $(MODULES_FILES)
 
 .PRECIOUS: .Modules.deps
-.Modules.deps: $(MODULES_FILES) globalconfig.h globalconfig.tags
-	@mkdir -p auto
+.Modules.deps: $(MODULES_FILES) globalconfig.h globalconfig.tags | auto
 	@echo "Cleaning up build directory"
 	$(VERBOSE)$(RM_R) *.lds *.o fiasco *.d .*.d .*.d.new *.d.new
 	$(VERBOSE)$(RM_R) auto/*.cc auto/*.h auto/*.S auto/stamp-*.ready
@@ -177,7 +176,7 @@ endif # ! no XARCH
 endif # ! config xconfig menuconfig oldconfig
 
 auto:
-	mkdir -p auto
+	@mkdir -p auto
 
 source:
 	test -e source || ln -sf $(srcdir) source
@@ -196,10 +195,13 @@ kconfig_call = $(MAKE) -C $(tooldir)/kconfig O=$(objbase) \
 	       KCONFIG_TRISTATE=include/config/tristate.conf \
 	       KCONFIG_CONFIG=globalconfig.out \
 	       KCONFIG_AUTOCONFIG=include/config/auto.conf \
-	       KERNELVERSION=SVN MENUCONFIG_COLOR=blackbg \
+	       MENUCONFIG_COLOR=blackbg \
 	       INCLUDE_PPC32=$(INCLUDE_PPC32) \
 	       INCLUDE_SPARC=$(INCLUDE_SPARC) \
 	       fiasco_srcdir=$(srcdir)/..
+
+update_globalconfig_tags = \
+	     @$(tooldir)/config-tags globalconfig.out > globalconfig.tags
 
 # save config file dependencies to detect BSP removals
 .$(KCONFIG_FILE).parts: FORCE
@@ -213,28 +215,34 @@ $(KCONFIG_FILE): $(KCONFIG_SRC_FILE) $(KCONFIG_PART_FILES) .$(KCONFIG_FILE).part
 globalconfig.out: $(KCONFIG_FILE)
 	+$(kconfig_call) oldconfig
 
-globalconfig.tags: globalconfig.out
-	$(tooldir)/config-tags $< >$@
-
-globalconfig.h: globalconfig.out
+globalconfig.h globalconfig.tags: globalconfig.out
 	+$(kconfig_call) syncconfig
+	+$(update_globalconfig_tags)
 
 config: $(KCONFIG_FILE)
 	+$(kconfig_call) menuconfig
 	+$(kconfig_call) syncconfig
+	+$(update_globalconfig_tags)
 
 textconfig: $(KCONFIG_FILE)
 	+$(kconfig_call) config syncconfig
+	+$(update_globalconfig_tags)
 
 menuconfig oldconfig xconfig gconfig nconfig randconfig allyesconfig allnoconfig: $(KCONFIG_FILE)
 	+$(kconfig_call) $@
 	+$(kconfig_call) syncconfig
+	+$(update_globalconfig_tags)
 
-listnewconfig olddefconfig oldnoconfig savedefconfig: $(KCONFIG_FILE)
+olddefconfig oldnoconfig: $(KCONFIG_FILE)
 	+$(kconfig_call) $@
+	+$(update_globalconfig_tags)
 
 oldaskconfig: $(KCONFIG_FILE)
 	+$(kconfig_call) config
+	+$(update_globalconfig_tags)
+
+listnewconfig savedefconfig: $(KCONFIG_FILE)
+	+$(kconfig_call) $@
 
 ifneq ($(filter clean cleanall mrproper,$(MAKECMDGOALS)),)
 

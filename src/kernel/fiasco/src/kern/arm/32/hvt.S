@@ -5,24 +5,13 @@
 #include "tcboffset.h"
 #include "asm_entry.h"
 
-
-.macro MSR_ELR_HYP reg
-	.inst 0xe12ef300 | \reg
-.endm
-
-.macro MRS_ELR_HYP reg
-	.inst 0xe10e0300 | (\reg << 12)
-.endm
-
-.macro ERET
-	.inst 0xe160006e @ eret
-.endm
+.arch_extension virt
 
 .macro  switch_to_hyp_kernel
 	sub	sp, sp, #RF_SIZE
 	clrex
 	str	lr, [sp, #RF(USR_LR, 0)]
-	MRS_ELR_HYP 14
+	mrs	lr, ELR_hyp
 	str	lr, [sp, #RF(PC, 0)]
 	mrs	lr, spsr
 	str	lr, [sp, #RF(PSR, 0)]
@@ -35,11 +24,11 @@
 	add	sp, sp, #RF_SIZE		@ SP to top of stack
 	msr	spsr_cfsx, lr			@ Load SPSR from kernel_lr
 	ldr	lr, [sp, #RF(PC, -RF_SIZE)]
-	MSR_ELR_HYP 14
+	msr	ELR_hyp, lr
 	ldr	lr, [sp, #RF(USR_SP, -RF_SIZE)]
 	msr	SP_usr, lr
 	ldr	lr, [sp, #RF(USR_LR, -RF_SIZE)]
-	ERET
+	eret
 .endm
 
 GEN_SYSCALL_TABLE
@@ -63,6 +52,7 @@ GEN_SYSCALL_TABLE
 GEN_EXCEPTION_RETURN
 GEN_VCPU_UPCALL OFS__THREAD__KERN_VCPU, LOAD_USR_SP, LOAD_USR_VCPU
 GEN_LEAVE_BY_TRIGGER_EXCEPTION
+GEN_LEAVE_AND_KILL_MYSELF
 GEN_DEBUGGER_ENTRIES
 
 
@@ -79,6 +69,9 @@ hyp_irq_entry:
 	disable_irqs
 	add	sp, sp, #20
 	return_from_exception
+
+	.global __irq_handler_irq
+__irq_handler_irq:
 1:	.word	irq_handler
 
 
@@ -149,6 +142,6 @@ vcpu_resume:
 	msr	sp_usr, r1
 
 	ldr	r1, [r0, #RF(PC, 13*4)]
-	MSR_ELR_HYP 1
+	msr	ELR_hyp, r1
 	ldmia	r0, {r0-r12}
-	ERET
+	eret

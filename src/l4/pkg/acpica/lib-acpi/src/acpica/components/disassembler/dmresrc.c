@@ -8,7 +8,7 @@
  *
  * 1. Copyright Notice
  *
- * Some or all of this work - Copyright (c) 1999 - 2017, Intel Corp.
+ * Some or all of this work - Copyright (c) 1999 - 2019, Intel Corp.
  * All rights reserved.
  *
  * 2. License
@@ -111,6 +111,42 @@
  * other governmental approval, or letter of assurance, without first obtaining
  * such license, approval or letter.
  *
+ *****************************************************************************
+ *
+ * Alternatively, you may choose to be licensed under the terms of the
+ * following license:
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions, and the following disclaimer,
+ *    without modification.
+ * 2. Redistributions in binary form must reproduce at minimum a disclaimer
+ *    substantially similar to the "NO WARRANTY" disclaimer below
+ *    ("Disclaimer") and any redistribution must be conditioned upon
+ *    including a substantially similar Disclaimer requirement for further
+ *    binary redistribution.
+ * 3. Neither the names of the above-listed copyright holders nor the names
+ *    of any contributors may be used to endorse or promote products derived
+ *    from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+ * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * Alternatively, you may choose to be licensed under the terms of the
+ * GNU General Public License ("GPL") version 2 as published by the Free
+ * Software Foundation.
+ *
  *****************************************************************************/
 
 #include "acpi.h"
@@ -161,8 +197,12 @@ static ACPI_RESOURCE_HANDLER    AcpiGbl_DmResourceDispatch [] =
     AcpiDmQwordDescriptor,          /* 0x0A, ACPI_RESOURCE_NAME_QWORD_ADDRESS_SPACE */
     AcpiDmExtendedDescriptor,       /* 0x0B, ACPI_RESOURCE_NAME_EXTENDED_ADDRESS_SPACE */
     AcpiDmGpioDescriptor,           /* 0x0C, ACPI_RESOURCE_NAME_GPIO */
-    NULL,                           /* 0x0D, Reserved */
-    AcpiDmSerialBusDescriptor       /* 0x0E, ACPI_RESOURCE_NAME_SERIAL_BUS */
+    AcpiDmPinFunctionDescriptor,    /* 0x0D, ACPI_RESOURCE_NAME_PIN_FUNCTION */
+    AcpiDmSerialBusDescriptor,      /* 0x0E, ACPI_RESOURCE_NAME_SERIAL_BUS */
+    AcpiDmPinConfigDescriptor,      /* 0x0F, ACPI_RESOURCE_NAME_PIN_CONFIG */
+    AcpiDmPinGroupDescriptor,       /* 0x10, ACPI_RESOURCE_NAME_PIN_GROUP */
+    AcpiDmPinGroupFunctionDescriptor, /* 0x11, ACPI_RESOURCE_NAME_PIN_GROUP_FUNCTION */
+    AcpiDmPinGroupConfigDescriptor, /* 0x12, ACPI_RESOURCE_NAME_PIN_GROUP_CONFIG */
 };
 
 
@@ -302,7 +342,7 @@ AcpiDmBitList (
  *
  * FUNCTION:    AcpiDmResourceTemplate
  *
- * PARAMETERS:  Info            - Curent parse tree walk info
+ * PARAMETERS:  Info            - Current parse tree walk info
  *              ByteData        - Pointer to the byte list data
  *              ByteCount       - Length of the byte list
  *
@@ -500,10 +540,33 @@ AcpiDmIsResourceTemplate (
     BufferLength = NextOp->Common.Value.Size;
 
     /*
+     * Any buffer smaller than one byte cannot possibly be a resource
+     * template. Two bytes could possibly be a "NULL" resource template
+     * with a lone end tag descriptor (as generated via
+     * "ResourceTemplate(){}"), but this would be an extremely unusual
+     * case, as the template would be essentially useless. The disassembler
+     * therefore does not recognize any two-byte buffer as a resource
+     * template.
+     */
+    if (BufferLength <= 2)
+    {
+        return (AE_TYPE);
+    }
+
+    /*
      * Not a template if declared buffer length != actual length of the
-     * intialization byte list. Because the resource macros will create
+     * initialization byte list. Because the resource macros will create
      * a buffer of the exact required length (buffer length will be equal
      * to the actual length).
+     *
+     * NOTE (April 2017): Resource templates with this issue have been
+     * seen in the field. We still don't want to attempt to disassemble
+     * a buffer like this to a resource template because this output
+     * would not match the original input buffer (it would be shorter
+     * than the original when the disassembled code is recompiled).
+     * Basically, a buffer like this appears to be hand crafted in the
+     * first place, so just emitting a buffer object instead of a
+     * resource template more closely resembles the original ASL code.
      */
     if (DeclaredBufferLength != BufferLength)
     {

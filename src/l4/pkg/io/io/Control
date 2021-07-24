@@ -1,2 +1,3 @@
 requires: acpica libc libstdc++ l4sys libio-io libsigma0 stdlibs lua++
+          drivers-frst
 maintainer: warg@os.inf.tu-dresden.de

@@ -1,4 +1,6 @@
 <map id="l4/sys/ipc_gate.h" name="l4/sys/ipc_gate.h">
-<area shape="rect" id="node2" href="$ipc__gate.html" title="The C++ IPC gate interface. " alt="" coords="31,80,147,107"/>
-<area shape="rect" id="node3" href="$object__registry_source.html" title="l4/re/util/object_registry" alt="" coords="5,155,172,181"/>
+<area shape="rect" id="node1" title="The C IPC gate interface." alt="" coords="29,5,159,32"/>
+<area shape="rect" id="node2" href="$ipc__gate.html" title="The C++ IPC gate interface." alt="" coords="35,80,153,107"/>
+<area shape="rect" id="node3" href="$object__registry_source.html" title=" " alt="" coords="5,155,183,181"/>
+<area shape="rect" id="node4" href="$client_2virtio-block_source.html" title=" " alt="" coords="32,229,156,271"/>
 </map>

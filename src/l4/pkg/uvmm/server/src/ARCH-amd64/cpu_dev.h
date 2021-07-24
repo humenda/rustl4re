@@ -7,21 +7,34 @@
  */
 #pragma once
 
-#include "generic_cpu_dev.h"
 #include "debug.h"
+#include "generic_cpu_dev.h"
 #include "vcpu_ptr.h"
+#include "monitor/cpu_dev_cmd_handler.h"
 
 namespace Vmm {
 
-class Cpu_dev : public Generic_cpu_dev
+class Cpu_dev
+: public Generic_cpu_dev,
+  public Monitor::Cpu_dev_cmd_handler<Monitor::Enabled, Cpu_dev>
 {
 public:
-  // SMP is currently not supported on amd64.
-  enum { Max_cpus = 1 };
+  enum { Max_cpus = 8 };
+
+  enum Cpu_state
+  {
+    Sleeping,
+    Init,
+    Init_level_de_assert,
+    Startup,
+    Running
+  };
 
   Cpu_dev(unsigned idx, unsigned phys_id, Vdev::Dt_node const *)
   : Generic_cpu_dev(idx, phys_id)
-  {}
+  {
+    _cpu_state = (idx == 0) ? Running : Sleeping;
+  }
 
   void reset() override
   {
@@ -33,17 +46,6 @@ public:
     _vcpu.reset();
   }
 
-  void show_state_registers(FILE *f)
-  {
-    l4_vcpu_regs_t regs = _vcpu->r;
-    fprintf(f, "RAX %lx\nRBX %lx\nRCX %lx\nRDX %lx\nRSI %lx\nRDI %lx\n"
-               "RSP %lx\nRBP %lx\nR8 %lx\nR9 %lx\nR10 %lx\nR11 %lx\n"
-               "R12 %lx\nR13 %lx\nR14 %lx\nR15 %lx\n",
-               regs.ax, regs.bx, regs.cx, regs.dx, regs.si, regs.di, regs.sp,
-               regs.bp, regs.r8, regs.r9, regs.r10, regs.r11, regs.r12,
-               regs.r13, regs.r14, regs.r15);
-  }
-
   /**
    * Translate a device tree "reg" value to an internally usable CPU id.
    *
@@ -53,6 +55,20 @@ public:
    */
   static unsigned dtid_to_cpuid(l4_int32_t prop_val)
   { return prop_val; }
+
+  static bool has_fixed_dt_mapping() { return true; }
+
+  unsigned get_phys_cpu_id() const noexcept
+  { return _phys_cpu_id; }
+
+  Cpu_state get_cpu_state()
+  { return _cpu_state; }
+
+  void set_cpu_state(Cpu_state state)
+  { _cpu_state = state; }
+
+private:
+  Cpu_state _cpu_state;
 
 }; // class Cpu_dev
 

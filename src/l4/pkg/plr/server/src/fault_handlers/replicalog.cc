@@ -129,12 +129,12 @@ void Romain::ReplicaLogObserver::startup_notify(Romain::App_instance *i,
 	/* Reserve the area at the replicas' RM. We map this buffer without going through
 	   the official channels. */
 	if (!logregion_reserved) {
-		a->rm()->attach_area(Romain::REPLICA_LOG_ADDRESS, logMB << 20, 0, L4_SUPERPAGESHIFT);
+		a->rm()->attach_area(Romain::REPLICA_LOG_ADDRESS, logMB << 20, L4Re::Rm::Flags(0), L4_SUPERPAGESHIFT);
 		logregion_reserved = true;
 	}
 
 	L4::Cap<L4Re::Dataspace> mem;
-	buffers[i->id()].local_addr = Romain::Region_map::allocate_and_attach(&mem, logMB << 20, 0, L4_SUPERPAGESHIFT);
+	buffers[i->id()].local_addr = Romain::Region_map::allocate_and_attach(&mem, logMB << 20, 0, L4Re::Rm::Flags(0), L4_SUPERPAGESHIFT);
 	INFO() << "Buffer for instance " << i->id() << " @ " << std::hex << buffers[i->id()].local_addr;
 	l4_touch_rw(reinterpret_cast<void*>(buffers[i->id()].local_addr), logMB << 20);
 

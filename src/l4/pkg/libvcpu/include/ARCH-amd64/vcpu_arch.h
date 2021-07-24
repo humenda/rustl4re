@@ -1,3 +1,7 @@
+/**
+ * \internal
+ * \file
+ */
 /*
  * (c) 2010 Adam Lackorzynski <adam@os.inf.tu-dresden.de>
  *     economic rights: Technische Universität Dresden (Germany)

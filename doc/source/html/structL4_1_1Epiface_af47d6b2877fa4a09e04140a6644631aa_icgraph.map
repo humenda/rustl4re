@@ -1,0 +1,4 @@
+<map id="L4::Epiface::set_server" name="L4::Epiface::set_server">
+<area shape="rect" id="node1" title="Set server registration info for the object." alt="" coords="232,13,401,39"/>
+<area shape="rect" id="node2" href="$classL4Re_1_1Util_1_1Object__registry.html#aeeea59583ffddfef4e7c1c3e6eed41b6" title="Remove a server object from the handler list." alt="" coords="5,5,184,47"/>
+</map>

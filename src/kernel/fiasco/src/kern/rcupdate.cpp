@@ -16,17 +16,17 @@ class Rcu_batch
   friend class Jdb_rcupdate;
 public:
   /// create uninitialized batch.
-  Rcu_batch() {}
-  /// create a btach initialized with \a b.
+  Rcu_batch() = default;
+  /// create a batch initialized with \a b.
   Rcu_batch(long b) : _b(b) {}
 
   /// less than comparison.
   bool operator < (Rcu_batch const &o) const { return (_b - o._b) < 0; }
   /// greater than comparison.
   bool operator > (Rcu_batch const &o) const { return (_b - o._b) > 0; }
-  /// greater than comparison.
+  /// greater than / equal to comparison.
   bool operator >= (Rcu_batch const &o) const { return (_b - o._b) >= 0; }
-  /// equelity check.
+  /// equality check.
   bool operator == (Rcu_batch const &o) const { return _b == o._b; }
   /// inequality test.
   bool operator != (Rcu_batch const &o) const { return _b != o._b; }
@@ -90,7 +90,7 @@ class Rcu_data
   friend class Jdb_rcupdate;
 public:
 
-  Rcu_batch _q_batch;   ///< batch nr. for grace period
+  Rcu_batch _q_batch;   ///< batch no. for grace period
   bool _q_passed;       ///< quiescent state passed?
   bool _pending;        ///< wait for quiescent state
   bool _idle;
@@ -125,7 +125,7 @@ private:
 };
 
 /**
- * \brief encapsulation of RCU implementation.
+ * \brief Encapsulation of RCU implementation.
  *
  * This class aggregates per CPU data structures as well as the global
  * data structure for RCU and provides a common RCU interface.
@@ -197,9 +197,6 @@ IMPLEMENTATION:
 #include "timeout.h"
 #include "logdefs.h"
 
-// XXX: includes for debugging
-// #include "logdefs.h"
-
 
 class Rcu_timeout : public Timeout
 {
@@ -211,7 +208,7 @@ class Rcu_timeout : public Timeout
  */
 PRIVATE
 bool
-Rcu_timeout::expired()
+Rcu_timeout::expired() override
 { return Rcu::process_callbacks(); }
 
 
@@ -285,7 +282,7 @@ Rcu_glbl::start_batch()
 {
   if (_next_pending && _completed == _current)
     {
-      _next_pending = 0;
+      _next_pending = false;
       Mem::mp_wmb();
       ++_current;
       Mem::mp_mb();
@@ -307,7 +304,7 @@ Rcu_data::enter_idle(Rcu_glbl *rgp)
       if (_q_batch != rgp->_current || _pending)
         {
           _q_batch = rgp->_current;
-          _pending = 0;
+          _pending = false;
           rgp->cpu_quiet(_cpu);
           assert (!pending(rgp));
         }
@@ -322,7 +319,7 @@ Rcu::enter_idle(Cpu_number cpu)
   rdp->enter_idle(rcu());
 }
 
-PUBLIC static inline
+PUBLIC static inline NEEDS["lock_guard.h"]
 void
 Rcu::leave_idle(Cpu_number cpu)
 {
@@ -356,8 +353,8 @@ Rcu_data::check_quiescent_state(Rcu_glbl *rgp)
   if (_q_batch != rgp->_current)
     {
       // start new grace period
-      _pending = 1;
-      _q_passed = 0;
+      _pending = true;
+      _q_passed = false;
       _q_batch = rgp->_current;
       return;
     }
@@ -371,7 +368,7 @@ Rcu_data::check_quiescent_state(Rcu_glbl *rgp)
   if (!_q_passed)
     return;
 
-  _pending = 0;
+  _pending = false;
 
   auto guard = lock_guard(rgp->_lock);
 
@@ -454,7 +451,7 @@ Rcu_data::process_callbacks(Rcu_glbl *rgp)
 	{
 	  // start the batch and schedule start if it's a new batch
 	  auto guard = lock_guard(rgp->_lock);
-	  rgp->_next_pending = 1;
+	  rgp->_next_pending = true;
 	  rgp->start_batch();
 	}
     }
@@ -520,7 +517,7 @@ Rcu::idle(Cpu_number cpu)
 PUBLIC static inline
 void
 Rcu::inc_q_cnt(Cpu_number cpu)
-{ _rcu_data.cpu(cpu)._q_passed = 1; }
+{ _rcu_data.cpu(cpu)._q_passed = true; }
 
 PUBLIC static
 void

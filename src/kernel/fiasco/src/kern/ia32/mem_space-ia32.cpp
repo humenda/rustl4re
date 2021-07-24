@@ -62,6 +62,57 @@ protected:
 };
 
 //----------------------------------------------------------------------------
+INTERFACE[amd64 && ia32_pcid]:
+
+#include "id_alloc.h"
+#include "types.h"
+#include "mem_unit.h"
+
+EXTENSION class Mem_space
+{
+public:
+  enum
+  {
+    Asid_num = (1 << 12) - 1,
+    Asid_base = 1
+  };
+
+private:
+  typedef Per_cpu_array<unsigned long> Asid_array;
+  Asid_array _asid;
+
+  struct Asid_ops
+  {
+    enum { Id_offset = Asid_base };
+
+    static bool valid(Mem_space *o, Cpu_number cpu)
+    { return o->_asid[cpu] != Mem_unit::Asid_invalid; }
+
+    static unsigned long get_id(Mem_space *o, Cpu_number cpu)
+    { return o->_asid[cpu]; }
+
+    static bool can_replace(Mem_space *v, Cpu_number cpu)
+    { return v != current_mem_space(cpu); }
+
+    static void set_id(Mem_space *o, Cpu_number cpu, unsigned long id)
+    {
+      write_now(&o->_asid[cpu], id);
+      Mem_unit::tlb_flush(id);
+    }
+
+    static void reset_id(Mem_space *o, Cpu_number cpu)
+    { write_now(&o->_asid[cpu], (unsigned long)Mem_unit::Asid_invalid); }
+  };
+
+  struct Asid_alloc : Id_alloc<Unsigned16, Mem_space, Asid_ops>
+  {
+    Asid_alloc() : Id_alloc<Unsigned16, Mem_space, Asid_ops>(Asid_num) {}
+  };
+
+  static Per_cpu<Asid_alloc> _asid_alloc;
+};
+
+//----------------------------------------------------------------------------
 IMPLEMENTATION [ia32 || ux || amd64]:
 
 #include <cstring>
@@ -72,19 +123,13 @@ IMPLEMENTATION [ia32 || ux || amd64]:
 #include "paging.h"
 #include "std_macros.h"
 
-
-
-
-PUBLIC explicit inline
-Mem_space::Mem_space(Ram_quota *q) : _quota(q), _dir(0) {}
-
 PROTECTED inline
 bool
 Mem_space::initialize()
 {
   void *b;
   if (EXPECT_FALSE(!(b = Kmem_alloc::allocator()
-	  ->q_alloc(_quota, Config::PAGE_SHIFT))))
+	  ->q_alloc(_quota, Config::page_order()))))
     return false;
 
   _dir = static_cast<Dir_type*>(b);
@@ -114,16 +159,6 @@ Mem_space::has_superpages()
   return Cpu::have_superpages();
 }
 
-
-IMPLEMENT inline NEEDS["mem_unit.h"]
-void
-Mem_space::tlb_flush(bool = false)
-{
-  if (_current.current() == this)
-    Mem_unit::tlb_flush();
-}
-
-
 IMPLEMENT inline
 Mem_space *
 Mem_space::current_mem_space(Cpu_number cpu) /// XXX: do not fix, deprecated, remove!
@@ -143,7 +178,6 @@ Mem_space::set_attributes(Virt_addr virt, Attr page_attribs)
   i.set_attribs(page_attribs);
   return true;
 }
-
 
 PROTECTED inline
 void
@@ -189,7 +223,7 @@ Mem_space::v_insert(Phys_addr phys, Vaddr virt, Page_order size,
         return Insert_warn_exists;
 
       i.set_page(entry);
-      page_protect(Virt_addr::val(virt), Address(1) << Page_order::val(size),
+      page_protect(cxx::int_value<Virt_addr>(virt), Address(1) << cxx::int_value<Page_order>(size),
                    *i.pte & Page_all_attribs);
 
       return Insert_warn_attrib_upgrade;
@@ -197,8 +231,8 @@ Mem_space::v_insert(Phys_addr phys, Vaddr virt, Page_order size,
   else
     {
       i.set_page(entry);
-      page_map(Virt_addr::val(phys), Virt_addr::val(virt),
-               Address(1) << Page_order::val(size), page_attribs);
+      page_map(cxx::int_value<Virt_addr>(phys), cxx::int_value<Virt_addr>(virt),
+               Address(1) << cxx::int_value<Page_order>(size), page_attribs);
 
       return Insert_ok;
     }
@@ -306,14 +340,14 @@ Mem_space::v_delete(Vaddr virt, Page_order size, L4_fpage::Rights page_attribs)
     {
       // downgrade PDE (superpage) rights
       i.del_rights(page_attribs);
-      page_protect(Virt_addr::val(virt), Address(1) << Page_order::val(size),
+      page_protect(cxx::int_value<Virt_addr>(virt), Address(1) << cxx::int_value<Page_order>(size),
                    *i.pte & Page_all_attribs);
     }
   else
     {
       // delete PDE (superpage)
       i.clear();
-      page_unmap(Virt_addr::val(virt), Address(1) << Page_order::val(size));
+      page_unmap(cxx::int_value<Virt_addr>(virt), Address(1) << cxx::int_value<Page_order>(size));
     }
 
   return ret;
@@ -346,10 +380,11 @@ Mem_space::dir_shutdown()
 PUBLIC
 Mem_space::~Mem_space()
 {
+  reset_asid();
   if (_dir)
     {
       dir_shutdown();
-      Kmem_alloc::allocator()->q_free(_quota, Config::PAGE_SHIFT, _dir);
+      Kmem_alloc::allocator()->q_free(_quota, Config::page_order(), _dir);
     }
 }
 
@@ -417,38 +452,94 @@ Mem_space::switchin_context(Mem_space *from)
     }
 }
 
-// --------------------------------------------------------------------
-IMPLEMENTATION [(amd64 || ia32) && !cpu_local_map]:
-
-IMPLEMENT inline NEEDS ["cpu.h", "kmem.h"]
+IMPLEMENT inline NEEDS ["cpu.h", Mem_space::prepare_pt_switch,
+                        Mem_space::switch_page_table]
 void
 Mem_space::make_current()
 {
-  Cpu::set_pdbr((Mem_layout::pmem_to_phys(_dir)));
+  prepare_pt_switch();
+  switch_page_table();
   _current.cpu(current_cpu()) = this;
 }
 
 // --------------------------------------------------------------------
-IMPLEMENTATION [(amd64 || ia32 || ux) && !cpu_local_map]:
+IMPLEMENTATION [(amd64 || ia32) && cpu_local_map && ia32_pcid]:
 
-PROTECTED inline
-int
-Mem_space::sync_kernel()
+PRIVATE inline NEEDS[Mem_space::cpu_val]
+void
+Mem_space::set_current_pcid()
 {
-  return _dir->sync(Virt_addr(Mem_layout::User_max + 1), Kmem::dir(),
-                    Virt_addr(Mem_layout::User_max + 1),
-                    Virt_size(-(Mem_layout::User_max + 1)), Pdir::Super_level,
-                    false,
-                    Kmem_alloc::q_allocator(_quota));
+  // [0]: CPU pdir pa + (if PCID: + bit 63 + ASID 0) -- not relevant here
+  // [3]: CPU pdir pa + (if PCID: + bit 63 + ASID)
+  Address pd_pa = cpu_val()[3];
+  pd_pa &= ~0xfffUL;
+  pd_pa |= asid();
+  cpu_val()[3] = pd_pa;
 }
 
+// --------------------------------------------------------------------
+IMPLEMENTATION [(amd64 || ia32) && !ia32_pcid]:
+
+PRIVATE inline
+void
+Mem_space::set_current_pcid()
+{}
+
+// --------------------------------------------------------------------
+IMPLEMENTATION [(amd64 || ia32) && cpu_local_map && intel_ia32_branch_barriers]:
+
+PRIVATE inline NEEDS[Mem_space::cpu_val]
+void
+Mem_space::set_needs_ibpb()
+{
+  // set EXIT flags CPUE_EXIT_NEED_IBPB
+  cpu_val()[2] |= 1;
+}
+
+// --------------------------------------------------------------------
+IMPLEMENTATION [(amd64 || ia32) && !intel_ia32_branch_barriers]:
+
+PRIVATE inline
+void
+Mem_space::set_needs_ibpb()
+{}
+
+// --------------------------------------------------------------------
+IMPLEMENTATION [(amd64 || ia32) && cpu_local_map && kernel_isolation]:
+
+PRIVATE inline NEEDS [Mem_space::set_current_pcid,
+                      Mem_space::set_needs_ibpb]
+void
+Mem_space::switch_page_table()
+{
+  // We are currently running on the kernel page table. Prepare for switching
+  // to the user page table on kernel exit.
+  set_needs_ibpb();
+  set_current_pcid();
+}
+
+// --------------------------------------------------------------------
+IMPLEMENTATION [(amd64 || ia32) && cpu_local_map && !kernel_isolation]:
+
+PRIVATE inline NEEDS[Mem_space::cpu_val]
+void
+Mem_space::switch_page_table()
+{
+  // switch page table directly
+  Cpu::set_pdbr(access_once(&cpu_val()[0]));
+}
 
 // --------------------------------------------------------------------
 IMPLEMENTATION [(amd64 || ia32) && cpu_local_map]:
 
-IMPLEMENT inline NEEDS ["cpu.h", "kmem.h"]
+PRIVATE static inline
+Address *
+Mem_space::cpu_val()
+{ return reinterpret_cast<Address *>(Mem_layout::Kentry_cpu_page); }
+
+PRIVATE inline NEEDS ["cpu.h", "kmem.h"]
 void
-Mem_space::make_current()
+Mem_space::prepare_pt_switch()
 {
   Mword *pd = reinterpret_cast<Mword *>(Kmem::current_cpu_udir());
   Mword *d = (Mword *)_dir;
@@ -467,20 +558,7 @@ Mem_space::make_current()
       //printf("u: %u %lx\n", bit - 1, n);
       //LOG_MSG_3VAL(current(), "u", bit - 1, n, *reinterpret_cast<Mword *>(m));
     }
-  //pd->sync(Virt_addr(0), _dir, Virt_addr(0), Virt_size(1UL << 47), 0);
-  //pd->sync(Virt_addr(Mem_layout::Io_bitmap), _dir, Virt_addr(Mem_layout::Io_bitmap), Virt_size(512UL << 30), 0);
-#ifndef CONFIG_KERNEL_ISOLATION
   asm volatile ("" : : : "memory");
-  Address pd_pa = access_once(reinterpret_cast<Address *>(Mem_layout::Kentry_cpu_page));
-  Cpu::set_pdbr(pd_pa);
-#else
-#ifdef CONFIG_INTEL_IA32_BRANCH_BARRIERS
-  Address *ca = reinterpret_cast<Address *>(Mem_layout::Kentry_cpu_page);
-  // set EXIT flags NEEDS IBPB
-  ca[2] |= 1;
-#endif
-#endif
-  _current.cpu(current_cpu()) = this;
 }
 
 
@@ -491,6 +569,32 @@ Mem_space::sync_kernel()
   return 0;
 }
 
+// --------------------------------------------------------------------
+IMPLEMENTATION [(amd64 || ia32) && !cpu_local_map]:
+
+PRIVATE inline
+void
+Mem_space::prepare_pt_switch()
+{}
+
+PRIVATE inline NEEDS["kmem.h"]
+void
+Mem_space::switch_page_table()
+{
+  // switch page table directly
+  Cpu::set_pdbr(Mem_layout::pmem_to_phys(_dir));
+}
+
+PROTECTED inline
+int
+Mem_space::sync_kernel()
+{
+  return _dir->sync(Virt_addr(Mem_layout::User_max + 1), Kmem::dir(),
+                    Virt_addr(Mem_layout::User_max + 1),
+                    Virt_size(-(Mem_layout::User_max + 1)), Pdir::Super_level,
+                    false,
+                    Kmem_alloc::q_allocator(_quota));
+}
 
 // --------------------------------------------------------------------
 IMPLEMENTATION [amd64]:
@@ -535,4 +639,71 @@ Mem_space::init_page_sizes()
   add_page_size(Page_order(Config::PAGE_SHIFT));
   if (Cpu::cpus.cpu(Cpu_number::boot_cpu()).superpages())
     add_page_size(Page_order(22)); // 4MB
+}
+
+//----------------------------------------------------------------------------
+IMPLEMENTATION [!ia32_pcid]:
+
+PUBLIC explicit inline
+Mem_space::Mem_space(Ram_quota *q) : _quota(q), _dir(0) {}
+
+IMPLEMENT inline NEEDS["mem_unit.h"]
+void
+Mem_space::tlb_flush(bool = false)
+{
+  if (_current.current() == this)
+    Mem_unit::tlb_flush();
+}
+
+PRIVATE inline
+void
+Mem_space::reset_asid() {}
+
+//----------------------------------------------------------------------------
+IMPLEMENTATION [amd64 && ia32_pcid]:
+
+DEFINE_PER_CPU Per_cpu<Mem_space::Asid_alloc> Mem_space::_asid_alloc;
+
+PUBLIC explicit inline NEEDS[Mem_space::asid]
+Mem_space::Mem_space(Ram_quota *q) : _quota(q), _dir(0)
+{
+  asid(Mem_unit::Asid_invalid);
+}
+
+PRIVATE inline
+void
+Mem_space::asid(unsigned long a)
+{
+  for (Asid_array::iterator i = _asid.begin(); i != _asid.end(); ++i)
+    *i = a;
+}
+
+PUBLIC inline
+unsigned long
+Mem_space::c_asid() const
+{ return _asid[current_cpu()]; }
+
+PRIVATE inline
+unsigned long
+Mem_space::asid()
+{
+  Cpu_number cpu = current_cpu();
+  return _asid_alloc.cpu(cpu).alloc(this, cpu);
+};
+
+PRIVATE inline
+void
+Mem_space::reset_asid()
+{
+  for (Cpu_number i = Cpu_number::first(); i < Config::max_num_cpus(); ++i)
+    _asid_alloc.cpu(i).free(this, i);
+}
+
+IMPLEMENT inline NEEDS["mem_unit.h"]
+void
+Mem_space::tlb_flush(bool = false)
+{
+  auto asid = c_asid();
+  if (asid != Mem_unit::Asid_invalid)
+    Mem_unit::tlb_flush(asid);
 }

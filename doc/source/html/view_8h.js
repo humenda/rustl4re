@@ -1,7 +1,7 @@
 var view_8h =
 [
-    [ "l4re_video_view_info_t", "group__api__l4re__c__video.html#ga9eec39bc5a55381d29f5a345ccce7bc9", null ],
-    [ "l4re_video_view_t", "group__api__l4re__c__video.html#ga75db0934a23ca6c41c64c10f4efe12c3", null ],
+    [ "l4re_video_view_info_t", "group__api__l4re__c__video.html#ga31edccf417fc2c05946b583cd24fc23a", null ],
+    [ "l4re_video_view_t", "group__api__l4re__c__video.html#ga34a8e567159ae804ed6b658f4af45f73", null ],
     [ "l4re_video_view_info_flags_t", "group__api__l4re__c__video.html#gac0ae53a08599fc8dd7292e5ebeb416ad", [
       [ "F_l4re_video_view_none", "group__api__l4re__c__video.html#ggac0ae53a08599fc8dd7292e5ebeb416ada97d26a8d7a7ba59c5719ba858c99beed", null ],
       [ "F_l4re_video_view_set_buffer", "group__api__l4re__c__video.html#ggac0ae53a08599fc8dd7292e5ebeb416ada653ce3ca8f4fb3c4536e47a3671269ce", null ],

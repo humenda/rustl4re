@@ -13,5 +13,5 @@ __assert_fail (const char *__assertion, const char *__file,
   _exit (EXIT_FAILURE);
 }
 
-extern __typeof(__assert_fail) __assert 
-  __attribute__((weak, alias("__assert_fail")));
+extern __typeof(__assert_fail) __assert
+  __attribute__((weak, alias("__assert_fail"), __noreturn__));

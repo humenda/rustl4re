@@ -1,4 +1,5 @@
-/*     $NetBSD: radixsort.c,v 1.18 2009/08/21 20:49:50 dsl Exp $       */
+/*	$NetBSD: radixsort.c,v 1.18 2009/08/21 20:49:50 dsl Exp $	*/
+
 /*-
  * Copyright (c) 1990, 1993
  *	The Regents of the University of California.  All rights reserved.

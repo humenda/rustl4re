@@ -70,8 +70,8 @@ Irq_chip_rmsi::inv_iec(unsigned vect)
 
 PUBLIC
 bool
-Irq_chip_rmsi::alloc(Irq_base *irq, Mword pin) override
-{ return valloc<Irq_chip_rmsi>(irq, pin, 0); }
+Irq_chip_rmsi::alloc(Irq_base *irq, Mword pin, bool init = true) override
+{ return valloc<Irq_chip_rmsi>(irq, pin, 0, init); }
 
 PUBLIC
 void
@@ -162,7 +162,7 @@ Irq_chip_rmsi::mask(Mword pin) override
 
   e.present() = 0;
   irte = e;
-  asm volatile ("wbinvd");
+  asm volatile ("wbinvd"); // FIXME: use a single chanline writeback here
   inv_iec(vect);
 }
 
@@ -184,7 +184,7 @@ Irq_chip_rmsi::mask_and_ack(Mword pin) override
 
   e.present() = 0;
   irte = e;
-  asm volatile ("wbinvd");
+  asm volatile ("wbinvd"); // FIXME: use a single chanline writeback here
   inv_iec(vect);
   ::Apic::irq_ack();
 }
@@ -207,7 +207,7 @@ Irq_chip_rmsi::unmask(Mword pin) override
 
   e.present() = 1;
   irte = e;
-  asm volatile ("wbinvd");
+  asm volatile ("wbinvd"); // FIXME: use a single chanline writeback here
 }
 
 
@@ -257,9 +257,9 @@ Irq_mgr_rmsi::legacy_override(Mword irq) override
 
 PUBLIC
 bool
-Io_apic_remapped::alloc(Irq_base *irq, Mword pin) override
+Io_apic_remapped::alloc(Irq_base *irq, Mword pin, bool init = true) override
 {
-  unsigned v = valloc<Io_apic_remapped>(irq, pin, 0);
+  unsigned v = valloc<Io_apic_remapped>(irq, pin, 0, init);
 
   if (!v)
     return false;
@@ -355,7 +355,7 @@ Io_apic_remapped::init_apics()
   };
 
   typedef Intel::Io_mmu::Irte Irte;
-  Irte *irt = new (Kmem_alloc::allocator()->unaligned_alloc(Num_irtes * sizeof(Irte)))
+  Irte *irt = new (Kmem_alloc::allocator()->alloc(Bytes(Num_irtes * sizeof(Irte))))
                   Irte[Num_irtes];
   if (!irt)
     panic("IOMMU: could not allocate interrupt remapping table\n");

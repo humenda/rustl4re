@@ -125,7 +125,7 @@ l4io_release_irq(int irqnum, l4_cap_idx_t irq_cap)
   }
 
   l4_task_unmap(L4_BASE_TASK_CAP,
-                l4_obj_fpage(irq_cap, 0, L4_FPAGE_RWX),
+                l4_obj_fpage(irq_cap, 0, L4_CAP_FPAGE_RWS),
                 L4_FP_ALL_SPACES);
 
   return 0;
@@ -148,16 +148,29 @@ __map_iomem(l4_addr_t phys, l4_addr_t* virt, unsigned long size, int flags)
   if (size >= L4_SUPERPAGESIZE)
     align = L4_SUPERPAGESHIFT;
 
-  unsigned long rmflags = 0;
+  L4Re::Rm::Flags rmflags = L4Re::Rm::F::RW;
 
   if (flags & L4IO_MEM_EAGER_MAP)
-    rmflags |= L4Re::Rm::Eager_map;
+    rmflags |= L4Re::Rm::F::Eager_map;
+
+  switch (flags & L4IO_MEM_ATTR_MASK)
+    {
+    case L4IO_MEM_NONCACHED:
+      rmflags |= L4Re::Rm::F::Cache_uncached;
+      break;
+    case L4IO_MEM_WRITE_COMBINED:
+      rmflags |= L4Re::Rm::F::Cache_buffered;
+      break;
+    case L4IO_MEM_CACHED:
+      rmflags |= L4Re::Rm::F::Cache_normal;
+      break;
+    }
 
   if (*virt && (flags & L4IO_MEM_USE_RESERVED_AREA))
-    rmflags |= L4Re::Rm::In_area;
+    rmflags |= L4Re::Rm::F::In_area;
 
   if (!*virt)
-    rmflags |= L4Re::Rm::Search_addr;
+    rmflags |= L4Re::Rm::F::Search_addr;
   else
     {
       /* Check for reasonable caller behavior:
@@ -169,7 +182,7 @@ __map_iomem(l4_addr_t phys, l4_addr_t* virt, unsigned long size, int flags)
 
   long r = L4Re::Env::env()->rm()->attach(virt, size, rmflags,
                                           L4::Ipc::make_cap_rw(iomem),
-                                          phys & L4_PAGEMASK, align);
+                                          phys, align);
   *virt += offset;
   return r;
 }
@@ -198,15 +211,6 @@ l4io_release_iomem(l4_addr_t virt, unsigned long size)
   return L4Re::Env::env()->rm()->detach(virt, 0);
 }
 
-long
-l4io_search_iomem_region(l4_addr_t phys, l4_addr_t size,
-                         l4_addr_t *rstart, l4_addr_t *rsize)
-{
-  *rstart = l4_trunc_page(phys);
-  *rsize  = l4_round_page(size + phys - *rstart);
-  return 0;
-}
-
 /***********************************************************************
  * I/O ports
  ***********************************************************************/
@@ -218,7 +222,7 @@ l4io_request_ioport(unsigned portnum, unsigned len)
   res.type = L4IO_RESOURCE_PORT;
   res.start = portnum;
   res.end = portnum + len - 1;
-  return l4vbus_request_resource(vbus().cap(), &res, 0);
+  return l4vbus_request_ioport(vbus().cap(), &res);
 }
 
 long
@@ -228,7 +232,7 @@ l4io_release_ioport(unsigned portnum, unsigned len)
   res.type = L4IO_RESOURCE_PORT;
   res.start = portnum;
   res.end = portnum + len - 1;
-  return l4vbus_release_resource(vbus().cap(), &res);
+  return l4vbus_release_ioport(vbus().cap(), &res);
 }
 
 /***********************************************************************
@@ -245,7 +249,7 @@ l4io_iterate_devices(l4io_device_handle_t *devhandle,
   if (reshandle)
     *reshandle = 0;
 
-  return l4vbus_get_next_device(vbus().cap(), L4VBUS_NULL,
+  return l4vbus_get_next_device(vbus().cap(), L4VBUS_ROOT_BUS,
                                 devhandle, L4VBUS_MAX_DEPTH, dev);
 }
 
@@ -255,7 +259,7 @@ l4io_lookup_device(const char *devname,
                    l4io_resource_handle_t *res_handle)
 {
   int r;
-  l4io_device_handle_t dh = 0;
+  l4io_device_handle_t dh = L4VBUS_NULL;
 
   if (!vbus().is_valid())
     return -L4_ENOENT;
@@ -316,7 +320,7 @@ l4io_request_resource_iomem(l4io_device_handle_t devhandle,
 void
 l4io_request_all_ioports(void (*res_cb)(l4vbus_resource_t const *res))
 {
-  l4vbus_device_handle_t next_dev = 0;
+  l4vbus_device_handle_t next_dev = L4VBUS_NULL;
   l4vbus_device_t info;
 
   while (!l4vbus_get_next_device(vbus().cap(), l4io_get_root_device(),
@@ -328,7 +332,7 @@ l4io_request_all_ioports(void (*res_cb)(l4vbus_resource_t const *res))
 	  l4vbus_get_resource(vbus().cap(), next_dev, r, &resource);
 	  if (resource.type == L4IO_RESOURCE_PORT)
             {
-	      l4vbus_request_resource(vbus().cap(), &resource, 0);
+	      l4vbus_request_ioport(vbus().cap(), &resource);
               if (res_cb)
                 res_cb(&resource);
             }
@@ -340,7 +344,7 @@ int
 l4io_has_resource(enum l4io_resource_types_t type,
                   l4vbus_paddr_t start, l4vbus_paddr_t end)
 {
-  l4io_device_handle_t dh = l4io_get_root_device();
+  l4io_device_handle_t dh = L4VBUS_NULL;
   l4io_device_t dev;
   l4io_resource_handle_t reshandle;
 

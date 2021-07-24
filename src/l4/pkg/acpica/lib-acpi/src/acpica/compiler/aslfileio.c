@@ -8,7 +8,7 @@
  *
  * 1. Copyright Notice
  *
- * Some or all of this work - Copyright (c) 1999 - 2017, Intel Corp.
+ * Some or all of this work - Copyright (c) 1999 - 2019, Intel Corp.
  * All rights reserved.
  *
  * 2. License
@@ -111,6 +111,42 @@
  * other governmental approval, or letter of assurance, without first obtaining
  * such license, approval or letter.
  *
+ *****************************************************************************
+ *
+ * Alternatively, you may choose to be licensed under the terms of the
+ * following license:
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions, and the following disclaimer,
+ *    without modification.
+ * 2. Redistributions in binary form must reproduce at minimum a disclaimer
+ *    substantially similar to the "NO WARRANTY" disclaimer below
+ *    ("Disclaimer") and any redistribution must be conditioned upon
+ *    including a substantially similar Disclaimer requirement for further
+ *    binary redistribution.
+ * 3. Neither the names of the above-listed copyright holders nor the names
+ *    of any contributors may be used to endorse or promote products derived
+ *    from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+ * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * Alternatively, you may choose to be licensed under the terms of the
+ * GNU General Public License ("GPL") version 2 as published by the Free
+ * Software Foundation.
+ *
  *****************************************************************************/
 
 #include "aslcompiler.h"
@@ -140,10 +176,10 @@ FlFileError (
     UINT8                   ErrorId)
 {
 
-    sprintf (MsgBuffer, "\"%s\" (%s) - %s", Gbl_Files[FileId].Filename,
-        Gbl_Files[FileId].Description, strerror (errno));
+    sprintf (AslGbl_MsgBuffer, "\"%s\" (%s) - %s", AslGbl_Files[FileId].Filename,
+        AslGbl_FileDescs[FileId].Description, strerror (errno));
 
-    AslCommonError (ASL_ERROR, ErrorId, 0, 0, 0, 0, NULL, MsgBuffer);
+    AslCommonError (ASL_ERROR, ErrorId, 0, 0, 0, 0, NULL, AslGbl_MsgBuffer);
 }
 
 
@@ -171,8 +207,8 @@ FlOpenFile (
     FILE                    *File;
 
 
-    Gbl_Files[FileId].Filename = Filename;
-    Gbl_Files[FileId].Handle = NULL;
+    AslGbl_Files[FileId].Filename = Filename;
+    AslGbl_Files[FileId].Handle = NULL;
 
     File = fopen (Filename, Mode);
     if (!File)
@@ -181,7 +217,7 @@ FlOpenFile (
         AslAbort ();
     }
 
-    Gbl_Files[FileId].Handle = File;
+    AslGbl_Files[FileId].Handle = File;
 }
 
 
@@ -205,7 +241,7 @@ FlGetFileSize (
     UINT32                  FileSize;
 
 
-    FileSize = CmGetFileSize (Gbl_Files[FileId].Handle);
+    FileSize = CmGetFileSize (AslGbl_Files[FileId].Handle);
     if (FileSize == ACPI_UINT32_MAX)
     {
         AslAbort();
@@ -241,10 +277,10 @@ FlReadFile (
 
     /* Read and check for error */
 
-    Actual = fread (Buffer, 1, Length, Gbl_Files[FileId].Handle);
+    Actual = fread (Buffer, 1, Length, AslGbl_Files[FileId].Handle);
     if (Actual < Length)
     {
-        if (feof (Gbl_Files[FileId].Handle))
+        if (feof (AslGbl_Files[FileId].Handle))
         {
             /* End-of-file, just return error */
 
@@ -285,19 +321,19 @@ FlWriteFile (
 
     /* Write and check for error */
 
-    Actual = fwrite ((char *) Buffer, 1, Length, Gbl_Files[FileId].Handle);
+    Actual = fwrite ((char *) Buffer, 1, Length, AslGbl_Files[FileId].Handle);
     if (Actual != Length)
     {
         FlFileError (FileId, ASL_MSG_WRITE);
         AslAbort ();
     }
 
-    if ((FileId == ASL_FILE_PREPROCESSOR) && Gbl_PreprocessorOutputFlag)
+    if ((FileId == ASL_FILE_PREPROCESSOR) && AslGbl_PreprocessorOutputFlag)
     {
         /* Duplicate the output to the user preprocessor (.i) file */
 
         Actual = fwrite ((char *) Buffer, 1, Length,
-            Gbl_Files[ASL_FILE_PREPROCESSOR_USER].Handle);
+            AslGbl_Files[ASL_FILE_PREPROCESSOR_USER].Handle);
         if (Actual != Length)
         {
             FlFileError (FileId, ASL_MSG_WRITE);
@@ -333,7 +369,7 @@ FlPrintFile (
 
 
     va_start (Args, Format);
-    Actual = vfprintf (Gbl_Files[FileId].Handle, Format, Args);
+    Actual = vfprintf (AslGbl_Files[FileId].Handle, Format, Args);
     va_end (Args);
 
     if (Actual == -1)
@@ -343,7 +379,7 @@ FlPrintFile (
     }
 
     if ((FileId == ASL_FILE_PREPROCESSOR) &&
-        Gbl_PreprocessorOutputFlag)
+        AslGbl_PreprocessorOutputFlag)
     {
         /*
          * Duplicate the output to the user preprocessor (.i) file,
@@ -355,7 +391,7 @@ FlPrintFile (
         }
 
         va_start (Args, Format);
-        Actual = vfprintf (Gbl_Files[ASL_FILE_PREPROCESSOR_USER].Handle,
+        Actual = vfprintf (AslGbl_Files[ASL_FILE_PREPROCESSOR_USER].Handle,
             Format, Args);
         va_end (Args);
 
@@ -390,7 +426,7 @@ FlSeekFile (
     int                     Error;
 
 
-    Error = fseek (Gbl_Files[FileId].Handle, Offset, SEEK_SET);
+    Error = fseek (AslGbl_Files[FileId].Handle, Offset, SEEK_SET);
     if (Error)
     {
         FlFileError (FileId, ASL_MSG_SEEK);
@@ -418,12 +454,12 @@ FlCloseFile (
     int                     Error;
 
 
-    if (!Gbl_Files[FileId].Handle)
+    if (!AslGbl_Files[FileId].Handle)
     {
         return;
     }
 
-    Error = fclose (Gbl_Files[FileId].Handle);
+    Error = fclose (AslGbl_Files[FileId].Handle);
     if (Error)
     {
         FlFileError (FileId, ASL_MSG_CLOSE);
@@ -432,7 +468,7 @@ FlCloseFile (
 
     /* Do not clear/free the filename string */
 
-    Gbl_Files[FileId].Handle = NULL;
+    AslGbl_Files[FileId].Handle = NULL;
     return;
 }
 
@@ -453,7 +489,7 @@ void
 FlDeleteFile (
     UINT32                  FileId)
 {
-    ASL_FILE_INFO           *Info = &Gbl_Files[FileId];
+    ASL_FILE_INFO           *Info = &AslGbl_Files[FileId];
 
 
     if (!Info->Filename)
@@ -464,7 +500,7 @@ FlDeleteFile (
     if (remove (Info->Filename))
     {
         printf ("%s (%s file) ",
-            Info->Filename, Info->Description);
+            Info->Filename, AslGbl_FileDescs[FileId].Description);
         perror ("Could not delete");
     }
 

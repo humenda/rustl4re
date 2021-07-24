@@ -67,7 +67,7 @@ int main()
    */
   char *addr = 0;
   int err = L4Re::Env::env()->rm()->attach(&addr, ds->size(),
-                                           L4Re::Rm::Search_addr,
+                                           L4Re::Rm::F::Search_addr | L4Re::Rm::F::RW,
                                            L4::Ipc::make_cap_rw(ds));
   if (err < 0)
     {

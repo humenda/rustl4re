@@ -1,7 +1,10 @@
 <map id="l4/util/splitlog2.h" name="l4/util/splitlog2.h">
-<area shape="rect" id="node3" href="$err_8h.html" title="Error codes. " alt="" coords="21,80,111,107"/>
-<area shape="rect" id="node5" href="$bitops_8h.html" title="bit manipulation functions " alt="" coords="199,80,306,107"/>
-<area shape="rect" id="node4" href="$compiler_8h.html" title="L4 compiler related defines. " alt="" coords="105,229,232,256"/>
-<area shape="rect" id="node6" href="$l4_2sys_2l4int_8h.html" title="Fixed sized integer types, generic version. " alt="" coords="343,229,442,256"/>
-<area shape="rect" id="node8" href="$l4_2util_2atomic_8h.html" title="atomic operations header and generic implementations " alt="" coords="291,155,401,181"/>
+<area shape="rect" id="node1" title="Split a range in log2 aligned and size&#45;aligned chunks." alt="" coords="5,5,136,32"/>
+<area shape="rect" id="node2" title=" " alt="" coords="41,304,164,331"/>
+<area shape="rect" id="node3" href="$err_8h.html" title="Error codes." alt="" coords="24,80,117,107"/>
+<area shape="rect" id="node5" href="$bitops_8h.html" title="bit manipulation functions" alt="" coords="207,80,321,107"/>
+<area shape="rect" id="node4" href="$compiler_8h.html" title="L4 compiler related defines." alt="" coords="143,229,275,256"/>
+<area shape="rect" id="node6" href="$l4_2sys_2l4int_8h.html" title="Fixed sized integer types, generic version." alt="" coords="357,229,462,256"/>
+<area shape="rect" id="node7" title=" " alt="" coords="75,155,226,181"/>
+<area shape="rect" id="node8" href="$l4_2util_2atomic_8h.html" title="atomic operations header and generic implementations" alt="" coords="301,155,421,181"/>
 </map>

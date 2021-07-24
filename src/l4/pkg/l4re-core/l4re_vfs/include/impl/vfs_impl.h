@@ -26,6 +26,7 @@
 #include <l4/re/rm>
 #include <l4/re/dataspace>
 #include <l4/cxx/hlist>
+#include <l4/cxx/pair>
 #include <l4/cxx/std_alloc>
 
 #include <l4/l4re_vfs/backend>
@@ -122,7 +123,8 @@ public:
   Ref_ptr<L4Re::Vfs::File> get_cwd() throw();
   void set_cwd(Ref_ptr<L4Re::Vfs::File> const &dir) throw();
   Ref_ptr<L4Re::Vfs::File> get_file(int fd) throw();
-  Ref_ptr<L4Re::Vfs::File> set_fd(int fd, Ref_ptr<L4Re::Vfs::File> const &f = Ref_ptr<>::Nil) throw();
+  cxx::Pair<Ref_ptr<L4Re::Vfs::File>, int>
+    set_fd(int fd, Ref_ptr<L4Re::Vfs::File> const &f = Ref_ptr<>::Nil) throw();
 
   int mmap2(void *start, size_t len, int prot, int flags, int fd,
             off_t offset, void **ptr) throw();
@@ -362,12 +364,15 @@ Vfs::get_file(int fd) throw()
   return fds.get(fd);
 }
 
-Ref_ptr<L4Re::Vfs::File>
+cxx::Pair<Ref_ptr<L4Re::Vfs::File>, int>
 Vfs::set_fd(int fd, Ref_ptr<L4Re::Vfs::File> const &f) throw()
 {
+  if (!fds.check_fd(fd))
+    return cxx::pair(Ref_ptr<L4Re::Vfs::File>(Ref_ptr<>::Nil), EBADF);
+
   Ref_ptr<L4Re::Vfs::File> old = fds.get(fd);
   fds.set(fd, f);
-  return old;
+  return cxx::pair(old, 0);
 }
 
 
@@ -521,7 +526,7 @@ Vfs::mmap2(void *start, size_t len, int prot, int flags, int fd, off_t _offset,
       int err;
       L4::Cap<Rm> r = Env::env()->rm();
       l4_addr_t area = (l4_addr_t)start;
-      err = r->reserve_area(&area, size, L4Re::Rm::Search_addr);
+      err = r->reserve_area(&area, size, L4Re::Rm::F::Search_addr);
       if (err < 0)
 	return err;
       *resptr = (void*)area;
@@ -537,11 +542,11 @@ Vfs::mmap2(void *start, size_t len, int prot, int flags, int fd, off_t _offset,
 
   L4Re::Shared_cap<L4Re::Dataspace> ds;
   l4_addr_t anon_offset = 0;
-  unsigned rm_flags = 0;
+  L4Re::Rm::Flags rm_flags(0);
 
   if (flags & (MAP_ANONYMOUS | MAP_PRIVATE))
     {
-      rm_flags |= L4Re::Rm::Detach_free;
+      rm_flags |= L4Re::Rm::F::Detach_free;
 
       int err = alloc_anon_mem(size, &ds, &anon_offset);
       if (err)
@@ -579,7 +584,11 @@ Vfs::mmap2(void *start, size_t len, int prot, int flags, int fd, off_t _offset,
       if (flags & MAP_PRIVATE)
 	{
 	  DEBUG_LOG(debug_mmap, outstring("COW\n"););
-	  ds->copy_in(anon_offset, fds, l4_trunc_page(offset), l4_round_page(size));
+          int err = ds->copy_in(anon_offset, fds, l4_trunc_page(offset),
+                                l4_round_page(size));
+          if (err < 0)
+            return err;
+
 	  offset = anon_offset;
 	}
       else
@@ -595,11 +604,11 @@ Vfs::mmap2(void *start, size_t len, int prot, int flags, int fd, off_t _offset,
   if (!(flags & MAP_FIXED) && start == 0)
     start = (void*)L4_PAGESIZE;
 
-  int err;
   char *data = (char *)start;
   L4::Cap<Rm> r = Env::env()->rm();
   l4_addr_t overmap_area = L4_INVALID_ADDR;
 
+  int err;
   if (flags & MAP_FIXED)
     {
       overmap_area = l4_addr_t(start);
@@ -608,15 +617,17 @@ Vfs::mmap2(void *start, size_t len, int prot, int flags, int fd, off_t _offset,
       if (err < 0)
 	overmap_area = L4_INVALID_ADDR;
 
-      rm_flags |= Rm::In_area;
+      rm_flags |= Rm::F::In_area;
 
       err = munmap(start, len);
       if (err && err != -ENOENT)
 	return err;
     }
 
-  if (!(flags & MAP_FIXED))  rm_flags |= Rm::Search_addr;
-  if (!(prot & PROT_WRITE))  rm_flags |= Rm::Read_only;
+  if (!(flags & MAP_FIXED))  rm_flags |= Rm::F::Search_addr;
+  if (prot & PROT_READ)      rm_flags |= Rm::F::R;
+  if (prot & PROT_WRITE)     rm_flags |= Rm::F::W;
+  if (prot & PROT_EXEC)      rm_flags |= Rm::F::X;
 
   err = r->attach(&data, size, rm_flags,
                   L4::Ipc::make_cap(ds.get(), (prot & PROT_WRITE)
@@ -664,7 +675,7 @@ namespace {
     explicit Auto_area(L4::Cap<L4Re::Rm> r, l4_addr_t a = L4_INVALID_ADDR)
     : r(r), a(a) {}
 
-    int reserve(l4_addr_t _a, l4_size_t sz, unsigned flags)
+    int reserve(l4_addr_t _a, l4_size_t sz, L4Re::Rm::Flags flags)
     {
       free();
       a = _a;
@@ -737,7 +748,7 @@ Vfs::mremap(void *old_addr, size_t old_size, size_t new_size, int flags,
     }
 
   Auto_area old_area(r);
-  int err = old_area.reserve(oa, old_size, 0);
+  int err = old_area.reserve(oa, old_size, L4Re::Rm::Flags(0));
   if (err < 0)
     return -EINVAL;
 
@@ -750,7 +761,7 @@ Vfs::mremap(void *old_addr, size_t old_size, size_t new_size, int flags,
         return -EINVAL;
 
       // check if the current virtual memory area can be expanded
-      int err = new_area.reserve(na, new_size, 0);
+      int err = new_area.reserve(na, new_size, L4Re::Rm::Flags(0));
       if (err < 0)
         return err;
 
@@ -762,18 +773,18 @@ Vfs::mremap(void *old_addr, size_t old_size, size_t new_size, int flags,
       l4_addr_t ta = oa + old_size;
       unsigned long ts = new_size - old_size;
       // check if the current virtual memory area can be expanded
-      int err = new_area.reserve(ta, ts, 0);
+      int err = new_area.reserve(ta, ts, L4Re::Rm::Flags(0));
       if (!maymove && err)
         return -ENOMEM;
 
-      l4_addr_t toffs;
-      unsigned tflags;
+      L4Re::Rm::Offset toffs;
+      L4Re::Rm::Flags tflags;
       L4::Cap<L4Re::Dataspace> tds;
 
       err = r->find(&ta, &ts, &toffs, &tflags, &tds);
 
       // there is enough space to expand the mapping in place
-      if (err == -ENOENT || (err == 0 && (tflags & Rm::In_area)))
+      if (err == -ENOENT || (err == 0 && (tflags & Rm::F::In_area)))
         {
           old_area.free(); // pad at the original address
           pad_addr = oa + old_size;
@@ -784,7 +795,7 @@ Vfs::mremap(void *old_addr, size_t old_size, size_t new_size, int flags,
       else
         {
           // search for a new area to remap
-          err = new_area.reserve(0, new_size, Rm::Search_addr);
+          err = new_area.reserve(0, new_size, Rm::F::Search_addr);
           if (err < 0)
             return -ENOMEM;
 
@@ -797,11 +808,11 @@ Vfs::mremap(void *old_addr, size_t old_size, size_t new_size, int flags,
     {
       l4_addr_t a = old_area.a;
       unsigned long s = old_size;
-      l4_addr_t o;
-      unsigned f;
+      L4Re::Rm::Offset o;
+      L4Re::Rm::Flags f;
       L4::Cap<L4Re::Dataspace> ds;
 
-      for (; r->find(&a, &s, &o, &f, &ds) >= 0 && (!(f & Rm::In_area));)
+      for (; r->find(&a, &s, &o, &f, &ds) >= 0 && (!(f & Rm::F::In_area));)
         {
           if (a < old_area.a)
             {
@@ -816,10 +827,8 @@ Vfs::mremap(void *old_addr, size_t old_size, size_t new_size, int flags,
 
           l4_addr_t x = a - old_area.a + new_area.a;
 
-          int err = r->attach(&x, s, Rm::In_area | f,
-                              L4::Ipc::make_cap(ds, (f & Rm::Read_only)
-                                                    ? L4_CAP_FPAGE_RO
-                                                    : L4_CAP_FPAGE_RW),
+          int err = r->attach(&x, s, Rm::F::In_area | f,
+                              L4::Ipc::make_cap(ds, f.cap_rights()),
                               o);
           if (err < 0)
             return err;
@@ -859,7 +868,10 @@ Vfs::mremap(void *old_addr, size_t old_size, size_t new_size, int flags,
       if (err)
         return err;
 
-      err = r->attach(&pad_addr, pad_sz, Rm::In_area | Rm::Detach_free,
+      // FIXME: must get the protection rights from the old
+      // mapping and use the same here, for now just use RWX
+      err = r->attach(&pad_addr, pad_sz,
+                      Rm::F::In_area | Rm::F::Detach_free | Rm::F::RWX,
                       L4::Ipc::make_cap_rw(tds.get()), toffs);
       if (err < 0)
         return err;

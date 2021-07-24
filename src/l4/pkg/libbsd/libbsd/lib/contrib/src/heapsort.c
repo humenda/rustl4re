@@ -1,3 +1,4 @@
+/*	$OpenBSD: heapsort.c,v 1.11 2017/05/20 12:48:56 millert Exp $ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -64,7 +65,7 @@
  * Build the list into a heap, where a heap is defined such that for
  * the records K1 ... KN, Kj/2 >= Kj for 1 <= j/2 <= j <= N.
  *
- * There two cases.  If j == nmemb, select largest of Ki and Kj.  If
+ * There are two cases.  If j == nmemb, select largest of Ki and Kj.  If
  * j < nmemb, select largest of Ki, Kj and Kj+1.
  */
 #define CREATE(initval, nmemb, par_i, child_i, par, child, size, count, tmp) { \
@@ -86,12 +87,12 @@
  * Select the top of the heap and 'heapify'.  Since by far the most expensive
  * action is the call to the compar function, a considerable optimization
  * in the average case can be achieved due to the fact that k, the displaced
- * elememt, is usually quite small, so it would be preferable to first
+ * element, is usually quite small, so it would be preferable to first
  * heapify, always maintaining the invariant that the larger child is copied
  * over its parent's record.
  *
  * Then, starting from the *bottom* of the heap, finding k's correct place,
- * again maintianing the invariant.  As a result of the invariant no element
+ * again maintaining the invariant.  As a result of the invariant no element
  * is 'lost' when k is assigned its correct place in the heap.
  *
  * The time savings from this optimization are on the order of 15-20% for the
@@ -131,7 +132,7 @@
  */
 int
 heapsort(void *vbase, size_t nmemb, size_t size,
-	int (*compar)(const void *, const void *))
+    int (*compar)(const void *, const void *))
 {
 	size_t cnt, i, j, l;
 	char tmp, *tmp1, *tmp2;

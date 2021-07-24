@@ -1,0 +1,4 @@
+<map id="l4_task_vgicc_map" name="l4_task_vgicc_map">
+<area shape="rect" id="node1" title="Map the GIC&#39;s virtual GICC page to the task." alt="" coords="5,5,152,32"/>
+<area shape="rect" id="node2" href="$group__l4__utcb__api.html#gadc099b4a59e1d99638c72c11a8c8b644" title="Get the UTCB address." alt="" coords="200,5,269,32"/>
+</map>

@@ -34,6 +34,8 @@ private:
   static unsigned		timer_divisor;
   static unsigned		frequency_khz;
   static Unsigned64		scaler_us_to_apic;
+  static bool                   use_x2;
+
 
   enum
   {
@@ -89,6 +91,7 @@ private:
 
   enum
   {
+    APIC_msr_base               = 0x800,
     APIC_base_msr		= 0x1b,
   };
 };
@@ -130,7 +133,7 @@ Apic::find_cpu(Unsigned32 phys_id)
 }
 
 PUBLIC void
-Apic::pm_on_suspend(Cpu_number)
+Apic::pm_on_suspend(Cpu_number) override
 {
   _saved_apic_timer = timer_reg_read();
 }
@@ -139,7 +142,7 @@ Apic::pm_on_suspend(Cpu_number)
 IMPLEMENTATION [!mp]:
 
 PUBLIC void
-Apic::pm_on_resume(Cpu_number)
+Apic::pm_on_resume(Cpu_number) override
 {
   Apic::init(true);
   timer_reg_write(_saved_apic_timer);
@@ -149,7 +152,7 @@ Apic::pm_on_resume(Cpu_number)
 IMPLEMENTATION [mp]:
 
 PUBLIC void
-Apic::pm_on_resume(Cpu_number cpu)
+Apic::pm_on_resume(Cpu_number cpu) override
 {
   if (cpu == Cpu_number::boot_cpu())
     Apic::init(true);
@@ -230,6 +233,7 @@ Address    Apic::phys_base;
 unsigned   Apic::timer_divisor = 1;
 unsigned   Apic::frequency_khz;
 Unsigned64 Apic::scaler_us_to_apic;
+bool       Apic::use_x2;
 
 int ignore_invalid_apic_reg_access;
 
@@ -237,6 +241,8 @@ PUBLIC static inline
 Unsigned32
 Apic::get_id()
 {
+  if (use_x2)
+    return Cpu::rdmsr(APIC_msr_base + (APIC_id >> 4));
   return reg_read(APIC_id) & 0xff000000;
 }
 
@@ -288,6 +294,8 @@ PUBLIC static inline
 Unsigned32
 Apic::reg_read(unsigned reg)
 {
+  if (use_x2)
+    return Cpu::rdmsr(APIC_msr_base + (reg >> 4));
   return *((volatile Unsigned32*)(io_base + reg));
 }
 
@@ -295,7 +303,18 @@ PUBLIC static inline
 void
 Apic::reg_write(unsigned reg, Unsigned32 val)
 {
-  *((volatile Unsigned32*)(io_base + reg)) = val;
+  if (use_x2)
+    Cpu::wrmsr(val, 0, APIC_msr_base + (reg >> 4));
+  else
+    *((volatile Unsigned32*)(io_base + reg)) = val;
+}
+
+PUBLIC static inline NEEDS[<cassert>]
+void
+Apic::reg_write64(unsigned reg, Unsigned64 val)
+{
+  assert(use_x2);
+  Cpu::wrmsr(val, APIC_msr_base + (reg >> 4));
 }
 
 PUBLIC static inline
@@ -664,7 +683,9 @@ Apic::activate_by_msr()
 
   msr = Cpu::rdmsr(APIC_base_msr);
   phys_base = msr & 0xfffff000;
-  msr |= (1<<11);
+  msr |= 1 << 11;
+  if (use_x2)
+    msr |= 1 << 10;
   Cpu::wrmsr(msr, APIC_base_msr);
 
   // now the CPU feature flags may have changed
@@ -680,7 +701,7 @@ Apic::check_still_getting_interrupts()
     return 0;
 
   Unsigned64 tsc_until;
-  Cpu_time clock_start = Kip::k()->clock;
+  Cpu_time clock_start = Kip::k()->clock();
 
   tsc_until = Cpu::rdtsc();
   tsc_until += 0x01000000; // > 10 Mio cycles should be sufficient until
@@ -688,8 +709,8 @@ Apic::check_still_getting_interrupts()
   do
     {
       // kernel clock by timer interrupt updated?
-      if (Kip::k()->clock != clock_start)
-	// yes, succesful
+      if (Kip::k()->clock() != clock_start)
+	// yes, successful
 	return 1;
     } while (Cpu::rdtsc() < tsc_until);
 
@@ -830,7 +851,7 @@ Apic::dump_info()
 {
   if (Config::Warn_level >= 2)
     printf("Local APIC[%02x]: version=%02x max_lvt=%d\n",
-           get_id() >> 24, get_version(), get_max_lvt());
+           get_id() >> (use_x2 ? 0 : 24), get_version(), get_max_lvt());
 }
 
 IMPLEMENT
@@ -843,18 +864,29 @@ Apic::init(bool resume)
   if(resume)
     cpu().update_features_info();
 
-  was_present = present = test_present();
-
-  if (!was_present)
+  if (cpu().ext_features() & FEATX_X2APIC)
     {
-      good_cpu = test_cpu();
+      printf("Using x2APIC\n");
+      use_x2 = true;
 
-      if (good_cpu && Config::apic)
+      was_present = present = 1;
+      activate_by_msr();
+    }
+  else
+    {
+      was_present = present = test_present();
+
+      if (!was_present)
         {
-          // activate; this could lead an disabled APIC to appear
-          // set base address of I/O registers to be able to access the registers
-          activate_by_msr();
-          present = test_present();
+          good_cpu = test_cpu();
+
+          if (good_cpu && Config::apic)
+            {
+              // activate; this could lead an disabled APIC to appear
+              // set base address of I/O registers to be able to access the registers
+              activate_by_msr();
+              present = test_present();
+            }
         }
     }
 
@@ -865,7 +897,7 @@ Apic::init(bool resume)
   if (present)
     {
       // map the Local APIC device registers
-      if (!resume)
+      if (!use_x2 && !resume)
         map_apic_page();
 
       // set some interrupt vectors to appropriate values
@@ -892,6 +924,7 @@ Apic::init(bool resume)
 
   dump_info();
 
-  apic_io_base = Mem_layout::Local_apic_page;
+  if (!use_x2)
+    apic_io_base = Mem_layout::Local_apic_page;
   init_timer();
 }

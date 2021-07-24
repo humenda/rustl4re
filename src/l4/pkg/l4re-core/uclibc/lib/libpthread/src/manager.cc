@@ -99,11 +99,15 @@ static int main_thread_exiting;
 
 /* Forward declarations */
 
-static int pthread_handle_create(pthread_t *thread, const pthread_attr_t *attr,
+static int pthread_handle_create(pthread_descr creator, const pthread_attr_t *attr,
                                  void * (*start_routine)(void *), void *arg);
 static void pthread_handle_free(pthread_t th_id);
+#ifdef NOT_FOR_L4
 static void pthread_handle_exit(pthread_descr issuing_thread, int exitcode)
      __attribute__ ((noreturn));
+#else
+static void pthread_handle_exit(pthread_descr issuing_thread, int exitcode);
+#endif
 //l4/static void pthread_kill_all_threads(int main_thread_also);
 static void pthread_for_each_thread(void *arg,
     void (*fn)(void *, pthread_descr));
@@ -164,7 +168,7 @@ __pthread_manager(void *arg)
 	{
 	case REQ_CREATE:
 	  request.req_thread->p_retcode =
-	    pthread_handle_create((pthread_t *) &request.req_thread->p_retval,
+	    pthread_handle_create(request.req_thread,
 		request.req_args.create.attr,
 		request.req_args.create.fn,
 		request.req_args.create.arg);
@@ -460,7 +464,7 @@ static int pthread_allocate_stack(const pthread_attr_t *attr,
       long err;
 
       if (e->rm()->reserve_area(&map_addr, stacksize + guardsize,
-	                        L4Re::Rm::Search_addr) < 0)
+	                        L4Re::Rm::F::Search_addr) < 0)
 	return -1;
 
       guardaddr = (char*)map_addr;
@@ -479,7 +483,8 @@ static int pthread_allocate_stack(const pthread_attr_t *attr,
 	}
 
       new_thread_bottom = (char *) map_addr + guardsize;
-      err = e->rm()->attach(&new_thread_bottom, stacksize, L4Re::Rm::In_area,
+      err = e->rm()->attach(&new_thread_bottom, stacksize,
+                            L4Re::Rm::F::In_area | L4Re::Rm::F::RW,
                             L4::Ipc::make_cap_rw(ds), 0);
 
       if (err < 0)
@@ -604,7 +609,7 @@ static int l4pthr_get_more_utcb()
   Env const *e = Env::env();
 
   if (e->rm()->reserve_area(&kumem, L4_PAGESIZE,
-                            Rm::Reserved | Rm::Search_addr))
+                            Rm::F::Reserved | Rm::F::Search_addr))
     return 1;
 
   if (l4_error(e->task()->add_ku_mem(l4_fpage(kumem, L4_PAGESHIFT,
@@ -648,7 +653,7 @@ int __pthread_start_manager(pthread_descr mgr)
                                     __pthread_manager, -1, 0, l4_sched_cpu_set(0, ~0, 1));
   if (err < 0)
     {
-      fprintf(stderr, "ERROR: could not start pthread manager thread\n");
+      fprintf(stderr, "ERROR: could not start pthread manager thread (err=%d)\n", err);
       exit(100);
     }
 
@@ -658,7 +663,7 @@ int __pthread_start_manager(pthread_descr mgr)
 }
 
 
-static int pthread_handle_create(pthread_t *thread, const pthread_attr_t *attr,
+static int pthread_handle_create(pthread_descr creator, const pthread_attr_t *attr,
 				 void * (*start_routine)(void *), void *arg)
 {
   int err;
@@ -745,13 +750,18 @@ static int pthread_handle_create(pthread_t *thread, const pthread_attr_t *attr,
 #endif
   new_thread->p_guardaddr = guardaddr;
   new_thread->p_guardsize = guardsize;
-  new_thread->p_inheritsched = attr ? attr->__inheritsched : 0;
+  new_thread->p_inheritsched = attr ? attr->__inheritsched : PTHREAD_INHERIT_SCHED;
   new_thread->p_alloca_cutoff = stksize / 4 > __MAX_ALLOCA_CUTOFF
 				 ? __MAX_ALLOCA_CUTOFF : stksize / 4;
   /* Initialize the thread handle */
   __pthread_init_lock(handle_to_lock(new_utcb));
   /* Determine scheduling parameters for the thread */
-  new_thread->p_sched_policy = -1;
+  // If no attributes are provided, pthread_create uses default values as
+  // described in pthread_attr_init. PTHREAD_INHERIT_SCHED is the default.
+
+  new_thread->p_sched_policy = creator->p_sched_policy;
+  new_thread->p_priority = creator->p_priority;
+
   if (attr != NULL)
     {
       new_thread->p_detached = attr->__detachstate;
@@ -789,7 +799,7 @@ static int pthread_handle_create(pthread_t *thread, const pthread_attr_t *attr,
   /* Make the new thread ID available already now.  If any of the later
      functions fail we return an error value and the caller must not use
      the stored thread ID.  */
-  *thread = new_thread_id;
+  creator->p_retval = new_thread_id;
   /* Do the cloning.  We have to use two different functions depending
      on whether we are debugging or not.  */
   err =  __pthread_mgr_create_thread(new_thread, &stack_addr,
@@ -1023,7 +1033,7 @@ static void pthread_for_each_thread(void *arg,
 
 static void pthread_handle_exit(pthread_descr issuing_thread, int exitcode)
 {
-  //l4/pthread_descr th;
+  pthread_descr th;
   __pthread_exit_requested = 1;
   __pthread_exit_code = exitcode;
 #if 0
@@ -1051,12 +1061,24 @@ static void pthread_handle_exit(pthread_descr issuing_thread, int exitcode)
   }
   __fresetlockfiles();
 #endif
-  restart(issuing_thread);
 #ifdef THIS_IS_THE_ORIGINAL
+  restart(issuing_thread);
   _exit(0);
 #else
-  // we do not do the exit path with kill and waitpid, so give the code here
-  _exit(exitcode);
+  for (th = issuing_thread->p_nextlive;
+       th != issuing_thread;
+       th = th->p_nextlive)
+    {
+      __l4_kill_thread(th->p_th_cap);
+    }
+
+  // let caller continue
+  if (l4_error(l4_ipc_send(L4_INVALID_CAP | L4_SYSF_REPLY,
+                           l4_utcb(),
+                           l4_msgtag(0, 0, 0, 0),
+                           L4_IPC_SEND_TIMEOUT_0)))
+    // assume caller has quit (and will not continue exit())
+    _exit(0);
 #endif
 }
 

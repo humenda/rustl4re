@@ -1,7 +1,6 @@
 var modules =
 [
     [ "Base API", "group__l4__api.html", "group__l4__api" ],
-    [ "DMA API for L4Re", "group__api__l4re__dma.html", null ],
     [ "EDID parsing functionality", "group__libedid.html", "group__libedid" ],
     [ "IO interface", "group__api__l4io.html", "group__api__l4io" ],
     [ "IRQ handling library", "group__l4irq__api.html", "group__l4irq__api" ],

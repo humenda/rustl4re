@@ -13,13 +13,14 @@
 
 #include "io_acpi.h"
 #include "debug.h"
-#include "pci.h"
+#include <pci-root.h>
 #include "acpi_l4.h"
 #include "__acpi.h"
 #include "cfg.h"
 #include "main.h"
 #include "phys_space.h"
 #include "hw_root_bus.h"
+#include "resource_provider.h"
 #include <map>
 #include <l4/re/error_helper>
 #include <l4/sys/iommu>
@@ -64,7 +65,7 @@ static unsigned _acpi_debug_level =
 static Hw::Pci::Root_bridge *
 create_port_bridge(int segment, int busnum, Hw::Device *dev)
 {
-  return new Hw::Pci::Port_root_bridge(segment, busnum, Hw::Pci::Bus::Pci_bus, dev);
+  return new Hw::Pci::Port_root_bridge(segment, busnum, dev);
 }
 
 Hw::Pci::Root_bridge *(*acpi_create_pci_root_bridge)(int segment,
@@ -193,12 +194,6 @@ discover_pre_cb(ACPI_HANDLE obj, UINT32 nl, void *ctxt, void **)
 {
   Discover_ctxt *c = reinterpret_cast<Discover_ctxt*>(ctxt);
 
-  if (nl > c->level)
-    {
-      c->current_bus = c->last_device;
-      c->level = nl;
-    }
-
   if (nl == 1)
     return AE_OK;
 
@@ -209,12 +204,18 @@ discover_pre_cb(ACPI_HANDLE obj, UINT32 nl, void *ctxt, void **)
       return AE_OK;
     }
 
+  if (nl > c->level)
+    {
+      c->current_bus = c->last_device;
+      c->level = nl;
+    }
+
   Acpi_ptr<ACPI_DEVICE_INFO> info;
   if (!ACPI_SUCCESS(AcpiGetObjectInfo(node, info.ref())))
-    return AE_OK;
+    return AE_CTRL_DEPTH;
 
   if (info->Type != ACPI_TYPE_DEVICE && info->Type != ACPI_TYPE_PROCESSOR)
-    return AE_OK;
+    return AE_CTRL_DEPTH;
 
   l4_uint32_t adr = ~0U;
 
@@ -455,7 +456,7 @@ acpi_trace_notifications(ACPI_HANDLE handle, UINT32 event, void *)
 
 struct Acpi_pm : Hw::Root_bus::Pm
 {
-  int suspend()
+  int suspend() override
   {
     int res;
     if ((res = acpi_enter_sleep()) < 0)
@@ -464,7 +465,7 @@ struct Acpi_pm : Hw::Root_bus::Pm
     return res;
   }
 
-  int shutdown()
+  int shutdown() override
   {
     int res;
     if ((res = acpi_enter_sleep(5)) < 0)
@@ -473,7 +474,7 @@ struct Acpi_pm : Hw::Root_bus::Pm
     return res;
   }
 
-  int reboot()
+  int reboot() override
   {
     ACPI_STATUS status = AcpiReset();
 
@@ -570,9 +571,8 @@ using namespace Hw;
 class Dmar_dma_domain : public Dma_domain
 {
 public:
-  Dmar_dma_domain(Pci::Bus const *bus, Hw::Device const *dev)
-  : _bus(bus),
-    _dev(dev ? const_cast<Hw::Device*>(dev)->find_feature<Hw::Pci::Dev>() : 0)
+  Dmar_dma_domain(Io_irq_pin::Msi_src *src)
+  : _src(src)
   {}
 
   static void init()
@@ -580,11 +580,48 @@ public:
     _supports_remapping = true;
   }
 
-  void iommu_bind(L4::Cap<L4::Iommu> iommu, l4_uint64_t src)
+  int iommu_bind(L4::Cap<L4::Iommu> iommu, l4_uint64_t src)
   {
-    int r = l4_error(iommu->bind(src, _kern_dma_space));
-    if (r < 0)
-      d_printf(DBG_ERR, "error: setting DMA for device: %d\n", r);
+    ::Device::Msi_src_info src_inf(src);
+
+    unsigned phantomfn = 0;
+    if (src_inf.svt() == 1) // bind specific device
+      phantomfn = src_inf.sq();
+
+    for (unsigned i = 0; i < (1u << phantomfn); ++i)
+      {
+        int r = l4_error(iommu->bind(src | (i << (3 - phantomfn)),
+                                     _kern_dma_space));
+        if (r < 0)
+          {
+            d_printf(DBG_ERR, "error: setting DMA for device: %d\n", r);
+            return r;
+          }
+      }
+
+    return 0;
+  }
+
+  int iommu_unbind(L4::Cap<L4::Iommu> iommu, l4_uint64_t src)
+  {
+    ::Device::Msi_src_info src_inf(src);
+
+    unsigned phantomfn = 0;
+    if (src_inf.svt() == 1) // bind specific device
+      phantomfn = src_inf.sq();
+
+    for (unsigned i = 0; i < (1u << phantomfn); ++i)
+      {
+        int r = l4_error(iommu->unbind(src | (i << (3 - phantomfn)),
+                                       _kern_dma_space));
+        if (r < 0)
+          {
+            d_printf(DBG_ERR, "error: unbinding DMA for device: %d\n", r);
+            return r;
+          }
+      }
+
+    return 0;
   }
 
   void set_managed_kern_dma_space(L4::Cap<L4::Task> s) override
@@ -598,21 +635,7 @@ public:
         return;
       }
 
-    if (_dev)
-      {
-        unsigned phantomfn = _dev->phantomfn_bits();
-        unsigned devfn     = _dev->devfn();
-        devfn &= (7 >> phantomfn) | 0xf8;
-        for (unsigned i = 0; i < (1u << phantomfn); ++i)
-          {
-            iommu_bind(iommu, 0x40000
-                              | (_bus->num << 8)
-                              | devfn | (i << (3 - phantomfn)));
-          }
-      }
-    else
-      iommu_bind(iommu, 0x80000
-                        | (_bus->num << 8) | _bus->num);
+    iommu_bind(iommu, _src->get_src_info(nullptr));
   }
 
   int create_managed_kern_dma_space() override
@@ -651,35 +674,14 @@ public:
     if (set)
       {
         _kern_dma_space = dma_task;
-        int r;
-        if (_dev)
-          r = l4_error(iommu->bind(0x40000
-                                   | (_bus->num << 8)
-                                   | (_dev->device_nr() << 3)
-                                   | _dev->function_nr(), _kern_dma_space));
-        else
-          r = l4_error(iommu->bind(0x80000
-                                   | (_bus->num << 8) | _bus->num,
-                                   _kern_dma_space));
-
-        return r;
+        return iommu_bind(iommu, _src->get_src_info(nullptr));
       }
     else
       {
         if (!_kern_dma_space)
           return 0;
 
-        int r;
-        if (_dev)
-          r = l4_error(iommu->unbind(0x40000
-                                     | (_bus->num << 8)
-                                     | (_dev->device_nr() << 3)
-                                     | _dev->function_nr(), _kern_dma_space));
-        else
-          r = l4_error(iommu->unbind(0x80000
-                                     | (_bus->num << 8) | _bus->num,
-                                     _kern_dma_space));
-
+        int r = iommu_unbind(iommu, _src->get_src_info(nullptr));
         if (r < 0)
           return r;
 
@@ -690,8 +692,7 @@ public:
   }
 
 private:
-  Pci::Bus const *_bus = 0;
-  Hw::Pci::Dev const *_dev = 0;
+  Io_irq_pin::Msi_src *_src = nullptr;
 };
 
 class Dmar_dma_domain_factory : public Dma_domain_factory
@@ -699,14 +700,22 @@ class Dmar_dma_domain_factory : public Dma_domain_factory
 public:
   Dmar_dma_domain *create(Hw::Device *bridge, Hw::Device *dev) override
   {
-    Pci::Bus *pbus = bridge->find_feature<Pci::Bus>();
-    assert (pbus);
-
+    Io_irq_pin::Msi_src *s = nullptr;
     if (!dev)
-      // downstream Domain requested, only allowed for non-pcie bus
-      assert (pbus->bus_type != Hw::Pci::Bus::Pci_express_bus);
+      {
+        Pci::Dev *p = bridge->find_feature<Pci::Dev>();
+        if (!p)
+          return nullptr;
 
-    return new Dmar_dma_domain(pbus, dev);
+        s = p->get_downstream_src_id();
+      }
+    else if (Pci::Dev *p = dev->find_feature<Pci::Dev>())
+      s = p->get_msi_src();
+
+    if (!s)
+      return nullptr;
+
+    return new Dmar_dma_domain(s);
   }
 };
 
@@ -741,7 +750,6 @@ setup_pci_root_mmconfig()
       unsigned num_busses = e->EndBusNumber - e->StartBusNumber + 1;
       Hw::Pci::register_root_bridge(
           new Hw::Pci::Mmio_root_bridge(e->PciSegment, e->StartBusNumber,
-                                        Hw::Pci::Bus::Pci_express_bus,
                                         0, e->Address, num_busses));
 
       acpi_create_pci_root_bridge = create_additional_mmio_bridge;
@@ -772,7 +780,7 @@ static void setup_pci_root()
 
   // fall-back to port-based bridge
   Hw::Pci::register_root_bridge(
-      new Hw::Pci::Port_root_bridge(0, 0, Hw::Pci::Bus::Pci_bus, 0));
+      new Hw::Pci::Port_root_bridge(0, 0, 0));
 }
 
 
@@ -1143,12 +1151,16 @@ Acpi_device_driver::find(unsigned short type)
 
 Acpi_dev *
 Acpi_device_driver::probe(Hw::Device *device, ACPI_HANDLE acpi_hdl,
-                          ACPI_DEVICE_INFO const *info)
+                          ACPI_DEVICE_INFO const *)
 {
+  ACPI_NAMESPACE_NODE *node = AcpiNsValidateHandle(acpi_hdl);
   Acpi_dev *adev = new Acpi_dev(acpi_hdl);
-  if ((info->Valid & ACPI_VALID_STA)
-      && (info->CurrentStatus & ACPI_STA_DEVICE_ENABLED))
+  UINT32 sta;
+
+  if (ACPI_SUCCESS(AcpiUtExecute_STA(node, &sta))
+      && (sta & ACPI_STA_DEVICE_ENABLED))
     adev->discover_crs(device);
+
   device->add_feature(adev);
   return adev;
 }

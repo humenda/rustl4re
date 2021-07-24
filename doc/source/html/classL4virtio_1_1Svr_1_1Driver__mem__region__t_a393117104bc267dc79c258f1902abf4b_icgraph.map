@@ -1,3 +1,4 @@
 <map id="L4virtio::Svr::Driver_mem_region_t::local" name="L4virtio::Svr::Driver_mem_region_t::local">
-<area shape="rect" id="node2" href="$classL4virtio_1_1Svr_1_1Driver__mem__list__t.html#a270520dc38853577d41834c95148eb43" title="Default implementation for loading an indirect descriptor. " alt="" coords="208,5,371,61"/>
+<area shape="rect" id="node1" title="Get the local address for driver address p." alt="" coords="228,5,391,47"/>
+<area shape="rect" id="node2" href="$classL4virtio_1_1Svr_1_1Driver__mem__list__t.html#a270520dc38853577d41834c95148eb43" title="Default implementation for loading an indirect descriptor." alt="" coords="5,5,180,47"/>
 </map>

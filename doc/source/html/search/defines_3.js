@@ -1,5 +1,4 @@
 var searchData=
 [
-  ['pslim_5fbmap_5fstart_5flsb',['pSLIM_BMAP_START_LSB',['../bitmap_8h.html#a341316ab3f7334c5a25ed86c766028c7',1,'bitmap.h']]],
-  ['pslim_5fbmap_5fstart_5fmsb',['pSLIM_BMAP_START_MSB',['../bitmap_8h.html#a758db59f07a640093e040385d618fa50',1,'bitmap.h']]]
+  ['gfxbitmap_5fdefault_5ffont_6589',['GFXBITMAP_DEFAULT_FONT',['../font_8h.html#a1e00c6313833e39afcfbfa0b7a560d1a',1,'font.h']]]
 ];

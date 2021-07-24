@@ -60,7 +60,7 @@ public:
    * \pre The IRQ pin needs to be already allocated before using this function.
    */
   virtual int msg(Mword irqnum, Unsigned64, Msi_info *) const
-  { (void)irqnum; return -L4_err::EPerm; }
+  { (void)irqnum; return -L4_err::ENosys; }
 
   virtual void set_cpu(Mword irqnum, Cpu_number cpu) const;
 
@@ -80,9 +80,9 @@ public:
   template< typename... A >
   explicit Irq_mgr_single_chip(A&&... args) : c(cxx::forward<A>(args)...) {}
 
-  Irq chip(Mword irqnum) const { return Irq(&c, irqnum); }
-  unsigned nr_irqs() const { return c.nr_irqs(); }
-  unsigned nr_msis() const { return 0; }
+  Irq chip(Mword irqnum) const override { return Irq(&c, irqnum); }
+  unsigned nr_irqs() const override { return c.nr_irqs(); }
+  unsigned nr_msis() const override { return 0; }
   mutable CHIP c;
 };
 
@@ -97,15 +97,16 @@ IMPLEMENT inline Irq_mgr::~Irq_mgr() {}
 
 PUBLIC inline
 bool
-Irq_mgr::alloc(Irq_base *irq, Mword global_irq)
+Irq_mgr::alloc(Irq_base *irq, Mword global_irq, bool init = true)
 {
   Irq i = chip(global_irq);
   if (!i.chip)
     return false;
 
-  if (i.chip->alloc(irq, i.pin))
+  if (i.chip->alloc(irq, i.pin, init))
     {
-      i.chip->set_cpu(i.pin, Cpu_number::boot_cpu());
+      if (init)
+        i.chip->set_cpu(i.pin, Cpu_number::boot_cpu());
       return true;
     }
   return false;

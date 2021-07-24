@@ -1,0 +1,5 @@
+<map id="L4::Thread::vcpu_control" name="L4::Thread::vcpu_control">
+<area shape="rect" id="node1" title="Enable or disable the vCPU feature for the thread." alt="" coords="5,31,187,57"/>
+<area shape="rect" id="node2" href="$classL4_1_1Kobject.html#a4f2117ae76762f4084e6a1adb915863c" title="Return capability selector." alt="" coords="267,5,391,32"/>
+<area shape="rect" id="node3" href="$group__l4__thread__api.html#ga8ebc0dd643266610d76860cf0fb77f53" title="Enable or disable the vCPU feature for the thread." alt="" coords="235,56,423,83"/>
+</map>

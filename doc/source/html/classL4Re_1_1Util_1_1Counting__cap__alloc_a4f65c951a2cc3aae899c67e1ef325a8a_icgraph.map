@@ -1,0 +1,5 @@
+<map id="L4Re::Util::Counting_cap_alloc::free" name="L4Re::Util::Counting_cap_alloc::free">
+<area shape="rect" id="node1" title="Free the capability." alt="" coords="232,39,383,80"/>
+<area shape="rect" id="node2" href="$classL4Re_1_1Util_1_1Smart__cap__auto.html#a4dfba4f2c4731689f1a53992c83371a6" title="Free operation for L4::Smart_cap." alt="" coords="13,5,176,47"/>
+<area shape="rect" id="node3" href="$classL4Re_1_1Util_1_1Object__registry.html#aeeea59583ffddfef4e7c1c3e6eed41b6" title="Remove a server object from the handler list." alt="" coords="5,71,184,112"/>
+</map>

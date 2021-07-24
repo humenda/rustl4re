@@ -1,0 +1,6 @@
+<map id="L4Re::Mem_alloc::alloc" name="L4Re::Mem_alloc::alloc">
+<area shape="rect" id="node1" title="Allocate anonymous memory." alt="" coords="5,31,177,57"/>
+<area shape="rect" id="node2" href="$classL4_1_1Factory.html#ab52604d4abed4d6009ce51a59492edd7" title="Generic create call to the factory." alt="" coords="225,5,365,32"/>
+<area shape="rect" id="node4" href="$group__l4__ipc__err__api.html#ga05c11e3e10b6c2aa941396ac2018899f" title="Return error code of a system call return message tag or the tag label." alt="" coords="259,56,331,83"/>
+<area shape="rect" id="node3" href="$classL4_1_1Kobject.html#a4f2117ae76762f4084e6a1adb915863c" title="Return capability selector." alt="" coords="413,5,537,32"/>
+</map>

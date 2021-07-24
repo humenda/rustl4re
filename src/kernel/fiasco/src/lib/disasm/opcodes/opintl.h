@@ -1,2 +1,0 @@
-
-# define _(String) (String)

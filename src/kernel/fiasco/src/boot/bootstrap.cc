@@ -42,10 +42,12 @@ exit(int)
     Proc::pause();
 }
 
+#ifndef NDEBUG
 void assert_fail(char const *expr, char const *file, unsigned int line)
 {
   panic("Assertion failed at %s:%u: %s\n", file, line, expr);
 }
+#endif
 
 // test if [start1..end1-1] overlaps [start2..end2-1]
 static
@@ -93,12 +95,13 @@ bootstrap()
     panic("Fiasco kernel occupies memory below %014lx",
           (unsigned long)Mem_layout::Kernel_image);
 
-  if ((Address)&_end - Mem_layout::Kernel_image > 4<<20)
-    panic("Fiasco boot system occupies more than 4MB");
+  if ((Address)&_end - Mem_layout::Kernel_image > Mem_layout::Kernel_image_size)
+    panic("Fiasco boot system occupies more than %luMB",
+          Mem_layout::Kernel_image_size / (1024 * 1024));
 
   base_map_physical_memory_for_kernel();
 
-  Mem_unit::tlb_flush();
+  Mem_unit::tlb_flush_early();
 
   start = (Start)_start;
 

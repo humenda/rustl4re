@@ -5,11 +5,9 @@
 # created 1996/04/20 by hohmuth
 #
 
-CHECKCC         = $(shell if $(CC)  $(1) -S -o /dev/null -xc   /dev/null \
-		    > /dev/null 2>&1; then echo "$(1)"; else echo "$(2)"; fi ;)
+CHECKCC         = $(if $(shell $(CC)  $(1) -S -o /dev/null -xc   /dev/null 2>&1),$(2),$(1))
 
-CHECKCXX        = $(shell if $(CXX) $(1) -S -o /dev/null -xc++ /dev/null \
-		    > /dev/null 2>&1; then echo "$(1)"; else echo "$(2)"; fi ;)
+CHECKCXX        = $(if $(shell $(CXX) $(1) -S -o /dev/null -xc++ /dev/null 2>&1),$(2),$(1))
 
 eval_impl	= $(if $($(1)_IMPL),$($(1)_IMPL),$(1))
 
@@ -34,8 +32,8 @@ AWKP		?= gawk --posix
 CCACHE		?= ccache
 CFLAGS		:=
 CXXFLAGS	:= -std=c++0x
-OPT_CFLAGS	:= -O3
-OPT_CXXFLAGS	:= -O3
+OPT_CFLAGS	:= $(if $(CONFIG_OPTIMIZE_FOR_SIZE),-Os,-O3)
+OPT_CXXFLAGS	:= $(if $(CONFIG_OPTIMIZE_FOR_SIZE),-Os,-O3)
 NOOPT_CFLAGS	:= -Os
 NOOPT_CXXFLAGS	:= -Os
 ARFLAGS		:= crsU
@@ -64,6 +62,8 @@ ifeq ($(CONFIG_INLINE),y)
 else
   PREPROCESS_FLAGS = -t
 endif
+
+PREPROCESS_FLAGS += $(if $(CONFIG_FULL_PATH_NAMES_IN_BINARIES),,$(if $(call CHECKCC,-fmacro-prefix-map=x=y),,-P $(abspath $(srcdir)/..)/))
 
 ifneq ($(SYSTEM_TARGET),)
   CROSS_COMPILE=$(SYSTEM_TARGET)
@@ -122,8 +122,6 @@ CCVER_FULL		:= $(CCVER_MAJOR).$(CCVER_MINOR).$(CCVER_PATCHLEVEL)
 CCVER_SEQ-gcc           := $(patsubst %$(word 1, " "),%,$(word 2,$(call get_cc_version_part, __VERSION__)))
 CCVER_SEQ-clang         := 0 # No (repo) version in release builds available
 CCVER_SEQ               := $(CCVER_SEQ-$(CC_TYPE))
-LIBGCC			:= $(shell $(CXX) $(SHARED_FLAGS) -print-libgcc-file-name)
-GCCINCDIR		:= $(shell $(CXX) $(SHARED_FLAGS) -print-file-name=include)
 
 
 L4ALL_INCDIR     	?= $(addprefix -I, $(PRIVATE_INCDIR))
@@ -132,13 +130,15 @@ L4STD_INCDIR_LAST	?= -isystem $(GCCINCDIR)
 KERNEL_LDFLAGS		+= -gc-sections
 SHARED_FLAGS            += -fno-pic
 SHARED_FLAGS-gcc        += -fno-defer-pop
+SHARED_FLAGS-gcc        += $(if $(CONFIG_FULL_PATH_NAMES_IN_BINARIES),,$(call CHECKCC,-fmacro-prefix-map=$(abspath $(srcdir)/../)=.))
 # gcc #57845
 SHARED_FLAGS-gcc        += $(if $(filter sparc,$(CONFIG_XARCH)),,-freg-struct-return)
-SHARED_FLAGS-gcc	+= $(call CHECKCXX,-Wmisleading-indentation,)
-SHARED_FLAGS		+= -g -Wall -Wextra
+SHARED_FLAGS-gcc	+= $(call CHECKCXX,-Wmisleading-indentation,) -Wlogical-op -Wfloat-equal
+SHARED_FLAGS  		+= -g -Wall -Wextra $(call CHECKCC,-Wdouble-promotion) $(call CHECKCC,-Wfloat-conversion) -Wmissing-declarations
 SHARED_FLAGS-clang	+= -Wno-unused-private-field
 SHARED_FLAGS-clang	+= -Wno-string-plus-int -Wno-overloaded-virtual
 SHARED_FLAGS-gcc	+= $(if $(call CHECKCC,-Wnonnull-compare),-Wno-nonnull-compare)
+SHARED_FLAGS-gcc	+= $(if $(call CHECKCC,-Waddress-of-packed-member),-Wno-address-of-packed-member)
 SHARED_FLAGS		+= -Wundef
 
 SHARED_FLAGS		+= $(call CHECKCC,-Wformat=2,)
@@ -168,7 +168,7 @@ NOOPT_SHARED_FLAGS += $(NOOPT_SHARED_FLAGS-$(CC_TYPE))
 # Standard compile flags
 ASFLAGS		+= $(SHARED_FLAGS) -DASSEMBLER
 ASFLAGS-clang	+= -no-integrated-as
-CFLAGS		+= $(SHARED_FLAGS)
+CFLAGS		+= $(SHARED_FLAGS) -Wbad-function-cast -Wstrict-prototypes -Wmissing-prototypes
 CXXFLAGS	+= $(SHARED_FLAGS) -fno-rtti -fno-exceptions
 OPT_CFLAGS	+= $(OPT_SHARED_FLAGS)
 OPT_CXXFLAGS	+= $(OPT_SHARED_FLAGS)
@@ -188,6 +188,10 @@ OPT_CFLAGS      += $(OPT_CFLAGS-$(CC_TYPE))
 OPT_CXXFLAGS    += $(OPT_CXXFLAGS-$(CC_TYPE))
 NOOPT_CFLAGS    += $(NOOPT_CFLAGS-$(CC_TYPE))
 NOOPT_CXXFLAGS  += $(NOOPT_CXXFLAGS-$(CC_TYPE))
+
+
+LIBGCC      := $(shell $(CXX) $(SHARED_FLAGS) -print-libgcc-file-name)
+GCCINCDIR   := $(shell $(CXX) $(SHARED_FLAGS) -print-file-name=include)
 
 
 # Output formatting, set V=1 to see command line, V=0 to prevent printing them
@@ -245,8 +249,8 @@ ifeq ($(CC_TYPE),gcc)
 endif
 
 
-CC_WHITELIST-gcc     := 4.7 4.8 4.9 5 6 7 8
-CC_WHITELIST-clang   := 3.6 3.7 3.8 3.9 4.0 5.0
+CC_WHITELIST-gcc     := 4.7 4.8 4.9 5 6 7 8 9 10 11
+CC_WHITELIST-clang   := 3.6 3.7 3.8 3.9 4.0 5.0 6.0 7.0 8.0 9.0 10.0 11.0
 CC_WHITELIST         := $(CC_WHITELIST-$(CC_TYPE))
 
 CC_BLACKLIST-arm-gcc   := 4.8.0 4.8.1 4.8.2

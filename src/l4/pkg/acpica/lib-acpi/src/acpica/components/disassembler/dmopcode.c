@@ -8,7 +8,7 @@
  *
  * 1. Copyright Notice
  *
- * Some or all of this work - Copyright (c) 1999 - 2017, Intel Corp.
+ * Some or all of this work - Copyright (c) 1999 - 2019, Intel Corp.
  * All rights reserved.
  *
  * 2. License
@@ -111,6 +111,42 @@
  * other governmental approval, or letter of assurance, without first obtaining
  * such license, approval or letter.
  *
+ *****************************************************************************
+ *
+ * Alternatively, you may choose to be licensed under the terms of the
+ * following license:
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions, and the following disclaimer,
+ *    without modification.
+ * 2. Redistributions in binary form must reproduce at minimum a disclaimer
+ *    substantially similar to the "NO WARRANTY" disclaimer below
+ *    ("Disclaimer") and any redistribution must be conditioned upon
+ *    including a substantially similar Disclaimer requirement for further
+ *    binary redistribution.
+ * 3. Neither the names of the above-listed copyright holders nor the names
+ *    of any contributors may be used to endorse or promote products derived
+ *    from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+ * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * Alternatively, you may choose to be licensed under the terms of the
+ * GNU General Public License ("GPL") version 2 as published by the Free
+ * Software Foundation.
+ *
  *****************************************************************************/
 
 #include "acpi.h"
@@ -120,6 +156,7 @@
 #include "acinterp.h"
 #include "acnamesp.h"
 #include "acdebug.h"
+#include "acconvert.h"
 
 
 #define _COMPONENT          ACPI_CA_DEBUGGER
@@ -139,14 +176,6 @@ AcpiDmConvertToElseIf (
 static void
 AcpiDmPromoteSubtree (
     ACPI_PARSE_OBJECT       *StartOp);
-
-static BOOLEAN
-AcpiDmIsSwitchBlock (
-    ACPI_PARSE_OBJECT       *Op);
-
-static BOOLEAN
-AcpiDmIsCaseBlock (
-    ACPI_PARSE_OBJECT       *Op);
 
 /*******************************************************************************
  *
@@ -499,21 +528,30 @@ AcpiDmFieldPredefinedDescription (
     /* Major cheat: We previously put the Tag ptr in the Node field */
 
     Tag = ACPI_CAST_PTR (char, IndexOp->Common.Node);
-    if (!Tag)
+    if (!Tag || (*Tag == 0))
     {
         return;
     }
 
-    /* Match the name in the info table */
+    /* Is the tag a predefined name? */
 
     Info = AcpiAhMatchPredefinedName (Tag);
-    if (Info)
+    if (!Info)
     {
-        AcpiOsPrintf ("  // %4.4s: %s", Tag,
-            ACPI_CAST_PTR (char, Info->Description));
+        /* Not a predefined name (does not start with underscore) */
+
+        return;
     }
 
+    AcpiOsPrintf ("  // %4.4s: %s", Tag,
+        ACPI_CAST_PTR (char, Info->Description));
+
+    /* String contains the prefix path, free it */
+
+    ACPI_FREE (IndexOp->Common.Value.String);
+    IndexOp->Common.Value.String = NULL;
 #endif
+
     return;
 }
 
@@ -788,15 +826,15 @@ AcpiDmDisassembleOneOp (
         {
             switch (Op->Common.AmlOpcode)
             {
-            case AML_LEQUAL_OP:
+            case AML_LOGICAL_EQUAL_OP:
                 AcpiOsPrintf ("LNotEqual");
                 break;
 
-            case AML_LGREATER_OP:
+            case AML_LOGICAL_GREATER_OP:
                 AcpiOsPrintf ("LLessEqual");
                 break;
 
-            case AML_LLESS_OP:
+            case AML_LOGICAL_LESS_OP:
                 AcpiOsPrintf ("LGreaterEqual");
                 break;
 
@@ -819,12 +857,12 @@ AcpiDmDisassembleOneOp (
 
     switch (Op->Common.AmlOpcode)
     {
-    case AML_LNOT_OP:
+    case AML_LOGICAL_NOT_OP:
 
         Child = Op->Common.Value.Arg;
-        if ((Child->Common.AmlOpcode == AML_LEQUAL_OP) ||
-            (Child->Common.AmlOpcode == AML_LGREATER_OP) ||
-            (Child->Common.AmlOpcode == AML_LLESS_OP))
+        if ((Child->Common.AmlOpcode == AML_LOGICAL_EQUAL_OP) ||
+            (Child->Common.AmlOpcode == AML_LOGICAL_GREATER_OP) ||
+            (Child->Common.AmlOpcode == AML_LOGICAL_LESS_OP))
         {
             Child->Common.DisasmOpcode = ACPI_DASM_LNOT_SUFFIX;
             Op->Common.DisasmOpcode = ACPI_DASM_LNOT_PREFIX;
@@ -953,8 +991,12 @@ AcpiDmDisassembleOneOp (
     case AML_INT_NAMEDFIELD_OP:
 
         Length = AcpiDmDumpName (Op->Named.Name);
-        AcpiOsPrintf (",%*.s  %u", (unsigned) (5 - Length), " ",
+
+        AcpiOsPrintf (",");
+        ASL_CV_PRINT_ONE_COMMENT (Op, AML_NAMECOMMENT, NULL, 0);
+        AcpiOsPrintf ("%*.s  %u", (unsigned) (5 - Length), " ",
             (UINT32) Op->Common.Value.Integer);
+
         AcpiDmCommaIfFieldMember (Op);
 
         Info->BitOffset += (UINT32) Op->Common.Value.Integer;
@@ -995,6 +1037,7 @@ AcpiDmDisassembleOneOp (
 
         AcpiOsPrintf (")");
         AcpiDmCommaIfFieldMember (Op);
+        ASL_CV_PRINT_ONE_COMMENT (Op, AML_COMMENT_END_NODE, NULL, 0);
         break;
 
     case AML_INT_CONNECTION_OP:
@@ -1028,6 +1071,8 @@ AcpiDmDisassembleOneOp (
 
         AcpiOsPrintf (")");
         AcpiDmCommaIfFieldMember (Op);
+        ASL_CV_PRINT_ONE_COMMENT (Op, AML_COMMENT_END_NODE, NULL, 0);
+        ASL_CV_PRINT_ONE_COMMENT (Op, AMLCOMMENT_INLINE, NULL, 0);
         AcpiOsPrintf ("\n");
 
         Op->Common.DisasmFlags |= ACPI_PARSEOP_IGNORE; /* for now, ignore in AcpiDmAscendingOp */
@@ -1049,7 +1094,7 @@ AcpiDmDisassembleOneOp (
 
     case AML_WHILE_OP:
 
-        if (AcpiDmIsSwitchBlock(Op))
+        if (Op->Common.DisasmOpcode == ACPI_DASM_SWITCH)
         {
             AcpiOsPrintf ("%s", "Switch");
             break;
@@ -1078,14 +1123,10 @@ AcpiDmDisassembleOneOp (
 
         if (AcpiGbl_DmEmitExternalOpcodes)
         {
-            AcpiOsPrintf ("/* Opcode 0x15 */ ");
+            AcpiDmEmitExternal (Op, AcpiPsGetArg(Op, 0));
+        }
 
-            /* Fallthrough */
-        }
-        else
-        {
-            break;
-        }
+        break;
 
     default:
 
@@ -1319,401 +1360,4 @@ AcpiDmPromoteSubtree (
         }
         Op = Op->Common.Next;
     }
-}
-
-/*******************************************************************************
- *
- * FUNCTION:    AcpiDmIsTempName
- *
- * PARAMETERS:  Op              - Object to be examined
- *
- * RETURN:      TRUE if object is a temporary (_T_x) name
- *
- * DESCRIPTION: Determine if an object is a temporary name and ignore it.
- *              Temporary names are only used for Switch statements. This
- *              function depends on this restriced usage.
- *
- ******************************************************************************/
-
-BOOLEAN
-AcpiDmIsTempName (
-    ACPI_PARSE_OBJECT       *Op)
-{
-    char                    *Temp;
-
-    if (Op->Common.AmlOpcode != AML_NAME_OP)
-    {
-        return (FALSE);
-    }
-
-    Temp = (char *)(Op->Common.Aml);
-    ++Temp;
-
-    if (strncmp(Temp, "_T_", 3))
-    {
-        return (FALSE);
-    }
-
-    /* Ignore Op */
-
-    Op->Common.DisasmFlags |= ACPI_PARSEOP_IGNORE;
-
-    return (TRUE);
-}
-
-/*******************************************************************************
- *
- * FUNCTION:    AcpiDmIsSwitchBlock
- *
- * PARAMETERS:  Op              - While Object
- *
- * RETURN:      TRUE if While block can be converted to a Switch/Case block
- *
- * DESCRIPTION: Determines if While block is a Switch/Case statement. Modifies
- *              parse tree to allow for Switch/Case disassembly during walk.
- *
- * EXAMPLE: Example of parse tree to be converted
- *
- *    While
- *        One
- *        Store
- *            ByteConst
- *             -NamePath-
- *        If
- *            LEqual
- *                -NamePath-
- *                Zero
- *            Return
- *                One
- *        Else
- *            Return
- *                WordConst
- *        Break
- *
- ******************************************************************************/
-
-static BOOLEAN
-AcpiDmIsSwitchBlock (
-    ACPI_PARSE_OBJECT       *Op)
-{
-    ACPI_PARSE_OBJECT       *OneOp;
-    ACPI_PARSE_OBJECT       *StoreOp;
-    ACPI_PARSE_OBJECT       *NamePathOp;
-    ACPI_PARSE_OBJECT       *PredicateOp;
-    ACPI_PARSE_OBJECT       *CurrentOp;
-    ACPI_PARSE_OBJECT       *TempOp;
-
-    /* Check for One Op Predicate */
-
-    OneOp = AcpiPsGetArg (Op, 0);
-    if (!OneOp || (OneOp->Common.AmlOpcode != AML_ONE_OP))
-    {
-        return (FALSE);
-    }
-
-    /* Check for Store Op */
-
-    StoreOp = OneOp->Common.Next;
-    if (!StoreOp || (StoreOp->Common.AmlOpcode != AML_STORE_OP))
-    {
-        return (FALSE);
-    }
-
-    /* Check for Name Op with _T_ string */
-
-    NamePathOp = AcpiPsGetArg (StoreOp, 1);
-    if (!NamePathOp || (NamePathOp->Common.AmlOpcode != AML_INT_NAMEPATH_OP))
-    {
-        return (FALSE);
-    }
-
-    if (strncmp((char *)(NamePathOp->Common.Aml), "_T_", 3))
-    {
-        return (FALSE);
-    }
-
-    /* This is a Switch/Case control block */
-
-    /* Ignore the One Op Predicate */
-
-    OneOp->Common.DisasmFlags |= ACPI_PARSEOP_IGNORE;
-
-    /* Ignore the Store Op, but not the children */
-
-    StoreOp->Common.DisasmOpcode = ACPI_DASM_IGNORE_SINGLE;
-
-    /*
-     * First arg of Store Op is the Switch condition.
-     * Mark it as a Switch predicate and as a parameter list for paren
-     * closing and correct indentation.
-     */
-    PredicateOp = AcpiPsGetArg (StoreOp, 0);
-    PredicateOp->Common.DisasmOpcode = ACPI_DASM_SWITCH_PREDICATE;
-    PredicateOp->Common.DisasmFlags |= ACPI_PARSEOP_PARAMETER_LIST;
-
-    /* Ignore the Name Op */
-
-    NamePathOp->Common.DisasmFlags = ACPI_PARSEOP_IGNORE;
-
-    /* Remaining opcodes are the Case statements (If/ElseIf's) */
-
-    CurrentOp = StoreOp->Common.Next;
-    while (AcpiDmIsCaseBlock (CurrentOp))
-    {
-        /* Block is a Case structure */
-
-        if (CurrentOp->Common.AmlOpcode == AML_ELSE_OP)
-        {
-            /* ElseIf */
-
-            CurrentOp->Common.DisasmOpcode = ACPI_DASM_CASE;
-            CurrentOp = AcpiPsGetArg (CurrentOp, 0);
-        }
-
-        /* If */
-
-        CurrentOp->Common.DisasmOpcode = ACPI_DASM_CASE;
-
-        /*
-         * Mark the parse tree for Case disassembly. There are two
-         * types of Case statements. The first type of statement begins with
-         * an LEqual. The second starts with an LNot and uses a Match statement
-         * on a Package of constants.
-         */
-        TempOp = AcpiPsGetArg (CurrentOp, 0);
-        switch (TempOp->Common.AmlOpcode)
-        {
-            case (AML_LEQUAL_OP):
-
-                /* Ignore just the LEqual Op */
-
-                TempOp->Common.DisasmOpcode = ACPI_DASM_IGNORE_SINGLE;
-
-                /* Ignore the NamePath Op */
-
-                TempOp = AcpiPsGetArg (TempOp, 0);
-                TempOp->Common.DisasmFlags = ACPI_PARSEOP_IGNORE;
-
-                /*
-                 * Second arg of LEqual will be the Case predicate.
-                 * Mark it as a predicate and also as a parameter list for paren
-                 * closing and correct indentation.
-                 */
-                PredicateOp = TempOp->Common.Next;
-                PredicateOp->Common.DisasmOpcode = ACPI_DASM_SWITCH_PREDICATE;
-                PredicateOp->Common.DisasmFlags |= ACPI_PARSEOP_PARAMETER_LIST;
-
-                break;
-
-            case (AML_LNOT_OP):
-
-                /*
-                 * The Package will be the predicate of the Case statement.
-                 * It's under:
-                 *            LNOT
-                 *                LEQUAL
-                 *                    MATCH
-                 *                        PACKAGE
-                 */
-
-                /* Get the LEqual Op from LNot */
-
-                TempOp = AcpiPsGetArg (TempOp, 0);
-
-                /* Get the Match Op from LEqual */
-
-                TempOp = AcpiPsGetArg (TempOp, 0);
-
-                /* Get the Package Op from Match */
-
-                PredicateOp = AcpiPsGetArg (TempOp, 0);
-
-                /* Mark as parameter list for paren closing */
-
-                PredicateOp->Common.DisasmFlags |= ACPI_PARSEOP_PARAMETER_LIST;
-
-                /*
-                 * The Package list would be too deeply indented if we
-                 * chose to simply ignore the all the parent opcodes, so
-                 * we rearrange the parse tree instead.
-                 */
-
-                /*
-                 * Save the second arg of the If/Else Op which is the
-                 * block code of code for this Case statement.
-                 */
-                TempOp = AcpiPsGetArg (CurrentOp, 1);
-
-                /*
-                 * Move the Package Op to the child (predicate) of the
-                 * Case statement.
-                 */
-                CurrentOp->Common.Value.Arg = PredicateOp;
-                PredicateOp->Common.Parent = CurrentOp;
-
-                /* Add the block code */
-
-                PredicateOp->Common.Next = TempOp;
-
-                break;
-
-            default:
-
-                /* Should never get here */
-
-                break;
-        }
-
-        /* Advance to next Case block */
-
-        CurrentOp = CurrentOp->Common.Next;
-    }
-
-    /* If CurrentOp is now an Else, then this is a Default block */
-
-    if (CurrentOp && CurrentOp->Common.AmlOpcode == AML_ELSE_OP)
-    {
-        CurrentOp->Common.DisasmOpcode = ACPI_DASM_DEFAULT;
-    }
-
-    /*
-     * From the first If advance to the Break op. It's possible to
-     * have an Else (Default) op here when there is only one Case
-     * statement, so check for it.
-     */
-    CurrentOp = StoreOp->Common.Next->Common.Next;
-    if (CurrentOp->Common.AmlOpcode == AML_ELSE_OP)
-    {
-        CurrentOp = CurrentOp->Common.Next;
-    }
-
-    /* Ignore the Break Op */
-
-    CurrentOp->Common.DisasmFlags |= ACPI_PARSEOP_IGNORE;
-
-    return (TRUE);
-}
-
-/*******************************************************************************
- *
- * FUNCTION:    AcpiDmIsCaseBlock
- *
- * PARAMETERS:  Op              - Object to test
- *
- * RETURN:      TRUE if Object is beginning of a Case block.
- *
- * DESCRIPTION: Determines if an Object is the beginning of a Case block for a
- *              Switch/Case statement. Parse tree must be one of the following
- *              forms:
- *
- *              Else (Optional)
- *                  If
- *                      LEqual
- *                          -NamePath- _T_x
- *
- *              Else (Optional)
- *                  If
- *                      LNot
- *                          LEqual
- *                              Match
- *                                  Package
- *                                      ByteConst
- *                                      -NamePath- _T_x
- *
- ******************************************************************************/
-
-static BOOLEAN
-AcpiDmIsCaseBlock (
-    ACPI_PARSE_OBJECT       *Op)
-{
-    ACPI_PARSE_OBJECT       *CurrentOp;
-
-    if (!Op)
-    {
-        return (FALSE);
-    }
-
-    /* Look for an If or ElseIf */
-
-    CurrentOp = Op;
-    if (CurrentOp->Common.AmlOpcode == AML_ELSE_OP)
-    {
-        CurrentOp = AcpiPsGetArg (CurrentOp, 0);
-        if (!CurrentOp)
-        {
-            return (FALSE);
-        }
-    }
-
-    if (!CurrentOp || CurrentOp->Common.AmlOpcode != AML_IF_OP)
-    {
-        return (FALSE);
-    }
-
-    /* Child must be LEqual or LNot */
-
-    CurrentOp = AcpiPsGetArg (CurrentOp, 0);
-    if (!CurrentOp)
-    {
-        return (FALSE);
-    }
-
-    switch (CurrentOp->Common.AmlOpcode)
-    {
-        case (AML_LEQUAL_OP):
-
-            /* Next child must be NamePath with string _T_ */
-
-            CurrentOp = AcpiPsGetArg (CurrentOp, 0);
-            if (!CurrentOp || !CurrentOp->Common.Value.Name ||
-                strncmp(CurrentOp->Common.Value.Name, "_T_", 3))
-            {
-                return (FALSE);
-            }
-
-            break;
-
-        case (AML_LNOT_OP):
-
-            /* Child of LNot must be LEqual op */
-
-            CurrentOp = AcpiPsGetArg (CurrentOp, 0);
-            if (!CurrentOp || (CurrentOp->Common.AmlOpcode != AML_LEQUAL_OP))
-            {
-                return (FALSE);
-            }
-
-            /* Child of LNot must be Match op */
-
-            CurrentOp = AcpiPsGetArg (CurrentOp, 0);
-            if (!CurrentOp || (CurrentOp->Common.AmlOpcode != AML_MATCH_OP))
-            {
-                return (FALSE);
-            }
-
-            /* First child of Match must be Package op */
-
-            CurrentOp = AcpiPsGetArg (CurrentOp, 0);
-            if (!CurrentOp || (CurrentOp->Common.AmlOpcode != AML_PACKAGE_OP))
-            {
-                return (FALSE);
-            }
-
-            /* Third child of Match must be NamePath with string _T_ */
-
-            CurrentOp = AcpiPsGetArg (CurrentOp->Common.Parent, 2);
-            if (!CurrentOp || !CurrentOp->Common.Value.Name ||
-                strncmp(CurrentOp->Common.Value.Name, "_T_", 3))
-            {
-                return (FALSE);
-            }
-
-            break;
-
-        default:
-
-            return (FALSE);
-    }
-
-    return (TRUE);
 }

@@ -15,15 +15,16 @@ namespace L4
   class Uart_sh : public Uart
   {
   public:
-    explicit Uart_sh() {}
-    bool startup(Io_register_block const *);
-    void shutdown();
-    bool enable_rx_irq(bool enable = true);
-    bool change_mode(Transfer_mode m, Baud_rate r);
-    int get_char(bool blocking = true) const;
-    int char_avail() const;
+    explicit Uart_sh(unsigned /*base_rate*/) {}
+    bool startup(Io_register_block const *) override;
+    void shutdown() override;
+    bool enable_rx_irq(bool enable = true) override;
+    bool change_mode(Transfer_mode m, Baud_rate r) override;
+    void irq_ack() override;
+    int get_char(bool blocking = true) const override;
+    int char_avail() const override;
     inline void out_char(char c) const;
-    int write(char const *s, unsigned long count) const;
+    int write(char const *s, unsigned long count) const override;
   };
 };
 

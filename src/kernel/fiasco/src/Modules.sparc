@@ -8,6 +8,11 @@ include $(srcdir)/Modules.generic
 SUBSYSTEMS  :=	ABI KERNEL LIBUART LIBK DRIVERS MINILIBC CXXLIB CRT0 \
 		VERSION JABI TCBOFFSET
 
+ifeq ($(CONFIG_UNIT_TEST),y)
+	# UTEST depends on KERNEL and CHECKSUM, must be listed after them
+	SUBSYSTEMS += UTEST
+endif
+
 
 PREPROCESS_PARTS 	+= $(CONFIG_XARCH) $(CONFIG_ABI) 32bit \
 			   abs_syscalls big_endian jdb_thread_names \
@@ -34,6 +39,8 @@ PREPROCESS_PARTS	+= libuart
 endif
 
 OBJECTS_LIBUART		+= uart_leon3.o
+CXXFLAGS_uart-libuart   += $(call LIBUART_UART, leon3)
+
 VPATH_LIBUART		:= $(srcdir)/lib/uart
 PRIVATE_INCDIR		+= lib/uart drivers/$(CONFIG_XARCH)/include
 
@@ -49,7 +56,7 @@ io_IMPL			:= io io-sparc
 mem_IMPL		:= mem mem-sparc
 reset_IMPL		:= reset-sparc
 processor_IMPL		:= processor processor-sparc
-uart_IMPL		:= uart uart-asi
+uart_IMPL		:= uart uart-libuart
 CXXSRC_DRIVERS		:= glue_libc.cc
 NOOPT			+= $(patsubst %.o, %, $(OBJ_DRIVERS))
 
@@ -63,14 +70,13 @@ CSRC_MINILIBC	:= atexit.c memccpy.c memcmp.c memmove.c memset.c memcpy.c \
 		   memchr.c panic.c strchr.c strcmp.c strcpy.c strlen.c \
 		   strncmp.c strncpy.c strstr.c printf.c \
 		   __v_printf.c vprintf.c strtol.c strtoul.c __lltostr.c \
-		   __ltostr.c putchar.c puts.c getchar.c gets.c \
+		   __ltostr.c putchar.c puts.c getchar.c \
 		   sprintf.c snprintf.c vsnprintf.c vsprintf.c \
 		   longjmp.c isalnum.c isalpha.c isascii.c isblank.c \
 		   iscntrl.c isdigit.c isgraph.c islower.c isprint.c \
 		   ispunct.c isspace.c isupper.c isxdigit.c strspn.c \
 		   strcspn.c tolower.c
 ASSRC_MINILIBC	:= setjmp.S
-NOOPT		+= $(patsubst %.o, %, $(OBJ_MINILIBC))
 
 
 #
@@ -95,7 +101,7 @@ l4_types_IMPL	:= l4_types l4_types-debug
 # KERNEL subsystem
 #
 KERNEL 		:= fiasco
-KERNEL_EXTRA 	:= Symbols
+KERNEL_EXTRA 	:= Symbols kernel.sparc.lds fiasco.debug
 VPATH 		+= kern/$(CONFIG_XARCH) kern
 VPATH		+= jdb/$(CONFIG_XARCH) jdb
 PRIVATE_INCDIR 	+= kern/$(CONFIG_XARCH) kern
@@ -116,13 +122,12 @@ cpu_IMPL		:= cpu cpu-sparc
 cpu_lock_IMPL		:= cpu_lock cpu_lock-generic
 dirq_IMPL		:= dirq-sparc
 entry_frame_IMPL	:= entry_frame entry_frame-sparc
-kdb_ke_IMPL		:= kdb_ke-sparc
+kdb_ke_IMPL		+= kdb_ke-sparc
 kernel_task_IMPL	:= kernel_task kernel_task-sparc
 kernel_thread_IMPL	:= kernel_thread kernel_thread-std kernel_thread-sparc
-kernel_uart_IMPL	:= kernel_uart kernel_uart-sparc
+kernel_uart_IMPL	:= kernel_uart kernel_uart-libuart
 kmem_alloc_IMPL		:= kmem_alloc kmem_alloc-sparc
 map_util_IMPL		:= map_util map_util-mem map_util-objs
-mapping_IMPL		:= mapping-sparc mapping
 mem_layout_IMPL		:= mem_layout mem_layout-sparc
 mem_unit_IMPL		:= mem_unit-sparc
 mem_space_IMPL		:= mem_space mem_space-user mem_space-sparc
@@ -179,7 +184,7 @@ ASSRC_CRT0	:= crt0.S
 # 
 CXXLIB 			:= libcxx.a
 VPATH			+= lib/cxxlib
-INTERFACES_CXXLIB 	:= paranoia s_cruft
+INTERFACES_CXXLIB 	:= paranoia
 
 #
 # LIBK subsystem
@@ -215,7 +220,6 @@ ifeq ("$(CONFIG_JDB_DISASM)","y")
   CXXSRC_LIBDISASM    := disasm.cc
   CSRC_LIBDISASM      := sparc-dis.c sparc-opc.c dis-init.c dis-buf.c \
                          safe-ctype.c libbfd.c
-  NOOPT               += $(patsubst %.o, %, $(OBJ_LIBDISASM))
 endif
 
 #

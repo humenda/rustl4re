@@ -1,4 +1,5 @@
 <map id="l4util_irq_acknowledge" name="l4util_irq_acknowledge">
-<area shape="rect" id="node2" href="$group__l4util__portio.html#ga6fd63a09b8ead7241fd90d4e6c7fa85b" title="Read byte from I/O port. " alt="" coords="223,5,300,32"/>
-<area shape="rect" id="node3" href="$group__l4util__portio.html#ga4b19e212f042fea17016186862da1ed2" title="Write byte to I/O port. " alt="" coords="219,56,304,83"/>
+<area shape="rect" id="node1" title="Acknowledge IRQ at PIC in fully special nested mode." alt="" coords="5,31,177,57"/>
+<area shape="rect" id="node2" href="$x86_2l4_2util_2port__io_8h.html#a6fd63a09b8ead7241fd90d4e6c7fa85b" title="Read byte from I/O port." alt="" coords="229,5,312,32"/>
+<area shape="rect" id="node3" href="$x86_2l4_2util_2port__io_8h.html#a4b19e212f042fea17016186862da1ed2" title="Write byte to I/O port." alt="" coords="225,56,316,83"/>
 </map>

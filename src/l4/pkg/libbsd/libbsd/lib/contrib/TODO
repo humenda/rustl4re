@@ -1,3 +1,4 @@
+* Migrate portable functions from GNU/kFreeBSD's libfreebsd.
 * Add more functions used by ported packages (check openssh).
 * Add more unit tests.
 * Add missing man pages.
@@ -5,7 +6,6 @@
   - timeconv?
 * Add a README.import file.
 * Update man pages:
-  - Fix references to a.out(5) and inline needed struct definitions.
   - Document when each interface was added on every BSD, and libbsd.
 * Handle LFS properly. By default the library emits LFS objects, but might
   be used by non-LFS objects. We should either provide foo and foo64

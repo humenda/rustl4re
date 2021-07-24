@@ -1,11 +1,10 @@
+/* SPDX-License-Identifier: GPL-2.0-only or License-Ref-kk-custom */
 /*
- * (c) 2013-2014 Alexander Warg <warg@os.inf.tu-dresden.de>
- *     economic rights: Technische Universität Dresden (Germany)
+ * Copyright (C) 2013-2020 Kernkonzept GmbH.
+ * Author(s): Alexander Warg <alexander.warg@kernkonzept.com>
  *
- * This file is part of TUD:OS and distributed under the terms of the
- * GNU General Public License 2.
- * Please see the COPYING-GPL-2 file for details.
  */
+
 #pragma once
 
 #include <l4/sys/l4int.h>
@@ -38,7 +37,7 @@ public:
   CXX_BITFIELD_MEMBER(14, 16, mcr_opc1, _raw);
   CXX_BITFIELD_MEMBER(10, 13, mcr_crn, _raw);
   CXX_BITFIELD_MEMBER(10, 13, mcrr_rt2, _raw);
-  CXX_BITFIELD_MEMBER( 5,  8, mcr_rt, _raw);
+  CXX_BITFIELD_MEMBER( 5,  9, mcr_rt, _raw);  // bit 9 reserved in AArch32
   CXX_BITFIELD_MEMBER( 1,  4, mcr_crm, _raw);
   CXX_BITFIELD_MEMBER( 0,  0, mcr_read, _raw);
 
@@ -56,6 +55,15 @@ public:
   {
     return   (op0 << 20) | (op2 << 17) | (op1 << 14)
            | (crn << 10) | (crm << 1);
+  }
+
+  unsigned msr_sysreg_n() const { return _raw & 0x00fffc00; }
+  static constexpr unsigned
+  msr_sysreg_n(unsigned op0, unsigned op1, unsigned crn,
+             unsigned op2)
+  {
+    return   (op0 << 20) | (op2 << 17) | (op1 << 14)
+           | (crn << 10);
   }
 
   CXX_BITFIELD_MEMBER(12, 19, ldc_imm, _raw);
@@ -165,7 +173,27 @@ namespace Gic_h {
     CXX_BITFIELD_MEMBER( 29, 29, active, raw);
     CXX_BITFIELD_MEMBER( 30, 30, grp1, raw);
     CXX_BITFIELD_MEMBER( 31, 31, hw, raw);
+
+    void set_cpuid(unsigned cpu) { cpuid() = cpu; }
   };
+
+  /**
+   * Initialize the vCPU state for virtual GIC support.
+   */
+  inline void init_vcpu(void *vcpu)
+  {
+    Vmcr vmcr(0);
+    vmcr.bp() = 2; // lowest possible value for 32 prios
+    vmcr.abp() = 2;
+    l4_vcpu_e_write_32(vcpu, L4_VCPU_E_GIC_VMCR, vmcr.raw);
+
+    // enable the interface and some maintenance settings
+    Hcr hcr(0);
+    hcr.en() = 1;
+    hcr.vgrp0_eie() = 1;
+    hcr.vgrp1_eie() = 1;
+    l4_vcpu_e_write_32(vcpu, L4_VCPU_E_GIC_HCR, hcr.raw);
+  }
 }
 
 }

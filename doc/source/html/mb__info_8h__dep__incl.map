@@ -1,5 +1,6 @@
 <map id="l4/util/mb_info.h" name="l4/util/mb_info.h">
-<area shape="rect" id="node2" href="$x86_2l4_2util_2mbi__argv_8h.html" title="command line handling " alt="" coords="6,80,159,107"/>
-<area shape="rect" id="node4" href="$amd64_2l4_2util_2mbi__argv_8h.html" title="command line handling " alt="" coords="184,80,357,107"/>
-<area shape="rect" id="node3" href="$arm_2l4_2util_2mbi__argv_8h.html" title="Multiboot. " alt="" coords="5,155,160,181"/>
+<area shape="rect" id="node1" title="Multiboot info structure as defined by GRUB." alt="" coords="132,5,260,32"/>
+<area shape="rect" id="node2" href="$amd64_2l4_2util_2mbi__argv_8h.html" title="command line handling" alt="" coords="5,80,189,107"/>
+<area shape="rect" id="node3" href="$x86_2l4_2util_2mbi__argv_8h.html" title="command line handling" alt="" coords="213,80,376,107"/>
+<area shape="rect" id="node4" href="$arm_2l4_2util_2mbi__argv_8h.html" title="Multiboot." alt="" coords="212,155,377,181"/>
 </map>

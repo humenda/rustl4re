@@ -1,4 +1,4 @@
-#! /usr/bin/perl -w
+#! /usr/bin/env perl
 #
 # (c) 2009-2011 Technische Universität Dresden
 # This file is part of TUD:OS and distributed under the terms of the
@@ -12,6 +12,7 @@
 # Maybe sometime later we could use -W again?
 
 use strict;
+use warnings;
 use File::Temp qw/tempfile/;
 
 BEGIN { unshift @INC, $ENV{L4DIR}.'/tool/lib'
@@ -46,7 +47,7 @@ if ($ARGV[0] eq 'menu')
       }
 
     system("dialog --visit-items --title 'Select entry to launch:' "
-        ." $backtitle -1 -1 0 ".
+        ." $backtitle -1 -1 1000 ".
         join(' ', map { "$_ '$e[$_]'" } (0 .. $#e) )." 2> $tmpfilename");
 
     if ($?)

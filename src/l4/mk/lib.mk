@@ -13,6 +13,8 @@ _L4DIR_MK_LIB_MK=y
 
 ROLE = lib.mk
 
+include $(L4DIR)/mk/Makeconf
+
 # define INSTALLDIRs prior to including install.inc, where the install-
 # rules are defined. Same for INSTALLDIR.
 ifeq ($(MODE),host)
@@ -22,8 +24,14 @@ else
 INSTALLDIR_LIB		?= $(DROPS_STDDIR)/lib/$(subst -,/,$(SYSTEM))
 INSTALLDIR_LIB_LOCAL	?= $(OBJ_BASE)/lib/$(subst -,/,$(SYSTEM))
 endif
-INSTALLFILE_LIB		?= $(INSTALL) -m 644 $(1) $(2)
-INSTALLFILE_LIB_LOCAL	?= $(LN) -sf $(call absfilename,$(1)) $(2)
+
+do_strip=$(and $(CONFIG_BID_STRIP_BINARIES),$(filter %.so,$(1)))
+INSTALLFILE_LIB         ?= $(if $(call do_strip,$(1)),                      \
+                                $(call copy_stripped_binary,$(1),$(2),644), \
+                                $(INSTALL) -m 644 $(1) $(2))
+INSTALLFILE_LIB_LOCAL   ?= $(if $(call do_strip,$(1)),                      \
+                                $(call copy_stripped_binary,$(1),$(2),644), \
+                                $(LN) -sf $(call absfilename,$(1)) $(2))
 
 INSTALLFILE		= $(INSTALLFILE_LIB)
 INSTALLDIR		= $(INSTALLDIR_LIB)
@@ -47,7 +55,6 @@ endif
 CPPFLAGS          += -DL4SYS_USE_UTCB_WRAP=1
 
 # include all Makeconf.locals, define common rules/variables
-include $(L4DIR)/mk/Makeconf
 include $(L4DIR)/mk/binary.inc
 $(GENERAL_D_LOC): $(L4DIR)/mk/lib.mk
 
@@ -129,7 +136,7 @@ DEPS	+= $(foreach file,$(TARGET), $(call BID_LINK_DEPS,$(file)))
 
 $(filter-out $(LINK_INCR) %.so %.o.a %.o.pr.a, $(TARGET)):%.a: $(OBJS)
 	@$(AR_MESSAGE)
-	$(VERBOSE)[ -d "$(dir $@)" ] || $(MKDIR) $(dir $@)
+	$(VERBOSE)$(call create_dir,$(@D))
 	$(VERBOSE)$(RM) $@
 	$(VERBOSE)$(AR) crs$(if $(filter %.thin.a,$@),T) $@ $(OBJS)
 	@$(BUILT_MESSAGE)
@@ -137,7 +144,7 @@ $(filter-out $(LINK_INCR) %.so %.o.a %.o.pr.a, $(TARGET)):%.a: $(OBJS)
 # shared lib
 $(filter %.so, $(TARGET)):%.so: $(OBJS) $(LIBDEPS)
 	@$(LINK_SHARED_MESSAGE)
-	$(VERBOSE)[ -d "$(dir $@)" ] || $(MKDIR) $(dir $@)
+	$(VERBOSE)$(call create_dir,$(@D))
 	$(VERBOSE)$(call MAKEDEP,$(LD)) $(BID_LINK) -MD -MF $(call BID_link_deps_file,$@) -o $@ $(LDFLAGS_SO) \
 	  $(LDFLAGS) $(OBJS) $(addprefix -PC,$(REQUIRES_LIBS))
 	@$(BUILT_MESSAGE)
@@ -148,7 +155,7 @@ $(filter %.so, $(TARGET)):%.so: $(OBJS) $(LIBDEPS)
 LINK_INCR_TARGETS = $(filter $(LINK_INCR) %.o.a %.o.pr.a, $(TARGET))
 $(LINK_INCR_TARGETS):%.a: $(OBJS) $(LIBDEPS) $(foreach x,$(LINK_INCR_TARGETS),$(LINK_INCR_ONLYGLOBSYMFILE_$(x)))
 	@$(LINK_PARTIAL_MESSAGE)
-	$(VERBOSE)[ -d "$(dir $@)" ] || $(MKDIR) $(dir $@)
+	$(VERBOSE)$(call create_dir,$(@D))
 	$(VERBOSE)$(call MAKEDEP,$(LD)) $(LD) \
 	   -T $(LDSCRIPT_INCR) \
 	   -o $@ -r $(OBJS) $(LDFLAGS)

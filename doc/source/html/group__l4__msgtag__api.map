@@ -1,3 +1,4 @@
 <map id="Message Tag" name="Message Tag">
-<area shape="rect" id="node1" href="$group__l4__ipc__api.html" title="API for L4 object invocation. " alt="" coords="5,5,136,32"/>
+<area shape="rect" id="node1" href="$group__l4__ipc__api.html" title="API for L4 object invocation." alt="" coords="5,5,141,31"/>
+<area shape="rect" id="node2" title="API related to the message tag data type." alt="" coords="189,5,296,31"/>
 </map>

@@ -34,6 +34,12 @@
 #include <string.h>
 #include <stdlib.h>
 
+#if defined(_WIN32) || defined(__WIN32__) || defined(__WINDOWS__)
+#define LIBBSD_IS_PATHNAME_SEPARATOR(c) ((c) == '/' || (c) == '\\')
+#else
+#define LIBBSD_IS_PATHNAME_SEPARATOR(c) ((c) == '/')
+#endif
+
 #ifdef HAVE___PROGNAME
 extern const char *__progname;
 #else
@@ -58,11 +64,13 @@ getprogname(void)
 void
 setprogname(const char *progname)
 {
-	const char *last_slash;
+	size_t i;
 
-	last_slash = strrchr(progname, '/');
-	if (last_slash == NULL)
-		__progname = progname;
-	else
-		__progname = last_slash + 1;
+	for (i = strlen(progname); i > 0; i--) {
+		if (LIBBSD_IS_PATHNAME_SEPARATOR(progname[i - 1])) {
+			__progname = progname + i;
+			return;
+		}
+	}
+	__progname = progname;
 }

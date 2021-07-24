@@ -1,0 +1,4 @@
+<map id="l4util_cpu_capabilities_nocheck" name="l4util_cpu_capabilities_nocheck">
+<area shape="rect" id="node1" title="Returns the CPU capabilities." alt="" coords="220,5,387,47"/>
+<area shape="rect" id="node2" href="$amd64_2l4_2util_2cpu_8h.html#a8c07254a927cdb66b4639c7b977eeead" title="Returns the CPU capabilities if the &quot;cpuid&quot; instruction is available." alt="" coords="5,13,172,39"/>
+</map>

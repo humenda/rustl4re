@@ -8,7 +8,7 @@
  *
  * 1. Copyright Notice
  *
- * Some or all of this work - Copyright (c) 1999 - 2017, Intel Corp.
+ * Some or all of this work - Copyright (c) 1999 - 2019, Intel Corp.
  * All rights reserved.
  *
  * 2. License
@@ -111,11 +111,45 @@
  * other governmental approval, or letter of assurance, without first obtaining
  * such license, approval or letter.
  *
+ *****************************************************************************
+ *
+ * Alternatively, you may choose to be licensed under the terms of the
+ * following license:
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions, and the following disclaimer,
+ *    without modification.
+ * 2. Redistributions in binary form must reproduce at minimum a disclaimer
+ *    substantially similar to the "NO WARRANTY" disclaimer below
+ *    ("Disclaimer") and any redistribution must be conditioned upon
+ *    including a substantially similar Disclaimer requirement for further
+ *    binary redistribution.
+ * 3. Neither the names of the above-listed copyright holders nor the names
+ *    of any contributors may be used to endorse or promote products derived
+ *    from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+ * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * Alternatively, you may choose to be licensed under the terms of the
+ * GNU General Public License ("GPL") version 2 as published by the Free
+ * Software Foundation.
+ *
  *****************************************************************************/
 
 #include "aslcompiler.h"
-#include "dtcompiler.h"
-
 
 #define _COMPONENT          ASL_PREPROCESSOR
         ACPI_MODULE_NAME    ("prexpress")
@@ -189,8 +223,8 @@ PrExpandMacros (
     int                     OffsetAdjust;
 
 
-    strcpy (Gbl_ExpressionTokenBuffer, Gbl_CurrentLineBuffer);
-    Token = PrGetNextToken (Gbl_ExpressionTokenBuffer, PR_EXPR_SEPARATORS, &Next);
+    strcpy (AslGbl_ExpressionTokenBuffer, AslGbl_CurrentLineBuffer);
+    Token = PrGetNextToken (AslGbl_ExpressionTokenBuffer, PR_EXPR_SEPARATORS, &Next);
     OffsetAdjust = 0;
 
     while (Token)
@@ -204,10 +238,10 @@ PrExpandMacros (
 
                 DbgPrint (ASL_DEBUG_OUTPUT, PR_PREFIX_ID
                     "Matched Macro: %s->%s\n",
-                    Gbl_CurrentLineNumber, DefineInfo->Identifier,
+                    AslGbl_CurrentLineNumber, DefineInfo->Identifier,
                     DefineInfo->Replacement);
 
-                PrDoMacroInvocation (Gbl_ExpressionTokenBuffer, Token,
+                PrDoMacroInvocation (AslGbl_ExpressionTokenBuffer, Token,
                     DefineInfo, &Next);
             }
             else
@@ -216,9 +250,9 @@ PrExpandMacros (
 
                 /* Replace the name in the original line buffer */
 
-                TokenOffset = Token - Gbl_ExpressionTokenBuffer + OffsetAdjust;
+                TokenOffset = Token - AslGbl_ExpressionTokenBuffer + OffsetAdjust;
                 PrReplaceData (
-                    &Gbl_CurrentLineBuffer[TokenOffset], strlen (Token),
+                    &AslGbl_CurrentLineBuffer[TokenOffset], strlen (Token),
                     ReplaceString, strlen (ReplaceString));
 
                 /* Adjust for length difference between old and new name length */
@@ -227,7 +261,7 @@ PrExpandMacros (
 
                 DbgPrint (ASL_DEBUG_OUTPUT, PR_PREFIX_ID
                     "Matched #define within expression: %s->%s\n",
-                    Gbl_CurrentLineNumber, Token,
+                    AslGbl_CurrentLineNumber, Token,
                     *ReplaceString ? ReplaceString : "(NULL STRING)");
             }
         }
@@ -260,7 +294,7 @@ PrIsDefined (
 
 
     DbgPrint (ASL_DEBUG_OUTPUT, PR_PREFIX_ID
-        "**** Is defined?:  %s\n", Gbl_CurrentLineNumber, Identifier);
+        "**** Is defined?:  %s\n", AslGbl_CurrentLineNumber, Identifier);
 
     Value = 0; /* Default is "Not defined" -- FALSE */
 
@@ -272,7 +306,7 @@ PrIsDefined (
 
     DbgPrint (ASL_DEBUG_OUTPUT, PR_PREFIX_ID
         "[#if defined %s] resolved to: %8.8X%8.8X\n",
-        Gbl_CurrentLineNumber, Identifier, ACPI_FORMAT_UINT64 (Value));
+        AslGbl_CurrentLineNumber, Identifier, ACPI_FORMAT_UINT64 (Value));
 
     return (Value);
 }
@@ -299,7 +333,7 @@ PrResolveDefine (
 
 
     DbgPrint (ASL_DEBUG_OUTPUT, PR_PREFIX_ID
-        "**** Resolve #define:  %s\n", Gbl_CurrentLineNumber, Identifier);
+        "**** Resolve #define:  %s\n", AslGbl_CurrentLineNumber, Identifier);
 
     Value = 0; /* Default is "Not defined" -- FALSE */
 
@@ -311,7 +345,7 @@ PrResolveDefine (
 
     DbgPrint (ASL_DEBUG_OUTPUT, PR_PREFIX_ID
         "[#if defined %s] resolved to: %8.8X%8.8X\n",
-        Gbl_CurrentLineNumber, Identifier, ACPI_FORMAT_UINT64 (Value));
+        AslGbl_CurrentLineNumber, Identifier, ACPI_FORMAT_UINT64 (Value));
 
     return (Value);
 }
@@ -342,7 +376,7 @@ PrResolveIntegerExpression (
 
 
     DbgPrint (ASL_DEBUG_OUTPUT, PR_PREFIX_ID
-        "**** Resolve #if:  %s\n", Gbl_CurrentLineNumber, Line);
+        "**** Resolve #if:  %s\n", AslGbl_CurrentLineNumber, Line);
 
     /* Expand all macros within the expression first */
 
@@ -353,7 +387,7 @@ PrResolveIntegerExpression (
     Result = PrEvaluateExpression (ExpandedLine);
     DbgPrint (ASL_DEBUG_OUTPUT, PR_PREFIX_ID
         "**** Expression Resolved to: %8.8X%8.8X\n",
-        Gbl_CurrentLineNumber, ACPI_FORMAT_UINT64 (Result));
+        AslGbl_CurrentLineNumber, ACPI_FORMAT_UINT64 (Result));
 
     *ReturnValue = Result;
     return (AE_OK);
@@ -370,7 +404,7 @@ NormalExit:
 
     DbgPrint (ASL_DEBUG_OUTPUT, PR_PREFIX_ID
         "**** Expression Resolved to: %8.8X%8.8X\n",
-        Gbl_CurrentLineNumber, ACPI_FORMAT_UINT64 (Value1));
+        AslGbl_CurrentLineNumber, ACPI_FORMAT_UINT64 (Value1));
 
     *ReturnValue = Value1;
     return (AE_OK);

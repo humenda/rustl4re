@@ -1,4 +1,5 @@
 <map id="IRQ handling library" name="IRQ handling library">
-<area shape="rect" id="node1" href="$group__l4irq__api__async.html" title="This interface has just two (main) functions. " alt="" coords="200,5,391,47"/>
-<area shape="rect" id="node3" href="$group__l4irq__api__irq.html" title="Interface using direct\l functionality." alt="" coords="218,71,373,112"/>
+<area shape="rect" id="node1" href="$group__l4irq__api__async.html" title="This interface has just two (main) functions." alt="" coords="204,5,400,45"/>
+<area shape="rect" id="node2" title=" " alt="" coords="5,45,156,70"/>
+<area shape="rect" id="node3" href="$group__l4irq__api__irq.html" title=" " alt="" coords="222,69,382,109"/>
 </map>

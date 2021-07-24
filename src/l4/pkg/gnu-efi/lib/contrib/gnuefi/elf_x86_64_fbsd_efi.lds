@@ -6,7 +6,9 @@ SECTIONS
 {
   . = 0;
   ImageBase = .;
-  .hash : { *(.hash) }	/* this MUST come first! */
+  /* .hash and/or .gnu.hash MUST come first! */
+  .hash : { *(.hash) }
+  .gnu.hash : { *(.gnu.hash) }
   . = ALIGN(4096);
   .eh_frame : 
   { 
@@ -15,8 +17,12 @@ SECTIONS
   . = ALIGN(4096);
   .text :
   {
+   _text = .;
    *(.text)
+   . = ALIGN(16);
   }
+  _etext = .;
+  _text_size = . - _text;
   .reloc :
   {
    *(.reloc)
@@ -24,6 +30,7 @@ SECTIONS
   . = ALIGN(4096);
   .data :
   {
+   _data = .;
    *(.rodata*)
    *(.got.plt)
    *(.got)
@@ -38,6 +45,8 @@ SECTIONS
    *(COMMON)
    *(.rel.local)
   }
+  .note.gnu.build-id : { *(.note.gnu.build-id) }
+
   . = ALIGN(4096);
   .dynamic  : { *(.dynamic) }
   . = ALIGN(4096);
@@ -47,6 +56,8 @@ SECTIONS
     *(.rela.got)
     *(.rela.stab)
   }
+  _edata = .;
+  _data_size = . - _etext;
   . = ALIGN(4096);
   .dynsym   : { *(.dynsym) }
   . = ALIGN(4096);

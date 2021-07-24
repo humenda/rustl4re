@@ -18,20 +18,17 @@
  */
 
 /* L4 */
-#if defined(ARCH_x86) || defined(ARCH_amd64) || defined(ARCH_ppc32)
+#if defined(ARCH_x86) || defined(ARCH_amd64)
 #include <l4/util/rdtsc.h>     /* XXX x86 specific */
 #endif
 #include <l4/util/util.h>
 
-/* Linux */
-#include <asm/delay.h>
-
 /* UDELAY */
 void udelay(unsigned long usecs)
 {
-#ifdef ARCH_arm
-  l4_sleep(usecs/1000); // XXX
-#else
+#if defined(ARCH_amd64) || defined(ARCH_x86)
   l4_busy_wait_us(usecs);
+#else
+  l4_sleep(usecs/1000); // XXX
 #endif
 }

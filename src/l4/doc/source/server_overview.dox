@@ -15,6 +15,8 @@ unprivileged mode.  To run something useful on Fiasco.OC you usually
 need to run Sigma0, nevertheless it is possible to replace Sigma0
 by a different implementation.
 
+For more details see \subpage l4re_servers_sigma0
+
 
 Moe, the Root Task
 ==================

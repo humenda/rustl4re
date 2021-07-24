@@ -21,7 +21,7 @@ typedef l4_addr_t l4vbus_paddr_t;
 
 /** Description of a single vbus resource */
 typedef struct {
-  /** Resource type, see l4vbus_resource_type_t */
+  /** Resource type, see \ref l4vbus_resource_type_t */
   l4_uint16_t    type;
   /** Flags */
   l4_uint16_t    flags;
@@ -47,6 +47,19 @@ enum l4vbus_resource_type_t {
   L4VBUS_RESOURCE_MAX,         /**< Maximum resource id */
 };
 
+/**
+ * Description of vbus resource flags.
+ *
+ * At the moment these flags are mostly place holders as the IO server does not
+ * return any resource flag at all. These two flags were introduced for custom
+ * servers implementing the vbus protocol. */
+enum l4vbus_resource_flags_t {
+  /** Reading needs to be performed using the MMIO space protocol. */
+  L4VBUS_RESOURCE_F_MEM_MMIO_READ = 0x2000,
+  /** Writing needs to be performed using the MMIO space protocol. */
+  L4VBUS_RESOURCE_F_MEM_MMIO_WRITE = 0x4000,
+};
+
 enum l4vbus_consts_t {
   L4VBUS_DEV_NAME_LEN = 64,
   L4VBUS_MAX_DEPTH = 100,
@@ -54,16 +67,17 @@ enum l4vbus_consts_t {
 
 /** Detailed information about a vbus device */
 typedef struct {
-  /** Bitfield of supported sub-interfaces, see l4vbus_iface_type_t */
+  /** Bitfield of supported sub-interfaces, see \ref l4vbus_iface_type_t */
   l4_uint32_t   type;
   /** Name */
   char          name[L4VBUS_DEV_NAME_LEN];
   /** Number of resources for this device */
   unsigned      num_resources;
-  /** Flags, see l4vbus_device_flags_t */
+  /** Flags, see \ref l4vbus_device_flags_t */
   unsigned      flags;
 } l4vbus_device_t;
 
+/** Flags describing device properties, see l4vbus_device_t. */
 enum l4vbus_device_flags_t {
-  L4VBUS_DEVICE_F_CHILDREN = 0x10,
+  L4VBUS_DEVICE_F_CHILDREN = 0x10, /**< Device has child devices. */
 };

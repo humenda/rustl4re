@@ -3,20 +3,21 @@
 
 #include "std_macros.h"
 
-/** return (divident / divisor) with divisor<2^32 */
-extern inline FIASCO_CONST
+/** return (dividend / divisor) with divisor<2^32 */
+static inline FIASCO_CONST
 unsigned long long
-div32(unsigned long long divident, unsigned long divisor)
+div32(unsigned long long dividend, unsigned long divisor)
 {
   unsigned long long ret;
   unsigned long dummy;
-  asm ("divl	%5		\n\t"
-       "xchg	%%eax, %4	\n\t"
-       "divl	%5		\n\t"
-       "movl	%4, %%edx	\n\t"
+  asm ("divl    %[divisor]              \n\t"
+       "xchg    %%eax, %[dividend_lo32] \n\t"
+       "divl    %[divisor]              \n\t"
+       "movl    %[dividend_lo32], %%edx \n\t"
      : "=A"(ret), "=r"(dummy)
-     : "a"((unsigned long)(divident >> 32)), "d"(0),
-       "1"((unsigned long)(divident & 0xffffffff)), "rm"(divisor));
+     : "a"((unsigned long)(dividend >> 32)), "d"(0),
+       [dividend_lo32]"1"((unsigned long)(dividend & 0xffffffff)),
+       [divisor]"rm"(divisor));
   return ret;
 }
 

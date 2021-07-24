@@ -1,0 +1,2 @@
+ * Needs fixes for new Dataspace API
+ * L4Re::Dataspace::phys() needs replacement -> Dma_space::map()

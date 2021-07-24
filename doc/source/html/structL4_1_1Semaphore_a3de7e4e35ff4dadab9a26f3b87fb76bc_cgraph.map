@@ -1,0 +1,9 @@
+<map id="L4::Semaphore::up" name="L4::Semaphore::up">
+<area shape="rect" id="node1" title="Semaphore up operation (wrapper for trigger())." alt="" coords="5,31,148,57"/>
+<area shape="rect" id="node2" href="$structL4_1_1Triggerable.html#a7109ca8b4aeac0169639f973c91a3a6b" title="Trigger." alt="" coords="196,31,364,57"/>
+<area shape="rect" id="node3" href="$classL4_1_1Kobject.html#a4f2117ae76762f4084e6a1adb915863c" title="Return capability selector." alt="" coords="412,5,536,32"/>
+<area shape="rect" id="node4" href="$group__l4__irq__api.html#ga180cfaf342ce9ff484a6aa7c276e1597" title="Trigger." alt="" coords="413,56,535,83"/>
+<area shape="rect" id="node5" href="$group__l4__ipc__api.html#ga7de45eb59ce852466362ea85da00299e" title="Send a message to an object (do not wait for a reply)." alt="" coords="584,31,683,57"/>
+<area shape="rect" id="node7" href="$group__l4__msgtag__api.html#ga661d71acad9d096fa990f7c94943bc78" title="Create a message tag from the specified values." alt="" coords="588,81,679,108"/>
+<area shape="rect" id="node6" href="$group__l4__ipc__api.html#ga0e7e5b18d784b1d3439ea6e5b4bea4e2" title="Generic L4 object invocation." alt="" coords="731,31,791,57"/>
+</map>

@@ -1,14 +1,14 @@
 var group__l4__vm__vmx__api =
 [
     [ "L4_vm_vmx_caps_regs", "group__l4__vm__vmx__api.html#ga7f887612340fb99adf3ef179d558d71b", [
-      [ "L4_VM_VMX_VMCS_CR2", "group__l4__vm__vmx__api.html#ggab48899087cc647f0f791ed0c459adc53a1722faecbb122e7743d9d662ccd719a1", null ],
-      [ "L4_VM_VMX_VMCS_XCR0", "group__l4__vm__vmx__api.html#ggab48899087cc647f0f791ed0c459adc53a57f0b04a87627b4aa602bf620c3b7d6d", null ],
-      [ "L4_VM_VMX_VMCS_MSR_SYSCALL_MASK", "group__l4__vm__vmx__api.html#ggab48899087cc647f0f791ed0c459adc53ae97d93178451a288d72f66f8ab528131", null ],
-      [ "L4_VM_VMX_VMCS_MSR_LSTAR", "group__l4__vm__vmx__api.html#ggab48899087cc647f0f791ed0c459adc53a03bbbc09d95db544e5429033803c1cb8", null ],
-      [ "L4_VM_VMX_VMCS_MSR_CSTAR", "group__l4__vm__vmx__api.html#ggab48899087cc647f0f791ed0c459adc53af3b8a516ed42738ef71980a5260c9d95", null ],
-      [ "L4_VM_VMX_VMCS_MSR_TSC_AUX", "group__l4__vm__vmx__api.html#ggab48899087cc647f0f791ed0c459adc53a5e89d3653d174e22f9aa84ad0d2cc6ad", null ],
-      [ "L4_VM_VMX_VMCS_MSR_STAR", "group__l4__vm__vmx__api.html#ggab48899087cc647f0f791ed0c459adc53a157c37450487720714a648b04c7972a7", null ],
-      [ "L4_VM_VMX_VMCS_MSR_KERNEL_GS_BASE", "group__l4__vm__vmx__api.html#ggab48899087cc647f0f791ed0c459adc53a793e5454d287deb65d89275c86ea1a0f", null ],
+      [ "L4_VM_VMX_VMCS_CR2", "group__l4__vm__vmx__api.html#gga7ff5f2dff38e7639981794c43dc9167ba1722faecbb122e7743d9d662ccd719a1", null ],
+      [ "L4_VM_VMX_VMCS_XCR0", "group__l4__vm__vmx__api.html#gga7ff5f2dff38e7639981794c43dc9167ba57f0b04a87627b4aa602bf620c3b7d6d", null ],
+      [ "L4_VM_VMX_VMCS_MSR_SYSCALL_MASK", "group__l4__vm__vmx__api.html#gga7ff5f2dff38e7639981794c43dc9167bae97d93178451a288d72f66f8ab528131", null ],
+      [ "L4_VM_VMX_VMCS_MSR_LSTAR", "group__l4__vm__vmx__api.html#gga7ff5f2dff38e7639981794c43dc9167ba03bbbc09d95db544e5429033803c1cb8", null ],
+      [ "L4_VM_VMX_VMCS_MSR_CSTAR", "group__l4__vm__vmx__api.html#gga7ff5f2dff38e7639981794c43dc9167baf3b8a516ed42738ef71980a5260c9d95", null ],
+      [ "L4_VM_VMX_VMCS_MSR_TSC_AUX", "group__l4__vm__vmx__api.html#gga7ff5f2dff38e7639981794c43dc9167ba5e89d3653d174e22f9aa84ad0d2cc6ad", null ],
+      [ "L4_VM_VMX_VMCS_MSR_STAR", "group__l4__vm__vmx__api.html#gga7ff5f2dff38e7639981794c43dc9167ba157c37450487720714a648b04c7972a7", null ],
+      [ "L4_VM_VMX_VMCS_MSR_KERNEL_GS_BASE", "group__l4__vm__vmx__api.html#gga7ff5f2dff38e7639981794c43dc9167ba793e5454d287deb65d89275c86ea1a0f", null ],
       [ "L4_VM_VMX_BASIC_REG", "group__l4__vm__vmx__api.html#gga7f887612340fb99adf3ef179d558d71baeb5e889bff07525d90f96b4ea1e95a6b", null ],
       [ "L4_VM_VMX_TRUE_PINBASED_CTLS_REG", "group__l4__vm__vmx__api.html#gga7f887612340fb99adf3ef179d558d71bada1cdf5ff0a078136094cfbac54c4929", null ],
       [ "L4_VM_VMX_TRUE_PROCBASED_CTLS_REG", "group__l4__vm__vmx__api.html#gga7f887612340fb99adf3ef179d558d71ba0552ed8e38d99b31ba45eac8d6fc0c8c", null ],

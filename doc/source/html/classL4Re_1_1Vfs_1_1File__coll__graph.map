@@ -1,6 +1,7 @@
 <map id="L4Re::Vfs::File" name="L4Re::Vfs::File">
-<area shape="rect" id="node2" href="$classL4Re_1_1Vfs_1_1Generic__file.html" title="The common interface for an open POSIX file. " alt="" coords="5,27,169,222"/>
-<area shape="rect" id="node3" href="$classL4Re_1_1Vfs_1_1Regular__file.html" title="Interface for a POSIX file that provides regular file semantics. " alt="" coords="194,5,357,244"/>
-<area shape="rect" id="node4" href="$classL4Re_1_1Vfs_1_1Directory.html" title="Interface for a POSIX file that is a directory. " alt="" coords="381,13,527,237"/>
-<area shape="rect" id="node5" href="$classL4Re_1_1Vfs_1_1Special__file.html" title="Interface for a POSIX file that provides special file semantics. " alt="" coords="551,79,711,171"/>
+<area shape="rect" id="node1" title="The basic interface for an open POSIX file." alt="" coords="312,307,435,487"/>
+<area shape="rect" id="node2" href="$classL4Re_1_1Vfs_1_1Generic__file.html" title="The common interface for an open POSIX file." alt="" coords="5,35,173,229"/>
+<area shape="rect" id="node3" href="$classL4Re_1_1Vfs_1_1Regular__file.html" title="Interface for a POSIX file that provides regular file semantics." alt="" coords="197,13,365,251"/>
+<area shape="rect" id="node4" href="$classL4Re_1_1Vfs_1_1Directory.html" title="Interface for a POSIX file that is a directory." alt="" coords="390,5,541,259"/>
+<area shape="rect" id="node5" href="$classL4Re_1_1Vfs_1_1Special__file.html" title="Interface for a POSIX file that provides special file semantics." alt="" coords="565,86,731,178"/>
 </map>

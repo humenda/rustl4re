@@ -156,7 +156,7 @@ namespace Romain
 				                                                            // multiple instances)
 			l4_addr_t                _offs;       // offset in DS
 			DS                       _mem[Romain::MAX_REPLICAS]; // DS capabilities of underlying dataspaces
-			l4_uint8_t            _flags;      // region flags
+			L4Re::Rm::Region_flags   _flags;      // region flags
 			RegionWritableType       _row;        // rw state
 			bool                     _shared;     // is DS shared across all replicas
 			                                      // (true for internal determinism's lock info page)
@@ -191,7 +191,7 @@ namespace Romain
 			}
 
 			Region_handler_template(DSCAP cap, l4_cap_idx_t client_cap = L4_INVALID_CAP, l4_addr_t offset = 0,
-			                        l4_umword_t flags = 0, Romain::Region local_reg = Romain::Region(0,0))
+			                        L4Re::Rm::Region_flags flags = 0, Romain::Region local_reg = Romain::Region(0,0))
 				: _cap(client_cap), _offs(offset), _flags(flags), _shared(false),
 				  _alignment(L4_PAGESHIFT), _align_diff(0), _numpf(0)
 			{
@@ -206,7 +206,7 @@ namespace Romain
 				 * shared memory. This fact is however established by someone else (e.g., the syscall
 				 * observer) and here we just set one of the two default states.
 				 */
-				if (flags & L4Re::Rm::Read_only) {
+				if (!(flags & L4Re::Rm::F::W)) {
 					writable(Romain::Region_handler_template<DS, OPS>::Read_only);
 				} else {
 					writable(Romain::Region_handler_template<DS, OPS>::Writable);
@@ -236,8 +236,8 @@ namespace Romain
 			void         local_memory(l4_umword_t idx, DS const & m)  { _mem[idx] = m; }
 			l4_addr_t    offset() const throw()                 { return _offs; }
 			void         offset(l4_addr_t o)                    { _offs = o; }
-			l4_addr_t    is_ro() const throw()                  { return _flags & L4Re::Rm::Read_only; }
-			l4_umword_t     flags() const throw()                  { return _flags; }
+			bool         is_ro() const throw()                  { return !(_flags & L4Re::Rm::F::W); }
+			L4Re::Rm::Region_flags flags() const throw()                  { return _flags; }
 
 			bool         shared() const throw()                 { return _shared; }
 			void         shared(bool yn) { _shared = yn; }
@@ -390,7 +390,7 @@ namespace Romain
 				DEBUG() << "copy existing: " << std::hex << r.alignment()
 				        << " diff " << r.align_diff();
 				l4_addr_t a = Romain::Region_map::allocate_and_attach(&mem, size,
-			                                                          0,  0,
+			                                                          0,  L4Re::Rm::Flags(0),
 			                                                          r.alignment(),
 			                                                          r.align_diff());
 				_check(a == 0, "DS allocation failed");
@@ -433,14 +433,14 @@ namespace Romain
 
 			static l4_addr_t
 			attach_aligned(L4::Cap<L4Re::Dataspace> const * ds, l4_umword_t size,
-			               l4_umword_t offs = 0, l4_umword_t flags = 0,
+			               l4_umword_t offs = 0, L4Re::Rm::Flags flags = L4Re::Rm::Flags(0),
 			               l4_umword_t align = L4_PAGESHIFT, l4_umword_t aligndiff = 0)
 			{
 				l4_addr_t a           = 0;
 				l4_addr_t search_size = size + aligndiff;
 
 				l4_umword_t r = L4Re::Env::env()->rm()->reserve_area(&a, search_size,
-				                                                     L4Re::Rm::Search_addr | flags,
+				                                                     L4Re::Rm::F::Search_addr | flags,
 				                                                     align);
 				_check(r != 0, "reserve area failed");
 				DEBUG() << std::hex << "Reserved area at " << a << " and will attach to "
@@ -449,7 +449,7 @@ namespace Romain
 				a += aligndiff;
 				l4_addr_t tmp_a = a;
 
-				r = L4Re::Env::env()->rm()->attach(&a, size, L4Re::Rm::In_area | L4Re::Rm::Eager_map | flags,
+				r = L4Re::Env::env()->rm()->attach(&a, size, L4Re::Rm::F::In_area | L4Re::Rm::F::Eager_map | flags,
 				                                   *ds, offs);
 				_check(r != 0, "attach error");
 				_check(a != tmp_a, "did not attach to correct location");
@@ -468,7 +468,7 @@ namespace Romain
 			 */
 			static l4_addr_t
 			allocate_and_attach(L4::Cap<L4Re::Dataspace> *cap, l4_umword_t size,
-				                l4_umword_t offs = 0, l4_umword_t flags = 0,
+				                l4_umword_t offs = 0, L4Re::Rm::Flags flags = L4Re::Rm::Flags(0),
 				                l4_umword_t align = L4_PAGESHIFT,
 				                l4_umword_t aligndiff = 0)
 			{
@@ -509,16 +509,16 @@ namespace Romain
 			 * the master process.
 			 */
 			void *attach_locally(void* addr, l4_umword_t size, Romain::Region_handler *hdlr,
-			                     l4_umword_t flags = None, l4_uint8_t align=L4_PAGESHIFT);
+			                     L4Re::Rm::Flags flags = L4Re::Rm::Flags(0), l4_uint8_t align=L4_PAGESHIFT);
 
 
 			void *attach(void* addr, l4_umword_t size, Romain::Region_handler const &hdlr,
-			             l4_umword_t flags = None, l4_uint8_t align=L4_PAGESHIFT, bool shared = false);
+			             L4Re::Rm::Flags flags = L4Re::Rm::Flags(0), l4_uint8_t align=L4_PAGESHIFT, bool shared = false);
 
-			l4_addr_t attach_area(l4_addr_t addr, l4_umword_t size, l4_umword_t flags = None,
+			l4_addr_t attach_area(l4_addr_t addr, l4_umword_t size, L4Re::Rm::Flags flags = L4Re::Rm::Flags(0),
 			                      l4_uint8_t align = L4_PAGESHIFT) throw()
 			{
-				DEBUG() << "attach_area(" << std::hex << addr << ", " << size << ", " << flags << ")";
+				DEBUG() << "attach_area(" << std::hex << addr << ", " << size << ", " << flags.raw << ")";
 				return Base::attach_area(addr, size, flags, align);
 			}
 
@@ -579,7 +579,7 @@ namespace Romain
 			enum { Have_find = true };
 
 			static int validate_ds(void *, L4::Ipc::Snd_fpage const &ds_cap,
-			                       l4_umword_t, L4::Cap<L4Re::Dataspace> *ds)
+			                       L4Re::Rm::Flags, L4::Cap<L4Re::Dataspace> *ds)
 			{
 				/*
 				 * XXX  We need to check if actually a cap was received.

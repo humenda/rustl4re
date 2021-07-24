@@ -229,7 +229,7 @@ static void draw_widgetarea(WIDGET *cw, int rx1, int ry1, int rx2, int ry2) {
  */
 static inline float adapt_pix_per_usec(float value, int pixels, float usec) {
 	float pix_usec_ratio = (float)pixels / usec;
-	return 0.95 * value + 0.05 * pix_usec_ratio;
+	return 0.95f * value + 0.05f * pix_usec_ratio;
 }
 
 
@@ -329,7 +329,7 @@ static s32 exec_redraw(s32 avail_time) {
 	 * limiting the adaption to a lower border is needed to preserve
 	 * robustness even in such bad situations.
 	 */
-	if (pix_per_usec < 8.0) pix_per_usec = 8.0;
+	if (pix_per_usec < 8.0f) pix_per_usec = 8.0;
 
 	/*
 	 * If there was not enough time to process min_pix pixels

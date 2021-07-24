@@ -11,7 +11,7 @@ class Jdb_kobject_name : public Jdb_kobject_extension
 {
 public:
   static char const *const static_type;
-  virtual char const *type() const { return static_type; }
+  virtual char const *type() const override { return static_type; }
 
   ~Jdb_kobject_name() {}
 
@@ -124,24 +124,26 @@ Jdb_kobject_name::name()
 class Jdb_name_hdl : public Jdb_kobject_handler
 {
 public:
-  virtual bool show_kobject(Kobject_common *, int) { return true; }
+  bool show_kobject(Kobject_common *, int) override { return true; }
   virtual ~Jdb_name_hdl() {}
 };
 
 PUBLIC
 void
-Jdb_name_hdl::show_kobject_short(String_buffer *buf, Kobject_common *o)
+Jdb_name_hdl::show_kobject_short(String_buffer *buf, Kobject_common *o,
+                                 bool dense) override
 {
   Jdb_kobject_name *ex
     = Jdb_kobject_extension::find_extension<Jdb_kobject_name>(o);
 
   if (ex)
-    buf->printf(" {%-*.*s}", ex->max_len(), ex->max_len(), ex->name());
+    buf->printf(" {%-*.*s}",
+                dense ? 0 : ex->max_len(), ex->max_len(), ex->name());
 }
 
 PUBLIC
 bool
-Jdb_name_hdl::invoke(Kobject_common *o, Syscall_frame *f, Utcb *utcb)
+Jdb_name_hdl::invoke(Kobject_common *o, Syscall_frame *f, Utcb *utcb) override
 {
   switch (utcb->values[0])
     {
@@ -200,7 +202,7 @@ PUBLIC static FIASCO_INIT
 void
 Jdb_kobject_name::init()
 {
-  _names = (Jdb_kobject_name*)Kmem_alloc::allocator()->unaligned_alloc(Name_buffer_size);
+  _names = (Jdb_kobject_name*)Kmem_alloc::allocator()->alloc(Bytes(Name_buffer_size));
   if (!_names)
     panic("No memory for thread names");
 

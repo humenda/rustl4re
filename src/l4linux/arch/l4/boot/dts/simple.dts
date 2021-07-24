@@ -1,0 +1,37 @@
+/*
+ * Basic DT for L4Linux.
+ */
+
+/dts-v1/;
+
+/ {
+	model = "L4Linux (DT)";
+	compatible = "L4Linux";
+
+	#address-cells = <1>;
+	#size-cells = <1>;
+	chosen { };
+	aliases { };
+
+	intc: l4icu {
+		compatible = "l4,icu";
+		interrupt-controller;
+		/* type can be 'gic' or 'single' currently */
+		l4icu-type = "gic";
+		#interrupt-cells = <3>;
+		/*
+		l4icu-type = "single";
+		#interrupt-cells = <1>;
+		*/
+	};
+
+	/* QEMU-ARM: -M realview-eb -net nic,model=smc91c111  */
+	ethernet@4e000000 {
+		compatible = "smsc,lan91c111";
+		reg = <0x4e000000 0x10>;
+		interrupt-parent = <&intc>;
+		interrupts = <0 28 0>;
+		status = "disabled";
+	};
+
+};

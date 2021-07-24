@@ -15,7 +15,9 @@ var group__l4vbus__module =
     [ "l4vbus_get_next_device", "group__l4vbus__module.html#ga1510914cb12bcd56b4caa65be360ee3c", null ],
     [ "l4vbus_get_resource", "group__l4vbus__module.html#gac60ae2d46f8158a887ce4b8a1bf447bd", null ],
     [ "l4vbus_is_compatible", "group__l4vbus__module.html#gada51cecbba0d25a6d05e810b737f3df5", null ],
+    [ "l4vbus_release_ioport", "group__l4vbus__module.html#gaf6d8f34fe76d15c0e3e614c275be84dd", null ],
     [ "l4vbus_release_resource", "group__l4vbus__module.html#ga5602d294089eac2fd2b4abdac008db6b", null ],
+    [ "l4vbus_request_ioport", "group__l4vbus__module.html#ga7cafdd96c957a08f9e84b197ecfb956f", null ],
     [ "l4vbus_request_resource", "group__l4vbus__module.html#gab031e3ff00474f3b961c6426a076b581", null ],
     [ "l4vbus_vicu_get_cap", "group__l4vbus__module.html#gaefeb0d86979de1ef1aa53951cc3764fd", null ]
 ];

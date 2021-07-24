@@ -1,0 +1,5 @@
+<map id="l4virtio_input_config_t" name="l4virtio_input_config_t">
+<area shape="rect" id="node1" title="Device configuration for input devices." alt="" coords="108,204,275,369"/>
+<area shape="rect" id="node2" href="$structl4virtio__input__absinfo__t.html" title="Information about the absolute axis in the underlying evdev implementation." alt="" coords="5,5,180,141"/>
+<area shape="rect" id="node3" href="$structl4virtio__input__devids__t.html" title="Device ID information for the device." alt="" coords="205,13,375,134"/>
+</map>

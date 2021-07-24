@@ -71,7 +71,8 @@ l4shmc_create(const char *shm_name, l4_umword_t shm_size)
       return r;
     }
 
-  if ((r = l4re_rm_attach((void **)&s, shm_size, L4RE_RM_SEARCH_ADDR,
+  if ((r = l4re_rm_attach((void **)&s, shm_size,
+                          L4RE_RM_F_SEARCH_ADDR | L4RE_RM_F_RW,
                           shm_ds | L4_CAP_FPAGE_RW,
                           0, L4_PAGESHIFT)))
     goto out_shm_free_mem;
@@ -131,7 +132,7 @@ l4shmc_attach_to(const char *shm_name, l4_umword_t timeout_ms,
   shmarea->_size = r;
 
   if ((r = l4re_rm_attach(&shmarea->_local_addr, shmarea->_size,
-                          L4RE_RM_SEARCH_ADDR,
+                          L4RE_RM_F_SEARCH_ADDR | L4RE_RM_F_RW,
                           shmarea->_shm_ds | L4_CAP_FPAGE_RW,
                           0, L4_PAGESHIFT)))
     goto out_free_cap_um;
@@ -330,7 +331,7 @@ l4shmc_add_signal(l4shmc_area_t *shmarea,
 
 out_unmap_irq:
   l4_task_unmap(L4_BASE_TASK_CAP,
-                l4_obj_fpage(signal->_sigcap, 0, L4_FPAGE_RWX),
+                l4_obj_fpage(signal->_sigcap, 0, L4_CAP_FPAGE_RWS),
                 L4_FP_ALL_SPACES);
 out_free_cap:
   l4re_util_cap_free(signal->_sigcap);

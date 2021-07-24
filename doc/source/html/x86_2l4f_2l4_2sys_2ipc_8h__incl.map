@@ -1,10 +1,12 @@
 <map id="x86/l4f/l4/sys/ipc.h" name="x86/l4f/l4/sys/ipc.h">
-<area shape="rect" id="node2" href="$l4_2sys_2types_8h.html" title="Common L4 ABI Data Types. " alt="" coords="223,80,330,107"/>
-<area shape="rect" id="node9" href="$ipc-invoke_8h_source.html" title="l4/sys/ipc&#45;invoke.h" alt="" coords="549,80,685,107"/>
-<area shape="rect" id="node10" href="$ipc-l42-gcc3-nopic_8h_source.html" title="ipc&#45;l42&#45;gcc3&#45;nopic.h" alt="" coords="378,80,525,107"/>
-<area shape="rect" id="node3" href="$l4_2sys_2l4int_8h.html" title="Fixed sized integer types, generic version. " alt="" coords="215,229,314,256"/>
-<area shape="rect" id="node4" href="$compiler_8h.html" title="L4 compiler related defines. " alt="" coords="369,229,496,256"/>
-<area shape="rect" id="node6" href="$l4_2sys_2consts_8h.html" title="Common constants. " alt="" coords="407,155,522,181"/>
-<area shape="rect" id="node7" href="$____l4__fpage_8h_source.html" title="l4/sys/__l4_fpage.h" alt="" coords="29,155,173,181"/>
-<area shape="rect" id="node8" href="$____timeout_8h_source.html" title="l4/sys/__timeout.h" alt="" coords="197,155,332,181"/>
+<area shape="rect" id="node1" title="L4 IPC System Calls, x86." alt="" coords="285,5,429,32"/>
+<area shape="rect" id="node2" href="$l4_2sys_2types_8h.html" title="Common L4 ABI Data Types." alt="" coords="301,80,413,107"/>
+<area shape="rect" id="node9" href="$ipc-invoke_8h_source.html" title=" " alt="" coords="437,80,579,107"/>
+<area shape="rect" id="node10" href="$ipc-l42-gcc3-nopic_8h_source.html" title=" " alt="" coords="123,80,277,107"/>
+<area shape="rect" id="node3" href="$l4_2sys_2l4int_8h.html" title="Fixed sized integer types, generic version." alt="" coords="178,229,283,256"/>
+<area shape="rect" id="node4" href="$compiler_8h.html" title="L4 compiler related defines." alt="" coords="373,229,505,256"/>
+<area shape="rect" id="node6" href="$l4_2sys_2consts_8h.html" title="Common constants." alt="" coords="171,155,290,181"/>
+<area shape="rect" id="node7" href="$____l4__fpage_8h_source.html" title=" " alt="" coords="365,155,512,181"/>
+<area shape="rect" id="node8" href="$____timeout_8h_source.html" title=" " alt="" coords="5,155,147,181"/>
+<area shape="rect" id="node5" title=" " alt="" coords="377,304,500,331"/>
 </map>

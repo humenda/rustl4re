@@ -8,7 +8,7 @@
  *
  * 1. Copyright Notice
  *
- * Some or all of this work - Copyright (c) 1999 - 2017, Intel Corp.
+ * Some or all of this work - Copyright (c) 1999 - 2019, Intel Corp.
  * All rights reserved.
  *
  * 2. License
@@ -111,6 +111,42 @@
  * other governmental approval, or letter of assurance, without first obtaining
  * such license, approval or letter.
  *
+ *****************************************************************************
+ *
+ * Alternatively, you may choose to be licensed under the terms of the
+ * following license:
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions, and the following disclaimer,
+ *    without modification.
+ * 2. Redistributions in binary form must reproduce at minimum a disclaimer
+ *    substantially similar to the "NO WARRANTY" disclaimer below
+ *    ("Disclaimer") and any redistribution must be conditioned upon
+ *    including a substantially similar Disclaimer requirement for further
+ *    binary redistribution.
+ * 3. Neither the names of the above-listed copyright holders nor the names
+ *    of any contributors may be used to endorse or promote products derived
+ *    from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+ * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * Alternatively, you may choose to be licensed under the terms of the
+ * GNU General Public License ("GPL") version 2 as published by the Free
+ * Software Foundation.
+ *
  *****************************************************************************/
 
 #include "aslcompiler.h"
@@ -202,7 +238,7 @@ const char                      *AslCompilerMsgs [] =
 /*    ASL_MSG_HID_SUFFIX */                 "_HID suffix must be all hex digits",
 /*    ASL_MSG_INCLUDE_FILE_OPEN */          "Could not open include file",
 /*    ASL_MSG_INPUT_FILE_OPEN */            "Could not open input file",
-/*    ASL_MSG_INTEGER_LENGTH */             "64-bit integer in 32-bit table, truncating (DSDT or SSDT version < 2)",
+/*    ASL_MSG_INTEGER_LENGTH */             "Truncating 64-bit constant found in 32-bit table",
 /*    ASL_MSG_INTEGER_OPTIMIZATION */       "Integer optimized to single-byte AML opcode",
 /*    ASL_MSG_INTERRUPT_LIST */             "Too many interrupts (16 max)",
 /*    ASL_MSG_INTERRUPT_NUMBER */           "Invalid interrupt number (must be 0-15)",
@@ -247,9 +283,9 @@ const char                      *AslCompilerMsgs [] =
 /*    ASL_MSG_NO_RETVAL */                  "Called method returns no value",
 /*    ASL_MSG_NO_WHILE */                   "No enclosing While statement",
 /*    ASL_MSG_NON_ASCII */                  "Invalid characters found in file",
-/*    ASL_MSG_NON_ZERO */                   "Operand evaluates to zero",
+/*    ASL_MSG_BUFFER_FIELD_LENGTH */        "Field length must be non-zero",
 /*    ASL_MSG_NOT_EXIST */                  "Object does not exist",
-/*    ASL_MSG_NOT_FOUND */                  "Object not found or not accessible from scope",
+/*    ASL_MSG_NOT_FOUND */                  "Object not found or not accessible from current scope",
 /*    ASL_MSG_NOT_METHOD */                 "Not a control method, cannot invoke",
 /*    ASL_MSG_NOT_PARAMETER */              "Not a parameter, used as local only",
 /*    ASL_MSG_NOT_REACHABLE */              "Object is not accessible from this scope",
@@ -306,13 +342,33 @@ const char                      *AslCompilerMsgs [] =
 /*    ASL_MSG_RANGE */                      "Constant out of range",
 /*    ASL_MSG_BUFFER_ALLOCATION */          "Could not allocate line buffer",
 /*    ASL_MSG_MISSING_DEPENDENCY */         "Missing dependency",
-/*    ASL_MSG_ILLEGAL_FORWARD_REF */        "Illegal forward reference within a method",
-/*    ASL_MSG_ILLEGAL_METHOD_REF */         "Illegal reference across two methods",
+/*    ASL_MSG_ILLEGAL_FORWARD_REF */        "Illegal forward reference",
+/*    ASL_MSG_ILLEGAL_METHOD_REF */         "Object is declared in a different method",
 /*    ASL_MSG_LOCAL_NOT_USED */             "Method Local is set but never used",
 /*    ASL_MSG_ARG_AS_LOCAL_NOT_USED */      "Method Argument (as a local) is set but never used",
 /*    ASL_MSG_ARG_NOT_USED */               "Method Argument is never used",
 /*    ASL_MSG_CONSTANT_REQUIRED */          "Non-reducible expression",
-/*    ASL_MSG_CROSS_TABLE_SCOPE */          "Illegal open scope on external object from within DSDT"
+/*    ASL_MSG_CROSS_TABLE_SCOPE */          "Illegal open scope on external object from within DSDT",
+/*    ASL_MSG_EXCEPTION_NOT_RECEIVED */     "Expected remark, warning, or error did not occur. Message ID:",
+/*    ASL_MSG_NULL_RESOURCE_TEMPLATE */     "Empty Resource Template (END_TAG only)",
+/*    ASL_MSG_FOUND_HERE */                 "Original name creation/declaration below: ",
+/*    ASL_MSG_ILLEGAL_RECURSION */          "Illegal recursive call to method that creates named objects",
+/*    ASL_MSG_DUPLICATE_INPUT_FILE */       "Duplicate input files detected:",
+/*    ASL_MSG_WARNING_AS_ERROR */           "Warnings detected during compilation",
+/*    ASL_MSG_OEM_TABLE_ID */               "Invalid OEM Table ID",
+/*    ASL_MSG_OEM_ID */                     "Invalid OEM ID",
+/*    ASL_MSG_UNLOAD */                     "Unload is not supported by all operating systems",
+/*    ASL_MSG_OFFSET */                     "Unnecessary/redundant use of Offset operator",
+/*    ASL_MSG_LONG_SLEEP */                 "Very long Sleep, greater than 1 second",
+/*    ASL_MSG_PREFIX_NOT_EXIST */           "One or more prefix Scopes do not exist",
+/*    ASL_MSG_NAMEPATH_NOT_EXIST */         "One or more objects within the Pathname do not exist",
+/*    ASL_MSG_REGION_LENGTH */              "Operation Region declared with zero length",
+/*    ASL_MSG_TEMPORARY_OBJECT */           "Object is created temporarily in another method and cannot be accessed",
+/*    ASL_MSG_UNDEFINED_EXTERNAL */         "Named object was declared external but the actual definition does not exist",
+/*    ASL_MSG_BUFFER_FIELD_OVERFLOW */      "Buffer field extends beyond end of target buffer",
+/*    ASL_MSG_INVALID_SPECIAL_NAME */       "declaration of this named object outside root scope is illegal",
+/*    ASL_MSG_INVALID_PROCESSOR_UID */      "_UID inside processor declaration must be an integer",
+/*    ASL_MSG_LEGACY_PROCESSOR_OP */        "Legacy Processor() keyword detected. Use Device() keyword instead."
 };
 
 /* Table compiler */
@@ -450,7 +506,7 @@ AeDecodeExceptionLevel (
 
     /* Differentiate the string type to be used (IDE is all lower case) */
 
-    if (Gbl_VerboseErrors)
+    if (AslGbl_VerboseErrors)
     {
         return (AslErrorLevel[Level]);
     }

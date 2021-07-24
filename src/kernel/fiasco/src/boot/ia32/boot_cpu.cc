@@ -138,8 +138,6 @@ static struct x86_tss dbf_tss =
     0/*ldt*/, 0/*trace_trap*/, 0x8000/*io_bit_map_offset*/
   };
 
-extern "C" void _exit(int code) __attribute__((noreturn));
-
 static inline Address* pdir_find_pde(Address pdir_pa, Address la)
 { return (&((Address*)pdir_pa)[(la >> PDESHIFT) & PDEMASK]); }
 
@@ -475,8 +473,7 @@ base_paging_init(void)
   // map in the Kernel image (superpage) of physical memory to 0xf0000000
   pdir_map_range(base_pdir_pa, /*virt*/Mem_layout::Kernel_image,
                  Mem_layout::Kernel_image_phys,
-		 /*size*/Mem_layout::Kernel_image_end -
-			 Mem_layout::Kernel_image,
+		 Mem_layout::Kernel_image_size,
 		 INTEL_PDE_VALID | INTEL_PDE_WRITE | INTEL_PDE_USER);
 
   // Adapter memory is already contrained in the kernel-image mapping
@@ -507,12 +504,13 @@ base_map_physical_memory_for_kernel()
 
 static char const * const base_regs =
   "\n"
-  "EAX %08x EBX %08x ECX %08x EDX %08x\n"
-  "ESI %08x EDI %08x EBP %08x ESP %08x\n"
-  "EIP %08x EFLAGS %08x\n"
-  "CS %04x SS %04x DS %04x ES %04x FS %04x GS %04x\n";
+  "EAX %08x  EBX %08x  ECX %08x  EDX %08x\n"
+  "ESI %08x  EDI %08x  EBP %08x  ESP %08x\n"
+  "EIP %08x  EFL %08x\n"
+  "CS %04x  SS %04x  DS %04x  ES %04x  FS %04x  GS %04x\n";
 
-extern "C" FIASCO_FASTCALL
+extern "C" FIASCO_FASTCALL void trap_dump_panic(const struct trap_state *);
+
 void
 trap_dump_panic(const struct trap_state *st)
 {

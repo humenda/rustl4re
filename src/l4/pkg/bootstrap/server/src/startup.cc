@@ -28,9 +28,11 @@
 #include <string.h>
 #include <assert.h>
 #include <ctype.h>
+#include <limits.h>
 
 /* L4 stuff */
 #include <l4/sys/compiler.h>
+#include <l4/sys/consts.h>
 #include <l4/util/mb_info.h>
 #include <l4/util/l4_macros.h>
 #include <l4/util/kip.h>
@@ -40,12 +42,13 @@
 #include "exec.h"
 #include "macros.h"
 #include "region.h"
+#include "memcpy_aligned.h"
 #include "module.h"
 #include "startup.h"
 #include "support.h"
 #include "init_kip.h"
-#include "patch.h"
 #include "koptions.h"
+#include "dt.h"
 
 #undef getchar
 
@@ -68,7 +71,7 @@ unsigned int kuart_flags;
  * big binary.
  */
 #ifdef IMAGE_MODE
-static l4_addr_t _mod_addr = RAM_BASE + MODADDR;
+static l4_addr_t _mod_addr = (l4_addr_t)RAM_BASE + MODADDR;
 #else
 static l4_addr_t _mod_addr;
 #endif
@@ -76,22 +79,14 @@ static l4_addr_t _mod_addr;
 static const char *builtin_cmdline = CMDLINE;
 
 
-enum {
-  kernel_module,
-  sigma0_module,
-  roottask_module,
-};
-
 /// Info passed through our ELF interpreter code
-struct Elf_info
+struct Elf_info : Elf_handle
 {
-  Boot_modules::Module mod;
   Region::Type type;
 };
 
-struct Hdr_info
+struct Hdr_info : Elf_handle
 {
-  Boot_modules::Module mod;
   unsigned hdr_type;
   l4_addr_t start;
   l4_size_t size;
@@ -139,17 +134,13 @@ dump_mbi(l4util_mb_info_t *mbi)
 static
 void *find_kip(Boot_modules::Module const &mod)
 {
-  unsigned char *p, *end;
-  void *k = 0;
-
   printf("  find kernel info page...\n");
 
   const char *error_msg;
   Hdr_info hdr;
   hdr.mod = mod;
   hdr.hdr_type = EXEC_SECTYPE_KIP;
-  int r = exec_load_elf(l4_exec_find_hdr, &hdr.mod,
-                        &error_msg, NULL);
+  int r = exec_load_elf(l4_exec_find_hdr, &hdr, &error_msg, NULL);
 
   if (r == 1)
     {
@@ -157,38 +148,28 @@ void *find_kip(Boot_modules::Module const &mod)
       return (void *)hdr.start;
     }
 
-  for (Region const *m = regions.begin(); m != regions.end(); ++m)
+  for (Region const &m : regions)
     {
-      if (m->type() != Region::Kernel)
-	continue;
+      if (m.type() != Region::Kernel)
+        continue;
 
-      if (sizeof(unsigned long) < 8
-          && m->end() >= (1ULL << 32))
-	end = (unsigned char *)(~0UL - 0x1000);
+      l4_addr_t end;
+      if (sizeof(unsigned long) < 8 && m.end() >= (1ULL << 32))
+        end = ~0UL - 0x1000;
       else
-	end = (unsigned char *) (unsigned long)m->end();
+        end = m.end();
 
-      for (p = (unsigned char *) (unsigned long)(m->begin() & 0xfffff000);
-	   p < end;
-	   p += 0x1000)
-	{
-	  l4_umword_t magic = L4_KERNEL_INFO_MAGIC;
-	  if (memcmp(p, &magic, 4) == 0)
-	    {
-	      k = p;
-	      printf("  found kernel info page at %p\n", p);
-	      break;
-	    }
-	}
-
-      if (k)
-        break;
+      for (l4_addr_t p = l4_round_size(m.begin(), 12); p < end; p += 0x1000)
+        {
+          if ( *(l4_uint32_t *)p == L4_KERNEL_INFO_MAGIC)
+            {
+              printf("  found kernel info page at %lx\n", p);
+              return (void *)p;
+            }
+        }
     }
 
-  if (!k)
-    panic("could not find kernel info page, maybe your kernel is too old");
-
-  return k;
+  panic("could not find kernel info page, maybe your kernel is too old");
 }
 
 static
@@ -198,8 +179,7 @@ L4_kernel_options::Options *find_kopts(Boot_modules::Module const &mod, void *ki
   Hdr_info hdr;
   hdr.mod = mod;
   hdr.hdr_type = EXEC_SECTYPE_KOPT;
-  int r = exec_load_elf(l4_exec_find_hdr, &hdr.mod,
-                        &error_msg, NULL);
+  int r = exec_load_elf(l4_exec_find_hdr, &hdr, &error_msg, NULL);
 
   if (r == 1)
     {
@@ -247,12 +227,6 @@ check_arg_str(char const *cmdline, const char *arg)
         return s;
     }
   return NULL;
-}
-
-static char *
-check_arg_str(char *cmdline, const char *arg)
-{
-  return const_cast<char *>(check_arg_str(const_cast<char const *>(cmdline), arg));
 }
 
 /**
@@ -375,7 +349,7 @@ setup_memory_map(char const *cmdline)
 
   if (s)
     {
-      while ((s = check_arg_str((char *)s, "-mem=")))
+      while ((s = check_arg_str(s, "-mem=")))
         {
           s += 5;
           unsigned long sz, offset = 0;
@@ -403,7 +377,6 @@ static void do_the_memset(unsigned long s, unsigned val, unsigned long len)
 
 static void fill_mem(unsigned fill_value)
 {
-  regions.sort();
   for (Region const *r = ram.begin(); r != ram.end(); ++r)
     {
       unsigned long long b = r->begin();
@@ -469,8 +442,7 @@ add_elf_regions(Boot_modules::Module const &m, Region::Type type)
 
   printf("  Scanning %s\n", m.cmdline);
 
-  r = exec_load_elf(l4_exec_add_region, &info,
-                    &error_msg, NULL);
+  r = exec_load_elf(l4_exec_add_region, &info, &error_msg, NULL);
 
   if (r)
     {
@@ -501,9 +473,9 @@ load_elf_module(Boot_modules::Module const &mod)
   l4_addr_t entry;
   int r;
   const char *error_msg;
+  Elf_handle handle = { mod };
 
-  r = exec_load_elf(l4_exec_read_exec, const_cast<Boot_modules::Module *>(&mod),
-                    &error_msg, &entry);
+  r = exec_load_elf(l4_exec_read_exec, &handle, &error_msg, &entry);
 
   if (r)
     printf("  => can't load module (%s)\n", error_msg);
@@ -606,16 +578,20 @@ setup_and_check_kernel_config(Platform_base *plat, l4_kernel_info_t *kip)
   if (!is_hyp_kernel && running_in_hyp_mode())
     {
       printf("  Non-HYP kernel detected but running in HYP mode, switching back.\n");
-      asm volatile("mcr p15, 0, sp, c13, c0, 2    \n"
+      asm volatile("mov r3, lr                    \n"
+                   "mcr p15, 0, sp, c13, c0, 2    \n"
                    "mrs r0, cpsr                  \n"
                    "bic r0, #0x1f                 \n"
                    "orr r0, #0x13                 \n"
-                   ".inst 0xe16ef300              \n"  // msr SPSR_hyp, r0
-                   "adr r0, 1f                    \n"
-                   ".inst 0xe12ef300              \n"  // msr elr_hyp, r0
-                   ".inst 0xe160006e              \n"  // eret
+                   "orr r0, #0x100                \n"
+                   "adr r1, 1f                    \n"
+                   ".inst 0xe16ff000              \n" // msr spsr_cfsx, r0
+                   ".inst 0xe12ef301              \n" // msr elr_hyp, r1
+                   ".inst 0xe160006e              \n" // eret
+                   "nop                           \n"
                    "1: mrc p15, 0, sp, c13, c0, 2 \n"
-                   : : : "r0", "memory");
+                   "mov lr, r3                    \n"
+                   : : : "r0", "r1" , "r3", "lr", "memory");
     }
 }
 #endif /* arm */
@@ -646,6 +622,54 @@ setup_and_check_kernel_config(Platform_base *, l4_kernel_info_t *kip)
 extern "C" void syncICache(unsigned long start, unsigned long size);
 #endif
 
+/*
+ * Replace the placeholder string in the utest_opts feature with the config
+ * string given on the command line.
+ *
+ * If the argument is found on the given command line and the KIP contains the
+ * feature string of the kernel unit test framework, the argument is written
+ * over the feature string's palceholder.
+ *
+ * \param cmdline  Kernel command line to search for argument.
+ * \param info     Kernel info page.
+ */
+static void
+search_and_setup_utest_feature(char const *cmdline, l4_kernel_info_t *info)
+{
+  char const *arg = "-utest_opts=";
+  size_t arg_len = strlen(arg);
+  char const *config = check_arg(cmdline, arg);
+
+  if (!config)
+    return;
+
+  config += arg_len;
+
+  char const *feat_prefix = "utest_opts=";
+  size_t prefix_len = strlen(feat_prefix);
+  char const *s = l4_kip_version_string(info);
+
+  if (!s)
+    return;
+
+  l4util_kip_for_each_feature(s)
+    if (0 == strncmp(s, feat_prefix, prefix_len))
+      {
+        size_t max_len = strlen(s) - prefix_len;
+        size_t opts_len = 0;
+        for (char const *s = config; *s && !isspace(*s); ++s, ++opts_len)
+          ;
+        size_t cpy_len = opts_len < max_len ? opts_len : max_len;
+
+        if (opts_len > max_len)
+          printf("Warning: %s argument too long for feature placeholder. Truncated to fit.\n", arg);
+
+        // We explicitly want to replace the placeholder string in this
+        // feature, thus the const_cast. Don't copy the null terminator.
+        strncpy(const_cast<char *>(s) + prefix_len, config, cpy_len);
+      }
+}
+
 static unsigned long
 load_elf_module(Boot_modules::Module const &mod, char const *n)
 {
@@ -660,11 +684,17 @@ load_elf_module(Boot_modules::Module const &mod, char const *n)
 void
 startup(char const *cmdline)
 {
+  unsigned presetmem_value = 0;
+  bool presetmem = false;
+
   if (!cmdline || !*cmdline)
     cmdline = builtin_cmdline;
 
   if (check_arg(cmdline, "-noserial"))
-    set_stdio_uart(NULL);
+    {
+      set_stdio_uart(NULL);
+      kuart_flags |= L4_kernel_options::F_noserial;
+    }
 
   if (!Platform_base::platform)
     {
@@ -710,71 +740,67 @@ startup(char const *cmdline)
   init_regions();
   plat->modules()->reserve();
 
-  /* modules to load by bootstrap */
-  bool sigma0 = true;   /* we need sigma0 */
-  bool roottask = true; /* we need a roottask */
-
-  /* check command line */
-  if (check_arg(cmdline, "-no-sigma0"))
-    sigma0 = 0;
-
-  if (check_arg(cmdline, "-no-roottask"))
-    roottask = 0;
-
   if (const char *s = check_arg(cmdline, "-modaddr"))
-    _mod_addr = RAM_BASE + strtoul(s + 9, 0, 0);
+    {
+      l4_addr_t addr = strtoul(s + 9, 0, 0);
+      if (addr >= ULONG_MAX - RAM_BASE)
+        panic("Bogus '-modaddr 0x%lx' parameter\n", addr);
+      _mod_addr = RAM_BASE + addr;
+    }
 
   _mod_addr = l4_round_page(_mod_addr);
 
+  if (char const *s = check_arg(cmdline, "-presetmem="))
+    {
+      presetmem_value = strtoul(s + 11, NULL, 0);
+      presetmem = true;
+    }
 
   Boot_modules *mods = plat->modules();
 
-  add_elf_regions(mods->module(kernel_module), Region::Kernel);
+  add_elf_regions(mods->mod_kern(), Region::Kernel);
+  add_elf_regions(mods->mod_sigma0(), Region::Sigma0);
+  add_elf_regions(mods->mod_roottask(), Region::Root);
 
-  if (sigma0)
-    add_elf_regions(mods->module(sigma0_module), Region::Sigma0);
+  l4util_l4mod_info *mbi = plat->modules()->construct_mbi(_mod_addr);
+  cmdline = nullptr;
 
-  if (roottask)
-    add_elf_regions(mods->module(roottask_module), Region::Root);
-
-  l4util_mb_info_t *mbi = plat->modules()->construct_mbi(_mod_addr);
+#if defined(ARCH_arm) || defined(ARCH_arm64)
+  // Ensure later stages do not overwrite the CPU boot-up code
+    {
+      extern char cpu_bootup_code_start[], cpu_bootup_code_end[];
+      regions.add(Region::n(cpu_bootup_code_start,
+                            cpu_bootup_code_end,
+                            ".cpu_boot", Region::Root), true);
+    }
+#endif
 
   /* We need at least two boot modules */
-  assert(mbi->flags & L4UTIL_MB_MODS);
   /* We have at least the L4 kernel and the first user task */
   assert(mbi->mods_count >= 2);
   assert(mbi->mods_count <= MODS_MAX);
 
-  if (const char *s = cmdline)
-    {
-      /* patch modules with content given at command line */
-      while ((s = check_arg_str((char *)s, "-patch=")))
-	patch_module(&s, mbi);
-    }
-
   boot_info_t boot_info;
-  l4util_mb_mod_t *mb_mod = (l4util_mb_mod_t *)(unsigned long)mbi->mods_addr;
+  l4util_l4mod_mod *mb_mod = (l4util_l4mod_mod *)(unsigned long)mbi->mods_addr;
   regions.optimize();
 
   /* setup kernel PART ONE */
-  boot_info.kernel_start = load_elf_module(mods->module(kernel_module), "[KERNEL]");
+  boot_info.kernel_start = load_elf_module(mods->mod_kern(), "[KERNEL]");
 
   /* setup sigma0 */
-  if (sigma0)
-    boot_info.sigma0_start = load_elf_module(mods->module(sigma0_module), "[SIGMA0]");
+  boot_info.sigma0_start = load_elf_module(mods->mod_sigma0(), "[SIGMA0]");
 
   /* setup roottask */
-  if (roottask)
-    boot_info.roottask_start = load_elf_module(mods->module(roottask_module),
-                                               "[ROOTTASK]");
+  boot_info.roottask_start = load_elf_module(mods->mod_roottask(),
+                                             "[ROOTTASK]");
 
   /* setup kernel PART TWO (special kernel initialization) */
-  void *l4i = find_kip(mods->module(kernel_module));
+  void *l4i = find_kip(mods->mod_kern());
 
   regions.optimize();
   regions.dump();
 
-  L4_kernel_options::Options *lko = find_kopts(mods->module(kernel_module), l4i);
+  L4_kernel_options::Options *lko = find_kopts(mods->mod_kern(), l4i);
 
   // Note: we have to ensure that the original ELF binaries are not modified
   // or overwritten up to this point. However, the memory regions for the
@@ -784,16 +810,15 @@ startup(char const *cmdline)
 
   // The ELF binaries for the kernel, sigma0, and roottask must no
   // longer be used from here on.
-  if (char const *c = check_arg(cmdline, "-presetmem="))
-    {
-      unsigned fill_value = strtoul(c + 11, NULL, 0);
-      fill_mem(fill_value);
-    }
+  if (presetmem)
+    fill_mem(presetmem_value);
 
-  kcmdline_parse(L4_CONST_CHAR_PTR(mb_mod[kernel_module].cmdline), lko);
+  kcmdline_parse(L4_CONST_CHAR_PTR(mb_mod[0].cmdline), lko);
   lko->uart   = kuart;
   lko->flags |= kuart_flags;
 
+  search_and_setup_utest_feature(L4_CONST_CHAR_PTR(mb_mod[0].cmdline),
+                                 (l4_kernel_info_t *)l4i);
 
   /* setup the L4 kernel info page before booting the L4 microkernel:
    * patch ourselves into the booter task addresses */
@@ -806,31 +831,34 @@ startup(char const *cmdline)
       break;
     case 0x02:
       panic("cannot boot V.2 API kernels: %lx\n", api_version);
-      break;
     case 0x03:
       panic("cannot boot X.0 and X.1 API kernels: %lx\n", api_version);
-      break;
     case 0x84:
       panic("cannot boot Fiasco V.4 API kernels: %lx\n", api_version);
-      break;
     case 0x04:
       panic("cannot boot V.4 API kernels: %lx\n", api_version);
     default:
       panic("cannot boot a kernel with unknown api version %lx\n", api_version);
-      break;
     }
 
   printf("  Starting kernel ");
-  print_module_name(L4_CONST_CHAR_PTR(mb_mod[kernel_module].cmdline),
+  print_module_name(L4_CONST_CHAR_PTR(mb_mod[0].cmdline),
 		    "[KERNEL]");
   printf(" at " l4_addr_fmt "\n", boot_info.kernel_start);
 
 #if defined(ARCH_arm)
   if (major == 0x87)
     setup_and_check_kernel_config(plat, (l4_kernel_info_t *)l4i);
+  lko->core_spin_addr = dt_cpu_release_addr(boot_args.r[0]);
 #endif
 #if defined(ARCH_arm64)
   setup_and_check_kernel_config(plat, (l4_kernel_info_t *)l4i);
+  lko->core_spin_addr = dt_cpu_release_addr(boot_args.r[0]);
+
+  extern l4_uint64_t mp_launch_spin_addr;
+  lko->core_spin_addr = 0ull;
+  asm volatile("" : : : "memory");
+  mp_launch_spin_addr = (l4_uint64_t)&lko->core_spin_addr;
 #endif
 #if defined(ARCH_mips)
   {
@@ -859,13 +887,13 @@ startup(char const *cmdline)
 }
 
 static int
-l4_exec_read_exec(void * handle,
+l4_exec_read_exec(Elf_handle *handle,
 		  l4_addr_t file_ofs, l4_size_t file_size,
 		  l4_addr_t mem_addr, l4_addr_t /*v_addr*/,
 		  l4_size_t mem_size,
 		  exec_sectype_t section_type)
 {
-  Boot_modules::Module const *m = (Boot_modules::Module const *)handle;
+  Boot_modules::Module &m = handle->mod;
   if (!mem_size)
     return 0;
 
@@ -886,10 +914,14 @@ l4_exec_read_exec(void * handle,
       panic("Binary outside memory");
     }
 
-  memcpy((void *) mem_addr, (char const *)m->start + file_ofs, file_size);
+  auto *src = (char const *)m.start + file_ofs;
+  auto *dst = (char *)mem_addr;
+  if ((unsigned long)src % 8 || (unsigned long)dst % 8)
+    memcpy(dst, src, file_size);
+  else
+    memcpy_aligned(dst, src, file_size);
   if (file_size < mem_size)
-    memset((void *) (mem_addr + file_size), 0, mem_size - file_size);
-
+    memset(dst + file_size, 0, mem_size - file_size);
 
   Region *f = regions.find(mem_addr);
   if (!f)
@@ -899,19 +931,19 @@ l4_exec_read_exec(void * handle,
       panic("Oops: region for module not found\n");
     }
 
-  f->name(m->cmdline ? m->cmdline :  ".[Unknown]");
+  f->name(m.cmdline ? m.cmdline :  ".[Unknown]");
   return 0;
 }
 
 
 static int
-l4_exec_add_region(void *handle,
+l4_exec_add_region(Elf_handle *handle,
 		  l4_addr_t /*file_ofs*/, l4_size_t /*file_size*/,
-		  l4_addr_t mem_addr, l4_addr_t v_addr,
+		  l4_addr_t mem_addr, l4_addr_t /*v_addr*/,
 		  l4_size_t mem_size,
 		  exec_sectype_t section_type)
 {
-  Elf_info const *info = (Elf_info const *)handle;
+  Elf_info const &info = static_cast<Elf_info const&>(*handle);
 
   if (!mem_size)
     return 0;
@@ -922,9 +954,17 @@ l4_exec_add_region(void *handle,
   if (! (section_type & (EXEC_SECTYPE_ALLOC|EXEC_SECTYPE_LOAD)))
     return 0;
 
+  unsigned short rights = L4_FPAGE_RO;
+  if (section_type & EXEC_SECTYPE_WRITE)
+    rights |= L4_FPAGE_W;
+  if (section_type & EXEC_SECTYPE_EXECUTE)
+    rights |= L4_FPAGE_X;
+
+  // The subtype is used only for Root regions. For other types set subtype to 0
+  // in order to allow merging regions with the same subtype.
   Region n = Region::n(mem_addr, mem_addr + mem_size,
-                       info->mod.cmdline ? info->mod.cmdline : ".[Unknown]",
-                       info->type, mem_addr == v_addr ? 1 : 0);
+                       info.mod.cmdline ? info.mod.cmdline : ".[Unknown]",
+                       info.type, info.type == Region::Root ? rights : 0);
 
   for (Region *r = regions.begin(); r != regions.end(); ++r)
     if (r->overlaps(n) && r->name() != Boot_modules::Mod_reg)
@@ -937,24 +977,22 @@ l4_exec_add_region(void *handle,
         panic("region overlap");
       }
 
-  regions.add(Region::n(mem_addr, mem_addr + mem_size,
-              info->mod.cmdline ? info->mod.cmdline : ".[Unknown]",
-              info->type, mem_addr == v_addr ? 1 : 0), true);
+  regions.add(n, true);
   return 0;
 }
 
 static int
-l4_exec_find_hdr(void *handle,
+l4_exec_find_hdr(Elf_handle *handle,
                  l4_addr_t /*file_ofs*/, l4_size_t /*file_size*/,
                  l4_addr_t mem_addr, l4_addr_t /*v_addr*/,
                  l4_size_t mem_size,
                  exec_sectype_t section_type)
 {
-  Hdr_info *hdr = reinterpret_cast<Hdr_info *>(handle);
-  if (hdr->hdr_type == (section_type & EXEC_SECTYPE_TYPE_MASK))
+  Hdr_info &hdr = static_cast<Hdr_info&>(*handle);
+  if (hdr.hdr_type == (section_type & EXEC_SECTYPE_TYPE_MASK))
     {
-      hdr->start = mem_addr;
-      hdr->size = mem_size;
+      hdr.start = mem_addr;
+      hdr.size = mem_size;
       return 1;
     }
   return 0;

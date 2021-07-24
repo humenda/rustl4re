@@ -1,4 +1,18 @@
 <map id="L4virtio::Virtqueue::num" name="L4virtio::Virtqueue::num">
-<area shape="rect" id="node2" href="$classL4virtio_1_1Svr_1_1Request__processor.html#abcf6a6b8bf80e0d73d45b5eb9e817abd" title="Start processing a new request. " alt="" coords="219,5,372,47"/>
-<area shape="rect" id="node3" href="$classL4virtio_1_1Svr_1_1Block__request.html#a5f6bf664cda7dfe4f82d8726f6c33099" title="Compute the total size of the data in the request. " alt="" coords="420,5,564,47"/>
+<area shape="rect" id="node1" title=" " alt="" coords="745,282,924,309"/>
+<area shape="rect" id="node2" href="$classL4virtio_1_1Virtqueue.html#a962767a117dad07184f59191d399f9ce" title="Calculate the size of the available ring for num entries." alt="" coords="519,46,661,87"/>
+<area shape="rect" id="node4" href="$classL4virtio_1_1Virtqueue.html#a437c0ed2eb83201cc69c41d011503036" title="Enable this queue." alt="" coords="268,63,411,104"/>
+<area shape="rect" id="node6" href="$classL4virtio_1_1Virtqueue.html#a19410c09db5499023cb4b9f11742cd26" title="Calculate the size of the descriptor table for num entries." alt="" coords="519,111,661,152"/>
+<area shape="rect" id="node7" href="$classL4virtio_1_1Driver_1_1Virtqueue.html#a8b7ef703e8e55d889419f43dc28dd40e" title="Initialize this virtqueue." alt="" coords="244,307,435,348"/>
+<area shape="rect" id="node9" href="$classL4virtio_1_1Driver_1_1Virtqueue.html#ac31099e5abf48745f518aed17b1dee54" title="Initialize the descriptor table and the index structures of this queue." alt="" coords="495,307,685,348"/>
+<area shape="rect" id="node10" href="$classL4virtio_1_1Driver_1_1Block__device.html#a9f1a7a08e90ca6c1441bd48abc8b574a" title="Process and free all items in the used queue." alt="" coords="483,475,697,516"/>
+<area shape="rect" id="node11" href="$classL4virtio_1_1Virtqueue.html#a109ea5677dd074df1d2c6a06056c7d82" title="Enable this queue." alt="" coords="519,176,661,218"/>
+<area shape="rect" id="node12" href="$classL4virtio_1_1Svr_1_1Request__processor.html#abcf6a6b8bf80e0d73d45b5eb9e817abd" title="Start processing a new request." alt="" coords="509,540,671,582"/>
+<area shape="rect" id="node15" href="$classL4virtio_1_1Virtqueue.html#a96dfd139f3a022e9e2328e28716acdc9" title="Calculate the total size of this virtqueue." alt="" coords="268,394,411,435"/>
+<area shape="rect" id="node16" href="$classL4virtio_1_1Virtqueue.html#a7747ac81d7fd21e1e55e43c2e7ead2ea" title="Calculate the size of the used ring for num entries." alt="" coords="519,242,661,283"/>
+<area shape="rect" id="node3" href="$classL4virtio_1_1Svr_1_1Device__t.html#ab906b4cc61026fd815a8056f07bef10e" title="Enable/disable the specified queue." alt="" coords="263,160,416,202"/>
+<area shape="rect" id="node5" href="$classL4virtio_1_1Driver_1_1Virtqueue.html#a285bae271e6acfe9c5bfa3df388c6b17" title="Initialize this virtqueue." alt="" coords="5,63,196,104"/>
+<area shape="rect" id="node8" href="$classL4virtio_1_1Driver_1_1Block__device.html#a688df51bdec4ba327a6c0b48a83a115a" title="Setup a connection to a device and set up shared memory." alt="" coords="17,307,184,348"/>
+<area shape="rect" id="node13" href="$classL4virtio_1_1Svr_1_1Block__request.html#a5f6bf664cda7dfe4f82d8726f6c33099" title="Compute the total size of the data in the request." alt="" coords="265,507,413,548"/>
+<area shape="rect" id="node14" href="$classL4virtio_1_1Svr_1_1Request__processor.html#af77e99c87758a89ebf4ec2038d996ee1" title="Start processing a new request." alt="" coords="259,572,420,614"/>
 </map>

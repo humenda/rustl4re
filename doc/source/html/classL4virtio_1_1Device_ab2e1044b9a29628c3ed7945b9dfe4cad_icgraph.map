@@ -1,0 +1,6 @@
+<map id="L4virtio::Device::set_status" name="L4virtio::Device::set_status">
+<area shape="rect" id="node1" title="Write the VIRTIO status register." alt="" coords="440,39,592,80"/>
+<area shape="rect" id="node2" href="$classL4virtio_1_1Driver_1_1Device.html#af06d27e63124749456ddc8d959231741" title="Finalize handshake with the device." alt="" coords="220,5,392,47"/>
+<area shape="rect" id="node4" href="$classL4virtio_1_1Driver_1_1Device.html#a4f8b3d73188c3b6664755b81b80e441c" title="Contacts the device and starts the initial handshake." alt="" coords="220,71,392,112"/>
+<area shape="rect" id="node3" href="$classL4virtio_1_1Driver_1_1Block__device.html#a688df51bdec4ba327a6c0b48a83a115a" title="Setup a connection to a device and set up shared memory." alt="" coords="5,39,172,80"/>
+</map>

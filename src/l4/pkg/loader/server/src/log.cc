@@ -27,7 +27,7 @@ static void my_outnstring(char const *s, unsigned long len)
   write(1, s, len);
 }
 
-static void mycpy(char **buf, int *rem, char const *s, int l)
+static void mycpy(char **buf, unsigned int *rem, char const *s, unsigned int l)
 {
   int o = cxx::min(*rem, l);
   memcpy(*buf, s, o);
@@ -61,7 +61,7 @@ Ldr::Log::op_dispatch(l4_utcb_t *utcb, l4_msgtag_t tag, L4::Vcon::Rights)
 
   memcpy(msg, &m->mr[2], len_msg);
 
-  int rem = sizeof(msgbuf);
+  unsigned int rem = sizeof(msgbuf);
   while (len_msg > 0 && msg[0])
     {
       char *obuf = msgbuf;

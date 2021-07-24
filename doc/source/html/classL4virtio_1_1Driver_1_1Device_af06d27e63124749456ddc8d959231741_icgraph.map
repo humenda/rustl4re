@@ -1,0 +1,4 @@
+<map id="L4virtio::Driver::Device::driver_acknowledge" name="L4virtio::Driver::Device::driver_acknowledge">
+<area shape="rect" id="node1" title="Finalize handshake with the device." alt="" coords="220,5,392,47"/>
+<area shape="rect" id="node2" href="$classL4virtio_1_1Driver_1_1Block__device.html#a688df51bdec4ba327a6c0b48a83a115a" title="Setup a connection to a device and set up shared memory." alt="" coords="5,5,172,47"/>
+</map>

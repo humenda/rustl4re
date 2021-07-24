@@ -436,7 +436,7 @@ con_if_openqry_component (CORBA_Object _dice_corba_obj,
   l4thread_t vc_tid;
   l4_threadid_t vc_l4id, dummy;
   l4dm_dataspace_t ds;
-  l4_offs_t ds_offs;
+  l4_addr_t ds_offs;
   l4_addr_t ds_map_addr;
   l4_size_t ds_map_size;
   int vc_num;

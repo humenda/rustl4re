@@ -1,4 +1,4 @@
-#! /usr/bin/perl -W
+#! /usr/bin/env perl
 
 # This program generates an image from a list of files, where every
 # file is aligned to PAGE_SIZE boundaries.
@@ -12,6 +12,7 @@
 #
 
 use strict;
+use warnings;
 
 my $OUT_FILE = shift;
 my $PAGE_SIZE = 4096;

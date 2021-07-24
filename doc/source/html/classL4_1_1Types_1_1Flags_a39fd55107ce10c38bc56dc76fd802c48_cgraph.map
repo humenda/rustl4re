@@ -1,3 +1,4 @@
 <map id="L4::Types::Flags::clear" name="L4::Types::Flags::clear">
-<area shape="rect" id="node2" href="$classL4_1_1Types_1_1Flags.html#a26fd957c8cf21a41f992f6a74034aacc" title="Support &amp;= of two compatible Flags types. " alt="" coords="213,5,416,32"/>
+<area shape="rect" id="node1" title="Clear the given flag." alt="" coords="5,5,171,32"/>
+<area shape="rect" id="node2" href="$classL4_1_1Types_1_1Flags.html#a418669da2176e3330ca2f6fc0bd9d360" title="Support &amp;= of two compatible Flags types." alt="" coords="219,5,428,32"/>
 </map>

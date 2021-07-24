@@ -1,3 +1,6 @@
 <map id="L4virtio::Virtqueue::ready" name="L4virtio::Virtqueue::ready">
-<area shape="rect" id="node2" href="$classL4virtio_1_1Svr_1_1Block__dev.html#a9a96e928470518780132b45397e8ad35" title="Attach device to an object registry. " alt="" coords="187,5,321,47"/>
+<area shape="rect" id="node1" title="Test if this queue is in working state." alt="" coords="256,71,399,112"/>
+<area shape="rect" id="node2" href="$classL4virtio_1_1Svr_1_1Virtqueue.html#ae47268978d2deb4f22d1b93662710f9b" title="Set the &#39;no notify&#39; flag for this queue." alt="" coords="21,5,192,47"/>
+<area shape="rect" id="node3" href="$classL4virtio_1_1Svr_1_1Virtqueue.html#a2bd42bd424a1661a8eca5bad51239522" title="Clear the &#39;no notify&#39; flag for this queue." alt="" coords="21,71,192,112"/>
+<area shape="rect" id="node4" href="$classL4virtio_1_1Svr_1_1Block__dev__base.html#afd81130f9e38af771d43aabafa05e043" title="Releases resources related to a request and notifies the client." alt="" coords="5,136,208,177"/>
 </map>

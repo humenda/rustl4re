@@ -45,7 +45,7 @@ public:
   Phys_space();
 
   bool reserve(Phys_region const &r);
-  bool alloc(Phys_region const &r);
+  bool request(Phys_region const &r);
   Phys_region alloc(Phys_region::Addr sz, Phys_region::Addr align);
 
   void dump();

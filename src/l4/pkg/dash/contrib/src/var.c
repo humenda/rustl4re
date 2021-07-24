@@ -80,9 +80,13 @@ const char defifsvar[] = "IFS= \t\n";
 #else
 const char defifs[] = " \t\n";
 #endif
+MKINIT char defoptindvar[] = "OPTIND=1";
 
 int lineno;
 char linenovar[sizeof("LINENO=")+sizeof(int)*CHAR_BIT/3+1] = "LINENO=";
+
+const char defps1[] = "PS1=$ ";
+const char rootps1[] = "PS1=# ";
 
 /* Some macros in var.h depend on the order, add new variables to the end. */
 struct var varinit[] = {
@@ -97,10 +101,10 @@ struct var varinit[] = {
 	{ 0,	VSTRFIXED|VTEXTFIXED|VUNSET,	"MAIL\0",	changemail },
 	{ 0,	VSTRFIXED|VTEXTFIXED|VUNSET,	"MAILPATH\0",	changemail },
 	{ 0,	VSTRFIXED|VTEXTFIXED,		defpathvar,	changepath },
-	{ 0,	VSTRFIXED|VTEXTFIXED,		"PS1=$ ",	0 },
+	{ 0,	VSTRFIXED|VTEXTFIXED,		defps1,	0 },
 	{ 0,	VSTRFIXED|VTEXTFIXED,		"PS2=> ",	0 },
 	{ 0,	VSTRFIXED|VTEXTFIXED,		"PS4=+ ",	0 },
-	{ 0,	VSTRFIXED|VTEXTFIXED,		"OPTIND=1",	getoptsreset },
+	{ 0,	VSTRFIXED|VTEXTFIXED,		defoptindvar,	getoptsreset },
 #ifdef WITH_LINENO
 	{ 0,	VSTRFIXED|VTEXTFIXED,		linenovar,	0 },
 #endif
@@ -142,7 +146,7 @@ INIT {
 		}
 	}
 
-	setvarint("OPTIND", 1, 0);
+	setvareq(defoptindvar, VTEXTFIXED);
 
 	fmtstr(ppid + 5, sizeof(ppid) - 5, "%ld", (long) getppid());
 	setvareq(ppid, VTEXTFIXED);
@@ -180,11 +184,22 @@ initvar(void)
 		vp->next = *vpp;
 		*vpp = vp;
 	} while (++vp < end);
-	/*
-	 * PS1 depends on uid
-	 */
-	if (!geteuid())
-		vps1.text = "PS1=# ";
+
+	choose_ps1();
+}
+
+/*
+ * Modify PS1 to reflect uid, unless an exported var exists.
+ */
+
+void
+choose_ps1(void)
+{
+	if (!geteuid()) {
+		vps1.text = rootps1;
+	} else {
+		vps1.text = defps1;
+	}
 }
 
 /*

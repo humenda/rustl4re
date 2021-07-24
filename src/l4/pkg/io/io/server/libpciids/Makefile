@@ -1,7 +1,7 @@
 PKGDIR  ?= ../..
 L4DIR   ?= $(PKGDIR)/../../..
 
-TARGET  := include src
+TARGET  := src
 
 include $(L4DIR)/mk/subdir.mk
 

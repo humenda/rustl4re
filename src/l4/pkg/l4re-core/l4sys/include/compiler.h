@@ -105,8 +105,8 @@
  *
  * This macro shall be used to mark C and C++ functions that never
  * throw any exception.  Note that also C functions may throw exceptions
- * according to the compilers ABI and shall be marke with L4_NOTHROW
- * if they never do.  In C++ this is equvalent to \c throw().
+ * according to the compilers ABI and shall be marked with L4_NOTHROW
+ * if they never do.  In C++ this is equivalent to \c throw().
  *
  * \code
  * int foo() L4_NOTHROW;
@@ -182,7 +182,11 @@
 #  endif
 #  define L4_DEFAULT_PARAM(x)
 #else /* __cplusplus */
-#  define L4_NOTHROW throw()
+#  if __cplusplus >= 201103L
+#    define L4_NOTHROW noexcept
+#  else /* C++ < 11 */
+#    define L4_NOTHROW throw()
+#  endif
 #  define EXTERN_C_BEGIN extern "C" {
 #  define EXTERN_C_END }
 #  define EXTERN_C extern "C"

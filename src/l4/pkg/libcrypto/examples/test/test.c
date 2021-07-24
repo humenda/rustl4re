@@ -16,7 +16,6 @@
 #include <string.h>
 
 #include <l4/log/log.h>
-#include <l4/util/reboot.h>
 
 #include <l4/crypto/oaep.h>
 #include <l4/crypto/random.h>
@@ -407,9 +406,6 @@ int main(void) {
     LOG_printf("test_aes128_cbc(): %d (0 expected)\n", test_aes128_cbc());
     LOG_printf("test_sha1():       %d (0 expected)\n", test_sha1());
 
-    /* terminate Fiasco-UX */
-    l4util_reboot();
-    
     return 0;
 }
 

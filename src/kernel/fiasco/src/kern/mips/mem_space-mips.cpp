@@ -137,7 +137,7 @@ Mem_space::initialize()
   if (EXPECT_FALSE(!q))
     return false;
 
-  _dir = (Dir_type*)Kmem_alloc::allocator()->unaligned_alloc(sizeof(Dir_type));
+  _dir = (Dir_type*)Kmem_alloc::allocator()->alloc(Bytes(sizeof(Dir_type)));
   if (!_dir)
     return false;
 
@@ -329,7 +329,7 @@ Mem_space::v_delete(Vaddr virt, Page_order size,
 PUBLIC inline NEEDS[Mem_space::set_guest_ctl1_rid, <cstdio>]
 bool
 Mem_space::add_tlb_entry(Vaddr virt, bool write_access, bool need_probe, bool guest)
-{ (void) write_access;
+{
   // align virt to double pages at least, as we need to add
   // two phys pages in the tlb
   Vaddr a = cxx::mask_lsb(virt, Page_order(Config::PAGE_SHIFT + 1));
@@ -415,7 +415,7 @@ Mem_space::~Mem_space()
       _dir->destroy(Virt_addr(0UL),
                     Virt_addr(Mem_layout::User_max),
                     Kmem_alloc::q_allocator(_quota));
-      Kmem_alloc::allocator()->q_unaligned_free(ram_quota(), sizeof(Dir_type), _dir);
+      Kmem_alloc::allocator()->q_free(ram_quota(), Bytes(sizeof(Dir_type)), _dir);
     }
 }
 

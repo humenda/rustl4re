@@ -251,7 +251,7 @@ int run(int argc, char const *argv[])
 
   L4Re::Rm::Unique_region<char *> fb_addr;
   chksys(env->rm()->attach(&fb_addr, goos_fb.buffer()->size(),
-                           L4Re::Rm::Search_addr,
+                           L4Re::Rm::F::Search_addr | L4Re::Rm::F::RW,
                            L4::Ipc::make_cap_rw(goos_fb.buffer()),
                            0, L4_SUPERPAGESHIFT));
 

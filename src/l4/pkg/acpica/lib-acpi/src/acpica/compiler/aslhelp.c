@@ -8,7 +8,7 @@
  *
  * 1. Copyright Notice
  *
- * Some or all of this work - Copyright (c) 1999 - 2017, Intel Corp.
+ * Some or all of this work - Copyright (c) 1999 - 2019, Intel Corp.
  * All rights reserved.
  *
  * 2. License
@@ -111,6 +111,42 @@
  * other governmental approval, or letter of assurance, without first obtaining
  * such license, approval or letter.
  *
+ *****************************************************************************
+ *
+ * Alternatively, you may choose to be licensed under the terms of the
+ * following license:
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions, and the following disclaimer,
+ *    without modification.
+ * 2. Redistributions in binary form must reproduce at minimum a disclaimer
+ *    substantially similar to the "NO WARRANTY" disclaimer below
+ *    ("Disclaimer") and any redistribution must be conditioned upon
+ *    including a substantially similar Disclaimer requirement for further
+ *    binary redistribution.
+ * 3. Neither the names of the above-listed copyright holders nor the names
+ *    of any contributors may be used to endorse or promote products derived
+ *    from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+ * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * Alternatively, you may choose to be licensed under the terms of the
+ * GNU General Public License ("GPL") version 2 as published by the Free
+ * Software Foundation.
+ *
  *****************************************************************************/
 
 #include "aslcompiler.h"
@@ -137,13 +173,14 @@ void
 Usage (
     void)
 {
+    printf (ACPI_COMMON_SIGNON (ASL_COMPILER_NAME));
     printf ("%s\n\n", ASL_COMPLIANCE);
     ACPI_USAGE_HEADER ("iasl [Options] [Files]");
 
     printf ("\nGeneral:\n");
-    ACPI_OPTION ("-@ <file>",       "Specify command file");
-    ACPI_OPTION ("-I <dir>",        "Specify additional include directory");
-    ACPI_OPTION ("-p <prefix>",     "Specify path/filename prefix for all output files");
+    ACPI_OPTION ("-@  <file>",      "Specify command file");
+    ACPI_OPTION ("-I  <dir>",       "Specify additional include directory");
+    ACPI_OPTION ("-p  <prefix>",    "Specify path/filename prefix for all output files");
     ACPI_OPTION ("-v",              "Display compiler version");
     ACPI_OPTION ("-vd",             "Display compiler build date and time");
     ACPI_OPTION ("-vo",             "Enable optimization comments");
@@ -168,11 +205,13 @@ Usage (
     ACPI_OPTION ("-ve",             "Report only errors (ignore warnings and remarks)");
     ACPI_OPTION ("-vi",             "Less verbose errors and warnings for use with IDEs");
     ACPI_OPTION ("-vr",             "Disable remarks");
-    ACPI_OPTION ("-vw <messageid>", "Disable specific warning or remark");
+    ACPI_OPTION ("-vw <messageid>", "Ignore specific error, warning or remark");
+    ACPI_OPTION ("-vx <messageid>", "Expect a specific warning, remark, or error");
     ACPI_OPTION ("-w <1|2|3>",      "Set warning reporting level");
     ACPI_OPTION ("-we",             "Report warnings as errors");
+    ACPI_OPTION ("-ww <messageid>", "Report specific warning or remark as error");
 
-    printf ("\nAML Code Generation (*.aml):\n");
+    printf ("\nAML Bytecode Generation (*.aml):\n");
     ACPI_OPTION ("-oa",             "Disable all optimizations (compatibility mode)");
     ACPI_OPTION ("-of",             "Disable constant folding");
     ACPI_OPTION ("-oi",             "Disable integer optimization to Zero/One/Ones");
@@ -189,21 +228,26 @@ Usage (
     ACPI_OPTION ("-ls",             "Create combined source file (expanded includes) (*.src)");
     ACPI_OPTION ("-lx",             "Create cross-reference file (*.xrf)");
 
-    printf ("\nFirmware Support - C Output:\n");
+    printf ("\nFirmware Support - C Text Output:\n");
     ACPI_OPTION ("-tc",             "Create hex AML table in C (*.hex)");
     ACPI_OPTION ("-sc",             "Create named hex AML arrays in C (*.c)");
     ACPI_OPTION ("-ic",             "Create include file in C for -sc symbols (*.h)");
     ACPI_OPTION ("-so",             "Create namespace AML offset table in C (*.offset.h)");
 
-    printf ("\nFirmware Support - Assembler Output:\n");
+    printf ("\nFirmware Support - Assembler Text Output:\n");
     ACPI_OPTION ("-ta",             "Create hex AML table in assembler (*.hex)");
     ACPI_OPTION ("-sa",             "Create named hex AML arrays in assembler (*.asm)");
     ACPI_OPTION ("-ia",             "Create include file in assembler for -sa symbols (*.inc)");
 
-    printf ("\nFirmware Support - ASL Output:\n");
+    printf ("\nFirmware Support - ASL Text Output:\n");
     ACPI_OPTION ("-ts",             "Create hex AML table in ASL (Buffer object) (*.hex)");
 
+    printf ("\nLegacy-ASL to ASL+ Converter:\n");
+    ACPI_OPTION ("-ca <file>",      "Convert legacy-ASL source file to new ASL+ file");
+    ACPI_OPTION ("",                "  (Original comments are passed through to ASL+ file)");
+
     printf ("\nData Table Compiler:\n");
+    ACPI_OPTION ("-tp",             "Compile tables with flex/bison prototype");
     ACPI_OPTION ("-G",              "Compile custom table that contains generic operators");
     ACPI_OPTION ("-T <sig list>|ALL",   "Create ACPI table template/example files");
     ACPI_OPTION ("-T <count>",      "Emit DSDT and <count> SSDTs to same file");
@@ -225,6 +269,7 @@ Usage (
     ACPI_OPTION ("-vt",             "Dump binary table data in hex format within output file");
 
     printf ("\nDebug Options:\n");
+    ACPI_OPTION ("-bc",             "Create converter debug file (*.cdb)");
     ACPI_OPTION ("-bf",             "Create debug file (full output) (*.txt)");
     ACPI_OPTION ("-bs",             "Create debug file (parse tree only) (*.txt)");
     ACPI_OPTION ("-bp <depth>",     "Prune ASL parse tree");

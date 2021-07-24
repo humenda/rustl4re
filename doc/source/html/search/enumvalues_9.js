@@ -1,19 +1,11 @@
 var searchData=
 [
-  ['map_5fbufferable',['Map_bufferable',['../classL4Re_1_1Dataspace.html#aabaf1549938f599cbf4e10db50095d13abb5ef54434cf2b2d5c0b594e58351d2f',1,'L4Re::Dataspace']]],
-  ['map_5fcacheable',['Map_cacheable',['../classL4Re_1_1Dataspace.html#aabaf1549938f599cbf4e10db50095d13a775f46880ac064354068fa8b2adfb53f',1,'L4Re::Dataspace']]],
-  ['map_5fcaching_5fmask',['Map_caching_mask',['../classL4Re_1_1Dataspace.html#aabaf1549938f599cbf4e10db50095d13a6ad294b5ac7b5e9de7de2ba60b1984df',1,'L4Re::Dataspace']]],
-  ['map_5fcaching_5fshift',['Map_caching_shift',['../classL4Re_1_1Dataspace.html#aabaf1549938f599cbf4e10db50095d13aa63ebe42ce51f6062ceb60e9b8b6f9ce',1,'L4Re::Dataspace']]],
-  ['map_5fnormal',['Map_normal',['../classL4Re_1_1Dataspace.html#aabaf1549938f599cbf4e10db50095d13a5a2db648e2964150b68adb22ab1e8064',1,'L4Re::Dataspace']]],
-  ['map_5fro',['Map_ro',['../classL4Re_1_1Dataspace.html#aabaf1549938f599cbf4e10db50095d13a923c302cfc81e6484af2f33d1cb31f78',1,'L4Re::Dataspace']]],
-  ['map_5frw',['Map_rw',['../classL4Re_1_1Dataspace.html#aabaf1549938f599cbf4e10db50095d13a609dbcd143ee4df7f86d4658a4357e58',1,'L4Re::Dataspace']]],
-  ['map_5funcacheable',['Map_uncacheable',['../classL4Re_1_1Dataspace.html#aabaf1549938f599cbf4e10db50095d13a2d0c7d108ded472718a2a7c832545ac4',1,'L4Re::Dataspace']]],
-  ['mask',['Mask',['../classcxx_1_1Bitfield.html#a85afeb75ac1516f5bec8fe3cb63f9b35ae140ccae1e38bdcad4354722b4ff888e',1,'cxx::Bitfield']]],
-  ['max_5ffree_5fslabs',['max_free_slabs',['../classcxx_1_1Base__slab.html#a8e10ebe9b687c632831e61ee08d37528a02a4bdaa07af8ec9e34fedc5deb7fff5',1,'cxx::Base_slab::max_free_slabs()'],['../classcxx_1_1Base__slab__static.html#aba32308b9a130ce8b000af1b68e113faa6dc84eb87654a77812372af101503430',1,'cxx::Base_slab_static::max_free_slabs()']]],
-  ['mem',['Mem',['../structL4_1_1Type__info_1_1Demand__t.html#a67985bff730156e98073d519da7b9370a7a31955b235e21eab31d4482a35e0548',1,'L4::Type_info::Demand_t']]],
-  ['mode_5firq',['Mode_irq',['../classL4Re_1_1Util_1_1Event__t.html#a8135ac33e061c5ee03a95bc2b1a2e4afa36b4ece428429fc370c014725cd590c9',1,'L4Re::Util::Event_t']]],
-  ['mode_5fpolling',['Mode_polling',['../classL4Re_1_1Util_1_1Event__t.html#a8135ac33e061c5ee03a95bc2b1a2e4afa3d9dd15594fc68b159ad5905eb333fa9',1,'L4Re::Util::Event_t']]],
-  ['mr_5fbytes',['Mr_bytes',['../namespaceL4_1_1Ipc_1_1Msg.html#a20e9603477278a40adaf64858feddde7a9cff9b86a2797207017bd56e65925640',1,'L4::Ipc::Msg']]],
-  ['mr_5fwords',['Mr_words',['../namespaceL4_1_1Ipc_1_1Msg.html#a20e9603477278a40adaf64858feddde7af94280f1159fb68063858f8077bf5eaa',1,'L4::Ipc::Msg']]],
-  ['msb',['Msb',['../classcxx_1_1Bitfield.html#a869665b5518727d89a0f191837552ad9a2f5e6f2d3e1cd25d4c905e680eadcc34',1,'cxx::Bitfield']]]
+  ['mask_6347',['Mask',['../classcxx_1_1Bitfield.html#a85afeb75ac1516f5bec8fe3cb63f9b35ae140ccae1e38bdcad4354722b4ff888e',1,'cxx::Bitfield']]],
+  ['max_5ffree_5fslabs_6348',['max_free_slabs',['../classcxx_1_1Base__slab.html#a3ee958bc257000ef2b0d66140d984dffa02a4bdaa07af8ec9e34fedc5deb7fff5',1,'cxx::Base_slab::max_free_slabs()'],['../classcxx_1_1Base__slab__static.html#a9abfade9ee2984e5fb9178b8aa8b87c6a6dc84eb87654a77812372af101503430',1,'cxx::Base_slab_static::max_free_slabs()']]],
+  ['mem_6349',['Mem',['../structL4_1_1Type__info_1_1Demand__t.html#afdb021baaaa3ddfbf886605d02b3f4aba7a31955b235e21eab31d4482a35e0548',1,'L4::Type_info::Demand_t']]],
+  ['mode_5firq_6350',['Mode_irq',['../classL4Re_1_1Util_1_1Event__t.html#a8135ac33e061c5ee03a95bc2b1a2e4afa36b4ece428429fc370c014725cd590c9',1,'L4Re::Util::Event_t']]],
+  ['mode_5fpolling_6351',['Mode_polling',['../classL4Re_1_1Util_1_1Event__t.html#a8135ac33e061c5ee03a95bc2b1a2e4afa3d9dd15594fc68b159ad5905eb333fa9',1,'L4Re::Util::Event_t']]],
+  ['mr_5fbytes_6352',['Mr_bytes',['../namespaceL4_1_1Ipc_1_1Msg.html#a1d4878c74f772bfe4c4dbe0a9bdfb5cea9cff9b86a2797207017bd56e65925640',1,'L4::Ipc::Msg']]],
+  ['mr_5fwords_6353',['Mr_words',['../namespaceL4_1_1Ipc_1_1Msg.html#a1d4878c74f772bfe4c4dbe0a9bdfb5ceaf94280f1159fb68063858f8077bf5eaa',1,'L4::Ipc::Msg']]],
+  ['msb_6354',['Msb',['../classcxx_1_1Bitfield.html#ad0c02882b146d3301f30f4e762b65789a2f5e6f2d3e1cd25d4c905e680eadcc34',1,'cxx::Bitfield']]]
 ];

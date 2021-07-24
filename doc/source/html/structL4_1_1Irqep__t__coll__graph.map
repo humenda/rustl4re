@@ -1,0 +1,6 @@
+<map id="L4::Irqep_t&lt; Derived, BASE, bool &gt;" name="L4::Irqep_t&lt; Derived, BASE, bool &gt;">
+<area shape="rect" id="node1" title="Epiface implementation for interrupt handlers." alt="" coords="17,589,177,696"/>
+<area shape="rect" id="node2" href="$structL4_1_1Epiface__t0.html" title=" " alt="" coords="11,433,184,540"/>
+<area shape="rect" id="node3" href="$structL4_1_1Epiface.html" title="Base class for interface implementations." alt="" coords="5,5,179,215"/>
+<area shape="rect" id="node4" href="$structL4_1_1Epiface__t0.html" title="Epiface mixin for generic Kobject&#45;based interfaces." alt="" coords="113,264,287,371"/>
+</map>

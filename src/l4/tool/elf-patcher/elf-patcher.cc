@@ -139,6 +139,7 @@ int main(int argc, const char *argv[])
   if (fstat(victim, &victim_sb) == -1)
     {
       fprintf(stderr, "could not get size of '%s':", argv[1]);
+      close(victim);
       perror("");
       return 1;
     }
@@ -149,12 +150,16 @@ int main(int argc, const char *argv[])
   if (elf_addr == MAP_FAILED)
     {
       fprintf(stderr, "could not mmap '%s':", argv[1]);
+      close(victim);
       perror("");
       return 1;
     }
 
   if (check_elf(elf_addr, argv[1]))
-    return 1;
+    {
+      close(victim);
+      return 1;
+    }
 
   patch_phdrs(elf_addr, argc, argv);
   patch_shdrs(elf_addr, argc, argv);

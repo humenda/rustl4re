@@ -34,7 +34,7 @@
  * hardware description by hand. A simple example for this is
  * <tt>x86-legacy.devs</tt>.
  *
- * Virtual Bus Description
+ * Virtual Bus Description \anchor vbus_desc
  * -----------------------
  *
  * Each Io server client is provided with its own virtual bus which
@@ -52,7 +52,7 @@
  * configuration may be split across several configuration files passed
  * to Io through the command line.
  *
- * To allow clients access to a available devices, a virtual system bus needs
+ * To allow clients access to available devices, a virtual system bus needs
  * to be created that lists the devices and their resources that should be
  * available to that client. The names of the buses correspond to the
  * capabilities given to Io in its launch configuration.
@@ -178,4 +178,67 @@
  * concatenate multiple ID strings using `&`. An example where a specific
  * device from a specific vendor at a fixed bus address is matched would use
  * the string `PCI/VEN_vvvv&DEV_dddd&ADR_xxxx:xx:xx.x`.
+ *
+ * ### Isolation of PCIe devices ###
+ *
+ * PCIe encodes device communication with a network-like protocol with
+ * destination headers and packet fragmentation allowing a devices to talk
+ * directly to other devices. This potentially works against security
+ * boundaries for a system. E.g. two network cards could exchange packets and
+ * thereby leak information from one security domain to the other without
+ * involvement of the OS.
+ *
+ * PCIe introduced an optional capability named PCI Access Control Services
+ * (PCI/ACS) to control communication between PCIe devices.
+ *
+ * With PCI/ACS it is possible to restrict inter-device communication between
+ * PCIe devices.
+ *
+ * PCI/ACS is optional and for Intel chipsets, it is usually only implemented
+ * on high-end PCI platform controller hubs (PCHs), and is missing on low-end
+ * and mobile PCHs. On some Intel-PCHs there exist facilities that allow for
+ * similar isolation.
+ *
+ * If IO encounters a supported PCH, it will enable those facilities in order
+ * to enforce device isolation.
+ *
+ * Command Line Options
+ * -----------------------
+ * The Io Server supports the following optional parameters:
+ *
+ *     [--verbose|v] [--transparent-msi] [--trace <trace_mask>] [--acpi-debug-level <debug_level>] [config_files]
+ *
+ * - **verbose|v**
+ *
+ *  By default, error debug messages are enabled. This option increments the
+ *  verboseness level, and can be applied multiple times to reach the desired
+ *  debug level. The available debug levels are ordered as: `DBG_ERR` (default,
+ *  level 1), `DBG_WARN`, `DBG_INFO`, `DBG_DEBUG`,  `DBG_DEBUG2` and `DBG_ALL`
+ *  (level 6).
+ *
+ * - **transparent-msi**
+ *
+ *  Enable MSI on PCI devices which support this feature. This is transparent
+ *  to clients, as there are no changes in the API used to interact
+ *  with PCI device via interrupts.
+ *
+ * - **acpi-debug-level <level_mask>**
+ *
+ *  Set the ACPI debug level. The `<level_mask>` is a mask that selects
+ *  components of interest for debugging. It can be constructed from the
+ *  ACPI debug constants defined in the linux kernel, see <a href=
+ *  "https://www.kernel.org/doc/html/latest/firmware-guide/acpi/debug.html"
+ *  target="_blank"> ACPI Debug Output</a> for details. By default,
+ *  the ACPI debug level is set to
+ *  `ACPI_LV_INIT | ACPI_LV_TABLES | ACPI_LV_VERBOSE_INFO`.
+ *
+ * - **trace <trace_mask>**
+ *
+ *  Enable tracing of events matching `trace_mask`. The only supported trace
+ *  mask is `1` and this matches ACPI events.
+ *
+ * - **config_files**
+ *
+ *  Space separated list of Lua configuration files specifying real hardware
+ *  and virtual buses. See example on \ref vbus_desc "Virtual Bus Description".
  */

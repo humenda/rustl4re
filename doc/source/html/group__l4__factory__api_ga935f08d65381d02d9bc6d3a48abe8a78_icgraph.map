@@ -1,4 +1,5 @@
 <map id="l4_factory_create_gate_u" name="l4_factory_create_gate_u">
-<area shape="rect" id="node2" href="$classL4_1_1Factory.html#a3bcb94f03ca9bad5821f575d5048025d" title="Create a new IPC gate. " alt="" coords="236,5,409,32"/>
-<area shape="rect" id="node3" href="$group__l4__factory__api.html#ga15e3ccc0f2ac38b98bfc943bfbcbfc57" title="Create a new IPC gate. " alt="" coords="239,56,407,83"/>
+<area shape="rect" id="node1" title="Create a new IPC gate." alt="" coords="229,31,416,57"/>
+<area shape="rect" id="node2" href="$classL4_1_1Factory.html#aac0a160a20464a6917f2f614d5b86407" title="Create a new IPC gate." alt="" coords="5,5,181,32"/>
+<area shape="rect" id="node3" href="$group__l4__factory__api.html#ga15e3ccc0f2ac38b98bfc943bfbcbfc57" title="Create a new IPC gate." alt="" coords="8,56,179,83"/>
 </map>

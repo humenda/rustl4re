@@ -139,6 +139,7 @@ extern char linenovar[];
 #define mpathset()	((vmpath.flags & VUNSET) == 0)
 
 void initvar(void);
+void choose_ps1(void);
 struct var *setvar(const char *name, const char *val, int flags);
 intmax_t setvarint(const char *, intmax_t, int);
 struct var *setvareq(char *s, int flags);

@@ -1,0 +1,9 @@
+<map id="L4::Ipc::make_cap_rw" name="L4::Ipc::make_cap_rw">
+<area shape="rect" id="node1" title="Make an L4::Ipc::Cap&lt;T&gt; for the given capability with L4_CAP_FPAGE_RW rights." alt="" coords="443,166,604,193"/>
+<area shape="rect" id="node2" href="$classL4Re_1_1Util_1_1Event__buffer__t.html#a7ccb828618951c13cd1ccd7ebe1959e2" title="Attach event buffer from address space." alt="" coords="220,5,395,47"/>
+<area shape="rect" id="node3" href="$classL4virtio_1_1Driver_1_1Device.html#a4f8b3d73188c3b6664755b81b80e441c" title="Contacts the device and starts the initial handshake." alt="" coords="221,71,393,112"/>
+<area shape="rect" id="node4" href="$classL4virtio_1_1Driver_1_1Block__device.html#a688df51bdec4ba327a6c0b48a83a115a" title="Setup a connection to a device and set up shared memory." alt="" coords="5,129,172,171"/>
+<area shape="rect" id="node5" href="$classL4Re_1_1Util_1_1Event__t.html#a6052908f83d35a7bb1ba9371cbfc9834" title="Initialise an event object." alt="" coords="236,188,379,229"/>
+<area shape="rect" id="node6" href="$classL4Re_1_1Util_1_1Event__t.html#a2161b185b3f69aa9ef597a03fdbde247" title="Initialise an event object in polling mode." alt="" coords="236,253,379,295"/>
+<area shape="rect" id="node7" href="$classL4virtio_1_1Driver_1_1Device.html#a7a5c440b8353e0bd030a552334e7e5a3" title="Share a dataspace with the device." alt="" coords="221,319,393,360"/>
+</map>

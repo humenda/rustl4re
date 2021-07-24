@@ -55,24 +55,37 @@ endif
 LDFLAGS		+= -shared -Bsymbolic -L../lib -L../gnuefi $(CRTOBJS)
 
 LOADLIBES	+= -lefi -lgnuefi
-LOADLIBES	+= $(shell $(CC) $(ARCH3264) -print-libgcc-file-name)
+LOADLIBES	+= $(LIBGCC)
 LOADLIBES	+= -T $(LDSCRIPT)
 
-FORMAT		= efi-app-$(ARCH)
-
 TARGET_APPS = t.efi t2.efi t3.efi t4.efi t5.efi t6.efi \
-	      printenv.efi t7.efi tcc.efi modelist.efi \
-	      route80h.efi drv0_use.efi AllocPages.efi \
-	      FreePages.efi
+	      printenv.efi t7.efi t8.efi tcc.efi modelist.efi \
+	      route80h.efi drv0_use.efi AllocPages.efi exit.efi \
+	      FreePages.efi setjmp.efi debughook.efi debughook.efi.debug \
+	      bltgrid.efi lfbgrid.efi setdbg.efi unsetdbg.efi
 TARGET_BSDRIVERS = drv0.efi
 TARGET_RTDRIVERS =
+
+ifneq ($(HAVE_EFI_OBJCOPY),)
+
+FORMAT		:= --target efi-app-$(ARCH)
+$(TARGET_BSDRIVERS): FORMAT=--target efi-bsdrv-$(ARCH)
+$(TARGET_RTDRIVERS): FORMAT=--target efi-rtdrv-$(ARCH)
+
+else
+
+SUBSYSTEM	:= 0xa
+$(TARGET_BSDRIVERS): SUBSYSTEM = 0xb
+$(TARGET_RTDRIVERS): SUBSYSTEM = 0xc
+
+FORMAT		:= -O binary
+LDFLAGS		+= --defsym=EFI_SUBSYSTEM=$(SUBSYSTEM)
+
+endif
 
 TARGETS = $(TARGET_APPS) $(TARGET_BSDRIVERS) $(TARGET_RTDRIVERS)
 
 all:	$(TARGETS)
-
-$(TARGET_BSDRIVERS): FORMAT=efi-bsdrv-$(ARCH)
-$(TARGET_RTDRIVERS): FORMAT=efi-rtdrv-$(ARCH)
 
 clean:
 	rm -f $(TARGETS) *~ *.o *.so

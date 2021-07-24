@@ -1,0 +1,6 @@
+<map id="cxx::Bits::Bst::remove_all" name="cxx::Bits::Bst::remove_all">
+<area shape="rect" id="node1" title="Clear the tree." alt="" coords="5,31,193,57"/>
+<area shape="rect" id="node2" href="$classcxx_1_1Bits_1_1Bst.html#ad0507c7685968acce75bafa667add503" title="Access the head node as object of type Node." alt="" coords="488,5,635,32"/>
+<area shape="rect" id="node3" href="$classcxx_1_1Bits_1_1Bst.html#af67018e81ae44b38b09ee239f7a34896" title="Remove all elements in the subtree of head." alt="" coords="241,56,440,83"/>
+<area shape="rect" id="node4" href="$classcxx_1_1Bits_1_1Bst__node.html#a529a8a48a3efdccbc8c77d6ccca1ba39" title="Get next node in direction d." alt="" coords="488,57,635,98"/>
+</map>

@@ -1,3 +1,4 @@
 <map id="l4vbus_pcidev_cfg_read" name="l4vbus_pcidev_cfg_read">
-<area shape="rect" id="node2" href="$classL4vbus_1_1Pci__dev.html#a20658b5eb70c4773b369a0a3c8c88582" title="Read from the device&#39;s vPCI configuration space. " alt="" coords="228,5,412,32"/>
+<area shape="rect" id="node1" title="Read from the device&#39;s vPCI configuration space." alt="" coords="243,5,421,32"/>
+<area shape="rect" id="node2" href="$classL4vbus_1_1Pci__dev.html#a20658b5eb70c4773b369a0a3c8c88582" title="Read from the device&#39;s vPCI configuration space." alt="" coords="5,5,195,32"/>
 </map>

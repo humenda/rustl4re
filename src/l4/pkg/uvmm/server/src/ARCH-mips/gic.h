@@ -140,33 +140,30 @@ public:
       _irq_array[irq]->ack();
   }
 
-  void bind_irq_source(unsigned irq, cxx::Ref_ptr<Irq_source> const &src) override
+  void bind_eoi_handler(unsigned irq, Eoi_handler *handler) override
   {
     assert(irq < Num_irqs);
 
-    if (_sources[irq])
+    if (handler && _sources[irq])
       throw L4::Runtime_error(-L4_EEXIST);
 
-    _sources[irq] = src;
+    _sources[irq] = handler;
   }
 
-  cxx::Ref_ptr<Irq_source> get_irq_source(unsigned irq) const override
+  Eoi_handler *get_eoi_handler(unsigned irq) const override
   { return _sources[irq]; }
 
-  int dt_get_num_interrupts(Vdev::Dt_node const &node) override
+  int dt_get_interrupt(fdt32_t const *prop, int propsz, int *read) const override
   {
-    int size;
-    if (!node.get_prop<fdt32_t>("interrupts", &size))
-      return 0;
+    if (propsz < 3)
+      return -L4_ERANGE;
 
-    return size / 3;
-  }
+    int irq = fdt32_to_cpu(prop[1]);
 
-  unsigned dt_get_interrupt(Vdev::Dt_node const &node, int irq) override
-  {
-    auto *prop = node.check_prop<fdt32_t>("interrupts", 3 * (irq + 1));
+    if (read)
+      *read = 3;
 
-    return fdt32_to_cpu(prop[3 * irq + 1]);
+    return irq;
   }
 
   void reset_mask(unsigned reg, char size, l4_umword_t mask);
@@ -206,7 +203,7 @@ private:
 
   template <typename T>
   T *gic_mem(unsigned offset) const
-  { return reinterpret_cast<T *>(_mmio_region.get() + offset); }
+  { return reinterpret_cast<T *>(mmio_local_addr() + offset); }
 
   void gic_mem_set(unsigned offset, char size, l4_umword_t value) const
   {
@@ -224,7 +221,7 @@ private:
   // array of IRQ connections towards core IC
   cxx::unique_ptr<Vmm::Irq_sink> _irq_array[Num_irqs];
   // registered device callbacks for configuration and eoi
-  cxx::Ref_ptr<Irq_source> _sources[Num_irqs];
+  Eoi_handler *_sources[Num_irqs];
   Cpu_info _vcpu_info[Num_vpes];
   std::mutex _lock;
 };

@@ -1,6 +1,7 @@
-#! /usr/bin/perl -W
+#! /usr/bin/env perl
 
 use strict;
+use warnings;
 
 my $do_cluster_subgraphs = 0;
 my $collapse_clusters = 0;
@@ -698,10 +699,10 @@ sub generate_overview_set($$)
   print INDEX <<EOFOO;
 <html>
  <head>
- <title>TUD:OS package dependency overview</title>
+ <title>L4Re package dependency overview</title>
  </head>
  <body>
-  <h2>TUD:OS package dependency overview</h2>
+  <h2>L4Re package dependency overview</h2>
   <p>Generated: $datestring</p>
   <p>
     Legend of overview graphs:

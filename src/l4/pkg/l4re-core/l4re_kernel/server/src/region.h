@@ -16,7 +16,7 @@
 #include <l4/re/util/region_mapping_svr_2>
 #include <l4/re/debug>
 #include "debug.h"
-#include <cstdlib>
+#include <stdlib.h>
 
 inline void *operator new (size_t s, cxx::Nothrow const &) throw() { return malloc(s); }
 
@@ -32,13 +32,7 @@ public:
                  L4Re::Util::Region const &r, bool writable,
                  l4_umword_t *result);
 
-  static void unmap(Region_handler const *h, l4_addr_t vaddr,
-                    l4_addr_t offs, unsigned long size);
-
   static void free(Region_handler const *h, l4_addr_t start, unsigned long size);
-
-  static void take(Region_handler const *h);
-  static void release(Region_handler const *h);
 };
 
 
@@ -55,7 +49,8 @@ public:
   enum { Have_find = true };
   void *server_iface() const { return 0; }
   static int validate_ds(void *, L4::Ipc::Snd_fpage const &ds_cap,
-                         unsigned, L4::Cap<L4Re::Dataspace> *ds)
+                         L4Re::Rm::Region_flags,
+                         L4::Cap<L4Re::Dataspace> *ds)
   {
     // if no cap was sent then the region will be reserved
     if (ds_cap.local_id_received())
@@ -80,7 +75,6 @@ public:
                    L4::Ipc::Opt<L4::Ipc::Snd_fpage> &fp);
   long op_io_page_fault(L4::Io_pager::Rights,
                         l4_fpage_t io_pfa, l4_umword_t pc,
-                        L4::Ipc::Opt<l4_mword_t> &result,
                         L4::Ipc::Opt<L4::Ipc::Snd_fpage> &);
   long op_debug(L4Re::Debug_obj::Rights, unsigned long function)
   { debug_dump(function); return 0; }

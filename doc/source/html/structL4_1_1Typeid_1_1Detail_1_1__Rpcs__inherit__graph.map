@@ -1,11 +1,12 @@
 <map id="L4::Typeid::Detail::_Rpcs&lt; OPCODE, O, X &gt;" name="L4::Typeid::Detail::_Rpcs&lt; OPCODE, O, X &gt;">
-<area shape="rect" id="node3" href="$structL4_1_1Typeid_1_1Detail_1_1__Rpcs.html" title="{L4::Typeid::Detail\l::_Rpcs\&lt; OPCODE_TYPE,\l 0, RPCS... \&gt;\n||}" alt="" coords="25,301,212,408"/>
-<area shape="rect" id="node5" href="$structL4_1_1Typeid_1_1Detail_1_1__Rpcs.html" title="{L4::Typeid::Detail\l::_Rpcs\&lt; l4_umword_t,\l 0, ARG... \&gt;\n||}" alt="" coords="269,301,432,408"/>
-<area shape="rect" id="node7" href="$structL4_1_1Typeid_1_1Detail_1_1__Rpcs.html" title="{L4::Typeid::Detail\l::_Rpcs\&lt; L4::Opcode,\l 0, RPCS... \&gt;\n||}" alt="" coords="471,301,625,408"/>
-<area shape="rect" id="node9" href="$structL4_1_1Typeid_1_1Detail_1_1__Rpcs.html" title="{L4::Typeid::Detail\l::_Rpcs\&lt; void, 0, OPERATION \&gt;\n||}" alt="" coords="650,309,873,401"/>
-<area shape="rect" id="node2" href="$structL4_1_1Typeid_1_1Detail_1_1Rpcs__end.html" title="Internal end&#45;of&#45;list marker. " alt="" coords="386,5,515,97"/>
-<area shape="rect" id="node4" href="$structL4_1_1Typeid_1_1Rpcs__code_1_1F.html" title="{L4::Typeid::Rpcs_code\l\&lt; OPCODE_TYPE \&gt;::F\&lt; RPCS \&gt;\n||}" alt="" coords="5,457,232,549"/>
-<area shape="rect" id="node6" href="$structL4_1_1Typeid_1_1Rpcs__sys.html" title="List of RPCs typically used for kernel interfaces. " alt="" coords="273,457,428,549"/>
-<area shape="rect" id="node8" href="$structL4_1_1Typeid_1_1Rpcs.html" title="Standard list of RPCs of an interface. " alt="" coords="455,465,641,542"/>
-<area shape="rect" id="node10" href="$structL4_1_1Typeid_1_1Rpc__nocode.html" title="List of RPCs of an interface using a single operation without an opcode. " alt="" coords="675,457,848,549"/>
+<area shape="rect" id="node1" title="Empty list of RPCs." alt="" coords="361,147,549,239"/>
+<area shape="rect" id="node3" href="$structL4_1_1Typeid_1_1Detail_1_1__Rpcs.html" title=" " alt="" coords="28,301,209,408"/>
+<area shape="rect" id="node5" href="$structL4_1_1Typeid_1_1Detail_1_1__Rpcs.html" title=" " alt="" coords="263,301,433,408"/>
+<area shape="rect" id="node7" href="$structL4_1_1Typeid_1_1Detail_1_1__Rpcs.html" title=" " alt="" coords="479,301,638,408"/>
+<area shape="rect" id="node9" href="$structL4_1_1Typeid_1_1Detail_1_1__Rpcs.html" title=" " alt="" coords="662,309,887,401"/>
+<area shape="rect" id="node2" href="$structL4_1_1Typeid_1_1Detail_1_1Rpcs__end.html" title="Internal end&#45;of&#45;list marker." alt="" coords="387,5,522,97"/>
+<area shape="rect" id="node4" href="$structL4_1_1Typeid_1_1Rpcs__code_1_1F.html" title=" " alt="" coords="5,457,232,549"/>
+<area shape="rect" id="node6" href="$structL4_1_1Typeid_1_1Rpcs__sys.html" title="List of RPCs typically used for kernel interfaces." alt="" coords="271,457,425,549"/>
+<area shape="rect" id="node8" href="$structL4_1_1Typeid_1_1Rpcs.html" title="Standard list of RPCs of an interface." alt="" coords="463,465,654,542"/>
+<area shape="rect" id="node10" href="$structL4_1_1Typeid_1_1Rpc__nocode.html" title="List of RPCs of an interface using a single operation without an opcode." alt="" coords="688,457,861,549"/>
 </map>

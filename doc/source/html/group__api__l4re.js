@@ -5,7 +5,7 @@ var group__api__l4re =
     [ "Console API", "group__api__l4re__console.html", "group__api__l4re__console" ],
     [ "Debugging API", "group__api__l4re__debug.html", "group__api__l4re__debug" ],
     [ "Event API", "group__api__l4re__event.html", "group__api__l4re__event" ],
-    [ "L4Re ELF Auxiliary Information", "group__api__l4re__elf__aux.html", "group__api__l4re__elf__aux" ],
+    [ "L4Re ELF Auxiliary Information", "group__api__l4re__elf__aux.html", null ],
     [ "L4Re Protocol identifiers", "group__api__l4re__protocols.html", "group__api__l4re__protocols" ],
     [ "L4Re Util C++ Interface", "group__api__l4re__util.html", "group__api__l4re__util" ],
     [ "Logging interface", "group__api__l4re__log.html", "group__api__l4re__log" ],

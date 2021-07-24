@@ -63,6 +63,12 @@ public:
 
     constexpr bool empty() const
     { return (rights & Rights::RWX()).empty(); }
+
+    Attr operator |= (Attr r)
+    {
+      rights |= r.rights;
+      return *this;
+    }
   };
 };
 
@@ -92,11 +98,11 @@ class Pdir_alloc_simple
 public:
   Pdir_alloc_simple(ALLOC *a = 0) : _a(a) {}
 
-  void *alloc(unsigned long size) const
-  { return _a->unaligned_alloc(size); }
+  void *alloc(Bytes size) const
+  { return _a->alloc(size); }
 
-  void free(void *block, unsigned long size) const
-  { _a->unaligned_free(size, block); }
+  void free(void *block, Bytes size) const
+  { _a->free(size, block); }
 
   bool valid() const { return _a; }
 

@@ -1,11 +1,13 @@
 <map id="l4/sys/__kernel_object_impl.h" name="l4/sys/__kernel_object_impl.h">
-<area shape="rect" id="node2" href="$l4_2sys_2ipc_8h.html" title="Common IPC interface. " alt="" coords="409,95,500,121"/>
-<area shape="rect" id="node3" href="$l4_2sys_2types_8h.html" title="Common L4 ABI Data Types. " alt="" coords="314,244,421,271"/>
-<area shape="rect" id="node10" href="$l4_2sys_2utcb_8h.html" title="UTCB definitions. " alt="" coords="318,169,417,196"/>
-<area shape="rect" id="node11" href="$err_8h.html" title="Error codes. " alt="" coords="642,244,733,271"/>
-<area shape="rect" id="node4" href="$l4_2sys_2l4int_8h.html" title="Fixed sized integer types, generic version. " alt="" coords="96,393,194,420"/>
-<area shape="rect" id="node5" href="$compiler_8h.html" title="L4 compiler related defines. " alt="" coords="516,393,643,420"/>
-<area shape="rect" id="node7" href="$l4_2sys_2consts_8h.html" title="Common constants. " alt="" coords="234,319,349,345"/>
-<area shape="rect" id="node8" href="$____l4__fpage_8h_source.html" title="l4/sys/__l4_fpage.h" alt="" coords="373,319,517,345"/>
-<area shape="rect" id="node9" href="$____timeout_8h_source.html" title="l4/sys/__timeout.h" alt="" coords="24,319,159,345"/>
+<area shape="rect" id="node1" title="Low&#45;level kernel debugger functions." alt="" coords="321,5,486,47"/>
+<area shape="rect" id="node2" href="$l4_2sys_2ipc_8h.html" title="Common IPC interface." alt="" coords="356,95,451,121"/>
+<area shape="rect" id="node3" href="$l4_2sys_2types_8h.html" title="Common L4 ABI Data Types." alt="" coords="258,244,370,271"/>
+<area shape="rect" id="node10" href="$l4_2sys_2utcb_8h.html" title="UTCB definitions." alt="" coords="262,169,366,196"/>
+<area shape="rect" id="node11" href="$err_8h.html" title="Error codes." alt="" coords="622,244,715,271"/>
+<area shape="rect" id="node4" href="$l4_2sys_2l4int_8h.html" title="Fixed sized integer types, generic version." alt="" coords="5,393,111,420"/>
+<area shape="rect" id="node5" href="$compiler_8h.html" title="L4 compiler related defines." alt="" coords="408,393,540,420"/>
+<area shape="rect" id="node7" href="$l4_2sys_2consts_8h.html" title="Common constants." alt="" coords="207,319,325,345"/>
+<area shape="rect" id="node8" href="$____l4__fpage_8h_source.html" title=" " alt="" coords="401,319,547,345"/>
+<area shape="rect" id="node9" href="$____timeout_8h_source.html" title=" " alt="" coords="41,319,182,345"/>
+<area shape="rect" id="node6" title=" " alt="" coords="413,468,535,495"/>
 </map>

@@ -8,7 +8,7 @@
  *
  * 1. Copyright Notice
  *
- * Some or all of this work - Copyright (c) 1999 - 2017, Intel Corp.
+ * Some or all of this work - Copyright (c) 1999 - 2019, Intel Corp.
  * All rights reserved.
  *
  * 2. License
@@ -111,6 +111,42 @@
  * other governmental approval, or letter of assurance, without first obtaining
  * such license, approval or letter.
  *
+ *****************************************************************************
+ *
+ * Alternatively, you may choose to be licensed under the terms of the
+ * following license:
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions, and the following disclaimer,
+ *    without modification.
+ * 2. Redistributions in binary form must reproduce at minimum a disclaimer
+ *    substantially similar to the "NO WARRANTY" disclaimer below
+ *    ("Disclaimer") and any redistribution must be conditioned upon
+ *    including a substantially similar Disclaimer requirement for further
+ *    binary redistribution.
+ * 3. Neither the names of the above-listed copyright holders nor the names
+ *    of any contributors may be used to endorse or promote products derived
+ *    from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+ * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * Alternatively, you may choose to be licensed under the terms of the
+ * GNU General Public License ("GPL") version 2 as published by the Free
+ * Software Foundation.
+ *
  *****************************************************************************/
 
 #include "acpisrc.h"
@@ -130,6 +166,11 @@ BOOLEAN
 AsDetectLoneLineFeeds (
     char                    *Filename,
     char                    *Buffer);
+
+static BOOLEAN
+AsCheckForNonPrintableChars (
+    char                    *FileBuffer,
+    UINT32                  FileSize);
 
 static ACPI_INLINE int
 AsMaxInt (int a, int b)
@@ -381,6 +422,7 @@ AsConvertFile (
     ACPI_IDENTIFIER_TABLE   *LineTable;
     ACPI_TYPED_IDENTIFIER_TABLE *StructTable;
     ACPI_IDENTIFIER_TABLE   *SpecialMacroTable;
+    char                    *SpdxHeader=NULL;
 
 
     switch (FileType)
@@ -393,6 +435,7 @@ AsConvertFile (
         ConditionalTable    = ConversionTable->SourceConditionalTable;
         StructTable         = ConversionTable->SourceStructTable;
         SpecialMacroTable   = ConversionTable->SourceSpecialMacroTable;
+        SpdxHeader          = ConversionTable->SourceSpdxHeader;
         break;
 
     case FILE_TYPE_HEADER:
@@ -403,6 +446,7 @@ AsConvertFile (
         ConditionalTable    = ConversionTable->HeaderConditionalTable;
         StructTable         = ConversionTable->HeaderStructTable;
         SpecialMacroTable   = ConversionTable->HeaderSpecialMacroTable;
+        SpdxHeader          = ConversionTable->HeaderSpdxHeader;
         break;
 
     case FILE_TYPE_PATCH:
@@ -598,6 +642,49 @@ AsConvertFile (
     {
         AsReplaceHeader (FileBuffer, ConversionTable->NewHeader);
     }
+    if (SpdxHeader)
+    {
+        AsDoSpdxHeader (FileBuffer, SpdxHeader);
+    }
+}
+
+/*******************************************************************************
+ *
+ * FUNCTION:    AsCheckForNonPrintableChars
+ *
+ * PARAMETERS:  FileBuffer              - Buffer with contents of entire file
+ *              FileSize                - Size of the file and buffer
+ *
+ * RETURN:      TRUE if there are no non-printable characters
+ *
+ * DESCRIPTION: Scan a file for any non-printable ASCII bytes.
+ *
+ ******************************************************************************/
+
+static BOOLEAN
+AsCheckForNonPrintableChars (
+    char                    *FileBuffer,
+    UINT32                  FileSize)
+{
+    BOOLEAN                 Found = TRUE;
+    UINT8                   Byte;
+    UINT32                  i;
+
+
+    /* Scan entire file for any non-printable characters */
+
+    for (i = 0; i < FileSize; i++)
+    {
+        Byte = FileBuffer[i];
+        if (!isprint (Byte) && !isspace (Byte))
+        {
+            printf ( "Non-printable character (0x%2.2X) "
+                "at file offset: %8u (0x%X)\n", Byte, i, i);
+            Found = FALSE;
+        }
+    }
+
+    return (Found);
 }
 
 
@@ -644,11 +731,18 @@ AsProcessOneFile (
     }
 
     strcat (Pathname, Filename);
-
     if (AsGetFile (Pathname, &Gbl_FileBuffer, &Gbl_FileSize))
     {
         Status = -1;
         goto Exit1;
+    }
+
+    /* Exit now if simply checking the file for printable ascii chars */
+
+    if (Gbl_CheckAscii)
+    {
+        Status = 0;
+        goto Exit2;
     }
 
     Gbl_HeaderSize = 0;
@@ -837,6 +931,19 @@ AsGetFile (
     Buffer [Size] = 0;         /* Null terminate the buffer */
     fclose (File);
 
+    /* This option checks the entire file for non-printable chars */
+
+    if (Gbl_CheckAscii)
+    {
+        if (AsCheckForNonPrintableChars (Buffer, Size))
+        {
+            printf ("File contains only printable ASCII characters\n");
+        }
+
+        free (Buffer);
+        return (0);
+    }
+
     /* Check for unix contamination */
 
     Gbl_HasLoneLineFeeds = AsDetectLoneLineFeeds (Filename, Buffer);
@@ -855,7 +962,6 @@ ErrorFree:
     free (Buffer);
 
 ErrorExit:
-
     fclose (File);
     return (-1);
 }

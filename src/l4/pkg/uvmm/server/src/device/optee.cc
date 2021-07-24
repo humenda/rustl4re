@@ -1,22 +1,22 @@
+/* SPDX-License-Identifier: GPL-2.0-only or License-Ref-kk-custom */
 /*
- * Copyright (C) 2018 Kernkonzept GmbH.
+ * Copyright (C) 2018-2020 Kernkonzept GmbH.
  * Author(s): Sarah Hoffmann <sarah.hoffmann@kernkonzept.com>
  *
- * This file is distributed under the terms of the GNU General Public
- * License, version 2.  Please see the COPYING-GPL-2 file for details.
  */
-
 #include <l4/re/env>
 #include <l4/sys/arm_smccc>
 
 #include "device_factory.h"
 #include "ds_mmio_mapper.h"
 #include "guest.h"
-#include "io_proxy.h"
-#include "smc_device.h"
+#include "irq_dt.h"
+#include "irq_svr.h"
+#include "smccc_device.h"
 
 namespace {
 
+Dbg info(Dbg::Dev, Dbg::Info, "optee");
 Dbg warn(Dbg::Dev, Dbg::Warn, "optee");
 Dbg trace(Dbg::Dev, Dbg::Warn, "optee");
 
@@ -32,7 +32,7 @@ Dbg trace(Dbg::Dev, Dbg::Warn, "optee");
  *     firmware {
  *       optee {
  *         compatible = "linaro,optee-tz";
- *         method = "smccc";
+ *         method = "smc";
  *         l4vmm,cap = "smccc";
  *         l4vmm,dscap = "vbus";
  *         interrupts = <0 140 4>;
@@ -50,7 +50,7 @@ Dbg trace(Dbg::Dev, Dbg::Warn, "optee");
  * capability provided by Fiasco and point `l4vmm,dscap` to an appropriately
  * configured IO. When using a proxy, set `l4vmm,cap` only.
  */
-class Optee : public Vdev::Device, public Vmm::Smc_device
+class Optee : public Vdev::Device, public Vmm::Smccc_device
 {
   enum
   {
@@ -71,12 +71,20 @@ class Optee : public Vdev::Device, public Vmm::Smc_device
 public:
   Optee(L4::Cap<L4::Arm_smccc> optee) : _optee(optee) {}
 
-  void smc(Vmm::Vcpu_ptr vcpu) override
+  bool vm_call(unsigned imm, Vmm::Vcpu_ptr vcpu) override
   {
-    if (_optee.is_valid())
-      _optee->call(vcpu->r.r[0], vcpu->r.r[1], vcpu->r.r[2], vcpu->r.r[3],
-                   vcpu->r.r[4], vcpu->r.r[5], vcpu->r.r[6],
-                   &vcpu->r.r[0], &vcpu->r.r[1], &vcpu->r.r[2], &vcpu->r.r[3], 0);
+    if (imm != 0)
+      return false;
+
+    if (   _optee.is_valid()
+        && is_valid_func_id(vcpu->r.r[0]))
+      {
+        _optee->call(vcpu->r.r[0], vcpu->r.r[1], vcpu->r.r[2], vcpu->r.r[3],
+                     vcpu->r.r[4], vcpu->r.r[5], vcpu->r.r[6],
+                     &vcpu->r.r[0], &vcpu->r.r[1], &vcpu->r.r[2], &vcpu->r.r[3], 0);
+        return true;
+      }
+    return false;
   }
 
   int map_optee_memory(Vmm::Guest *vmm, L4::Cap<L4Re::Dataspace> iods)
@@ -89,22 +97,22 @@ public:
     if (ret < 0 || p[0] != Optee_uuid_word0 || p[1] != Optee_uuid_word1 ||
         p[2] != Optee_uuid_word2 || p[3] != Optee_uuid_word3)
       {
-        warn.printf("OP-TEE not runing.\n");
+        warn.printf("OP-TEE not running.\n");
         return -L4_ENODEV;
       }
 
     // check for correct API version
-    ret = fast_call(0xbf00ff03, p);
+    ret = fast_call(Smc_call_trusted_os_revision, p);
 
     if (ret < 0 || p[0] != Optee_api_major || p[1] != Optee_api_minor)
       {
-        warn.printf("OP-TEE has wrong API (%ld.%ld). Need 2.0.\n",
-                    p[0], p[1]);
+        warn.printf("OP-TEE has wrong API (%ld.%ld). Need %x.%x.\n",
+                    p[0], p[1], Optee_api_major, Optee_api_minor);
         return -L4_EINVAL;
       }
 
-    // check if the OS exports memory
-    ret = fast_call(0xb2000009, p);
+    // check if OP-TEE exports memory
+    ret = fast_call(Optee_call_exchange_caps, p);
 
     if (ret < 0 || p[0] != 0 || !(p[1] & 1))
       {
@@ -113,7 +121,7 @@ public:
       }
 
     // get the memory area
-    ret = fast_call(0xb2000007, p);
+    ret = fast_call(Optee_call_get_shm_config, p);
 
     if (ret < 0 || p[0] != 0)
       {
@@ -122,12 +130,19 @@ public:
       }
 
     trace.printf("OP-TEE start = 0x%lx  size = 0x%lx\n", p[1], p[2]);
-    auto handler = Vdev::make_device<Ds_handler>(iods, 0, p[2], p[1]);
+    auto handler = Vdev::make_device<Ds_handler>(
+        cxx::make_ref_obj<Vmm::Ds_manager>(iods, p[1], p[2])
+      );
     // XXX should check that the resource is actually available
-    vmm->add_mmio_device(Region(p[1], p[1] + p[2] - 1), handler);
+    vmm->add_mmio_device(Vmm::Region(Vmm::Guest_addr(p[1]),
+                                     Vmm::Guest_addr(p[1] + p[2] - 1),
+                                     Vmm::Region_type::Virtual), handler);
 
     return L4_EOK;
   }
+
+  void set_notification_irq(cxx::Ref_ptr<Vdev::Irq_svr> &&irq)
+  { _irq = std::move(irq); }
 
 private:
   long fast_call(l4_umword_t func, l4_umword_t out[])
@@ -136,7 +151,15 @@ private:
                                  out, out + 1, out + 2, out + 3, 0));
   }
 
+  bool is_valid_func_id(l4_umword_t reg) const
+  {
+    // Check this is in the trusted application/OS range
+    reg &= 0x3f00ffff;
+    return (reg >= 0x30000000 && reg <= 0x3f00ffff);
+  }
+
   L4::Cap<L4::Arm_smccc> _optee;
+  cxx::Ref_ptr<Vdev::Irq_svr> _irq;
 };
 
 struct F : Vdev::Factory
@@ -144,68 +167,60 @@ struct F : Vdev::Factory
   cxx::Ref_ptr<Vdev::Device> create(Vdev::Device_lookup *devs,
                                     Vdev::Dt_node const &node) override
   {
-    Dbg(Dbg::Dev, Dbg::Info).printf("Create OP-TEE device\n");
+    info.printf("Create OP-TEE device\n");
 
-    int cap_name_len;
+    auto cap = Vdev::get_cap<L4::Arm_smccc>(node, "l4vmm,cap");
+    if (!cap)
+      return nullptr;
 
-    char const *cap_name = node.get_prop<char>("l4vmm,cap", &cap_name_len);
-    if (!cap_name)
-      {
-        warn.printf("l4vmm,cap property missing for OP-TEE device.\n");
-        return nullptr;
-      }
-
-    auto cap = L4Re::Env::env()->get_cap<L4::Arm_smccc>(cap_name);
-    if (!cap.is_valid())
-      {
-        warn.printf("'l4vmm,cap' property: capability '%.*s' is invalid.\n",
-                    cap_name_len, cap_name);
-        return nullptr;
-      }
+    auto dscap = Vdev::get_cap<L4Re::Dataspace>(node, "l4vmm,dscap", cap);
+    if (!dscap)
+      return nullptr;
 
     auto c = Vdev::make_device<Optee>(cap);
-
-    L4::Cap<L4Re::Dataspace> dscap;
-    cap_name = node.get_prop<char>("l4vmm,dscap", &cap_name_len);
-
-    if (cap_name)
-      {
-        dscap = L4Re::Env::env()->get_cap<L4Re::Dataspace>(cap_name);
-        if (!dscap.is_valid())
-          {
-            warn.printf("'l4vmm,dscap' property: capability '%.*s' is invalid.\n",
-                        cap_name_len, cap_name);
-            return nullptr;
-          }
-      }
-    else
-      dscap = L4::cap_reinterpret_cast<L4Re::Dataspace>(cap);
-
     if (c->map_optee_memory(devs->vmm(), dscap) < 0)
       return nullptr;
 
-    auto ic = devs->get_or_create_ic_dev(node, false);
+    Vdev::Irq_dt_iterator it(devs, node);
 
-    if (ic && ic->dt_get_num_interrupts(node) > 0)
+    if (it.next(devs) >= 0)
       {
-        // XXX Using a standard IO interrupt here. Possibly better to
-        // write our own non-masking irq svr.
-        auto irq_svr = Vdev::make_device<Vdev::Irq_svr>(0);
-
-        L4Re::chkcap(devs->vmm()->registry()->register_irq_obj(irq_svr.get()),
-            "Register IRQ handling server.");
-
         auto icu = L4::cap_dynamic_cast<L4::Icu>(cap);
-        L4Re::chksys(icu->bind(0, irq_svr->obj_cap()),
-            "Bind to IRQ to OP-TEE service.");
 
-        unsigned dt_irq = ic->dt_get_interrupt(node, 0);
+        if (icu)
+          {
+            if (!it.ic_is_virt())
+              L4Re::chksys(-L4_EINVAL, "OP-TEE device requires a virtual interrupt controller");
 
-        irq_svr->set_sink(ic.get(), dt_irq);
-        ic->bind_irq_source(dt_irq, irq_svr);
+            // XXX Using a standard IO interrupt here. Possibly better to
+            // write our own non-masking irq svr.
+            auto irq_svr =
+              cxx::make_ref_obj<Vdev::Irq_svr>(devs->vmm()->registry(), icu, 0,
+                                               it.ic(), it.irq());
+
+            c->set_notification_irq(std::move(irq_svr));
+          }
+        else
+          // When no proxy is used, there is also no notification available.
+          // So it is not necessarily an error, when no ICU can be found.
+          warn.printf("SMC device does not support notification interrupts.\n");
       }
 
-    devs->vmm()->register_smc_handler(c);
+    Vmm::Guest::Smccc_method smccc_method = Vmm::Guest::Smc;
+    char const *method = node.get_prop<char>("method", nullptr);
+    if (method)
+      {
+        if (strcmp(method, "hvc") == 0)
+          smccc_method = Vmm::Guest::Hvc;
+        else if (strcmp(method, "smc") != 0)
+          warn.printf("Method '%s' is not supported. Must be hvc or smc!\n",
+                      method);
+      }
+
+    info.printf("Register OP-TEE device: %s mode\n",
+                smccc_method == Vmm::Guest::Hvc ? "hvc" : "smc");
+
+    devs->vmm()->register_vm_handler(smccc_method, c);
 
     return c;
   }

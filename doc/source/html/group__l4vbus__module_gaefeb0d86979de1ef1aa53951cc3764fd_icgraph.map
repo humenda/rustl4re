@@ -1,3 +1,4 @@
 <map id="l4vbus_vicu_get_cap" name="l4vbus_vicu_get_cap">
-<area shape="rect" id="node2" href="$classL4vbus_1_1Icu.html#a836655616e1572d6e5453a566c6d6372" title="Request the L4::Icu capability for this Vbus ICU. " alt="" coords="205,5,325,32"/>
+<area shape="rect" id="node1" title="Get capability of ICU." alt="" coords="184,5,341,32"/>
+<area shape="rect" id="node2" href="$classL4vbus_1_1Icu.html#a836655616e1572d6e5453a566c6d6372" title="Request the L4::Icu capability for this Vbus ICU." alt="" coords="5,5,136,32"/>
 </map>

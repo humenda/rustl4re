@@ -8,7 +8,7 @@
  *
  * 1. Copyright Notice
  *
- * Some or all of this work - Copyright (c) 1999 - 2017, Intel Corp.
+ * Some or all of this work - Copyright (c) 1999 - 2019, Intel Corp.
  * All rights reserved.
  *
  * 2. License
@@ -111,10 +111,45 @@
  * other governmental approval, or letter of assurance, without first obtaining
  * such license, approval or letter.
  *
+ *****************************************************************************
+ *
+ * Alternatively, you may choose to be licensed under the terms of the
+ * following license:
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions, and the following disclaimer,
+ *    without modification.
+ * 2. Redistributions in binary form must reproduce at minimum a disclaimer
+ *    substantially similar to the "NO WARRANTY" disclaimer below
+ *    ("Disclaimer") and any redistribution must be conditioned upon
+ *    including a substantially similar Disclaimer requirement for further
+ *    binary redistribution.
+ * 3. Neither the names of the above-listed copyright holders nor the names
+ *    of any contributors may be used to endorse or promote products derived
+ *    from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+ * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * Alternatively, you may choose to be licensed under the terms of the
+ * GNU General Public License ("GPL") version 2 as published by the Free
+ * Software Foundation.
+ *
  *****************************************************************************/
 
 #include "aslcompiler.h"
-#include "dtcompiler.h"
 
 #define _COMPONENT          DT_COMPILER
         ACPI_MODULE_NAME    ("dtfield")
@@ -245,8 +280,10 @@ DtCompileString (
 
     if (Length > ByteLength)
     {
-        sprintf (MsgBuffer, "Maximum %u characters", ByteLength);
-        DtError (ASL_ERROR, ASL_MSG_STRING_LENGTH, Field, MsgBuffer);
+        sprintf (AslGbl_MsgBuffer,
+            "Maximum %u characters, found %u characters [%s]",
+            ByteLength, Length, Field->Value);
+        DtError (ASL_ERROR, ASL_MSG_STRING_LENGTH, Field, AslGbl_MsgBuffer);
         Length = ByteLength;
     }
 
@@ -325,8 +362,8 @@ DtCompileUuid (
     Status = AuValidateUuid (InString);
     if (ACPI_FAILURE (Status))
     {
-        sprintf (MsgBuffer, "%s", Field->Value);
-        DtNameError (ASL_ERROR, ASL_MSG_INVALID_UUID, Field, MsgBuffer);
+        sprintf (AslGbl_MsgBuffer, "%s", Field->Value);
+        DtNameError (ASL_ERROR, ASL_MSG_INVALID_UUID, Field, AslGbl_MsgBuffer);
     }
     else
     {
@@ -427,9 +464,9 @@ DtCompileInteger (
 
     if (Value > MaxValue)
     {
-        sprintf (MsgBuffer, "%8.8X%8.8X - max %u bytes",
+        sprintf (AslGbl_MsgBuffer, "%8.8X%8.8X - max %u bytes",
             ACPI_FORMAT_UINT64 (Value), ByteLength);
-        DtError (ASL_ERROR, ASL_MSG_INTEGER_SIZE, Field, MsgBuffer);
+        DtError (ASL_ERROR, ASL_MSG_INTEGER_SIZE, Field, AslGbl_MsgBuffer);
     }
 
     memcpy (Buffer, &Value, ByteLength);
@@ -592,15 +629,9 @@ DtCompileFlag (
     UINT64                  Value = 0;
     UINT32                  BitLength = 1;
     UINT8                   BitPosition = 0;
-    ACPI_STATUS             Status;
 
 
-    Status = AcpiUtStrtoul64 (Field->Value,
-        (ACPI_STRTOUL_64BIT | ACPI_STRTOUL_BASE16), &Value);
-    if (ACPI_FAILURE (Status))
-    {
-        DtError (ASL_ERROR, ASL_MSG_INVALID_HEX_INTEGER, Field, NULL);
-    }
+    Value = AcpiUtImplicitStrtoul64 (Field->Value);
 
     switch (Info->Opcode)
     {
@@ -643,6 +674,36 @@ DtCompileFlag (
         BitLength = 2;
         break;
 
+    case ACPI_DMT_FLAGS4_0:
+
+        BitPosition = 0;
+        BitLength = 4;
+        break;
+
+    case ACPI_DMT_FLAGS4_4:
+
+        BitPosition = 4;
+        BitLength = 4;
+        break;
+
+    case ACPI_DMT_FLAGS4_8:
+
+        BitPosition = 8;
+        BitLength = 4;
+        break;
+
+    case ACPI_DMT_FLAGS4_12:
+
+        BitPosition = 12;
+        BitLength = 4;
+        break;
+
+    case ACPI_DMT_FLAGS16_16:
+
+        BitPosition = 16;
+        BitLength = 16;
+        break;
+
     default:
 
         DtFatal (ASL_MSG_COMPILER_INTERNAL, Field, "Invalid flag opcode");
@@ -653,8 +714,8 @@ DtCompileFlag (
 
     if (Value >= ((UINT64) 1 << BitLength))
     {
-        sprintf (MsgBuffer, "Maximum %u bit", BitLength);
-        DtError (ASL_ERROR, ASL_MSG_FLAG_VALUE, Field, MsgBuffer);
+        sprintf (AslGbl_MsgBuffer, "Maximum %u bit", BitLength);
+        DtError (ASL_ERROR, ASL_MSG_FLAG_VALUE, Field, AslGbl_MsgBuffer);
         Value = 0;
     }
 

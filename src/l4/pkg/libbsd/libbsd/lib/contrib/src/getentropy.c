@@ -40,6 +40,8 @@
 #include "getentropy_aix.c"
 #elif defined(__hpux)
 #include "getentropy_hpux.c"
+#elif defined(_WIN32)
+#include "getentropy_win.c"
 #else
 #error "No getentropy hooks defined for this platform."
 #endif

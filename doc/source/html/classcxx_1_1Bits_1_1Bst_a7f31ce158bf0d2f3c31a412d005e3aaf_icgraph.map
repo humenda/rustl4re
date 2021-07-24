@@ -1,4 +1,4 @@
 <map id="cxx::Bits::Bst::find_node" name="cxx::Bits::Bst::find_node">
-<area shape="rect" id="node2" href="$classcxx_1_1Bits_1_1Base__avl__set.html#a1825ad4f133473e296c3842cb7bbcc92" title="Lookup a node equal to item. " alt="" coords="220,5,443,105"/>
-<area shape="rect" id="node3" href="$classcxx_1_1Bits_1_1Bst.html#a4ec66458f0c91f295c598f0ef472d76f" title="Get the end marker for the mutable backward iterator. " alt="" coords="224,129,439,171"/>
+<area shape="rect" id="node1" title="find the node with the given key." alt="" coords="199,13,377,39"/>
+<area shape="rect" id="node2" href="$classcxx_1_1Bits_1_1Base__avl__set.html#a1825ad4f133473e296c3842cb7bbcc92" title="Lookup a node equal to item." alt="" coords="5,5,151,47"/>
 </map>

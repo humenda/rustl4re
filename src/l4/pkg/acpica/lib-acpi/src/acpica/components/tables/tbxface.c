@@ -8,7 +8,7 @@
  *
  * 1. Copyright Notice
  *
- * Some or all of this work - Copyright (c) 1999 - 2017, Intel Corp.
+ * Some or all of this work - Copyright (c) 1999 - 2019, Intel Corp.
  * All rights reserved.
  *
  * 2. License
@@ -110,6 +110,42 @@
  * United States government or any agency thereof requires an export license,
  * other governmental approval, or letter of assurance, without first obtaining
  * such license, approval or letter.
+ *
+ *****************************************************************************
+ *
+ * Alternatively, you may choose to be licensed under the terms of the
+ * following license:
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions, and the following disclaimer,
+ *    without modification.
+ * 2. Redistributions in binary form must reproduce at minimum a disclaimer
+ *    substantially similar to the "NO WARRANTY" disclaimer below
+ *    ("Disclaimer") and any redistribution must be conditioned upon
+ *    including a substantially similar Disclaimer requirement for further
+ *    binary redistribution.
+ * 3. Neither the names of the above-listed copyright holders nor the names
+ *    of any contributors may be used to endorse or promote products derived
+ *    from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+ * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * Alternatively, you may choose to be licensed under the terms of the
+ * GNU General Public License ("GPL") version 2 as published by the Free
+ * Software Foundation.
  *
  *****************************************************************************/
 
@@ -227,7 +263,7 @@ AcpiInitializeTables (
     /*
      * Get the root table (RSDT or XSDT) and extract all entries to the local
      * Root Table Array. This array contains the information of the RSDT/XSDT
-     * in a common, more useable format.
+     * in a common, more usable format.
      */
     Status = AcpiTbParseRootTable (RsdpAddress);
     return_ACPI_STATUS (Status);
@@ -256,20 +292,26 @@ AcpiReallocateRootTable (
     void)
 {
     ACPI_STATUS             Status;
-    UINT32                  i;
+    ACPI_TABLE_DESC         *TableDesc;
+    UINT32                  i, j;
 
 
     ACPI_FUNCTION_TRACE (AcpiReallocateRootTable);
 
 
     /*
-     * Only reallocate the root table if the host provided a static buffer
-     * for the table array in the call to AcpiInitializeTables.
+     * If there are tables unverified, it is required to reallocate the
+     * root table list to clean up invalid table entries. Otherwise only
+     * reallocate the root table list if the host provided a static buffer
+     * for the table array in the call to AcpiInitializeTables().
      */
-    if (AcpiGbl_RootTableList.Flags & ACPI_ROOT_ORIGIN_ALLOCATED)
+    if ((AcpiGbl_RootTableList.Flags & ACPI_ROOT_ORIGIN_ALLOCATED) &&
+        AcpiGbl_EnableTableValidation)
     {
         return_ACPI_STATUS (AE_SUPPORT);
     }
+
+    (void) AcpiUtAcquireMutex (ACPI_MTX_TABLES);
 
     /*
      * Ensure OS early boot logic, which is required by some hosts. If the
@@ -279,17 +321,41 @@ AcpiReallocateRootTable (
      */
     for (i = 0; i < AcpiGbl_RootTableList.CurrentTableCount; ++i)
     {
-        if (AcpiGbl_RootTableList.Tables[i].Pointer)
+        TableDesc = &AcpiGbl_RootTableList.Tables[i];
+        if (TableDesc->Pointer)
         {
             ACPI_ERROR ((AE_INFO,
                 "Table [%4.4s] is not invalidated during early boot stage",
-                AcpiGbl_RootTableList.Tables[i].Signature.Ascii));
+                TableDesc->Signature.Ascii));
+        }
+    }
+
+    if (!AcpiGbl_EnableTableValidation)
+    {
+        /*
+         * Now it's safe to do full table validation. We can do deferred
+         * table initialization here once the flag is set.
+         */
+        AcpiGbl_EnableTableValidation = TRUE;
+        for (i = 0; i < AcpiGbl_RootTableList.CurrentTableCount; ++i)
+        {
+            TableDesc = &AcpiGbl_RootTableList.Tables[i];
+            if (!(TableDesc->Flags & ACPI_TABLE_IS_VERIFIED))
+            {
+                Status = AcpiTbVerifyTempTable (TableDesc, NULL, &j);
+                if (ACPI_FAILURE (Status))
+                {
+                    AcpiTbUninstallTable (TableDesc);
+                }
+            }
         }
     }
 
     AcpiGbl_RootTableList.Flags |= ACPI_ROOT_ALLOW_RESIZE;
-
     Status = AcpiTbResizeRootTableList ();
+    AcpiGbl_RootTableList.Flags |= ACPI_ROOT_ORIGIN_ALLOCATED;
+
+    (void) AcpiUtReleaseMutex (ACPI_MTX_TABLES);
     return_ACPI_STATUS (Status);
 }
 
@@ -335,7 +401,7 @@ AcpiGetTableHeader (
 
     for (i = 0, j = 0; i < AcpiGbl_RootTableList.CurrentTableCount; i++)
     {
-        if (!ACPI_COMPARE_NAME (
+        if (!ACPI_COMPARE_NAMESEG (
                 &(AcpiGbl_RootTableList.Tables[i].Signature), Signature))
         {
             continue;
@@ -438,7 +504,7 @@ AcpiGetTable (
     {
         TableDesc = &AcpiGbl_RootTableList.Tables[i];
 
-        if (!ACPI_COMPARE_NAME (&TableDesc->Signature, Signature))
+        if (!ACPI_COMPARE_NAMESEG (&TableDesc->Signature, Signature))
         {
             continue;
         }
@@ -485,6 +551,11 @@ AcpiPutTable (
 
     ACPI_FUNCTION_TRACE (AcpiPutTable);
 
+
+    if (!Table)
+    {
+        return_VOID;
+    }
 
     (void) AcpiUtAcquireMutex (ACPI_MTX_TABLES);
 

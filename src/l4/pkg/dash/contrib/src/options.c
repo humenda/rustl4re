@@ -45,6 +45,7 @@
 #include "jobs.h"
 #include "input.h"
 #include "output.h"
+#include "priv.h"
 #include "trap.h"
 #include "var.h"
 #include "memalloc.h"
@@ -79,6 +80,7 @@ static const char *const optnames[NOPTS] = {
 	"allexport",
 	"notify",
 	"nounset",
+	"priv",
 	"nolog",
 	"debug",
 };
@@ -99,6 +101,7 @@ const char optletters[NOPTS] = {
 	'a',
 	'b',
 	'u',
+	'p',
 	0,
 	0,
 };
@@ -182,6 +185,7 @@ optschanged(void)
 #ifdef DEBUG
 	opentrace();
 #endif
+	setprivileged(pflag);
 	setinteractive(iflag);
 #ifndef SMALL
 	histedit();

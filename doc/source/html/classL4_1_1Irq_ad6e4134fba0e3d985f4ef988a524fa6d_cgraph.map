@@ -1,0 +1,4 @@
+<map id="L4::Irq::receive" name="L4::Irq::receive">
+<area shape="rect" id="node1" title="Unmask and wait for this IRQ." alt="" coords="5,5,124,32"/>
+<area shape="rect" id="node2" href="$group__l4__irq__api.html#ga430999e1f8f6eb5f7e3f957b854b7446" title="Unmask and wait for this IRQ." alt="" coords="172,5,300,32"/>
+</map>

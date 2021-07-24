@@ -1,5 +1,5 @@
-AC_INIT(dash, 0.5.8)
-AM_INIT_AUTOMAKE([foreign])
+AC_INIT(dash, 0.5.10.2)
+AM_INIT_AUTOMAKE([foreign subdir-objects])
 AC_CONFIG_SRCDIR([src/main.c])
 
 AC_CONFIG_HEADERS(config.h)
@@ -90,6 +90,37 @@ AC_CHECK_FUNCS(bsearch faccessat getpwnam getrlimit isalpha killpg \
 	       sigsetmask stpcpy strchrnul strsignal strtod strtoimax \
 	       strtoumax sysconf)
 
+dnl Check whether it's worth working around FreeBSD PR kern/125009.
+dnl The traditional behavior of access/faccessat is crazy, but
+dnl POSIX.1-2008 explicitly allows those functions to misbehave.
+dnl
+dnl Unaffected kernels:
+dnl
+dnl - all versions of Linux
+dnl - NetBSD sys/kern/vfs_subr.c 1.64, 1997-04-23
+dnl - FreeBSD 9 (r212002), 2010-09-10
+dnl - OpenBSD sys/kern/vfs_subr.c 1.166, 2008-06-09
+dnl
+dnl Also worked around in Debian's libc0.1 2.13-19 when using
+dnl kFreeBSD 8.
+
+AC_ARG_ENABLE(test-workaround, AS_HELP_STRING(--enable-test-workaround, \
+	[Guard against faccessat(2) that tells root all files are executable]),,
+	[enable_test_workaround=auto])
+
+if test "enable_test_workaround" = "auto" &&
+   test "$ac_cv_func_faccessat" = yes; then
+	case `uname -s 2>/dev/null` in
+	GNU/kFreeBSD | \
+	FreeBSD)
+		enable_test_workaround=yes
+	esac
+fi
+if test "$enable_test_workaround" = "yes"; then
+	AC_DEFINE([HAVE_TRADITIONAL_FACCESSAT], [1],
+		[Define if your faccessat tells root all files are executable])
+fi
+
 if test "$enable_fnmatch" = yes; then
 	use_fnmatch=
 	AC_CHECK_FUNCS(fnmatch, use_fnmatch=yes)
@@ -117,6 +148,20 @@ AC_CHECK_FUNC(stat64,, [
 AC_CHECK_FUNC(open64,, [
 	AC_DEFINE(open64, open, [64-bit operations are the same as 32-bit])
 ])
+
+dnl Check if struct stat has st_mtim.
+AC_MSG_CHECKING(for stat::st_mtim)
+AC_COMPILE_IFELSE(
+[AC_LANG_PROGRAM([#include <time.h>
+#include <sys/time.h>
+#include <sys/stat.h>],
+[struct stat foo; return sizeof(foo.st_mtim.tv_sec)])],
+have_st_mtim=yes, have_st_mtim=no)
+AC_MSG_RESULT($have_st_mtim)
+if test "$have_st_mtim" = "yes"; then
+	AC_DEFINE([HAVE_ST_MTIM], [1],
+		[Define if your `struct stat' has `st_mtim'])
+fi
 
 AC_ARG_WITH(libedit, AS_HELP_STRING(--with-libedit, [Compile with libedit support]))
 use_libedit=

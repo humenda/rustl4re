@@ -35,7 +35,7 @@ public:
   Irq_base *irq(Mword pin) const override
   { return _irqs[pin]; }
 
-  bool alloc(Irq_base *irq, Mword pin) override
+  bool alloc(Irq_base *irq, Mword pin, bool init = true) override
   {
     if (pin >= Mips_cpu_irq_chip::nr_irqs())
       return false;
@@ -46,7 +46,7 @@ public:
     if (!mp_cas(&_irqs[pin], (Irq_base *)0, irq))
       return false;
 
-    bind(irq, pin);
+    bind(irq, pin, !init);
     return true;
   }
 
@@ -80,6 +80,11 @@ public:
     // and enabling IRQs must use 'ehb'
   }
 
+  void mask_percpu(Cpu_number, Mword pin) override
+  {
+    mask(pin);
+  }
+
   void ack(Mword) override
   {}
 
@@ -108,6 +113,11 @@ public:
     Cp0_status::write(s);
     // NOTE: we do not use 'ehb' here as this is done with IRQs disabled
     // and enabling IRQs must use 'ehb'
+  }
+
+  void unmask_percpu(Cpu_number, Mword pin) override
+  {
+    unmask(pin);
   }
 
 private:

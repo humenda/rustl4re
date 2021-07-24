@@ -1,3 +1,4 @@
 <map id="L4virtio::Svr::Dev_config::get_cmd" name="L4virtio::Svr::Dev_config::get_cmd">
-<area shape="rect" id="node2" href="$classL4virtio_1_1Svr_1_1Device__t.html#a460f5dc2b32e33a616eb822ffd2f88f0" title="Check for a value in the cmd register and handle a write. " alt="" coords="181,5,341,61"/>
+<area shape="rect" id="node1" title="Get the value from the cmd register." alt="" coords="256,5,391,47"/>
+<area shape="rect" id="node2" href="$classL4virtio_1_1Svr_1_1Device__t.html#a460f5dc2b32e33a616eb822ffd2f88f0" title="Check for a value in the cmd register and handle a write." alt="" coords="5,5,208,47"/>
 </map>

@@ -21,9 +21,11 @@ Static_object<Mapdb> mapdb_mem;
     @param fp_from_{page, size, write, grant} flexpage description for
 	virtual-address space range in source address space
     @param to destination address space
-    @param fp_to_{page, size} flexpage descripton for virtual-address
+    @param fp_to_{page, size} flexpage description for virtual-address
 	space range in destination address space
-    @param offs sender-specified offset into destination flexpage
+    @param control message send item containing the sender-specified offset
+        into the destination flexpage, the caching attributes and the grant
+        flag.
     @return IPC error code that describes the status of the operation
  */
 L4_error __attribute__((nonnull(1, 3)))
@@ -123,9 +125,9 @@ init_mapdb_mem(Space *sigma0)
         c = last_bits - Page_order(12);
       else
         ++ps;
-      printf("MDB: use page size: %u\n", Page_order::val(c));
+      printf("MDB: use page size: %u\n", cxx::int_value<Page_order>(c));
       assert (idx < Max_num_page_sizes);
-      page_sizes[idx++] = Page_order::val(c) - Config::PAGE_SHIFT;
+      page_sizes[idx++] = cxx::int_value<Page_order>(c) - Config::PAGE_SHIFT;
       last_bits = c;
     }
 
@@ -133,8 +135,8 @@ init_mapdb_mem(Space *sigma0)
     printf("MDB: phys_bits=%u levels = %u\n", Cpu::boot_cpu()->phys_bits(), idx);
 
   mapdb_mem.construct(sigma0,
-      Mapping::Page(1U << (phys_bits - Config::PAGE_SHIFT - page_sizes[0])),
-      page_sizes, idx);
+                      Mapping::Order(phys_bits - Config::PAGE_SHIFT),
+                      page_sizes, idx);
 }
 
 

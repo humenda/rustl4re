@@ -23,17 +23,18 @@ namespace L4
       Type_imx51,
       Type_imx6,
       Type_imx7,
+      Type_imx8,
     };
     explicit Uart_imx(enum platform_type type)
        : _type(type) {}
-    bool startup(Io_register_block const *);
-    void shutdown();
-    bool enable_rx_irq(bool enable = true);
-    bool change_mode(Transfer_mode m, Baud_rate r);
-    int get_char(bool blocking = true) const;
-    int char_avail() const;
+    bool startup(Io_register_block const *) override;
+    void shutdown() override;
+    bool enable_rx_irq(bool enable = true) override;
+    bool change_mode(Transfer_mode m, Baud_rate r) override;
+    int get_char(bool blocking = true) const override;
+    int char_avail() const override;
     inline void out_char(char c) const;
-    int write(char const *s, unsigned long count) const;
+    int write(char const *s, unsigned long count) const override;
 
   private:
     enum platform_type _type;
@@ -61,12 +62,20 @@ namespace L4
   {
   public:
     Uart_imx6() : Uart_imx(Type_imx6) {}
+
+    void irq_ack() override;
   };
 
   class Uart_imx7 : public Uart_imx
   {
   public:
     Uart_imx7() : Uart_imx(Type_imx7) {}
+  };
+
+  class Uart_imx8 : public Uart_imx
+  {
+  public:
+    Uart_imx8() : Uart_imx(Type_imx8) {}
   };
 };
 

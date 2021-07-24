@@ -12,6 +12,7 @@ IMPLEMENTATION:
 #include "jdb_kobject_names.h"
 #include "kernel_console.h"
 #include "keycodes.h"
+#include "kip.h"
 #include "minmax.h"
 #include "simpleio.h"
 #include "task.h"
@@ -557,7 +558,7 @@ Jdb_thread_list::Jdb_thread_list()
 
 PUBLIC
 Jdb_module::Action_code
-Jdb_thread_list::action(int cmd, void *&argbuf, char const *&fmt, int &)
+Jdb_thread_list::action(int cmd, void *&argbuf, char const *&fmt, int &) override
 {
   static char const *const cpu_fmt = " cpu=%i\n";
   static char const *const nfmt = "";
@@ -584,7 +585,8 @@ Jdb_thread_list::action(int cmd, void *&argbuf, char const *&fmt, int &)
 		  if (Cpu::online(cpu))
 		    list_threads(Jdb::get_thread(cpu), 'r');
 		  else
-		    printf("\nCPU %u is not online!\n", Cpu_number::val(cpu));
+		    printf("\nCPU %u is not online!\n",
+			   cxx::int_value<Cpu_number>(cpu));
 		  cpu = Cpu_number::first();
 		  break;
 	case 't': Jdb::execute_command("lt"); break; // other module
@@ -594,6 +596,16 @@ Jdb_thread_list::action(int cmd, void *&argbuf, char const *&fmt, int &)
   else if (cmd == 1)
     {
       Thread *t = Jdb::get_current_active();
+
+      {
+        // Hm, we are in JDB, however we have to make the assertion in
+        // ready_enqueue happy.
+        auto g = lock_guard(cpu_lock);
+        // enqueue current, which may not be in the ready list due to lazy queueing
+        if (!t->in_ready_list())
+          Sched_context::rq.cpu(t->home_cpu()).ready_enqueue(t->sched());
+      }
+
       long_output = 1;
       Jdb_thread_list::init(subcmd == 'r' ? 'r' : 'p', t);
       Jdb_thread_list::set_start(t);
@@ -670,7 +682,7 @@ Jdb_thread_list::list_threads_show_thread(Thread *t)
     {
       if (t->_timeout && t->_timeout->is_set())
 	{
-	  Signed64 diff = (t->_timeout->get_timeout(Kip::k()->clock));
+	  Signed64 diff = (t->_timeout->get_timeout(Kip::k()->clock()));
 	  if (diff < 0)
 	    strcpy(to, " over");
 	  else if (diff >= 100000000LL)
@@ -685,7 +697,7 @@ Jdb_thread_list::list_threads_show_thread(Thread *t)
 	      else if (us >= 1000)
 		snprintf(to, sizeof(to), " %3dm", us / 1000);
 	      else
-		snprintf(to, sizeof(to), " %3d%c", us, Config::char_micro);
+		snprintf(to, sizeof(to), " %3du", us);
 	    }
 	}
     }
@@ -694,7 +706,7 @@ Jdb_thread_list::list_threads_show_thread(Thread *t)
 
   if (long_output)
     {
-      Jdb_thread::print_state_long(t, 47);
+      Jdb_thread::print_state_long(t, 72);
       putchar('\n');
     }
   else
@@ -853,7 +865,7 @@ Jdb_thread_list::list_threads(Thread *t_start, char pr)
 
 PUBLIC
 Jdb_module::Cmd const *
-Jdb_thread_list::cmds() const
+Jdb_thread_list::cmds() const override
 {
   static Cmd cs[] =
     {
@@ -866,7 +878,7 @@ Jdb_thread_list::cmds() const
 
 PUBLIC
 int
-Jdb_thread_list::num_cmds() const
+Jdb_thread_list::num_cmds() const override
 {
   return 2;
 }

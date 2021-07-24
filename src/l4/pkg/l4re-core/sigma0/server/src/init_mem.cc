@@ -27,8 +27,6 @@ init_memory(l4_kernel_info_t *info)
       enter_kdebug("FATAL");
     }
 
-  tbuf_status = 0; //fiasco_tbuf_get_status_phys();
-
 #ifdef ARCH_x86
   char kip_syscalls = l4_info->kip_sys_calls;
 
@@ -36,7 +34,7 @@ init_memory(l4_kernel_info_t *info)
            << (kip_syscalls ? "yes\n" : "no\n");
 #endif
 
-  iomem.add_free(Region(0, ~0UL));
+  iomem.add_free(Region(0, ~0UL, 0, L4_FPAGE_RW));
 
   Region mismatch = Region::invalid();
   for (auto const &md: L4::Kip::Mem_desc::all(info))
@@ -58,33 +56,37 @@ init_memory(l4_kernel_info_t *info)
         }
 
       switch (type)
-	{
-	case Mem_desc::Conventional:
-	  Mem_man::ram()->add_free(Region(start, end));
-	  if (!iomem.reserve(Region(start, end, sigma0_taskno)))
-            mismatch = Region(start, end, sigma0_taskno);
-	  continue;
-	case Mem_desc::Reserved:
-	case Mem_desc::Dedicated:
-	  if (   !iomem.reserve(Region(start, end, sigma0_taskno))
+        {
+        case Mem_desc::Conventional:
+          Mem_man::ram()->add_free(Region(start, end));
+          if (!iomem.reserve(Region(start, end, sigma0_taskno, L4_FPAGE_RW)))
+            mismatch = Region(start, end, sigma0_taskno, L4_FPAGE_RW);
+          continue;
+        case Mem_desc::Reserved:
+        case Mem_desc::Dedicated:
+          if (!iomem.reserve(Region(start, end, sigma0_taskno, L4_FPAGE_RW))
               || !Mem_man::ram()->reserve(Region(start, end, sigma0_taskno)))
-            mismatch = Region(start, end, sigma0_taskno);
-	  break;
-	case Mem_desc::Bootloader:
-	  if (   !iomem.reserve(Region(start, end, sigma0_taskno))
-              || !Mem_man::ram()->reserve(Region(start, end, root_taskno)))
+            mismatch = Region(start, end, sigma0_taskno, L4_FPAGE_RW);
+          break;
+        case Mem_desc::Bootloader:
+          if (!iomem.reserve(Region(start, end, sigma0_taskno, L4_FPAGE_RW))
+              || !Mem_man::ram()->reserve(
+                   Region(start, end, root_taskno,
+                          (L4_fpage_rights)(md.sub_type()
+                                            & L4_FPAGE_RIGHTS_MASK))))
             mismatch = Region(start, end, root_taskno);
-	  break;
-	case Mem_desc::Info:
-	case Mem_desc::Arch:
-	case Mem_desc::Shared:
-	  iomem.add_free(Region(start, end));
-	  if (!Mem_man::ram()->reserve(Region(start, end, sigma0_taskno)))
+          break;
+        case Mem_desc::Info:
+        case Mem_desc::Arch:
+        case Mem_desc::Shared:
+          iomem.add_free(Region(start, end, 0, L4_FPAGE_RW));
+          if (!Mem_man::ram()->reserve(
+                Region(start, end, sigma0_taskno, L4_FPAGE_RW)))
             mismatch = Region(start, end, root_taskno);
-	  break;
-	default:
-	  break;
-	}
+          break;
+        default:
+          break;
+        }
 
       if (mismatch.valid())
         {

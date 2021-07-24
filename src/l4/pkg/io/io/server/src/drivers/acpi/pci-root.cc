@@ -1,7 +1,14 @@
+/* SPDX-License-Identifier: GPL-2.0-only or License-Ref-kk-custom */
+/*
+ * Copyright (C) 2010-2020 Kernkonzept GmbH.
+ * Author(s): Adam Lackorzynski <adam.lackorzynski@kernkonzept.com>,
+ *            Alexander Warg <alexander.warg@kernkonzept.com>
+ */
 #include "io_acpi.h"
 #include "__acpi.h"
-#include "pci.h"
 #include "debug.h"
+
+#include <pci-root.h>
 #include <l4/cxx/list>
 
 

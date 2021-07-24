@@ -194,7 +194,7 @@ class Uart_echo_server
 			err = l4vbus_get_resource(vbus, dev, 0, &res);
 			assert(err == 0);
 
-			err = l4vbus_request_resource(vbus, &res, 0);
+			err = l4vbus_request_ioport(vbus, &res);
 			assert(err == 0);
 
 			if (res.type == L4VBUS_RESOURCE_PORT) {

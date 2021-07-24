@@ -15,6 +15,7 @@ var mb__info_8h =
     [ "L4UTIL_MB_CONFIG_TABLE", "mb__info_8h.html#ab2d44d055885d15dc9c028a347d03b03", null ],
     [ "L4UTIL_MB_DRIVE_INFO", "mb__info_8h.html#ad18a3b24178c1c95cf42590a4de316c6", null ],
     [ "L4UTIL_MB_ELF_SHDR", "mb__info_8h.html#a41374235958fe83c49a1ac2dbff90afb", null ],
+    [ "l4util_mb_for_each_mmap_entry", "mb__info_8h.html#a63e8447e5c6c4756496686b4842ec580", null ],
     [ "L4UTIL_MB_MEM_MAP", "mb__info_8h.html#a846ff89bcc1c2c03348ce9d09896af5a", null ],
     [ "L4UTIL_MB_MEMORY", "mb__info_8h.html#ac16a0b985517163587735aae47b490ea", null ],
     [ "L4UTIL_MB_MODS", "mb__info_8h.html#a66aa61e7976631ffab75b39283fb27df", null ],

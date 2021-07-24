@@ -39,3 +39,19 @@ l4virtio_register_iface(l4_cap_idx_t cap, l4_cap_idx_t guest_irq,
     ->register_iface(girq, L4::Cap<L4::Irq>(host_irq),
                      L4::Cap<L4Re::Dataspace>(config_ds));
 }
+
+L4_CV int
+l4virtio_device_config_ds(l4_cap_idx_t cap, l4_cap_idx_t config_ds,
+                          l4_addr_t *ds_offset) L4_NOTHROW
+{
+  return L4::Cap<L4virtio::Device>(cap)
+    ->device_config(L4::Cap<L4Re::Dataspace>(config_ds), ds_offset);
+}
+
+L4_CV int
+l4virtio_device_notification_irq(l4_cap_idx_t cap, unsigned index,
+                                 l4_cap_idx_t irq) L4_NOTHROW
+{
+  return L4::Cap<L4virtio::Device>(cap)
+    ->device_notification_irq(index, L4::Cap<L4::Triggerable>(irq));
+}

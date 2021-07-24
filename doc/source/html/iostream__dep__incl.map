@@ -1,4 +1,4 @@
 <map id="l4/cxx/iostream" name="l4/cxx/iostream">
-<area shape="rect" id="node2" href="$iostream_8h_source.html" title="l4/cxx/iostream.h" alt="" coords="5,80,132,107"/>
-<area shape="rect" id="node3" href="$std__exc__io.html" title="Base exceptions std stream operator. " alt="" coords="157,80,287,107"/>
+<area shape="rect" id="node1" title="IO Stream." alt="" coords="11,5,134,32"/>
+<area shape="rect" id="node2" href="$std__exc__io.html" title="Base exceptions std stream operator." alt="" coords="5,80,140,107"/>
 </map>

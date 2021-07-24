@@ -1,12 +1,32 @@
 var group__api__l4re__rm =
 [
     [ "Rm", "classL4Re_1_1Rm.html", [
-      [ "Attach_flags", "classL4Re_1_1Rm.html#aa7c8a5c304df0512a85dcb95f48222bf", [
-        [ "Search_addr", "classL4Re_1_1Rm.html#aa7c8a5c304df0512a85dcb95f48222bfad603073d1cc415a1daaa491751030ac8", null ],
-        [ "In_area", "classL4Re_1_1Rm.html#aa7c8a5c304df0512a85dcb95f48222bfab1a2128b8fd34329ae450d50c796bc88", null ],
-        [ "Eager_map", "classL4Re_1_1Rm.html#aa7c8a5c304df0512a85dcb95f48222bfa837c38bd74c038ec77131723232497df", null ],
-        [ "Attach_flags", "classL4Re_1_1Rm.html#aa7c8a5c304df0512a85dcb95f48222bfaa46e1baf0a75d2efd70f9ab615497f3b", null ]
+      [ "F", "structL4Re_1_1Rm_1_1F.html", [
+        [ "Attach_flags", "structL4Re_1_1Rm_1_1F.html#adec4d26077e34d9586891ac0489e0041", [
+          [ "Search_addr", "structL4Re_1_1Rm_1_1F.html#adec4d26077e34d9586891ac0489e0041a067b0bc28378717b6962241c621caa0a", null ],
+          [ "In_area", "structL4Re_1_1Rm_1_1F.html#adec4d26077e34d9586891ac0489e0041af80cdbdea8dc3a8e155be2ad2c3e5579", null ],
+          [ "Eager_map", "structL4Re_1_1Rm_1_1F.html#adec4d26077e34d9586891ac0489e0041a5b916dc458b6756a7b2aa8478a2af2dd", null ],
+          [ "Attach_mask", "structL4Re_1_1Rm_1_1F.html#adec4d26077e34d9586891ac0489e0041a07c55d3a4313a4d62b9e8f50918299f8", null ]
+        ] ],
+        [ "Region_flags", "structL4Re_1_1Rm_1_1F.html#a9707a14d822d3f60aa6a97cb16b2a989", [
+          [ "Rights_mask", "structL4Re_1_1Rm_1_1F.html#a9707a14d822d3f60aa6a97cb16b2a989a096464540f7eacdff45f814569c8afd9", null ],
+          [ "Detach_free", "structL4Re_1_1Rm_1_1F.html#a9707a14d822d3f60aa6a97cb16b2a989a73be84e7035cfe1bbed5edbff7116641", null ],
+          [ "Pager", "structL4Re_1_1Rm_1_1F.html#a9707a14d822d3f60aa6a97cb16b2a989a33ceb48a0752720faf882ac4fe685d38", null ],
+          [ "Reserved", "structL4Re_1_1Rm_1_1F.html#a9707a14d822d3f60aa6a97cb16b2a989a10240889d9e7bb27e7bb04f0ea46122d", null ],
+          [ "Caching_mask", "structL4Re_1_1Rm_1_1F.html#a9707a14d822d3f60aa6a97cb16b2a989abe676f4020fe53d1366fd431c7927fd9", null ],
+          [ "Cache_normal", "structL4Re_1_1Rm_1_1F.html#a9707a14d822d3f60aa6a97cb16b2a989a91da4a396eae78b88b9f0e54459e13e4", null ],
+          [ "Cache_buffered", "structL4Re_1_1Rm_1_1F.html#a9707a14d822d3f60aa6a97cb16b2a989a7699ea952cd1af941e52d40ef60be81e", null ],
+          [ "Cache_uncached", "structL4Re_1_1Rm_1_1F.html#a9707a14d822d3f60aa6a97cb16b2a989a015538d2c417419e97ccb14be6fea5cb", null ],
+          [ "Ds_map_mask", "structL4Re_1_1Rm_1_1F.html#a9707a14d822d3f60aa6a97cb16b2a989a0ece0ccb64fe81f85e01c39579c4d91d", null ],
+          [ "Region_flags_mask", "structL4Re_1_1Rm_1_1F.html#a9707a14d822d3f60aa6a97cb16b2a989a0b27ac4c2a061083b61ae708a30ef0d5", null ]
+        ] ]
       ] ],
+      [ "Range", "structL4Re_1_1Rm_1_1Range.html", [
+        [ "end", "structL4Re_1_1Rm_1_1Range.html#a453fb582bac1d4466ead6d6a5f723d59", null ],
+        [ "start", "structL4Re_1_1Rm_1_1Range.html#a38ca67cc2b8ae9a5e8ae18e85180664a", null ]
+      ] ],
+      [ "Area", "classL4Re_1_1Rm.html#a38f14bb73f93be2f814a1a2917f58ca3", null ],
+      [ "Region", "classL4Re_1_1Rm.html#a3dda497d2e28e8700b5eb487495c0511", null ],
       [ "Detach_flags", "classL4Re_1_1Rm.html#ab2016b6baa0393491c0cc3ab97eff3af", [
         [ "Detach_exact", "classL4Re_1_1Rm.html#ab2016b6baa0393491c0cc3ab97eff3afa6d989d18bdfabb32dcd6e75081a43e4a", null ],
         [ "Detach_overlap", "classL4Re_1_1Rm.html#ab2016b6baa0393491c0cc3ab97eff3afa4a6ddedb3fb0cfd350dd3abc7ccdf2e3", null ],
@@ -18,27 +38,19 @@ var group__api__l4re__rm =
         [ "Split_ds", "classL4Re_1_1Rm.html#a43a67efc09d07fb2b0ed559184d4a883aa327a69d4932e571c19e48ad5b81d9de", null ],
         [ "Detach_again", "classL4Re_1_1Rm.html#a43a67efc09d07fb2b0ed559184d4a883a52152fd07767300856c5248edc1a5101", null ]
       ] ],
-      [ "Region_flags", "classL4Re_1_1Rm.html#a44518e00ea6b33c01424c1d9f29dfc0a", [
-        [ "Read_only", "classL4Re_1_1Rm.html#a44518e00ea6b33c01424c1d9f29dfc0aa6c534dbbef42deea9f4e486c65792eac", null ],
-        [ "Detach_free", "classL4Re_1_1Rm.html#a44518e00ea6b33c01424c1d9f29dfc0aa190f6c2bf4d6ce471472423540825de1", null ],
-        [ "Pager", "classL4Re_1_1Rm.html#a44518e00ea6b33c01424c1d9f29dfc0aa030bfd8a05874366d4fc691b04eb0dd4", null ],
-        [ "Reserved", "classL4Re_1_1Rm.html#a44518e00ea6b33c01424c1d9f29dfc0aa0bc44a781deccdab0212e1fa3d87c7d8", null ],
-        [ "Caching_shift", "classL4Re_1_1Rm.html#a44518e00ea6b33c01424c1d9f29dfc0aaac2055075c855e3496dfcaa5060358e9", null ],
-        [ "Caching_ds_shift", "classL4Re_1_1Rm.html#a44518e00ea6b33c01424c1d9f29dfc0aa82a1882b5fc8e198241e5643996cb92d", null ],
-        [ "Caching", "classL4Re_1_1Rm.html#a44518e00ea6b33c01424c1d9f29dfc0aaafd2aeca3673512e5efb67a6cc56dba4", null ],
-        [ "Cache_normal", "classL4Re_1_1Rm.html#a44518e00ea6b33c01424c1d9f29dfc0aad0f30891386d9ce9804bd3b1ba691f28", null ],
-        [ "Cache_buffered", "classL4Re_1_1Rm.html#a44518e00ea6b33c01424c1d9f29dfc0aa89b2cceb99a3d9fa4814e5f4ccd05d00", null ],
-        [ "Cache_uncached", "classL4Re_1_1Rm.html#a44518e00ea6b33c01424c1d9f29dfc0aa1435f4e2a579dfd2fb3c01acb57a4aa9", null ],
-        [ "Region_flags", "classL4Re_1_1Rm.html#a44518e00ea6b33c01424c1d9f29dfc0aa88295b2710c1464948ef112e910f5c27", null ]
+      [ "Region_flag_shifts", "classL4Re_1_1Rm.html#a6c519437e7be883723e43f80ea42ce87", [
+        [ "Caching_shift", "classL4Re_1_1Rm.html#a6c519437e7be883723e43f80ea42ce87aac2055075c855e3496dfcaa5060358e9", null ]
       ] ],
-      [ "attach", "classL4Re_1_1Rm.html#ac85c7b70e1b4cbdd34a9b2399d6bf985", null ],
-      [ "attach", "classL4Re_1_1Rm.html#a8b3b55065a8a5f4eb3f953a62848a687", null ],
-      [ "detach", "classL4Re_1_1Rm.html#a87922edfbf74322dcb2ac12424824739", null ],
-      [ "detach", "classL4Re_1_1Rm.html#a9f4c6bfe6c61a227cb7f5a63856804ed", null ],
-      [ "detach", "classL4Re_1_1Rm.html#ad94891c37aafd92e38cd9c577299d60e", null ],
-      [ "find", "classL4Re_1_1Rm.html#ad01335d8310c25a7676f69338e880495", null ],
+      [ "attach", "classL4Re_1_1Rm.html#a81c3edf15190139911ab69211c0a4bc4", null ],
+      [ "attach", "classL4Re_1_1Rm.html#a8d3d85a7c9359a9051869115cb5e08d6", null ],
+      [ "detach", "classL4Re_1_1Rm.html#af4ad2b5650cb44bff10c217220def4c9", null ],
+      [ "detach", "classL4Re_1_1Rm.html#a74ba3fe648cf135cb99bd9dcecbb21f2", null ],
+      [ "detach", "classL4Re_1_1Rm.html#ac293fbe09183b2ac352bd1665b003cb0", null ],
+      [ "find", "classL4Re_1_1Rm.html#a325d93a083f7251a434a10d4035dca8e", null ],
       [ "free_area", "classL4Re_1_1Rm.html#a3165a1f7521b5ec58cd710654575f6bb", null ],
-      [ "reserve_area", "classL4Re_1_1Rm.html#af9cc388c59e8e3c295e7f4f008dc4461", null ],
-      [ "reserve_area", "classL4Re_1_1Rm.html#a8b4da092ae24628a4bba43df53e7b194", null ]
+      [ "get_areas", "classL4Re_1_1Rm.html#a1d0b957253cf81e531443d38cf0a6b7d", null ],
+      [ "get_regions", "classL4Re_1_1Rm.html#a41421ee05a078fb931cc623a475db241", null ],
+      [ "reserve_area", "classL4Re_1_1Rm.html#ad1a4be565f4767dfce5e16d7d5e855c3", null ],
+      [ "reserve_area", "classL4Re_1_1Rm.html#a48756bf96d7afde63c8b15adbfd30a38", null ]
     ] ]
 ];

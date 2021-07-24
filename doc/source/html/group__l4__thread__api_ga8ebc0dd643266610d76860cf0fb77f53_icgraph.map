@@ -1,4 +1,5 @@
 <map id="l4_thread_vcpu_control_u" name="l4_thread_vcpu_control_u">
-<area shape="rect" id="node2" href="$group__l4__thread__api.html#gac3263f4949c90adda83dba763b195988" title="Enable or disable the vCPU feature for the thread. " alt="" coords="241,5,412,32"/>
-<area shape="rect" id="node3" href="$classL4_1_1Thread.html#af88410084b23685f43bb1ce5070428cd" title="Enable or disable the vCPU feature for the thread. " alt="" coords="239,56,415,83"/>
+<area shape="rect" id="node1" title="Enable or disable the vCPU feature for the thread." alt="" coords="235,31,423,57"/>
+<area shape="rect" id="node2" href="$group__l4__thread__api.html#gac3263f4949c90adda83dba763b195988" title="Enable or disable the vCPU feature for the thread." alt="" coords="9,5,183,32"/>
+<area shape="rect" id="node3" href="$classL4_1_1Thread.html#a94a6d8a5a7a78fa99ef3c6358e0a0459" title="Enable or disable the vCPU feature for the thread." alt="" coords="5,56,187,83"/>
 </map>

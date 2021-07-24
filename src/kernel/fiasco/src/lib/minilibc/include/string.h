@@ -44,10 +44,10 @@ size_t strcspn(const char *s, const char *reject);
 char *strpbrk(const char *s, const char *_accept);
 char *strsep(char **stringp, const char *delim);
 
+char *stpcpy(char *dest, const char *src);
+
 void* memset(void *s, int c, size_t n);
 void* memchr(const void *s, int c, size_t n);
-
-int strcoll(const char *s1, const char *s2);
 
 
 __END_DECLS

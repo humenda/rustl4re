@@ -1,17 +1,13 @@
 <map id="l4_msgtag_has_error" name="l4_msgtag_has_error">
-<area shape="rect" id="node2" href="$structl4__msgtag__t.html#a26b13889368ed62ec4c85682e29c0dd4" title="Test if flags indicate an error. " alt="" coords="215,132,382,159"/>
-<area shape="rect" id="node9" href="$group__l4__ipc__err__api.html#gad40f404217497793e95a10d77a47db39" title="Get the error code for an object invocation. " alt="" coords="249,317,348,344"/>
-<area shape="rect" id="node12" href="$group__l4__vcon__api.html#ga899728ba23baf18f59f62142534e039c" title="Write data to this virtual console. " alt="" coords="237,376,361,403"/>
-<area shape="rect" id="node15" href="$group__api__libvcpu.html#gaa1e7797e4ed8b7dabd40c9849f5c362c" title="Disable a vCPU for event delivery and return previous state. " alt="" coords="211,452,387,479"/>
-<area shape="rect" id="node3" href="$namespaceL4.html#aba0849c4b92afdccbe110489e18dadbd" title="Throw an L4 IPC error as exception. " alt="" coords="455,5,630,32"/>
-<area shape="rect" id="node5" href="$namespaceL4Re.html#ae0dd5d25abdc1d195edd8ab6b744334c" title="Generate C++ exception on error. " alt="" coords="490,56,595,83"/>
-<area shape="rect" id="node6" href="$namespaceL4Re.html#ae21329b88c6ffc4917048e8d9564ea99" title="Test a message tag for IPC errors. " alt="" coords="491,107,594,133"/>
-<area shape="rect" id="node7" href="$classL4_1_1Server.html#a4333dc750dee494087ee92ab058718a1" title="Internal implementation for reply and wait. " alt="" coords="457,157,629,184"/>
-<area shape="rect" id="node8" href="$classL4_1_1Server.html#ac0965dc536f1df5dfe0be1b224feab89" title="The server loop. " alt="" coords="455,208,630,235"/>
-<area shape="rect" id="node4" href="$namespaceL4.html#a54f8da0e02ff2496f1ad935e38ab17c4" title="Throw an L4 IPC error as exception. " alt="" coords="699,5,873,32"/>
-<area shape="rect" id="node10" href="$x86_2l4f_2l4_2util_2port__io_8h.html#a38a37fdbed4dd2dca75ce192d506a2d4" title="Map a range of I/O ports. " alt="" coords="478,259,607,285"/>
-<area shape="rect" id="node11" href="$classL4Re_1_1Util_1_1Event__buffer__consumer__t.html#a4ed22b41ce4c7e6b93efae878b1415ef" title="Continuously wait for events and process them. " alt="" coords="459,310,626,351"/>
-<area shape="rect" id="node13" href="$classL4_1_1Vcon.html#acb9a53b77487d644212030c27d642f1e" title="Write data to this virtual console. " alt="" coords="487,376,599,403"/>
-<area shape="rect" id="node14" href="$group__l4__vcon__api.html#ga9f083a69c2c51329da6778a3af0331bc" title="Write data to virtual console. " alt="" coords="488,427,597,453"/>
-<area shape="rect" id="node16" href="$classL4vcpu_1_1Vcpu.html#a05a251f7ecc0852035f2db1cd8b23188" title="Disable the vCPU for event delivery and return previous state. " alt="" coords="435,477,651,504"/>
+<area shape="rect" id="node1" title="Test for error indicator flag." alt="" coords="1077,159,1236,185"/>
+<area shape="rect" id="node2" href="$group__l4__ipc__err__api.html#gad40f404217497793e95a10d77a47db39" title="Get the error code for an object invocation." alt="" coords="917,97,1015,124"/>
+<area shape="rect" id="node9" href="$group__l4__vcon__api.html#ga899728ba23baf18f59f62142534e039c" title="Write data to this virtual console." alt="" coords="903,188,1029,215"/>
+<area shape="rect" id="node3" href="$x86_2l4f_2l4_2util_2port__io_8h.html#a38a37fdbed4dd2dca75ce192d506a2d4" title="Map a range of I/O ports." alt="" coords="699,5,835,32"/>
+<area shape="rect" id="node4" href="$classL4Re_1_1Util_1_1Event__buffer__consumer__t.html#a4ed22b41ce4c7e6b93efae878b1415ef" title="Continuously wait for events and process them." alt="" coords="680,57,855,98"/>
+<area shape="rect" id="node5" href="$classL4virtio_1_1Driver_1_1Device.html#a05a02d57ddf646f029311ca8a63f4081" title="Wait for a notification from the device." alt="" coords="681,122,853,163"/>
+<area shape="rect" id="node6" href="$classL4virtio_1_1Driver_1_1Device.html#a156576a5d43ef2fe11b39f4d8ffc4c9e" title="Wait for the next item to arrive in the used queue and return it." alt="" coords="460,122,632,163"/>
+<area shape="rect" id="node7" href="$classL4virtio_1_1Driver_1_1Device.html#af4aa9ac34ce928b9d437f1bb6a2ec216" title="Send a request to the device and wait for it to be processed." alt="" coords="240,122,412,163"/>
+<area shape="rect" id="node8" href="$classL4virtio_1_1Driver_1_1Block__device.html#a63f21e71556accc8c669ef80161ecd8e" title="Process request synchronously." alt="" coords="5,122,192,163"/>
+<area shape="rect" id="node10" href="$group__l4__vcon__api.html#ga9f083a69c2c51329da6778a3af0331bc" title="Write data to virtual console." alt="" coords="711,188,823,215"/>
+<area shape="rect" id="node11" href="$classL4_1_1Vcon.html#a83407df2f5b674126d33505d73f5d34b" title="Write data to this virtual console." alt="" coords="708,239,827,265"/>
 </map>

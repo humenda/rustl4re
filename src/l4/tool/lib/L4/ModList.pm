@@ -1,13 +1,16 @@
 
 package L4::ModList;
 use Exporter;
+use File::Basename;
+use warnings;
 use vars qw(@ISA @EXPORT);
 @ISA    = qw(Exporter);
-@EXPORT = qw(get_module_entry search_file get_entries);
+@EXPORT = qw(get_module_entry search_file get_entries merge_entries);
 
 my @internal_searchpaths;
 
-my $arglen = 200;
+sub quoted { shift =~ s/"/\\"/gr; }
+sub trim { shift =~ s/^\s+|\s+$//gr; }
 
 sub get_command_and_cmdline
 {
@@ -15,18 +18,33 @@ sub get_command_and_cmdline
   my %opts = @_;
 
   my ($file, $args) = split /\s+/, $cmd_and_args, 2;
+  $file = trim($file);
+  $args = trim($args) if defined($args);
 
-  my $full = $file;
-  $full = $opts{fname} if exists $opts{fname};
-  $full .= " $args" if defined $args;
-  $full =~ s/"/\\"/g;
+  my $command = basename($file);
+  $command = trim($opts{fname}) if exists $opts{fname};
 
-  if (length($full) > $arglen) {
-    print "$.: \"$full\" too long...\n";
-    exit 1;
-  }
+  my $cmdline = $command;
+  $cmdline .= ' ' . $args if defined($args);
 
-  ($file, $full);
+  $args = '' unless defined($args);
+
+  # $mod structure
+  (
+    # File name or absolute file path of file on host
+    file => $file,
+    # File name in L4Re environment: fname if specified otherwise basename($file)
+    command => $command,
+    # $command and $args separated by a space (no trailing space if no args)
+    cmdline => $cmdline,
+    # Arguments only
+    args => $args,
+    # $cmdline but " replaced with \"
+    cmdline_quoted => quoted($cmdline),
+    # $args but " replaced with \"
+    args_quoted => quoted($args),
+    opts => { %opts },
+  );
 }
 
 sub error($)
@@ -66,6 +84,12 @@ sub handle_line
 
   $r =~ s/\s+$//;
 
+  if (exists $opts{arch})
+    {
+      my @a = split /\|+/, $opts{arch};
+      return () unless grep /^$ENV{ARCH}$/, @a;
+    }
+
   if (exists $opts{perl})
     {
       my @m = eval $r;
@@ -80,54 +104,9 @@ sub handle_line
       return @m;
     }
 
-  if (exists $opts{arch})
-    {
-      my @a = split /\|+/, $opts{arch};
-      return ( $r ) if grep /^$ENV{ARCH}$/, @a;
-      return ();
-    }
-
   return ( glob $r ) if exists $opts{glob};
 
-
-  # Deprecated start -- remove in 2016
-  if ($r =~ /^((perl|glob|shell):\s+)/)
-    {
-      substr $r, 0, length($1), "";
-
-      print STDERR "ATTENTION:\n".
-                   "  Using deprecated syntax '$2:' on line $.\n".
-                   "  Use option syntax now: <command>[$2] $r\n";
-
-      if ($2 eq 'perl')
-        {
-          my @m = eval $r;
-          die "perl: ".$@ if $@;
-          return @m;
-        }
-      elsif ($2 eq 'shell')
-        {
-          my @m = split /\n/, `$r`;
-          error "$mod_file:$.: Shell command failed\n" if $?;
-          return @m;
-        }
-      elsif ($2 eq 'glob')
-        {
-          return ( glob $r );
-        }
-      else
-        {
-          die "should not happen";
-        }
-    }
-  # Deprecated end
-
   return ( $r );
-}
-
-sub handle_line_first
-{
-  return (handle_line(shift, @_))[0];
 }
 
 sub readin_config($)
@@ -217,7 +196,7 @@ sub readin_config($)
 
   if (0)
     {
-      print "$id_to_file{$$_[0]}($$_[0]):$$_[1]: $$_[2]\n" foreach (@contents);
+      print STDERR "$id_to_file{$$_[0]}($$_[0]):$$_[1]: $$_[2]\n" foreach (@contents);
     }
 
   return (
@@ -233,41 +212,29 @@ sub disassemble_line
   ($1, $2, $3);
 }
 
-# extract an entry with modules from a modules.list file
+## Extract an entry with modules from a modules.list file
 sub get_module_entry($$)
 {
   my ($mod_file, $entry_to_pick) = @_;
   my @mods;
   my %groups;
 
-  if ($entry_to_pick eq 'auto-build-entry') {
-    # Automatic build entry is being built.
-    # This image is useless but it always builds.
-
-    $mods[0] = { command => 'Makefile', cmdline => 'Makefile', type => 'bin'};
-    $mods[1] = { command => 'Makefile', cmdline => 'Makefile', type => 'bin'};
-    $mods[2] = { command => 'Makefile', cmdline => 'Makefile', type => 'bin'};
-
-    return (
-      bootstrap => { command => 'bootstrap',
-                     cmdline => 'bootstrap' },
-      mods    => [ @mods ],
-      modaddr => 0x200000,
-    );
-  }
-
   # preseed first 3 modules
-  $mods[0] = { command => 'fiasco',   cmdline => 'fiasco',   type => 'bin'};
-  $mods[1] = { command => 'sigma0',   cmdline => 'sigma0',   type => 'bin'};
-  $mods[2] = { command => 'roottask', cmdline => 'moe',      type => 'bin'};
+  $mods[0] = { get_command_and_cmdline("fiasco") };
+  $mods[1] = { get_command_and_cmdline("sigma0") };
+  $mods[2] = {
+    get_command_and_cmdline("moe"),
+    command => 'roottask',
+  };
 
   my $process_mode = undef;
   my $found_entry = 0;
   my $global = 1;
   my $modaddr_title;
   my $modaddr_global;
-  my $bootstrap_command = "bootstrap";
-  my $bootstrap_cmdline = "bootstrap";
+  my %bootstrap = (
+    get_command_and_cmdline("bootstrap"),
+  );
   my $linux_initrd;
   my $is_mode_linux;
 
@@ -315,27 +282,27 @@ sub get_module_entry($$)
         next;
       } elsif ($type eq 'group') {
         $process_mode = 'group';
-        $current_group_name = (split /\s+/, handle_line_first($remaining, %opts))[0];
+        $current_group_name = (split /\s+/, (handle_line($remaining, %opts))[0])[0];
         next;
       } elsif ($type eq 'default-bootstrap') {
-        my ($file, $full) = get_command_and_cmdline(handle_line_first($remaining, %opts), %opts);
-        $bootstrap_command = $file;
-        $bootstrap_cmdline = $full;
+        my $s = (handle_line($remaining, %opts))[0];
+        next unless defined $s;
+        %bootstrap = (%bootstrap, get_command_and_cmdline($s, %opts) );
         next;
       } elsif ($type eq 'default-kernel') {
-        my ($file, $full) = get_command_and_cmdline(handle_line_first($remaining, %opts), %opts);
-        $mods[0]{command}  = $file;
-        $mods[0]{cmdline}  = $full;
+        my $s = (handle_line($remaining, %opts))[0];
+        next unless defined $s;
+        $mods[0] = { %{$mods[0]}, get_command_and_cmdline($s, %opts) };
         next;
       } elsif ($type eq 'default-sigma0') {
-        my ($file, $full) = get_command_and_cmdline(handle_line_first($remaining, %opts), %opts);
-        $mods[1]{command}  = $file;
-        $mods[1]{cmdline}  = $full;
+        my $s = (handle_line($remaining, %opts))[0];
+        next unless defined $s;
+        $mods[1] = { %{$mods[1]}, get_command_and_cmdline($s, %opts) };
         next;
       } elsif ($type eq 'default-roottask') {
-        my ($file, $full) = get_command_and_cmdline(handle_line_first($remaining, %opts), %opts);
-        $mods[2]{command}  = $file;
-        $mods[2]{cmdline}  = $full;
+        my $s = (handle_line($remaining, %opts))[0];
+        next unless defined $s;
+        $mods[2] = { %{$mods[2]}, get_command_and_cmdline($s, %opts) };
         next;
       }
 
@@ -349,6 +316,12 @@ sub get_module_entry($$)
       error "$mod_file_db{id_to_file}{$$fileentry[0]}:$$fileentry[1]: Invalid type \"$type\"\n"
         unless grep(/^$type$/, @valid_types);
 
+      # foo-nostrip is deprecated, use 'nostrip' option now. Added 2020-07.
+      if ($type =~ /(.+)-nostrip$/) {
+        print STDERR "Warning: Using '$type' is deprecated, use '$1"."[nostrip]' now\n";
+        $type = $1;
+        $opts{nostrip} = undef;
+      }
 
       if ($type eq 'set') {
         my ($varname, $value) = split /\s+/, $params[0], 2;
@@ -365,40 +338,30 @@ sub get_module_entry($$)
         $type = 'bin';
       } elsif ($type eq 'moe') {
         my $bn = (reverse split(/\/+/, $params[0]))[0];
-        $mods[2]{command}  = 'moe';
-        $mods[2]{cmdline}  = "moe rom/$bn";
+        $mods[2] = { get_command_and_cmdline("moe rom/$bn", %opts) };
         $type = 'bin';
-        @m = ($params[0]);
       }
       next if not defined $params[0] or $params[0] eq '';
 
       if ($process_mode eq 'entry') {
         foreach my $m (@params) {
 
-          my ($file, $full) = get_command_and_cmdline($m, %opts);
+          my %modinfo = get_command_and_cmdline($m, %opts);
 
           # special cases
           if ($type eq 'bootstrap') {
-            $bootstrap_command = $file;
-            $bootstrap_cmdline = $full;
+            %bootstrap = (%bootstrap, %modinfo);
           } elsif ($type =~ /(rmgr|roottask)/i) {
-            $mods[2]{command}  = $file;
-            $mods[2]{cmdline}  = $full;
+            $mods[2] = { %{$mods[2] || {}}, %modinfo };
           } elsif ($type eq 'kernel') {
-            $mods[0]{command}  = $file;
-            $mods[0]{cmdline}  = $full;
+            $mods[0] = { %{$mods[0] || {}}, %modinfo };
           } elsif ($type eq 'sigma0') {
-            $mods[1]{command}  = $file;
-            $mods[1]{cmdline}  = $full;
+            $mods[1] = { %{$mods[1] || {}}, %modinfo };
           } elsif ($type eq 'initrd') {
-            $linux_initrd      = $file;
+            $linux_initrd      = $modinfo{file};
             $is_mode_linux     = 1;
           } else {
-            push @mods, {
-                          type    => $type,
-                          command => $file,
-                          cmdline => $full,
-                        };
+            push @mods, { %modinfo };
           }
         }
       } elsif ($process_mode eq 'group') {
@@ -408,27 +371,22 @@ sub get_module_entry($$)
       }
     }
 
-  error "$mod_file: Unknown entry \"$entry_to_pick\"!\n" unless $found_entry;
+  error "$mod_file: Unknown entry \"$entry_to_pick\"!\n".
+        "Available entries: ".join(' ', sort &get_entries($mod_file))."\n"
+    unless $found_entry;
 
   if (defined $is_mode_linux)
     {
       error "No Linux kernel image defined\n" unless defined $mods[0]{cmdline};
       print STDERR "Entry '$entry_to_pick' is a Linux type entry\n";
-      my @files;
-      # @files is actually redundant but eases file selection for entry
-      # generators
-      push @files, $mods[0]{command};
-      push @files, $linux_initrd if defined $linux_initrd;
       my %r;
       %r = (
              # actually bootstrap is always the kernel in this
              # environment, for convenience we use $mods[0] because that
              # are the contents of 'kernel xxx' which sounds more
              # reasonable
-             bootstrap => { command => $mods[0]{command},
-                            cmdline => $mods[0]{cmdline}},
+             bootstrap => { %{$mods[0]} },
              type      => 'Linux',
-             files     => [ @files ],
            );
       $r{initrd} = { cmdline => $linux_initrd } if defined $linux_initrd;
       return %r;
@@ -438,27 +396,22 @@ sub get_module_entry($$)
   my $m = $modaddr_title || $modaddr_global;
   if (defined $m)
     {
-      if ($bootstrap_cmdline =~ /-modaddr\s+/)
+      if ($bootstrap{cmdline} =~ /-modaddr\s+/)
         {
-          $bootstrap_cmdline =~ s/(-modaddr\s+)%modaddr%/$1$m/;
+          $bootstrap{cmdline} =~ s/(-modaddr\s+)%modaddr%/$1$m/;
         }
       else
         {
-          $bootstrap_cmdline .= " -modaddr $m";
+          $bootstrap{cmdline} .= " -modaddr $m";
         }
     }
 
-  my @files; # again, this is redundant but helps generator functions
-  push @files, $bootstrap_command;
-  push @files, $_->{command} foreach @mods;
-
   return (
-           bootstrap => { command => $bootstrap_command,
-                          cmdline => $bootstrap_cmdline },
+           bootstrap => \%bootstrap,
            mods    => [ @mods ],
            modaddr => $modaddr_title || $modaddr_global,
            type    => 'MB',
-           files   => [ @files ],
+           entry   => $entry_to_pick,
          );
 }
 
@@ -497,30 +450,49 @@ sub get_entries($)
   return @entry_list;
 }
 
+# internal function
+sub handle_remote_file_get_file_in_dir
+{
+  my $lpath = shift;
+  my $lfile = "__unknown_yet__";
+  if (opendir(my $dh, $lpath))
+    {
+      my @entries = readdir $dh;
+      die "Too many/few files in $lpath" if @entries != 3;
+      foreach (@entries)
+        {
+          $lfile = $_ if $_ ne '.' and $_ ne '..';
+        }
+      closedir $dh;
+    }
+
+  return "$lpath/$lfile";
+}
+
 sub handle_remote_file
 {
   my $file = shift;
   my $fetch_file = shift;
-  my $output_dir = $ENV{OUTPUT_DIR};
-  $output_dir = $ENV{TMPDIR} unless defined $output_dir;
-  $output_dir = '/tmp' unless defined $output_dir;
+  my $output_dir = $ENV{OUTPUT_DIR} || $ENV{TMPDIR} || '/tmp';
 
   if ($file =~ /^s(sh|cp):\/\/([^\/]+)\/(.+)/)
     {
       my $rhost = $2;
       my $rpath = $3;
 
-      (my $lfile = $file) =~ s,[\s/:~],_,g;
-      $lfile = "$output_dir/$lfile";
+      (my $lpath = $file) =~ s,[\s/:~],_,g;
+      $lpath = "$output_dir/$lpath";
 
       if ($fetch_file)
         {
           print STDERR "Retrieving $file...\n";
-          system("rsync -azS $rhost:$rpath $lfile 1>&2");
+
+          mkdir $lpath || die "Cannot create directory '$lpath'";
+          system("rsync -azS $rhost:$rpath $lpath 1>&2");
           die "rsync failed" if $?;
         }
 
-      return $lfile;
+      return handle_remote_file_get_file_in_dir($lpath);
     }
 
   if ($file =~ /^(https?:\/\/.+)/)
@@ -532,7 +504,7 @@ sub handle_remote_file
 
       if ($fetch_file)
         {
-          print STDERR "Retrieving ($$, $ARGV[0]) $file...\n";
+          print STDERR "Retrieving $file...\n";
 
           # So we do not know the on-disk filename of the URL we're downloading
           # and since we want to use -N and as -N and -O don't play together,
@@ -543,17 +515,12 @@ sub handle_remote_file
           die "wget failed" if $?;
         }
 
-      my $lfile = "__unknown_yet__";
-      if (opendir(my $dh, $lpath))
-        {
-          die "First path should be '.'"   unless readdir $dh eq '.';
-          die "Second path should be '..'" unless readdir $dh eq '..';
-          $lfile = readdir $dh;
-          die "Too many files in $lpath" if readdir $dh;
-          closedir $dh;
-        }
+      return handle_remote_file_get_file_in_dir($lpath);
+    }
 
-      return "$lpath/$lfile";
+  if ($file =~ /^((ssh\+)?git:\/\/.+)/)
+    {
+      # git archive --format=tar --remote=$1 HEAD path | tar -xO
     }
 
   return undef;
@@ -573,7 +540,7 @@ sub search_file($$)
   return $r if $r;
 
   foreach my $p (split(/[:\s]+/, $paths), @internal_searchpaths) {
-    return "$p/$file" if -e "$p/$file" and ! -d "$p/$file";
+    return "$p/$file" if $p ne '' and -e "$p/$file" and ! -d "$p/$file";
   }
 
   undef;
@@ -584,7 +551,8 @@ sub search_file_or_die($$)
   my $file = shift;
   my $paths = shift;
   my $f = search_file($file, $paths);
-  error "Could not find '$file' with path '$paths'\n" unless defined $f;
+  error "Could not find\n  '$file'\n\nwithin paths\n  " .
+        join("\n  ", split(/[:\s]+/, $paths)) . "\n" unless defined $f;
   $f;
 }
 
@@ -593,16 +561,23 @@ sub fetch_remote_file
   handle_remote_file(shift, 1);
 }
 
+sub is_gzipped_file
+{
+  my $file = shift;
+
+  open(my $f, $file) || error "Cannot open '$file': $!\n";
+  my $buf;
+  read $f, $buf, 2;
+  close $f;
+
+  return length($buf) >= 2 && unpack("n", $buf) == 0x1f8b;
+}
+
 sub get_or_copy_file_uncompressed_or_die($$$$$)
 {
   my ($command, $paths, $targetdir, $targetfilename, $copy) = @_;
 
   my $fp = L4::ModList::search_file_or_die($command, $paths);
-
-  open(F, $fp) || error "Cannot open '$fp': $!\n";
-  my $buf;
-  read F, $buf, 2;
-  close F;
 
   my $tf;
   if ($targetfilename) {
@@ -612,7 +587,7 @@ sub get_or_copy_file_uncompressed_or_die($$$$$)
     $tf = $targetdir.'/'.$f;
   }
 
-  if (length($buf) >= 2 && unpack("n", $buf) == 0x1f8b) {
+  if (is_gzipped_file($fp)) {
     print STDERR "'$fp' is a zipped file, uncompressing to '$tf'\n";
     system("zcat $fp >$tf");
     $fp = $tf;
@@ -620,7 +595,7 @@ sub get_or_copy_file_uncompressed_or_die($$$$$)
     system("cmp -s $fp $tf");
     if ($?)
       {
-        print("cp $fp $tf\n");
+        print STDERR "cp $fp $tf\n";
         system("cp $fp $tf");
       }
     $fp = $tf;
@@ -651,21 +626,18 @@ sub generate_grub1_entry($$%)
   my %entry = @_;
   my $s = "title $entryname\n";
   my $c = $entry{bootstrap}{cmdline};
-  $c =~ s/^\S*\/([^\/]+\s*)/$1/;
   $s .= "kernel $prefix/$c\n";
 
   if (entry_is_linux(%entry) and defined $entry{initrd})
     {
       $c = $entry{initrd}{cmdline};
-      $c =~ s/^\S*\/([^\/]+\s*)/$1/;
       $s .= "initrd $prefix/$c\n";
       return $s;
     }
 
   foreach my $m (@{$entry{mods}})
     {
-      $c = $m->{cmdline};
-      $c =~ s/^\S*\/([^\/]+\s*)/$1/;
+      $c = $m->{unique_short_filepath} . ' ' . $m->{args};
       $s .= "module $prefix/$c\n";
     }
   $s;
@@ -679,9 +651,8 @@ sub generate_grub2_entry($$%)
   $prefix = "/$prefix" if $prefix ne '' and $prefix !~ /^[\/(]/;
   my %entry = @_;
   # basename of first path
-  my ($c, $args) = split(/\s+/, $entry{bootstrap}{cmdline}, 2);
-  $args = '' unless defined $args;
-  my $bn = (reverse split(/\/+/, $c))[0];
+  my $args = $entry{bootstrap}{args};
+  my $bn = $entry{bootstrap}{unique_short_filepath};
   my $s = "menuentry \"$entryname\" {\n";
 
   if (entry_is_linux(%entry))
@@ -690,10 +661,8 @@ sub generate_grub2_entry($$%)
       $s .= "  linux $prefix/$bn $args\n";
       if (defined $entry{initrd})
         {
-          $bn = (reverse split(/\/+/, $entry{initrd}{cmdline}))[0];
-          my $c = $entry{initrd}{cmdline};
-          $c =~ s/^\S*(\/[^\/]+\s*)/$1/;
-          $s .= "  initrd $prefix$c\n";
+          my $c = $entry{initrd}{unique_short_filepath} . ' ' . $entry{initrd}{args};
+          $s .= "  initrd $prefix/$c\n";
         }
     }
   else
@@ -702,16 +671,82 @@ sub generate_grub2_entry($$%)
       $s .= "  multiboot $prefix/$bn $prefix/$bn $args\n";
       foreach my $m (@{$entry{mods}})
         {
-          # basename
-          $bn = (reverse split(/\/+/, $m->{command}))[0];
-          my $c = $m->{cmdline};
-          $c =~ s/^\S*(\/[^\/]+\s*)/$1/;
-          $s .= "  echo Loading '$prefix/$bn $c'\n";
-          $s .= "  module $prefix/$bn $c\n";
+          my $moduleline = "$prefix/" . $m->{unique_short_filepath} . " " . $m->{cmdline};
+          $s .= "  echo Loading '$moduleline'\n";
+          $s .= "  module $moduleline\n";
         }
     }
   $s .= "  echo Done, booting...\n";
   $s .= "}\n";
+}
+
+# Merge multiple entries such that we only need to copy a file
+# once to a boot medium (e.g. ISO file, target, etc.)
+# For that, the entries will be augmented with additional entries 'file' and
+# 'unique_short_filepath'.
+sub merge_entries
+{
+  my $module_path = shift;
+  my $uncompressdir = shift;
+  my @entries = @_;
+
+  my %f;
+  foreach my $e (@entries)
+    {
+      foreach my $mod (@{$e->{mods}}, $e->{bootstrap})
+        {
+          my $file = $mod->{file};
+          fetch_remote_file($file);
+          my $filepath;
+          if (defined $uncompressdir)
+            {
+              # generate a file-path for the uncompressed file that is as
+              # unique as the other file-path (same path -> same content)
+              (my $ufn = $file) =~ s,/,_,g;
+              $filepath = copy_file_uncompressed_or_die($file, $module_path,
+                                                        $uncompressdir, $ufn);
+            }
+          else
+            {
+              $filepath = search_file_or_die($file, $module_path);
+            }
+          my $bn = $mod->{command};
+          push @{$f{$bn}}, { fp => $filepath, entry => $e->{entry} };
+          $mod->{file} = $filepath;
+        }
+    }
+
+  my %r;
+  foreach my $bn (keys %f)
+    {
+      my %tmp;
+      foreach my $e (@{$f{$bn}})
+        {
+          push @{$tmp{$e->{fp}}}, $e->{entry};
+        }
+
+      if (keys %tmp == 1)
+        {
+          $r{$_} = $bn foreach keys %tmp;
+        }
+      else
+        {
+          my $subdir = 1;
+          foreach my $fp (keys %tmp)
+            {
+              $r{$fp} = "$subdir/$bn";
+              $subdir++;
+            }
+        }
+    }
+
+  foreach my $e (@entries)
+    {
+      foreach my $mod (@{$e->{mods}}, $e->{bootstrap})
+        {
+          $mod->{unique_short_filepath} = $r{$mod->{file}};
+        }
+    }
 }
 
 return 1;

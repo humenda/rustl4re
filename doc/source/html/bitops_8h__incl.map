@@ -1,5 +1,8 @@
 <map id="l4/util/bitops.h" name="l4/util/bitops.h">
-<area shape="rect" id="node2" href="$l4_2sys_2l4int_8h.html" title="Fixed sized integer types, generic version. " alt="" coords="5,155,104,181"/>
-<area shape="rect" id="node3" href="$compiler_8h.html" title="L4 compiler related defines. " alt="" coords="237,155,363,181"/>
-<area shape="rect" id="node6" href="$l4_2util_2atomic_8h.html" title="atomic operations header and generic implementations " alt="" coords="46,80,157,107"/>
+<area shape="rect" id="node1" title="bit manipulation functions" alt="" coords="130,5,245,32"/>
+<area shape="rect" id="node2" href="$l4_2sys_2l4int_8h.html" title="Fixed sized integer types, generic version." alt="" coords="5,155,111,181"/>
+<area shape="rect" id="node3" href="$compiler_8h.html" title="L4 compiler related defines." alt="" coords="224,155,356,181"/>
+<area shape="rect" id="node5" title=" " alt="" coords="192,80,343,107"/>
+<area shape="rect" id="node6" href="$l4_2util_2atomic_8h.html" title="atomic operations header and generic implementations" alt="" coords="47,80,167,107"/>
+<area shape="rect" id="node4" title=" " alt="" coords="229,229,351,256"/>
 </map>

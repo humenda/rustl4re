@@ -1,3 +1,4 @@
 <map id="l4_vm_vmx_write_nat" name="l4_vm_vmx_write_nat">
-<area shape="rect" id="node2" href="$group__l4__vm__vmx__api.html#ga8d0ed5965242fe81fd33c37c0e48ee74" title="Write to an arbitrary VMCS field. " alt="" coords="212,5,343,32"/>
+<area shape="rect" id="node1" title="Write to a natural width VMCS field." alt="" coords="192,5,359,32"/>
+<area shape="rect" id="node2" href="$group__l4__vm__vmx__api.html#ga8d0ed5965242fe81fd33c37c0e48ee74" title="Write to an arbitrary VMCS field." alt="" coords="5,5,144,32"/>
 </map>

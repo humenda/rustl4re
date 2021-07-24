@@ -1,7 +1,7 @@
 var scheduler_8h =
 [
-    [ "l4_sched_cpu_set_t", "group__l4__scheduler__api.html#ga157e8cbec58be83b74e43339c859bae5", null ],
-    [ "l4_sched_param_t", "group__l4__scheduler__api.html#gadbb1ce2e2bd445e7ea9457d18056de01", null ],
+    [ "l4_sched_cpu_set_t", "group__l4__scheduler__api.html#ga865f6c471fd1fd4d5de9bf9c66387c84", null ],
+    [ "l4_sched_param_t", "group__l4__scheduler__api.html#gaf5845ebad6af70f0d0cc49152adad65d", null ],
     [ "L4_scheduler_ops", "group__l4__scheduler__api.html#ga0b5a4009c40728ca0326ae9a603a9c0b", [
       [ "L4_SCHEDULER_INFO_OP", "group__l4__scheduler__api.html#gga0b5a4009c40728ca0326ae9a603a9c0ba7cf4293e84bdc74b2ed7016bd381cabb", null ],
       [ "L4_SCHEDULER_RUN_THREAD_OP", "group__l4__scheduler__api.html#gga0b5a4009c40728ca0326ae9a603a9c0ba02b947c2473e4abce56be3c80a9eac01", null ],

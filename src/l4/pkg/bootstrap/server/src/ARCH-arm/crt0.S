@@ -42,14 +42,14 @@ _start:
 	beq	run		/* ... go to run */
 
 	/* Disable caches as we're moving code around */
-	mcr p15, 0, r3, c7, c5, 0 /* ICIALLU */
-	mrc p15, 0, r0, c1, c0
-	bic r0, #0x0004
-	bic r0, #0x1000
-	mcr p15, 0, r0, c1, c0
+	mcr p15, 0, r6, c7, c5, 0 /* ICIALLU */
+	mrc p15, 0, r6, c1, c0
+	bic r6, #0x0004
+	bic r6, #0x1000
+	mcr p15, 0, r6, c1, c0
 
 	/* Figure how to move */
-        ldr     r7, .LCend_bin
+        ldr     r7, crt_end_bin_lsb
 	subs	r8, r5, r4	/* r8 is the distance between the blocks */
 	bpl	move_behind
 
@@ -57,17 +57,17 @@ _start:
 	/* First, copy our copy loop to the very beginning to avoid code
 	 * overwrites */
 	mov	r9, r5			/* r9: run address */
-	ldr	r0, .LCstart_bin
-	ldr	r3, 3f
-	str	r3, [r0], #4
-	ldr	r3, 32f
-	str	r3, [r0], #4
-	ldr	r3, 33f
-	str	r3, [r0], #4
-	ldr	r3, 34f
-	str	r3, [r0], #4
-	ldr	r3, 35f
-	str	r3, [r0], #4
+	ldr	r10, .LCstart_bin
+	ldr	r6, 3f
+	str	r6, [r10], #4
+	ldr	r6, 32f
+	str	r6, [r10], #4
+	ldr	r6, 33f
+	str	r6, [r10], #4
+	ldr	r6, 34f
+	str	r6, [r10], #4
+	ldr	r6, 35f
+	str	r6, [r10], #4
 	ldr	pc, .LCstart_bin
 
 3:	ldr	r6, [r4], #4
@@ -88,57 +88,60 @@ move_behind:
 
 .LCrun:       .word run
 .LCstart_bin: .word _start
-.LCend_bin:   .word _module_data_end
+crt_end_bin:     .word 0
+crt_end_bin_lsb: .word _module_data_end;
 
+	.global cpu_bootup_code_start
+cpu_bootup_code_start:
 run:
-	mov	r3, #0x1000
-	sub	r3, r3, #1                 /* r3 == 0xfff */
-	mrc	p15, 0, r0, c0, c0, 0      /* Main ID */
-	lsr	r0, #4
-	and	r0, r0, r3
+	mov	r5, #0x1000
+	sub	r5, r5, #1                 /* r5 == 0xfff */
+	mrc	p15, 0, r6, c0, c0, 0      /* Main ID */
+	lsr	r6, #4
+	and	r6, r6, r5
 
 	/* Check for processors that understand CPU ID */
 	mov	r9, #0xb00
 	orr 	r9, #0x002
-	cmp	r0, r9
+	cmp	r6, r9
 	beq	do_cpuid
 
-	mov	r3, #0xf00
-	and	r0, r3
+	mov	r5, #0xf00
+	and	r6, r5
 
 	mov	r9, #0xc00
-	cmp	r0, r9
+	cmp	r6, r9
 	beq	do_cpuid
 
 	mov	r9, #0xd00
-	cmp	r0, r9
+	cmp	r6, r9
 	bne	do_bootstrap               /* None matched, normal startup */
 
 do_cpuid:
-	mrc	p15, 0, r0, c0, c0, 5      /* CPU ID */
-	and     r0, r0, #0xf               /* CPU id */
-	cmp	r0, #0                     /* CPU0 continues with bootstrap */
+	mrc	p15, 0, r4, c0, c0, 5      /* CPU ID */
+	and     r4, r4, #0xf               /* CPU id */
+	cmp	r4, #0                     /* CPU0 continues with bootstrap */
 	beq	do_bootstrap	
 
 /* CPU1+ wait for bootup */
 
 	// I-cache on
-	mrc p15, 0, r0, c1, c0, 0
-	orr r0, r0, #(1 << 12)
-	mcr p15, 0, r0, c1, c0, 0
+	mrc p15, 0, r4, c1, c0, 0
+	orr r4, r4, #(1 << 12)
+	mcr p15, 0, r4, c1, c0, 0
 
 	// IRQs off, SVC
-	mrs r0, cpsr
-	orr r0, #0xd3
-	msr cpsr_c, r0
+	mrs r4, cpsr
+	orr r4, #0xd3
+	msr cpsr_c, r4
 
 #if defined(PLATFORM_TYPE_rv) || defined(PLATFORM_TYPE_rv_pbx) || \
     defined(PLATFORM_TYPE_rv_vexpress) || defined(PLATFORM_TYPE_rv_vexpress_a15)
 
 	// enable GIC CPU interface + prio mask for IRQs
-	mrc	p15, 0, r0, c0, c0, 0    // r0: cpu-id
-	and	r0, r0, #0x70
-	cmp	r0, #0x70
+	mrc	p15, 0, r8, c0, c0, 0    // r8: cpu-id
+	and	r8, r8, #0x70
+	cmp	r8, #0x70
 
 	// get board ID and retrieve MPCore-base from table
 	movne	r7, #0x10000000
@@ -155,28 +158,28 @@ do_cpuid:
 	cmp	r4, r5
 	bne	4f
 
-	ldr	r3, [r6, #4]
-	cmp	r0, r3
+	ldr	r9, [r6, #4]
+	cmp	r8, r9
 	beq	3f
-	cmp	r3, #0
+	cmp	r9, #0
 	beq	3f
 4:	add	r6, #12
 	b	2b
 
 3:
 	ldr	r4, [r6, #8]
-	mov	r0, #0x1
-	str	r0, [r4, #0]
-	mov	r0, #0xf0
-	str	r0, [r4, #4]
+	mov	r8, #0x1
+	str	r8, [r4, #0]
+	mov	r8, #0xf0
+	str	r8, [r4, #4]
 
 1:
 	ldr	r6, [r7, #0x30]
 	cmp	r6, #0
 	movne	pc, r6
 	.inst	0xe320f003 /* wfi */
-	ldr	r0, [r4, #12]
-	str	r0, [r4, #16]
+	ldr	r8, [r4, #12]
+	str	r8, [r4, #16]
 	b	1b
 
 .Lboard_data_table:
@@ -199,11 +202,28 @@ do_cpuid:
 1:	.word 0xe320f003 /* wfi */
 	b	1b
 #endif
+	.global cpu_bootup_code_end
+cpu_bootup_code_end:
 
 do_bootstrap:
-	ldr	sp, .LCstack
+#ifdef __ARM_FP
+	/* Prevent triggering 'undefined instruction' exceptions by enabling
+         * the FPU. Newer gcc versions implicitly generate FP instructions. */
+	mrc	p15, 0, r8, c1, c0, 2     /* read CPACR */
+	orr	r8, #(0xf << 20)          /* cp10 + cp11 (FPU) */
+	mcr	p15, 0, r8, c1, c0, 2     /* try to enable */
+	mrc	p15, 0, r8, c1, c0, 2     /* read CPACR */
+	and	r8, #(0xf << 20)
+	cmp	r8, #(0xf << 20)          /* verify enabled */
+	bne	no_fpu
+	vmrs	r8, fpexc
+	orr	r8, r8, #(0x1 << 30)      /* enable FP unit */
+	vmsr	fpexc, r8
 
-	mov	r0, r2                     /* ATAG pointer */
+no_fpu:
+#endif
+
+	ldr	sp, .LCstack
 	bl	__main
 1:	b	1b
 

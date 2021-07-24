@@ -47,6 +47,8 @@ public:
 
   char const *version_string() const;
 
+  Cpu_time clock() const;
+
   /* 0x00 */
   Mword      magic;
   Mword      version;
@@ -85,8 +87,8 @@ public:
   Mword      _res5[16];
 
   /* 0xA0   0x140 */
-  volatile Cpu_time clock;
-  Unsigned64 _res6;
+  volatile Cpu_time _clock; // don't access directly, use clock() instead!
+  Unsigned64 _res6;  // might be later used for clock-related time stamp offset
 
   /* 0xB0   0x150 */
   Mword      frequency_cpu;
@@ -100,7 +102,19 @@ public:
   Mword      vhw_offset;
   Mword      _res8[2];
 
-  /* 0xF0   0x1E0 */
+  /* 0xF0   0x1E0:
+   * Platform info. */
+
+  /* 0x800-0x900:
+   * Code for syscall invocation. */
+
+  /* 0x900-0x97F:
+   * Code for reading the KIP clock with fine-grained resolution (us). */
+
+  /* 0x980-0x9FF:
+   * Code for reading the system clock with nanoseconds accuracy. Depending
+   * on the configuration, this clock might or might not be synchronized with
+   * the KIP clock. */
 
 private:
   static Kip *global_kip asm ("GLOBAL_KIP");
@@ -215,6 +229,7 @@ Kip::init_global_kip(Kip *kip)
   global_kip = kip;
 
   kip->platform_info.is_mp = Config::Max_num_cpus > 1;
+  kip->sched_granularity = Config::Scheduler_granularity;
 
   // check that the KIP has actually been set up
   //assert(kip->sigma0_ip && kip->root_ip && kip->user_ptr);
@@ -230,6 +245,21 @@ char const *Kip::version_string() const
   return reinterpret_cast <char const *> (this) + (offset_version_strings << 4);
 }
 
+PUBLIC inline
+void
+Kip::clock(Cpu_time c)
+{ _clock = c; }
+
+PUBLIC inline
+void
+Kip::add_to_clock(Cpu_time c)
+{
+  // This function does not force an atomic update. The caller needs to be
+  // aware about this. Either the update is performed a single specific CPU
+  // (the boot CPU) or the callers have to use a lock.
+  _clock += c;
+}
+
 #ifdef TARGET_NAME
 #define TARGET_NAME_PHRASE " for " TARGET_NAME
 #else
@@ -243,3 +273,29 @@ asm(".section .initkip.version, \"a\", %progbits        \n"
 asm(".section .initkip.features.end, \"a\", %progbits   \n"
     ".string \"\"                                       \n"
     ".previous                                          \n");
+
+//----------------------------------------------------------------------------
+IMPLEMENTATION[32bit]:
+
+#include "mem.h"
+
+IMPLEMENT inline NEEDS["mem.h"]
+Cpu_time Kip::clock() const
+{
+  Unsigned32 *c = (Unsigned32 *)&_clock;
+  Unsigned32 lo, hi;
+  do
+    {
+      hi = access_once(&c[1]);
+      lo = access_once(&c[0]);
+      Mem::mp_rmb();
+    }
+  while (hi != access_once(&c[1]));
+  return ((Cpu_time)hi << 32) | lo;
+}
+
+//----------------------------------------------------------------------------
+IMPLEMENTATION[64bit]:
+
+IMPLEMENT inline Cpu_time Kip::clock() const
+{ return _clock; }

@@ -148,6 +148,36 @@ shellexec(char **argv, const char *path, int idx)
 }
 
 
+/*
+ * Check if an executable that just failed with ENOEXEC shouldn't be
+ * considered a script (wrong-arch ELF/PE, junk accidentally set +x, etc).
+ * We check only the first line to allow binaries encapsulated in a shell
+ * script without proper quoting.  The first line, if not a hashbang, is
+ * likely to contain comments; even ancient encodings, at least popular
+ * ones, don't use 0x7f nor values below 0x1f other than whitespace (\t,
+ * \n, \v, \f, \r), ISO/IEC 2022 can have SI, SO and \e.
+ */
+STATIC int file_is_binary(const char *cmd)
+{
+	char buf[128];
+	int fd = open(cmd, O_RDONLY|O_NOCTTY);
+	if (fd == -1)
+		return 1;
+	int len = read(fd, buf, sizeof(buf));
+	close(fd);
+	for (int i = 0; i < len; ++i) {
+		char c = buf[i];
+		if (c >= 0 && c <= 8 ||
+		    c >= 16 && c <= 31 && c != 27 ||
+		    c == 0x7f)
+			return 1;
+		if (c == '\n')
+			return 0;
+	}
+	return 0;
+}
+
+
 STATIC void
 tryexec(char *cmd, char **argv, char **envp)
 {
@@ -162,6 +192,8 @@ repeat:
 	execve(cmd, argv, envp);
 #endif
 	if (cmd != path_bshell && errno == ENOEXEC) {
+		if (file_is_binary(cmd))
+			return;
 		*argv-- = cmd;
 		*argv = cmd = path_bshell;
 		goto repeat;
@@ -743,8 +775,6 @@ describe_command(out, command, path, verbose)
 	struct tblentry *cmdp;
 	const struct alias *ap;
 
-	path = path ?: pathval();
-
 	if (verbose) {
 		outstr(command, out);
 	}
@@ -767,8 +797,17 @@ describe_command(out, command, path, verbose)
 		goto out;
 	}
 
-	/* Then check if it is a tracked alias */
-	if ((cmdp = cmdlookup(command, 0)) != NULL) {
+	/* Then if the standard search path is used, check if it is
+	 * a tracked alias.
+	 */
+	if (path == NULL) {
+		path = pathval();
+		cmdp = cmdlookup(command, 0);
+	} else {
+		cmdp = NULL;
+	}
+
+	if (cmdp != NULL) {
 		entry.cmdtype = cmdp->cmdtype;
 		entry.u = cmdp->param;
 	} else {

@@ -1,21 +1,10 @@
+/* SPDX-License-Identifier: GPL-2.0-only or License-Ref-kk-custom */
 /*
- * (c) 2013-2014 Alexander Warg <warg@os.inf.tu-dresden.de>
- *               Matthias Lange <matthias.lange@kernkonzept.com>
+ * Copyright (C) 2013-2020 Kernkonzept GmbH.
+ * Author(s): Alexander Warg <alexander.warg@kernkonzept.com>
+ *            Matthias Lange <matthias.lange@kernkonzept.com>
  *
- * This file is part of TUD:OS and distributed under the terms of the
- * GNU General Public License 2.
- * Please see the COPYING-GPL-2 file for details.
- *
- * As a special exception, you may use this file as part of a free software
- * library without restriction.  Specifically, if other files instantiate
- * templates or use macros or inline functions from this file, or you compile
- * this file and link it with other files to produce an executable, this
- * file does not by itself cause the resulting executable to be covered by
- * the GNU General Public License.  This exception does not however
- * invalidate any other reasons why the executable file might be covered by
- * the GNU General Public License.
  */
-
 #pragma once
 
 /**
@@ -51,6 +40,11 @@ enum L4virtio_magic
   L4VIRTIO_MAGIC = 0x74726976
 };
 
+enum L4virtio_vendor
+{
+  L4VIRTIO_VENDOR_KK = 0x44
+};
+
 /** L4-VIRTIO opcodes */
 enum L4_virtio_opcodes
 {
@@ -78,7 +72,7 @@ enum L4virtio_device_ids
   L4VIRTIO_ID_VSOCK         = 19,     /**< Vsock transport */
   L4VIRTIO_ID_CRYPTO        = 20,     /**< Crypto */
 
-  L4VIRTIO_ID_SOCK          = 0x9999, /**< Inofficial socket device. */
+  L4VIRTIO_ID_SOCK          = 0x9999, /**< Unofficial socket device. */
 };
 
 /** Virtio device status bits. */
@@ -88,7 +82,8 @@ enum L4virtio_device_status
   L4VIRTIO_STATUS_DRIVER      = 2,   /**< Guest OS knows how to drive device. */
   L4VIRTIO_STATUS_DRIVER_OK   = 4,   /**< Driver is set up. */
   L4VIRTIO_STATUS_FEATURES_OK = 8,   /**< Driver has acknowledged feature set. */
-  L4VIRTIO_STATUS_FAILED      = 0x80 /**< Fatal error in driver or device. */
+  L4VIRTIO_STATUS_DEVICE_NEEDS_RESET = 0x40, /**< Device detected fatal error. */
+  L4VIRTIO_STATUS_FAILED      = 0x80 /**< Driver detected fatal error. */
 };
 
 /** L4virtio-specific feature bits. */
@@ -289,49 +284,25 @@ l4virtio_get_feature(l4_uint32_t *feature_map, unsigned feat)
 }
 
 /**
- * Write the VIRTIO status register.
- * \note All other registers are accessed via shared memory.
- *
  * \param cap    Capability to the VIRTIO host
- * \param status Status word to write to the VIRTIO status.
  *
- * \return 0 on success, <0 on error.
+ * \copydoc L4virtio::Device::set_status
  */
 L4_CV int
 l4virtio_set_status(l4_cap_idx_t cap, unsigned status) L4_NOTHROW;
 
 /**
- * Trigger queue configuration of the given queue.
- *
- * Usually all queues are configured when the status is written to running.
- * However, in some cases queues shall be disabled or enabled dynamically, in
- * this case this function triggers a reconfiguration from the shared memory
- * register of the queue config.
- *
  * \param cap    Capability to the VIRTIO host.
- * \param queue  Queue index for the queue to be configured.
  *
- * \retval 0 on success.
- * \retval -L4_EIO    The queue's status is invalid.
- * \retval -L4_ERANGE The queue index exceeds the number of queues.
- * \retval -L4_EINVAL Otherwise.
+ * \copydoc L4virtio::Device::config_queue
  */
 L4_CV int
 l4virtio_config_queue(l4_cap_idx_t cap, unsigned queue) L4_NOTHROW;
 
 /**
- * Register a shared data space with VIRTIO host
- *
  * \param cap     Capability to the VIRTIO host
- * \param ds_cap  Data-space capability to register. The lower 8 bits determine
- *                the rights mask with which the guest's rights are masked during
- *                the registration of the dataspace at the VIRTIO host.
- * \param base    VIRTIO guest physical start address of shared memory region
- * \param offset  Offset within the data space that is attached to the
- *                given \a base in the guest physical memory.
- * \param size    Size of the memory region in the guest
  *
- * \return 0 on success, < 0 on error
+ * \copydoc L4virtio::Device::register_ds
  */
 L4_CV int
 l4virtio_register_ds(l4_cap_idx_t cap, l4_cap_idx_t ds_cap,
@@ -339,22 +310,32 @@ l4virtio_register_ds(l4_cap_idx_t cap, l4_cap_idx_t ds_cap,
                      l4_umword_t size) L4_NOTHROW;
 
 /**
- * Register client to the given L4-VIRTIO host
- *
  * \param cap     Capability to the L4-VIRTIO host
- * \param guest_irq  IRQ capability for valid IRQ object for host-to-guest
- *                   notifications
- * \param host_irq   Capability selector for receiving the guest-to-host
- *                   notifications IRQ capability.
- * \param config_ds  Capability for receiving the data-space capability for
- *                   the shared L4-VIRTIO config data space.
  *
- * \retval 0 on success.
- * \retval -L4_EINVAL The host did not receive the \a guest_irq cap.
+ * \copydoc L4virtio::Device::register_iface
  */
 L4_CV int
 l4virtio_register_iface(l4_cap_idx_t cap, l4_cap_idx_t guest_irq,
                         l4_cap_idx_t host_irq, l4_cap_idx_t config_ds) L4_NOTHROW;
+
+/**
+ * \param cap     Capability to the L4-VIRTIO host
+ *
+ * \copydoc L4virtio::Device::device_config
+ */
+L4_CV int
+l4virtio_device_config_ds(l4_cap_idx_t cap, l4_cap_idx_t config_ds,
+                          l4_addr_t *ds_offset) L4_NOTHROW;
+
+/**
+ * \param cap     Capability to the L4-VIRTIO host
+ *
+ * \copydoc L4virtio::Device::device_notification_irq
+ */
+L4_CV int
+l4virtio_device_notification_irq(l4_cap_idx_t cap, unsigned index,
+                                 l4_cap_idx_t irq) L4_NOTHROW;
+
 EXTERN_C_END
 
 /**\}*/

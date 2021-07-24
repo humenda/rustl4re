@@ -92,6 +92,19 @@ int res_init()
   return 0;
 };
 
+/**
+ * Map physical memory range from sigma0 to the current task.
+ *
+ * \param phys  Physical address to map from.
+ * \param virt  Virtual address to map to.
+ * \param size  Size of the area to map.
+ *
+ * \pre `phys`, `virt`, and `size` are aligned to a power of two.
+ *
+ * \retval 0           Requested range mapped successfully.
+ * \retval -L4_ERANGE  Input values are not page aligned.
+ * \retval <0          Error during sigma0 request.
+ */
 static long
 map_iomem_range(l4_addr_t phys, l4_addr_t virt, l4_addr_t size)
 {
@@ -104,7 +117,8 @@ map_iomem_range(l4_addr_t phys, l4_addr_t virt, l4_addr_t size)
 
   while (size)
     {
-#if 1
+      // Search for the largest power of two page size that fits
+      // the requested region to map at once.
       while (p2sz < 22)
 	{
 	  unsigned n = p2sz + 1;
@@ -112,7 +126,7 @@ map_iomem_range(l4_addr_t phys, l4_addr_t virt, l4_addr_t size)
 	    break;
 	  ++p2sz;
 	}
-#endif
+
       l4_msg_regs_t *m = l4_utcb_mr_u(l4_utcb());
       l4_buf_regs_t *b = l4_utcb_br_u(l4_utcb());
       l4_msgtag_t tag = l4_msgtag(L4_PROTO_SIGMA0, 2, 0, 0);
@@ -141,6 +155,14 @@ map_iomem_range(l4_addr_t phys, l4_addr_t virt, l4_addr_t size)
   return 0;
 }
 
+/**
+ * Request mapping of physical MMIO to our address space from Sigma0.
+ *
+ * Chose an I/O region 'iomem' which is log2-sized, log2-aligned and which
+ * contains the entire region from phys..phys+size-1. Map this I/O region from
+ * Sigma0 and remember that this physical region is mapped into our address
+ * space (in the 'io_set' AVL tree).
+ */
 l4_addr_t res_map_iomem(l4_addr_t phys, l4_addr_t size)
 {
   int p2size = Min_rs;
@@ -165,7 +187,7 @@ l4_addr_t res_map_iomem(l4_addr_t phys, l4_addr_t size)
           // start searching for virtual region at L4_PAGESIZE
 	  iomem->virt = L4_PAGESIZE;
 	  int res = L4Re::Env::env()->rm()->reserve_area(&iomem->virt,
-	      iomem->size, L4Re::Rm::Search_addr, p2size);
+	      iomem->size, L4Re::Rm::F::Search_addr, p2size);
 
 	  if (res < 0)
 	    {
@@ -175,12 +197,20 @@ l4_addr_t res_map_iomem(l4_addr_t phys, l4_addr_t size)
 
 	  unsigned bytes
 	    = cxx::Bitmap_base::bit_buffer_bytes(iomem->size >> Page_shift);
-	  iomem->pages = cxx::Bitmap_base(malloc(bytes));
+          void *bit_buffer = malloc(bytes);
+          if (!bit_buffer)
+            {
+              L4Re::Env::env()->rm()->free_area(iomem->virt);
+              delete iomem;
+              return 0;
+            }
+
+	  iomem->pages = cxx::Bitmap_base(bit_buffer);
 	  memset(iomem->pages.bit_buffer(), 0, bytes);
 
 	  io_set.insert(iomem);
 
-	  d_printf(DBG_DEBUG, "new iomem region: p=%lx v=%lx s=%lx (bmb=%p)\n",
+	  d_printf(DBG_DEBUG, "new iomem region: p=%014lx v=%014lx s=%lx (bmb=%p)\n",
                    iomem->phys, iomem->virt, iomem->size,
                    iomem->pages.bit_buffer());
 	  break;
@@ -217,7 +247,7 @@ l4_addr_t res_map_iomem(l4_addr_t phys, l4_addr_t size)
 	  int res = map_iomem_range(iomem->phys + min, iomem->virt + min,
 	                            max - min);
 
-	  d_printf(DBG_DEBUG2, "map mem: p=%lx v=%lx s=%lx: %s(%d)\n",
+	  d_printf(DBG_DEBUG2, "map mem: p=%014lx v=%014lx s=%lx: %s(%d)\n",
 	           iomem->phys + min,
                    iomem->virt + min, max - min,
                    res < 0 ? "failed" : "done", res);

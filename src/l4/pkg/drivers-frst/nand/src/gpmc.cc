@@ -60,7 +60,7 @@ void Gpmc::wr_dat(u8 d)
 u8 Gpmc::rd_dat()
 { return (u8)(*((volatile u16 *)&_reg->cs[0].nand_dat)); }
 
-void Gpmc::rd_dat(const u8 *buf, unsigned len)
+void Gpmc::rd_dat(u8 *buf, unsigned len)
 {
   u16 *p = (u16 *)buf;
   len >>= 1;

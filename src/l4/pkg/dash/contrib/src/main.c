@@ -50,6 +50,7 @@
 #include "eval.h"
 #include "jobs.h"
 #include "input.h"
+#include "priv.h"
 #include "trap.h"
 #include "var.h"
 #include "show.h"
@@ -59,10 +60,6 @@
 #include "mystring.h"
 #include "exec.h"
 #include "cd.h"
-
-#ifdef HETIO
-#include "hetio.h"
-#endif
 
 #define PROFILE 0
 
@@ -101,6 +98,9 @@ main(int argc, char **argv)
 #ifdef __GLIBC__
 	dash_errno = __errno_location();
 #endif
+
+	uid = getuid();
+	gid = getgid();
 
 #if PROFILE
 	monitor(4, etext, profile_buf, sizeof profile_buf, 50);
@@ -148,6 +148,7 @@ main(int argc, char **argv)
 	init();
 	setstackmark(&smark);
 	login = procargs(argc, argv);
+
 	if (login) {
 		state = 1;
 		read_profile("/etc/profile");
@@ -171,7 +172,7 @@ state2:
 state3:
 	state = 4;
 	if (minusc)
-		evalstring(minusc, sflag ? 0 : EV_EXIT);
+		evalstring(minusc, 0);
 
 	if (sflag || minusc == NULL) {
 state4:	/* XXX ??? - why isn't this before the "if" statement */
@@ -206,10 +207,6 @@ cmdloop(int top)
 	int numeof = 0;
 
 	TRACE(("cmdloop(%d) called\n", top));
-#ifdef HETIO
-	if(iflag && top)
-		hetio_init();
-#endif
 	for (;;) {
 		int skip;
 
@@ -227,22 +224,32 @@ cmdloop(int top)
 			if (!top || numeof >= 50)
 				break;
 			if (!stoppedjobs()) {
-				if (!Iflag)
+				if (!Iflag) {
+					if (iflag) {
+						out2c('\n');
+#ifdef FLUSHERR
+						flushout(out2);
+#endif
+					}
 					break;
+				}
 				out2str("\nUse \"exit\" to leave shell.\n");
 			}
 			numeof++;
 		} else if (nflag == 0) {
+			int i;
+
 			job_warning = (job_warning == 2) ? 1 : 0;
 			numeof = 0;
-			evaltree(n, 0);
-			status = exitstatus;
+			i = evaltree(n, 0);
+			if (n)
+				status = i;
 		}
 		popstackmark(&smark);
 
 		skip = evalskip;
 		if (skip) {
-			evalskip &= ~SKIPFUNC;
+			evalskip &= ~(SKIPFUNC | SKIPFUNCDEF);
 			break;
 		}
 	}
@@ -321,15 +328,19 @@ dotcmd(int argc, char **argv)
 {
 	int status = 0;
 
-	if (argc >= 2) {		/* That's what SVR2 does */
+	nextopt(nullstr);
+	argv = argptr;
+
+	if (*argv) {
 		char *fullname;
 
-		fullname = find_dot_file(argv[1]);
+		fullname = find_dot_file(*argv);
 		setinputfile(fullname, INPUT_PUSH_FILE);
 		commandname = fullname;
 		status = cmdloop(0);
 		popfile();
 	}
+
 	return status;
 }
 
@@ -339,8 +350,15 @@ exitcmd(int argc, char **argv)
 {
 	if (stoppedjobs())
 		return 0;
-	if (argc > 1)
-		exitstatus = number(argv[1]);
+
+	if (argc > 1) {
+		int status = number(argv[1]);
+
+		exitstatus = status;
+		if (savestatus >= 0)
+			savestatus = status;
+	}
+
 	exraise(EXEXIT);
 	/* NOTREACHED */
 }

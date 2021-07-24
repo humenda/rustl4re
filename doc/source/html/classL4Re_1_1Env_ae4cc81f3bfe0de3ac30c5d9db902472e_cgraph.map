@@ -1,0 +1,4 @@
+<map id="L4Re::Env::get" name="L4Re::Env::get">
+<area shape="rect" id="node1" title="Get the Cap_entry for the object named name." alt="" coords="5,5,120,32"/>
+<area shape="rect" id="node2" href="$group__api__l4re__env.html#gadb38a15f6070f3c4e264532f3779d3bc" title="Get the full l4re_env_cap_entry_t for the object named name." alt="" coords="168,5,315,32"/>
+</map>

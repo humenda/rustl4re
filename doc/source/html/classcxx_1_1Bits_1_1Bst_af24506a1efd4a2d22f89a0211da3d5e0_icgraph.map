@@ -1,3 +1,5 @@
 <map id="cxx::Bits::Bst::begin" name="cxx::Bits::Bst::begin">
-<area shape="rect" id="node2" href="$classcxx_1_1Bits_1_1Base__avl__set.html#a83e54951cd2dcbaec5f65dd54fbbe184" title="Get the constant forward iterator for the first element in the set. " alt="" coords="192,5,415,105"/>
+<area shape="rect" id="node1" title="Get the constant forward iterator for the first element in the set." alt="" coords="392,13,543,39"/>
+<area shape="rect" id="node2" href="$classcxx_1_1Bits_1_1Base__avl__set.html#a83e54951cd2dcbaec5f65dd54fbbe184" title="Get the constant forward iterator for the first element in the set." alt="" coords="199,5,344,47"/>
+<area shape="rect" id="node3" href="$classcxx_1_1Bits_1_1Base__avl__set.html#acd26d51c56a9a8d27edcbad7313f1194" title="Create a copy of an AVL&#45;tree based set." alt="" coords="5,5,151,47"/>
 </map>

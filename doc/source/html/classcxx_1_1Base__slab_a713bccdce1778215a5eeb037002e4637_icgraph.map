@@ -1,3 +1,4 @@
 <map id="cxx::Base_slab::free_objects" name="cxx::Base_slab::free_objects">
-<area shape="rect" id="node2" href="$classcxx_1_1Base__slab__static.html#a3defcaba78286729fd24bb77053272b0" title="Get the number of free objects in the slab allocator. " alt="" coords="199,5,357,76"/>
+<area shape="rect" id="node1" title="Get the number of objects which can be allocated before a new empty slab needs to be added to the sla..." alt="" coords="216,5,369,47"/>
+<area shape="rect" id="node2" href="$classcxx_1_1Base__slab__static.html#a3defcaba78286729fd24bb77053272b0" title="Get the number of free objects in the slab allocator." alt="" coords="5,5,168,47"/>
 </map>

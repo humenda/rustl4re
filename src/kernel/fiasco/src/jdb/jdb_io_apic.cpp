@@ -34,6 +34,10 @@ Jdb_io_apic_module::print_lapic(Cpu_number cpu)
          cxx::int_value<Cpu_number>(cpu),
          Apic::get_id(), Apic::tpr(), Apic::reg_read(0xa0));
   printf("  Running: tpr=%02x\n", Jdb::apic_tpr.cpu(cpu));
+  printf("  Timer: icr=%08x ccr=%08x LVT=%08x\n",
+         Apic::reg_read(0x380),
+         Apic::reg_read(0x390),
+         Apic::reg_read(0x320));
 
   unsigned const regs[] = { 0x200, 0x100, 0x180 };
   char const *const regn[] = { "IRR", "ISR", "TMR" };
@@ -51,7 +55,7 @@ Jdb_io_apic_module::print_lapic(Cpu_number cpu)
 
 PUBLIC
 Jdb_module::Action_code
-Jdb_io_apic_module::action (int cmd, void *&, char const *&, int &)
+Jdb_io_apic_module::action(int cmd, void *&, char const *&, int &) override
 {
   if (cmd!=0)
     return NOTHING;
@@ -102,14 +106,14 @@ Jdb_io_apic_module::action (int cmd, void *&, char const *&, int &)
 
 PUBLIC
 int
-Jdb_io_apic_module::num_cmds() const
+Jdb_io_apic_module::num_cmds() const override
 { 
   return 1;
 }
 
 PUBLIC
 Jdb_module::Cmd const *
-Jdb_io_apic_module::cmds() const
+Jdb_io_apic_module::cmds() const override
 {
   static Cmd cs[] =
     { { 0, "A", "apic", "", "apic\tdump state of IOAPIC", (void*)0 } };

@@ -1,0 +1,7 @@
+<map id="L4virtio::Driver::Virtqueue::alloc_descriptor" name="L4virtio::Driver::Virtqueue::alloc_descriptor">
+<area shape="rect" id="node1" title="Allocate and return an unused descriptor from the descriptor table." alt="" coords="240,104,431,145"/>
+<area shape="rect" id="node2" href="$classL4virtio_1_1Driver_1_1Block__device.html#a53ec612b1d207804102e34d51f6016cc" title="Add a data block to a request that has already been set up." alt="" coords="17,5,180,47"/>
+<area shape="rect" id="node3" href="$classL4virtio_1_1Driver_1_1Block__device.html#a63f21e71556accc8c669ef80161ecd8e" title="Process request synchronously." alt="" coords="5,71,192,112"/>
+<area shape="rect" id="node4" href="$classL4virtio_1_1Driver_1_1Block__device.html#a2c2e9924abafe2eff34821b166c6c36f" title="Process request asynchronously." alt="" coords="15,136,182,177"/>
+<area shape="rect" id="node5" href="$classL4virtio_1_1Driver_1_1Block__device.html#afdd043c2adbca7fea5eb057f9aa4b483" title="Start the setup of a new request." alt="" coords="15,201,182,243"/>
+</map>

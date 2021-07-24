@@ -1,0 +1,5 @@
+<map id="L4virtio::Svr::Block_dev_base::finalize_request" name="L4virtio::Svr::Block_dev_base::finalize_request">
+<area shape="rect" id="node1" title="Releases resources related to a request and notifies the client." alt="" coords="5,39,208,80"/>
+<area shape="rect" id="node2" href="$classL4virtio_1_1Svr_1_1Device__t.html#a29f780ecb04509d8b72f4a155b073c74" title="Transition device into DEVICE_NEEDS_RESET state." alt="" coords="256,5,463,47"/>
+<area shape="rect" id="node3" href="$classL4virtio_1_1Virtqueue.html#aa242e930433e8705c4ee00afaf58f686" title="Test if this queue is in working state." alt="" coords="288,71,431,112"/>
+</map>

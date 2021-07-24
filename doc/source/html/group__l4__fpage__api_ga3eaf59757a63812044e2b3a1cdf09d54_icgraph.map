@@ -1,8 +1,8 @@
 <map id="l4_obj_fpage" name="l4_obj_fpage">
-<area shape="rect" id="node2" href="$classL4_1_1Cap__base.html#ab394291024e0e7ad887ece81efb3074e" title="Return flex&#45;page for the capability. " alt="" coords="156,78,307,105"/>
-<area shape="rect" id="node3" href="$classL4_1_1Cap__base.html#ab6cd8e73ebbdb5dfa45355b7c1fde1c2" title="Replace this capability with the contents of src. " alt="" coords="355,53,503,79"/>
-<area shape="rect" id="node6" href="$classL4_1_1Cap__base.html#a1501f9852fda4c01a1591a7c53585d5f" title="Copy a capability. " alt="" coords="357,103,501,130"/>
-<area shape="rect" id="node4" href="$classL4_1_1Cap.html#ae097fe17d218b76dc368a5383372168f" title="Move a capability to this cap slot. " alt="" coords="551,5,709,47"/>
-<area shape="rect" id="node5" href="$classL4_1_1Cap.html#a580ae207f1a9a54c3a2ffd93fa3f4eef" title="Member access of a T. " alt="" coords="551,71,709,112"/>
-<area shape="rect" id="node7" href="$classL4_1_1Cap.html#a03750491e2cb888d26e2fbdfcc0b7dbc" title="Copy a capability to this cap slot. " alt="" coords="551,136,709,177"/>
+<area shape="rect" id="node1" title="Create a kernel&#45;object flex page." alt="" coords="571,31,676,57"/>
+<area shape="rect" id="node2" href="$classL4_1_1Cap__base.html#a60a4c249059576429246b5b74bd3174e" title="Return flex&#45;page for the capability." alt="" coords="369,31,523,57"/>
+<area shape="rect" id="node3" href="$classL4_1_1Cap__base.html#a1501f9852fda4c01a1591a7c53585d5f" title="Copy a capability." alt="" coords="171,5,318,32"/>
+<area shape="rect" id="node5" href="$classL4_1_1Cap__base.html#ab6cd8e73ebbdb5dfa45355b7c1fde1c2" title="Replace this capability with the contents of src." alt="" coords="168,56,321,83"/>
+<area shape="rect" id="node4" href="$classL4_1_1Cap.html#a03750491e2cb888d26e2fbdfcc0b7dbc" title="Copy a capability to this cap slot." alt="" coords="8,5,117,32"/>
+<area shape="rect" id="node6" href="$classL4_1_1Cap.html#ae097fe17d218b76dc368a5383372168f" title="Move a capability to this cap slot." alt="" coords="5,56,120,83"/>
 </map>

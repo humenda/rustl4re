@@ -12,8 +12,8 @@ m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])],
                             [AC_SUBST([AM_DEFAULT_VERBOSITY], [1])])
 
 LIBBSD_ABI_MAJOR=0
-LIBBSD_ABI_MINOR=8
-LIBBSD_ABI_PATCH=6
+LIBBSD_ABI_MINOR=10
+LIBBSD_ABI_PATCH=0
 
 LIBBSD_ABI="$LIBBSD_ABI_MAJOR:$LIBBSD_ABI_MINOR:$LIBBSD_ABI_PATCH"
 AC_SUBST([LIBBSD_ABI])
@@ -44,11 +44,16 @@ AC_SUBST([TESTU01_LIBS])
 AM_CONDITIONAL([HAVE_LIBTESTU01],
                [test "x$ac_cv_lib_testu01_unif01_CreateExternGenBits" = "xyes"])
 
+is_windows=no
 AS_CASE([$host_os],
   [*-gnu*], [
     # In old glibc versions (< 2.17) clock_gettime() is in librt.
     saved_LIBS="$LIBS"
-    AC_SEARCH_LIBS([clock_gettime], [rt], [CLOCK_GETTIME_LIBS="-lrt"])
+    AC_SEARCH_LIBS([clock_gettime], [rt], [
+      AS_IF([test "x$ac_cv_search_clock_gettime" != "xnone required"], [
+        CLOCK_GETTIME_LIBS="$ac_cv_search_clock_gettime"
+      ])
+    ])
     AC_SUBST([CLOCK_GETTIME_LIBS])
     LIBS="$saved_LIBS"
   ],
@@ -56,10 +61,14 @@ AS_CASE([$host_os],
     # Upstream refuses to define this, we will do it ourselves then.
     AC_DEFINE([__MUSL__], [1], [Define to 1 if we are building for musl])
   ],
+  [mingw*], [
+    is_windows=yes
+  ],
 )
+AM_CONDITIONAL([OS_WINDOWS], [test "x$is_windows" = "xyes"])
 
 # Checks for header files.
-AC_CHECK_HEADERS([sys/ndir.h sys/dir.h ndir.h dirent.h])
+AC_CHECK_HEADERS([sys/ndir.h sys/dir.h ndir.h dirent.h grp.h])
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_C_INLINE
@@ -87,7 +96,7 @@ AC_CACHE_CHECK(
 [[
 static int rc = 1;
 static void init(int argc) { if (argc == 1) rc = 0; }
-void (*init_func)(int argc) __attribute__((section(".init_array"))) = init;
+void (*init_func)(int argc) __attribute__((__section__(".init_array"))) = init;
 int main() { return rc; }
 ]]
 		)],
@@ -140,6 +149,23 @@ AC_LINK_IFELSE(
 	[AC_DEFINE([HAVE___PROGNAME], [1], [Define to 1 if you have __progname])
 	 AC_MSG_RESULT([yes])],
 	[AC_MSG_RESULT([no])])
+
+AC_MSG_CHECKING([for __register_atfork])
+AC_LINK_IFELSE(
+	[AC_LANG_PROGRAM([[
+		#include <stddef.h>
+		extern void *__dso_handle;
+		extern int __register_atfork(void (*)(void), void(*)(void), void (*)(void), void *);
+	]], [[
+		__register_atfork(NULL, NULL, NULL, __dso_handle);
+	]])],
+	[AC_DEFINE([HAVE___REGISTER_ATFORK], [1],
+	           [Define to 1 if you have __register_atfork])
+	 AC_MSG_RESULT([yes])],
+	[ARC4RANDOM_ATFORK_LIBS="-pthread"
+	 AC_SUBST([ARC4RANDOM_ATFORK_LIBS])
+	 AC_MSG_RESULT([no])
+	])
 
 AC_CHECK_FUNCS([clearenv dirfd fopencookie __fpurge \
                 getauxval getentropy getexecname getline \

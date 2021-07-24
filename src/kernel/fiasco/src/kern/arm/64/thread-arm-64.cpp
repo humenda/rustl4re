@@ -1,6 +1,7 @@
 IMPLEMENTATION [arm && 64bit]:
 
 #include "fpu.h"
+#include "slowtrap_entry.h"
 
 /**
  * Mangle the error code in case of a kernel lib page fault.
@@ -117,11 +118,11 @@ Thread::do_syscall()
   sys_call_table[0]();
 }
 
-PRIVATE inline
+
+PRIVATE inline NEEDS["slowtrap_entry.h"]
 void
 Thread::handle_svc(Trap_state *ts)
 {
-  extern void slowtrap_entry(Trap_state *ts) asm ("slowtrap_entry");
   Mword state = this->state();
   state_del(Thread_cancel);
   if (state & (Thread_vcpu_user | Thread_alien))
@@ -133,8 +134,6 @@ Thread::handle_svc(Trap_state *ts)
 
           ts->error_code |= 1 << 16; // ts->esr().alien_after_syscall() = 1;
         }
-      else
-        ts->pc -= 2 << ts->esr.il();
 
       slowtrap_entry(ts);
       return;
@@ -174,7 +173,7 @@ Thread::copy_utcb_to_ts(L4_msg_tag const &tag, Thread *snd, Thread *rcv,
   ts->copy_and_sanitize(&r->s);
   rcv->set_tpidruro(r);
 
-  if (tag.transfer_fpu() && (rights & L4_fpage::Rights::W()))
+  if (tag.transfer_fpu() && (rights & L4_fpage::Rights::CS()))
     snd->transfer_fpu(rcv);
 
   bool ret = transfer_msg_items(tag, snd, snd_utcb,
@@ -199,7 +198,7 @@ Thread::copy_ts_to_utcb(L4_msg_tag const &, Thread *snd, Thread *rcv,
     r->s = *ts;
     snd->store_tpidruro(r);
 
-    if (rcv_utcb->inherit_fpu() && (rights & L4_fpage::Rights::W()))
+    if (rcv_utcb->inherit_fpu() && (rights & L4_fpage::Rights::CS()))
       snd->transfer_fpu(rcv);
 
     __asm__ __volatile__ ("" : : "m"(*r));
@@ -216,7 +215,6 @@ Thread::handle_fpu_trap(Trap_state *ts)
 {
   if (Fpu::is_enabled())
     {
-      assert(Fpu::fpu.current().owner() == current());
       ts->esr.ec() = 0; // tag fpu undef insn
     }
   else if (current_thread()->switchin_fpu())

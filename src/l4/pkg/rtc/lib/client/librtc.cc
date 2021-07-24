@@ -51,7 +51,7 @@ l4_uint64_t get_timer()
 #endif
 
 L4rtc::Rtc::Time L4rtc::Rtc::get_timer()
-{ return get_timer(); }
+{ return ::get_timer(); }
 
 l4_uint64_t l4rtc_get_timer()
 { return get_timer(); }

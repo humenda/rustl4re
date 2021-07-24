@@ -35,10 +35,7 @@ $(if $(ROLE),$(OBJ_DIR)/.general.d: $(L4DIR)/mk/$(ROLE))
 
 -include $(wildcard $(L4DIR)/mk/arch/Makeconf.*)
 
-ifneq ($(SYSTEM_TARGET),) # Added late 2015
-  CROSS_COMPILE=$(SYSTEM_TARGET)
-  $(info The variable SYSTEM_TARGET has been deprecated in favor of CROSS_COMPILE.)
-endif
+strip_quotes = $(patsubst "%,%,$(patsubst %",%,$(1)))#"
 
 CROSS_COMPILE    ?= $(CROSS_COMPILE_$(ARCH))
 
@@ -52,7 +49,7 @@ L4_KIP_OFFS_SYS_DEBUGGER = 0x900
 L4_STACK_ADDR           ?= $(L4_STACK_ADDR_$(ARCH))
 L4_STACK_SIZE           ?= $(if $(L4_STACK_SIZE_MAIN_THREAD),$(L4_STACK_SIZE_MAIN_THREAD),0x8000)
 
-CC_WHITELIST-gcc     := 4.7 4.8 4.9 5 6 7 8
+CC_WHITELIST-gcc     := 4.8 4.9 5 6 7 8 9 10 11
 CC_WHITELIST-clang   := 3.5 3.6 3.7 3.8 3.9
 
 # This is quite bad: There is no other chance to disable the page-alignedment
@@ -66,12 +63,12 @@ DEPEND_VERBOSE   = $(if $(CONFIG_DEPEND_VERBOSE),,@)
 DROPS_STDDIR     = $(patsubst "%",%,$(CONFIG_DROPS_STDDIR))
 DROPS_INSTDIR    = $(patsubst "%",%,$(CONFIG_DROPS_INSTDIR))
 RAM_SIZE_MB      = $(CONFIG_RAM_SIZE_MB)
-PLATFORM_TYPE    = $(patsubst "%",%,$(CONFIG_PLATFORM_TYPE))
+PLATFORM_TYPE   ?= $(patsubst "%",%,$(CONFIG_PLATFORM_TYPE))
 CPU              = $(patsubst "%",%,$(CONFIG_CPU))
 CPU_ABI          = $(patsubst "%",%,$(CONFIG_CPU_ABI))
 BUILD_ABI        = $(patsubst "%",%,$(CONFIG_BUILD_ABI))
 BUILD_ARCH       = $(patsubst "%",%,$(CONFIG_BUILD_ARCH))
-MAKECONFS_ADD    = $(patsubst "%,%,$(patsubst %",%,$(CONFIG_MAKECONFS_ADD))) #"
+MAKECONFS_ADD    = $(call strip_quotes,$(CONFIG_MAKECONFS_ADD))
 
 CCXX_FLAGS        = $(CCXX_FLAGS_$(BUILD_ARCH))
 
@@ -120,7 +117,6 @@ MKFLAGS		+=$(MKFLAGS_$@)
 NM		?= $(CROSS_COMPILE)nm
 OBJCOPY		?= $(CROSS_COMPILE)objcopy
 OBJDUMP		?= $(CROSS_COMPILE)objdump
-PKG_CONFIG      = pkg-config
 PWDCMD		= pwd -P
 RANLIB		?= $(CROSS_COMPILE)ranlib
 $(call dv,RM)   = rm -f
@@ -142,11 +138,30 @@ IMAGES_DIR      ?= $(OBJ_BASE)/images
 
 # functions that are handy
 absfilename_target_dir_needs_to_exist = $(foreach w,$(1),$(addsuffix /$(notdir $(w)),$(shell cd $(dir $(w)) 2>/dev/null&&$(PWDCMD))))
-absfilename     = $(shell PWD=$$($(PWDCMD)) $(L4DIR)/mk/rel2abs.sh $(1))
+absfilename     = $(abspath $(1))
 findfile	= $(firstword $(wildcard $(addsuffix /$(1),$(2))) $(1)_NOT_FOUND)
 is_dir          = $(shell test -d '$(1)' && echo yes)
 define create_dir
-  $(VERBOSE)$(if $(wildcard $(1)),:,$(INSTALL) -d $(1))
+  $(if $(wildcard $(1)),true $(1) exists,$(INSTALL) -d $(1))
+endef
+
+# Generate the dotted name of a file name
+# 1: filename
+BID_dot_fname = $(dir $1).$(notdir $1)
+
+# Compare two strings, return something if they are unequal
+# 1: string
+# 2: string
+BID_cmp_str_ne = $(filter-out _$(subst $(BID_SPACE),_SPC_,$1),_$(subst $(BID_SPACE),_SPC_,$2))
+
+# Strip binary $(1) to $(2) and set target file mode to $(3)
+define copy_stripped_binary
+  $(call create_dir,$(dir $(2))/.debug); \
+  ln -sf $(call absfilename,$(1)) $(dir $(2))/.debug/$(1); \
+  $(OBJCOPY) --strip-unneeded --add-gnu-debuglink=$(1) \
+             $(1) $(2) >/dev/null 2>&1 \
+    || ln -sf $(call absfilename,$(1)) $(2); \
+  chmod $(3) $(2)
 endef
 
 # Move $(2) to $(1) if content of both files differ
@@ -308,7 +323,13 @@ BID_IDENT	= $(1)
 ifeq ($(call BID_IDENT,$$),)
 BID_DOLLARQUOTE	= $$
 endif
-BID_COMMA	= ,
+BID_COMMA  := ,
+BID_POUND  := \#
+BID_EMPTY  :=
+BID_SPACE  := $(BID_EMPTY) $(BID_EMPTY)
+BID_SQUOTE := '
+BID_DQUOTE := "
+
 
 ifneq ($(PL),)
 PL_j := -j $(PL)
@@ -361,12 +382,14 @@ BID_ASM_FILE_EXTENSIONS ?= .S
 BID_ASM_CPP_FILE_EXTENSIONS ?= .S
 
 # macros used here and in packages
-checkcc   = $(shell if $(CC)  $(CCXX_FLAGS) $(1) -o /dev/null -c -x c \
-                    /dev/null > /dev/null 2>&1; then echo "$(1)"; fi)
-checkcxx  = $(shell if $(CXX) $(CCXX_FLAGS) $(1) -o /dev/null -c -x c++ \
-                    /dev/null > /dev/null 2>&1; then echo "$(1)"; fi)
+checkcc   = $(if $(shell $(CC)  $(CCXX_FLAGS) $(1) -S -o /dev/null -x c   \
+                                /dev/null 2>&1),$(2),$(1))
+checkcxx  = $(if $(shell $(CXX) $(CCXX_FLAGS) $(1) -S -o /dev/null -x c++ \
+                                /dev/null 2>&1),$(2),$(1))
 checkdtc  = $(shell if $(DTC) $(1) --version /dev/null > /dev/null 2>&1; \
                     then echo "$(1)"; fi)
+checkcxx_nowarn = $(if $(shell $(CXX) $(CCXX_FLAGS) -W$(1) -S -o /dev/null \
+                                      -x c++ /dev/null 2>&1),,-Wno-$(1))
 
 callcc    = LC_ALL=C $(CC)  $(CCXX_FLAGS)
 callcxx   = LC_ALL=C $(CXX) $(CCXX_FLAGS)
@@ -405,16 +428,20 @@ GCCMAJORVERSION_f=$(GCCMAJORVERSION_f_$(BID_COMPILER_TYPE_f))
 GCCMINORVERSION_f=$(GCCMINORVERSION_f_$(BID_COMPILER_TYPE_f))
 GCCPATCHLEVEL_f  =$(GCCPATCHLEVEL_f_$(BID_COMPILER_TYPE_f))
 
+check_path_absolute = $(if $(patsubst /%,,$(2)),$(error Path $(1)=$(2) is not absolute),$(2))
+
 LDVERSION_f     = $(shell $(firstword $(LD)) -v | sed -e 's/.* \([0-9]\)\.\([^. ]*\).*/\1\2/')
 GCCSYSLIBDIRS_f = $(shell $(callcc) -print-search-dirs | sed '/^libraries:/{s/^libraries: =\?/-L/;s/:/ -L/g;q;};d')
 GCCDIR_f	= $(shell $(callcc) -print-search-dirs | sed -ne 's+^install: \(.*[^/][^/]*\)/+\1+p' )
-GCCLIB_file_f   = $(shell $(callcc) -print-file-name=$(1))
-GCCLIB_HOST_f	= $(shell $(callcc) -print-libgcc-file-name)
+GCCLIB_file_f   = $(call check_path_absolute,GCCLIB_file_$(1),$(shell $(callcc) -print-file-name=$(1)))
+GCCLIB_HOST_f   = $(call check_path_absolute,GCCLIB_HOST,$(shell $(callcc) -print-libgcc-file-name))
 GCCLIB_S_SO_f	= $(filter /%,$(shell $(callcc) -print-file-name=libgcc_s.so))
 GCCLIB_EH_f	= $(filter /%,$(shell $(callcc) -print-file-name=libgcc_eh.a))
 GCCNOSTACKPROTOPT_f= $(call checkcc,-fno-stack-protector)
 GCCSTACKPROTOPT_f = $(call checkcc,-fstack-protector)
 GCCSTACKPROTALLOPT_f = $(call checkcc,-fstack-protector-all)
+GCCWNONOEXCEPTTYPE_f = $(call checkcxx_nowarn,noexcept-type)
+GCCWNOPSABI_f   = $(call checkcxx_nowarn,psabi)
 GCCFORTRANAVAIL_f = $(shell echo | $(callfc) -dD -E - 2>&1 | grep -q __GNUC__ && echo y)
 GCC_HAS_ATOMICS_f = $(shell if echo '\#include <bits/c++config.h>' | \
 		               $(callcxx) -dD -E -x c++ - | \
@@ -424,6 +451,13 @@ GCCINCFIXEDPATH_f = $(patsubst %/limits.h,%,$(strip $(firstword $(wildcard \
                       $(addsuffix /limits.h, \
                         $(call GCCDIR_f)/include-fixed$(if $(filter .,$(shell $(callcc) -print-multi-directory)),,/$(shell $(callcc) -print-multi-directory)) \
                         $(call GCCDIR_f)/include-fixed)))))
+
+CONDITIONAL_WARNINGS_MEDIUM_f = $(call checkcc,-Wmissing-prototypes)
+CONDITIONAL_WARNINGS_FULL_f   = $(call checkcc,-Wfloat-conversion) \
+                                $(call checkcc,-Wfloat-equal) \
+                                $(call checkcc,-Wlogical-op)
+GCCPREFIXOPT_f  = $(call checkcc,-fmacro-prefix-map=$(L4DIR_ABS)/= \
+                                 -fmacro-prefix-map=$(OBJ_BASE)/=)
 
 BID_NOSTDINC_clang ?= #-nostdlibinc
 BID_NOSTDINC_gcc   ?= -nostdinc
@@ -542,6 +576,8 @@ $(GENERAL_D_LOC): $(L4DIR)/mk/Makeconf $(EXTRA_GENERAL_D_DEP)
 		$(PKGDIR_ABS)/Makeconf.local))
 	$(DEPEND_VERBOSE)$(call BID_DEPEND_GENERAL_D_COND,\
 		$(MAKECONFLOCAL))
+	$(DEPEND_VERBOSE)$(call BID_DEPEND_GENERAL_D_COND,\
+	        $(L4DIR)/mk/arch/Makeconf.$(BUILD_ARCH))
 
 DEPS	+= $(GENERAL_D_LOC)
 
@@ -555,7 +591,7 @@ DEPS	+= $(GENERAL_D_LOC)
 ifeq ($(CONFIG_BID_COLORED_PHASES),y)
   ifneq ($(BID_COLORS_TESTED),y)
     BID_COLORS_TESTED := y
-    BID_COLORS_SUPPORTED := $(shell tput colors 1>&2 2 > /dev/null; [ $$? -eq 0 ] && echo -n 'y' || echo -n 'n')
+    BID_COLORS_SUPPORTED := $(shell tput colors 2>/dev/null 1>&2; [ $$? -eq 0 ] && echo -n 'y' || echo -n 'n')
     export BID_COLORS_TESTED
     export BID_COLORS_SUPPORTED
   endif

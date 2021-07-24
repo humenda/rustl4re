@@ -24,7 +24,7 @@ int main(int argc, const char **argv)
   l4_size_t size;
   l4_addr_t fpage_addr;
   l4_size_t fpage_size;
-  l4_offs_t offs;
+  l4_addr_t offs;
   int error;
 
   if (!names_waitfor_name(LOG_NAMESERVER_NAME, &logcon_server, 10))

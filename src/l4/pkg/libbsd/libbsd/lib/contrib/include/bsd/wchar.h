@@ -40,7 +40,11 @@
 #define LIBBSD_WCHAR_H
 
 #include <stddef.h>
+#ifdef LIBBSD_OVERLAY
 #include <sys/cdefs.h>
+#else
+#include <bsd/sys/cdefs.h>
+#endif
 #include <sys/types.h>
 
 __BEGIN_DECLS

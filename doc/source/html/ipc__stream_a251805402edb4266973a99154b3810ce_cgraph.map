@@ -1,4 +1,4 @@
 <map id="operator&lt;&lt;" name="operator&lt;&lt;">
-<area shape="rect" id="node2" href="$namespaceL4_1_1Ipc.html#a0db6c083862791595d357666b2877149" title="Create an Msg_ptr to adjust the given pointer. " alt="" coords="159,5,279,32"/>
-<area shape="rect" id="node3" href="$classL4_1_1Ipc_1_1Ostream.html#a0bb12677e48b2b08456b30a928aed8e7" title="Put an array with size elements of type T into the stream. " alt="" coords="145,56,293,83"/>
+<area shape="rect" id="node1" title="Insert a zero terminated character string into the stream s." alt="" coords="5,5,104,32"/>
+<area shape="rect" id="node2" href="$classL4_1_1Ipc_1_1Ostream.html#a0bb12677e48b2b08456b30a928aed8e7" title="Put an array with size elements of type T into the stream." alt="" coords="152,5,309,32"/>
 </map>

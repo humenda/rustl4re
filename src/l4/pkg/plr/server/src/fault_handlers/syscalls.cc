@@ -17,9 +17,9 @@
 #include "../thread_group.h"
 
 #include "observers.h"
+#include "region_mapping_svr"
 
 #include <l4/re/rm-sys.h>
-#include <l4/re/util/region_mapping_svr>
 #include <l4/sys/segment.h>
 #include <l4/sys/consts.h>
 #include <l4/cxx/ipc_stream>
@@ -526,7 +526,7 @@ Romain::IrqSenderHandler::handle(Romain::App_instance* inst,
 		 * agent, because we need to modify the thread that is
 		 * attached to the IRQ
 		 */
-		case L4_IRQ_SENDER_OP_ATTACH:
+		case L4_RCV_EP_BIND_OP:
 			{
 				l4_umword_t attach_cap      = l4_utcb_mr_u(utcb)->mr[3] & L4_FPAGE_ADDR_MASK;
 				DEBUG() << "attach " << std::hex << (attach_cap >> L4_CAP_SHIFT);
@@ -537,7 +537,7 @@ Romain::IrqSenderHandler::handle(Romain::App_instance* inst,
 					ERROR() << "Unimplemented: Attaching someone else but myself!\n";
 				}
 
-				ret = irq->attach(label, group->gateagent->listener_cap);
+				ret = irq->bind_thread(group->gateagent->listener_cap, label);
 
 				t->vcpu()->r()->ax = ret.raw;
 				DEBUG() << std::hex << ret.raw ;

@@ -1,5 +1,6 @@
 <map id="L4::Ipc::Iostream" name="L4::Ipc::Iostream">
-<area shape="rect" id="node2" href="$classL4_1_1Ipc_1_1Istream.html" title="Input stream for IPC unmarshalling. " alt="" coords="5,307,125,824"/>
-<area shape="rect" id="node3" href="$structl4__msgtag__t.html" title="Message tag data structure. " alt="" coords="78,5,231,244"/>
-<area shape="rect" id="node4" href="$classL4_1_1Ipc_1_1Ostream.html" title="Output stream for IPC marshalling. " alt="" coords="150,365,295,765"/>
+<area shape="rect" id="node1" title="Input/Output stream for IPC [un]marshalling." alt="" coords="72,859,219,1523"/>
+<area shape="rect" id="node2" href="$classL4_1_1Ipc_1_1Istream.html" title="Input stream for IPC unmarshalling." alt="" coords="5,307,128,809"/>
+<area shape="rect" id="node3" href="$structl4__msgtag__t.html" title="Message tag data structure." alt="" coords="66,5,225,244"/>
+<area shape="rect" id="node4" href="$classL4_1_1Ipc_1_1Ostream.html" title="Output stream for IPC marshalling." alt="" coords="153,351,298,765"/>
 </map>

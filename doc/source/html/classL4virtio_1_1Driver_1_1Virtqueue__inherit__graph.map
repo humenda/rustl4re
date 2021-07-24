@@ -1,3 +1,4 @@
 <map id="L4virtio::Driver::Virtqueue" name="L4virtio::Driver::Virtqueue">
-<area shape="rect" id="node2" href="$classL4virtio_1_1Virtqueue.html" title="Low&#45;level Virtqueue. " alt="" coords="17,5,171,464"/>
+<area shape="rect" id="node1" title="Driver&#45;side implementation of a Virtqueue." alt="" coords="5,512,196,707"/>
+<area shape="rect" id="node2" href="$classL4virtio_1_1Virtqueue.html" title="Low&#45;level Virtqueue." alt="" coords="19,5,182,464"/>
 </map>

@@ -7,9 +7,6 @@ EXTENSION class Thread
 public:
   static void init_per_cpu(Cpu_number cpu, bool resume);
   bool check_and_handle_coproc_faults(Trap_state *);
-
-private:
-  bool _in_exception;
 };
 
 // ------------------------------------------------------------------------
@@ -24,6 +21,7 @@ IMPLEMENTATION [arm]:
 #include "static_assert.h"
 #include "thread_state.h"
 #include "types.h"
+#include "warn.h"
 
 enum {
   FSR_STATUS_MASK = 0x0d,
@@ -31,8 +29,6 @@ enum {
   FSR_DOMAIN      = 0x09,
   FSR_PERMISSION  = 0x0d,
 };
-
-DEFINE_PER_CPU Per_cpu<Thread::Dbg_stack> Thread::dbg_stack;
 
 PRIVATE static
 void
@@ -55,7 +51,6 @@ Thread::fast_return_to_user(Mword ip, Mword sp, Vcpu_state *arg)
 {
   extern char __iret[];
   Entry_frame *r = regs();
-  assert(r->check_valid_user_psr());
 
   r->ip(ip);
   r->sp(sp); // user-sp is in lazy user state and thus handled by
@@ -71,6 +66,7 @@ Thread::fast_return_to_user(Mword ip, Mword sp, Vcpu_state *arg)
   if (Proc::Is_hyp && (state() & Thread_ext_vcpu_enabled))
     r->psr_set_mode(Proc::Status_mode_user);
 
+  assert(r->check_valid_user_psr());
   arm_fast_exit(nonull_static_cast<Return_frame*>(r), __iret, arg);
   panic("__builtin_trap()");
 }
@@ -134,6 +130,9 @@ bool Thread::handle_sigma0_page_fault(Address pfa)
 
 
 extern "C" {
+  Mword pagefault_entry(const Mword pfa, Mword error_code,
+                        const Mword pc, Return_frame *ret_frame);
+  void slowtrap_entry(Trap_state *ts);
 
   /**
    * The low-level page fault handler called from entry.S.  We're invoked with
@@ -149,9 +148,10 @@ extern "C" {
   {
     if (EXPECT_FALSE(PF::is_alignment_error(error_code)))
       {
-	printf("KERNEL%d: alignment error at %08lx (PC: %08lx, SP: %08lx, FSR: %lx, PSR: %lx)\n",
-               cxx::int_value<Cpu_number>(current_cpu()), pfa, pc,
-               ret_frame->usp, error_code, ret_frame->psr);
+	WARNX(Warning,
+              "KERNEL%d: alignment error at %08lx (PC: %08lx, SP: %08lx, FSR: %lx, PSR: %lx)\n",
+              cxx::int_value<Cpu_number>(current_cpu()), pfa, pc,
+              ret_frame->usp, error_code, ret_frame->psr);
         return false;
       }
 
@@ -269,10 +269,6 @@ IMPLEMENTATION [arm]:
 
 
 /** Constructor.
-    @param space the address space
-    @param id user-visible thread ID of the sender
-    @param init_prio initial priority
-    @param mcp thread's maximum controlled priority
     @post state() != 0
  */
 IMPLEMENT
@@ -297,7 +293,6 @@ Thread::Thread(Ram_quota *q)
   _magic = magic;
   _recover_jmpbuf = 0;
   _timeout = 0;
-  _in_exception = false;
 
   prepare_switch_to(&user_invoke);
 
@@ -306,6 +301,8 @@ Thread::Thread(Ram_quota *q)
   Entry_frame *r = regs();
   memset(r, 0, sizeof(*r));
   r->psr = Proc::Status_mode_user;
+
+  alloc_eager_fpu_state();
 
   state_add_dirty(Thread_dead, false);
 
@@ -327,14 +324,6 @@ Mword
 Thread::user_flags() const
 { return 0; }
 
-PUBLIC inline NEEDS ["trap_state.h"]
-int
-Thread::send_exception_arch(Trap_state *)
-{
-  // nothing to tweak on ARM
-  return 1;
-}
-
 PRIVATE inline
 void
 Thread::save_fpu_state_to_utcb(Trap_state *ts, Utcb *u)
@@ -348,11 +337,8 @@ PRIVATE inline
 bool
 Thread::invalid_ipc_buffer(void const *a)
 {
-  if (!_in_exception)
-    return Mem_layout::in_kernel(((Address)a & Config::SUPERPAGE_MASK)
-                                 + Config::SUPERPAGE_SIZE - 1);
-
-  return false;
+  return Mem_layout::in_kernel(((Address)a & Config::SUPERPAGE_MASK)
+                               + Config::SUPERPAGE_SIZE - 1);
 }
 
 PROTECTED inline
@@ -369,14 +355,14 @@ Thread::do_trigger_exception(Entry_frame *r, void *ret_handler)
 
 PROTECTED inline
 int
-Thread::sys_control_arch(Utcb *)
+Thread::sys_control_arch(Utcb const *, Utcb *)
 {
   return 0;
 }
 
 PROTECTED inline NEEDS[Thread::set_tpidruro]
 L4_msg_tag
-Thread::invoke_arch(L4_msg_tag tag, Utcb *utcb)
+Thread::invoke_arch(L4_msg_tag tag, Utcb const *utcb, Utcb *)
 {
   switch (utcb->values[0] & Opcode_mask)
     {
@@ -478,7 +464,7 @@ IMPLEMENTATION [arm && arm_v6plus]:
 
 PRIVATE inline
 L4_msg_tag
-Thread::set_tpidruro(L4_msg_tag tag, Utcb *utcb)
+Thread::set_tpidruro(L4_msg_tag tag, Utcb const *utcb)
 {
   if (EXPECT_FALSE(tag.words() < 2))
     return commit_result(-L4_err::EInval);
@@ -514,7 +500,7 @@ IMPLEMENTATION [arm && !arm_v6plus]:
 
 PRIVATE inline
 L4_msg_tag
-Thread::set_tpidruro(L4_msg_tag, Utcb *)
+Thread::set_tpidruro(L4_msg_tag, Utcb const *)
 {
   return commit_result(-L4_err::EInval);
 }
@@ -541,7 +527,7 @@ public:
   static void kern_kdebug_ipi_entry() asm("kern_kdebug_ipi_entry");
 };
 
-PUBLIC static inline
+PUBLIC static inline NEEDS["ipi.h"]
 void
 Thread::handle_debug_remote_requests_irq()
 {
@@ -570,7 +556,7 @@ public:
     unmask();
   }
 
-  void switch_mode(bool) {}
+  void switch_mode(bool) override {}
 };
 
 class Thread_glbl_remote_rq_irq : public Irq_base
@@ -586,7 +572,7 @@ public:
     unmask();
   }
 
-  void switch_mode(bool) {}
+  void switch_mode(bool) override {}
 };
 
 class Thread_debug_ipi : public Irq_base
@@ -602,7 +588,7 @@ public:
     unmask();
   }
 
-  void switch_mode(bool) {}
+  void switch_mode(bool) override {}
 };
 
 class Thread_timer_tick_ipi : public Irq_base
@@ -614,7 +600,7 @@ public:
   Thread_timer_tick_ipi()
   { set_hit(&handler_wrapper<Thread_timer_tick_ipi>); }
 
-  void switch_mode(bool) {}
+  void switch_mode(bool) override {}
 };
 
 
@@ -626,10 +612,10 @@ class Arm_ipis
 public:
   Arm_ipis()
   {
-    check(Irq_mgr::mgr->alloc(&remote_rq_ipi, Ipi::Request));
-    check(Irq_mgr::mgr->alloc(&glbl_remote_rq_ipi, Ipi::Global_request));
-    check(Irq_mgr::mgr->alloc(&debug_ipi, Ipi::Debug));
-    check(Irq_mgr::mgr->alloc(&timer_ipi, Ipi::Timer));
+    check(Irq_mgr::mgr->alloc(&remote_rq_ipi, Ipi::Request, false));
+    check(Irq_mgr::mgr->alloc(&glbl_remote_rq_ipi, Ipi::Global_request, false));
+    check(Irq_mgr::mgr->alloc(&debug_ipi, Ipi::Debug, false));
+    check(Irq_mgr::mgr->alloc(&timer_ipi, Ipi::Timer, false));
   }
 
   Thread_remote_rq_irq remote_rq_ipi;

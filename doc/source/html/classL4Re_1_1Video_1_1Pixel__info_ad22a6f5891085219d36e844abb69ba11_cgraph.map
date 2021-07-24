@@ -1,3 +1,4 @@
 <map id="L4Re::Video::Pixel_info::bits_per_pixel" name="L4Re::Video::Pixel_info::bits_per_pixel">
-<area shape="rect" id="node2" href="$classL4Re_1_1Video_1_1Color__component.html#a68a69675b5ce76aba3ebdec992b297b5" title="Return the number of bits used by the component. " alt="" coords="200,5,339,47"/>
+<area shape="rect" id="node1" title="Number of bits of the pixel." alt="" coords="5,5,157,47"/>
+<area shape="rect" id="node2" href="$classL4Re_1_1Video_1_1Color__component.html#a68a69675b5ce76aba3ebdec992b297b5" title="Return the number of bits used by the component." alt="" coords="205,5,347,47"/>
 </map>

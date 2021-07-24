@@ -1,0 +1,5 @@
+<map id="L4::Thread::ex_regs" name="L4::Thread::ex_regs">
+<area shape="rect" id="node1" title="Exchange basic thread registers." alt="" coords="5,31,155,57"/>
+<area shape="rect" id="node2" href="$classL4_1_1Kobject.html#a4f2117ae76762f4084e6a1adb915863c" title="Return capability selector." alt="" coords="219,5,343,32"/>
+<area shape="rect" id="node3" href="$group__l4__thread__api.html#ga9387fbfe618c3ede0eae63261ce1662e" title="Exchange basic thread registers." alt="" coords="203,56,359,83"/>
+</map>

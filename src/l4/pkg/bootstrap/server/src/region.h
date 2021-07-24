@@ -22,8 +22,13 @@ class Region
 public:
   enum Type { No_mem, Kernel, Sigma0, Boot, Root, Arch, Ram, Info };
 
+  enum Subtype_info
+  {
+    Info_acpi_rsdp = 0,
+  };
+
   /** Basic noop constructor, to be able to have array without ini code */
-  Region() {}
+  Region() = default;
 
   /** Create an invalid region. */
   Region(Type) : _begin(0), _end(0) {}
@@ -147,6 +152,8 @@ public:
   void name(char const *name) { _name = name; }
   /** Get the type of the region. */
   Type type() const { return (Type)(_t); }
+  /** Set the type of the region. */
+  void type(Type t) { _t = t; }
   /** Get the subtype of the region. */
   short sub_type() const { return _s; }
   /** Set the subtype of the region. */
@@ -281,9 +288,6 @@ public:
   /** Remove the region given by the iterator r. */
   Region *remove(Region *r);
 
-  /** Sort the region list (does bubble sort). */
-  void sort();
-
   /** Optimize the region list.
    * Basically merges all regions with the same type, subtype, and name
    * that have a begin and end address on the same memory page.
@@ -301,11 +305,9 @@ protected:
   unsigned long long _combined_size;
 
 private:
-  void swap(Region *a, Region *b);
-
   /**
    * Add a new memory region to the list. The new region must not overlap
-   * any known region.
+   * any known region. The resulting list is sorted in ascending order.
    */
   void add_nolimitcheck(Region const &r, bool may_overlap = false);
 };

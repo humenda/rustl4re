@@ -130,7 +130,7 @@ extern short bigmouse_trp;
 
 static int
 vc_map_video_mem(l4_addr_t paddr, l4_size_t size,
-                 l4_addr_t *vaddr, l4_offs_t *offset) {
+                 l4_addr_t *vaddr, l4_addr_t *offset) {
 
 	printf("dope: paddr=%lx size=%ldKiB\n", paddr, (unsigned long)size >> 10);
 	if ((*vaddr = l4io_request_mem_region(paddr, size, L4IO_MEM_WRITE_COMBINED)) == 0)
@@ -155,7 +155,7 @@ static long set_screen(long width, long height, long depth) {
 	l4util_mb_info_t *mbi = l4env_multiboot_info;
 
 	l4_addr_t gr_vbase;
-	l4_offs_t gr_voffs;
+	l4_addr_t gr_voffs;
 
 	if (!(mbi->flags & L4UTIL_MB_VIDEO_INFO) || !(mbi->vbe_mode_info)) {
 		printf("Did not find VBE info block in multiboot info. "

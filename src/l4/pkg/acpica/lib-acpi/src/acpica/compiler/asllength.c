@@ -8,7 +8,7 @@
  *
  * 1. Copyright Notice
  *
- * Some or all of this work - Copyright (c) 1999 - 2017, Intel Corp.
+ * Some or all of this work - Copyright (c) 1999 - 2019, Intel Corp.
  * All rights reserved.
  *
  * 2. License
@@ -111,11 +111,48 @@
  * other governmental approval, or letter of assurance, without first obtaining
  * such license, approval or letter.
  *
+ *****************************************************************************
+ *
+ * Alternatively, you may choose to be licensed under the terms of the
+ * following license:
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions, and the following disclaimer,
+ *    without modification.
+ * 2. Redistributions in binary form must reproduce at minimum a disclaimer
+ *    substantially similar to the "NO WARRANTY" disclaimer below
+ *    ("Disclaimer") and any redistribution must be conditioned upon
+ *    including a substantially similar Disclaimer requirement for further
+ *    binary redistribution.
+ * 3. Neither the names of the above-listed copyright holders nor the names
+ *    of any contributors may be used to endorse or promote products derived
+ *    from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+ * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * Alternatively, you may choose to be licensed under the terms of the
+ * GNU General Public License ("GPL") version 2 as published by the Free
+ * Software Foundation.
+ *
  *****************************************************************************/
 
 #include "aslcompiler.h"
 #include "aslcompiler.y.h"
 #include "amlcode.h"
+#include "acconvert.h"
 
 
 #define _COMPONENT          ACPI_COMPILER
@@ -208,7 +245,9 @@ LnPackageLengthWalk (
             Op->Asl.AmlLength +
             Op->Asl.AmlOpcodeLength +
             Op->Asl.AmlPkgLenBytes +
-            Op->Asl.AmlSubtreeLength);
+            Op->Asl.AmlSubtreeLength +
+            CvCalculateCommentLengths (Op)
+        );
     }
     return (AE_OK);
 }
@@ -299,7 +338,7 @@ CgGenerateAmlOpcodeLength (
     /* Does this opcode have an associated "PackageLength" field? */
 
     Op->Asl.AmlPkgLenBytes = 0;
-    if (Op->Asl.CompileFlags & NODE_AML_PACKAGE)
+    if (Op->Asl.CompileFlags & OP_AML_PACKAGE)
     {
         Op->Asl.AmlPkgLenBytes = CgGetPackageLenByteCount (
             Op, Op->Asl.AmlSubtreeLength);
@@ -407,7 +446,7 @@ CgGenerateAmlLengths (
     {
     case PARSEOP_DEFINITION_BLOCK:
 
-        Gbl_TableLength = sizeof (ACPI_TABLE_HEADER) + Op->Asl.AmlSubtreeLength;
+        AslGbl_TableLength = sizeof (ACPI_TABLE_HEADER) + Op->Asl.AmlSubtreeLength;
         break;
 
     case PARSEOP_NAMESEG:
@@ -420,7 +459,7 @@ CgGenerateAmlLengths (
     case PARSEOP_NAMESTRING:
     case PARSEOP_METHODCALL:
 
-        if (Op->Asl.CompileFlags & NODE_NAME_INTERNALIZED)
+        if (Op->Asl.CompileFlags & OP_NAME_INTERNALIZED)
         {
             break;
         }
@@ -436,16 +475,17 @@ CgGenerateAmlLengths (
 
         Op->Asl.ExternalName = Op->Asl.Value.String;
         Op->Asl.Value.String = Buffer;
-        Op->Asl.CompileFlags |= NODE_NAME_INTERNALIZED;
+        Op->Asl.CompileFlags |= OP_NAME_INTERNALIZED;
         Op->Asl.AmlLength = strlen (Buffer);
 
         /*
-         * Check for single backslash reference to root,
-         * make it a null terminated string in the AML
+         * Check for single backslash reference to root or reference to a name
+         * consisting of only prefix (^) characters. Make it a null terminated
+         * string in the AML.
          */
-        if (Op->Asl.AmlLength == 1)
+        if (Op->Asl.AmlLength == 1 || UtNameContainsAllPrefix(Op))
         {
-            Op->Asl.AmlLength = 2;
+            Op->Asl.AmlLength++;
         }
         break;
 
@@ -480,10 +520,7 @@ CgGenerateAmlLengths (
 
     case PARSEOP_EXTERNAL:
 
-        if (Gbl_DoExternals == TRUE)
-        {
-            CgGenerateAmlOpcodeLength (Op);
-        }
+        CgGenerateAmlOpcodeLength (Op);
         break;
 
     default:
@@ -529,6 +566,6 @@ LnAdjustLengthToRoot (
 
     /* Adjust the global table length */
 
-    Gbl_TableLength -= LengthDelta;
+    AslGbl_TableLength -= LengthDelta;
 }
 #endif

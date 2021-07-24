@@ -1,0 +1,6 @@
+<map id="L4virtio::Svr::Device_t::device_notify_irq" name="L4virtio::Svr::Device_t::device_notify_irq">
+<area shape="rect" id="node1" title="Callback to gather the device notification IRQ (multi IRQ)." alt="" coords="5,5,159,47"/>
+<area shape="rect" id="node2" href="$namespaceL4Re.html#a3f17984019f06676a7e3eecb41bbb0bb" title="Generate C++ exception on error." alt="" coords="408,13,515,39"/>
+<area shape="rect" id="node4" href="$classL4virtio_1_1Svr_1_1Device__t.html#ae602028544a9b03a349af6522035dcac" title="callback to gather the device notification IRQ (old&#45;style)" alt="" coords="207,35,360,76"/>
+<area shape="rect" id="node3" href="$namespaceL4Re.html#ae27ac6f274f4ad1267d0d1c0c033c00b" title="Generate C++ exception." alt="" coords="563,13,700,39"/>
+</map>

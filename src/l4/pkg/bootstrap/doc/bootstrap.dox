@@ -1,0 +1,187 @@
+// vim: set ft=c: -*- mode: C; -*-
+/**
+ * \page bootstrap Bootstrap, the L4 kernel bootstrapper
+ *
+ * \subpage Bootstrap Command Line Options
+ * ---------------------------------------
+ *
+ * `bootstrap` and the kernel can be configured through command line switches.
+ * `bootstrap` is responsible for parsing both command lines: `bootstrap`
+ * options are the ones directly given to bootstrap, whereas kernel options are
+ * those directly given to the kernel, respectively.
+ *
+ * When using Multiboot boot, the first module directly after bootstrap is
+ * considered the kernel: An example using GRUB2 might look like this:
+ *
+ *     multiboot /path/to/bootstrap bootstrap -bs-boolean-opt -bs-opt-with-argument=foo
+ *     module /path/to/fiasco fiasco -kernel-opt-with-argument=bar -kernel-boolean-opt
+ *
+ * \note The exact way to provide the command line to `bootstrap` is
+ * platform-dependent. On platforms supporting booting via Multiboot
+ * Specification the command line can be specified in the boot configuration
+ * (currently x86/amd64 only, e.g. using GRUB) whereas other platforms need the
+ * command line to be compiled into the `bootstrap` binary.
+ *
+ * \note Platforms utilising flattened device trees usually also allow
+ * specifying a command line through the DT. This mechanism is **not** currently
+ * supported in `bootstrap`!
+ *
+ * &nbsp; <!-- Don't merge the next note -->
+ *
+ * \note `bootstrap` will ignore options it does not understand. For most cases,
+ * this also holds true if an option's arguments cannot be understood.
+ *
+ * ### `bootstrap` options
+ *
+ * Command line options directly understood by `bootstrap` itself are as
+ * follows (passed via `bootstrap` command line):
+ *
+ *   * `-comirq=<irqno>` (x86/amd64 only)
+ *
+ *     If serial logging is enabled (default on), `<irqno>` defines which IRQ to
+ *     use for serial port communication. This option is ignored if `-noserial`
+ *     is also specified (see below).
+ *
+ *   * `-comport=<portspec>` (x86/amd64 only)
+ *
+ *     If serial logging is enabled (default on), `<portspec>` defines which
+ *     serial port to use, being one of:
+ *
+ *     - `<number>`
+ *
+ *       Use legacy port `<number>`, e.g. use `-comport=1` for the port
+ *       commonly known as _COM1_, or
+ *
+ *     - `pci:<card>:<dev>`
+ *
+ *       Use serial port number `<dev>` at PCI card number `<card>`, e.g.
+ *       use `-comport=pci:0:0` for the first port on the first PCI card.
+ *
+ *     - `pci:probe`
+ *
+ *       Use this to have `bootstrap` autodiscover all PCI serial lines. On
+ *       each discovered line a message will be displayed, telling the correct
+ *       `<portspec>` to be given to use the respective line.
+ *
+ *     \note `bootstrap` does not support specifying the serial port's baudrate
+ *     and always uses 115200 bps.
+ *
+ *   * `-noserial`
+ *
+ *     Disable serial logging.
+ *
+ *   * `-wait`
+ *
+ *     Wait for key press at early startup.
+ *
+ *     \note This is not to be confused with the kernel's `-wait` option, see
+ *     below.
+ *
+ *   * `-maxmem=<mbytes>`
+ *
+ *     Limit the available memory to at most `<mbytes>` MiB.
+ *
+ *   * `-mem=<size>@<offset>`
+ *
+ *     Add a region of memory of `<size>` at `<offset>` to the system's memory
+ *     map. Both `<size>` and `<offset>` may be suffixed by either `G`, `M`, or
+ *     `K`/`k` to denote GiB, MiB, or KiB, respectively.
+ *
+ *     This option may be specified multiple times. If the option is not given,
+ *     a platform-specific method for determining the memory layout will be
+ *     used, if available.
+ *
+ *   * `-presetmem=<intval>`
+ *
+ *     Initialise memory regions with `<intval>` before starting the kernel.
+ *
+ *   * `-modaddr=<paddr>`
+ *
+ *     Relocate modules to the physical address `<paddr>`. Use this when
+ *     utilising a version of GRUB that lacks support for the `modaddr` command.
+ *
+ * ### Kernel Options
+ *
+ * Command line options for the kernel (passed on kernel command line, i.e. to
+ * first module) `bootstrap` understands are as follows.
+ *
+ * \note Availability of individual options might depend on used platform and/or
+ * actual kernel configuration.
+ *
+ *   * `-wait`
+ *
+ *     Enter debugger directly after startup, prior to executing any task.
+ *
+ *   * `-serial_esc`
+ *
+ *     Enable entering the debugger over serial line by pressing `Esc`.
+ *
+ *   * `-noserial`
+ *
+ *     Disable serial logging.
+ *
+ *     \note If this is given as kernel command line argument, it does not
+ *     affect `bootstrap` but only the kernel.
+ *
+ *   * `-noscreen`
+ *
+ *     Disable VGA console.
+ *
+ *   * `-esc`
+ *
+ *     Enable entering the debugger by pressing `Esc` on attached
+ *     keyboard.
+ *
+ *   * `-nojdb`
+ *
+ *     Disable the kernel debugger.
+ *
+ *   * `-nohlt`
+ *
+ *     Enable quirk for broken HLT instruction.
+ *
+ *   * `-apic`
+ *
+ *     Use Advanced Programmable Interrupt Controller (APIC) if available and
+ *     known to be well-behaving.
+ *
+ *   * `-loadcnt`
+ *
+ *     Use load counter for performance counting.
+ *
+ *   * `-watchdog`
+ *
+ *     Enable watchdog timer.
+ *
+ *   * `-irq0`
+ *
+ *     Allow IRQ 0 to be used by userland. This enables some sanity checks to
+ *     ensure IRQ 0 is not used by the kernel, e.g. for profiling or scheduling
+ *     purposes. This only has an effect on x86.
+ *
+ *   * `-nosfn`
+ *
+ *     Disable SFN (special fully nested) mode of interrupt controller. This
+ *     only has an effect on x86 with PIC8259 interrupt controller.
+ *
+ *   * `-jdb_never_stop`
+ *
+ *     Prevent system from stopping to enter JDB. This only has an effect on x86.
+ *
+ *   * `-kmemsize=<kbytes>`
+ *
+ *     Reserve `<kbytes>` KiB of memory for the kernel.
+ *
+ *   * `-tbuf_entries=<number>`
+ *
+ *     Specify the `<number>` of trace buffer entries.
+ *
+ *   * `-out_buf=<length>`
+ *
+ *     Specify length of console buffer to be `<length>` bytes.
+ *
+ *   * `-jdb_cmd=<ctrlseq>`
+ *
+ *     Execute JDB command sequence `<ctrlseq>` right after start-up. If `-wait`
+ *     is also given, `<ctrlseq>` is executed right before entering JDB.
+ */

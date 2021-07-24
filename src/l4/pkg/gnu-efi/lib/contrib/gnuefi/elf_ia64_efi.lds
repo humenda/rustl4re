@@ -5,18 +5,25 @@ SECTIONS
 {
   . = 0;
   ImageBase = .;
-  .hash : { *(.hash) }	/* this MUST come first! */
+  /* .hash and/or .gnu.hash MUST come first! */
+  .hash : { *(.hash) }
+  .gnu.hash : { *(.gnu.hash) }
   . = ALIGN(4096);
   .text :
   {
+   _text = .;
    *(.text)
    *(.text.*)
    *(.gnu.linkonce.t.*)
+   . = ALIGN(16);
   }
+  _etext = .;
+  _text_size = . - _text;
   . = ALIGN(4096);
   __gp = ALIGN (8) + 0x200000;
   .sdata :
   {
+   _data = .;
    *(.got.plt)
    *(.got)
    *(.srodata)
@@ -38,6 +45,8 @@ SECTIONS
    *(.bss)
    *(COMMON)
   }
+  .note.gnu.build-id : { *(.note.gnu.build-id) }
+
   . = ALIGN(4096);
   .dynamic  : { *(.dynamic) }
   . = ALIGN(4096);
@@ -51,6 +60,8 @@ SECTIONS
     *(.rela.stab)
     *(.rela.ctors)
   }
+  _edata = .;
+  _data_size = . - _etext;
   . = ALIGN(4096);
   .reloc :		/* This is the PECOFF .reloc section! */
   {

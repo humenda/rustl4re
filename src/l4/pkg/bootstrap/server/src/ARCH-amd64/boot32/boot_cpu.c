@@ -15,6 +15,7 @@
 #include "types.h"
 #include "boot_cpu.h"
 #include "boot_paging.h"
+#include "support.h"
 
 
 unsigned  KERNEL_CS_64		= 0x20; // XXX
@@ -64,7 +65,11 @@ enum
   INTEL_PML4E_PFN	= 0x000ffffffffff000LL,
 
   CPUF_4MB_PAGES	= 0x00000008,
+};
 
+// enum of 32-bit size members
+enum
+{
   CR0_PG		= 0x80000000,
   CR4_PSE		= 0x00000010,
   CR4_PAE		= 0x00000020,
@@ -289,15 +294,6 @@ paging_enable(l4_uint32_t pml4)
 
   /* Turn on paging and switch to long mode. */
   asm volatile("movl  %0,%%cr0 ; jmp  1f ; 1:" : : "r" (get_cr0() | CR0_PG));
-}
-
-static void
-panic(const char *str)
-{
-  printf("PANIC: %s\n", str);
-  while (1)
-    ;
-  _exit(-1);
 }
 
 static void

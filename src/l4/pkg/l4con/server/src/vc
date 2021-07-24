@@ -1,0 +1,64 @@
+// vi:ft=cpp
+#pragma once
+
+#include <l4/re/util/video/goos_svr>
+#include <l4/re/util/video/goos_fb>
+#include <l4/re/util/event_svr>
+#include <l4/sys/cxx/ipc_epiface>
+#include <l4/l4con/l4con.h>
+
+#include "l4con.h"
+#include "gmode.h"
+#include "server_object.h"
+
+class Vc : public L4Re::Util::Video::Goos_svr,
+           public L4Re::Util::Event_svr<Vc>,
+           public L4::Epiface_t<Vc, L4con, Server_object>,
+           public l4con_vc
+{
+public:
+  using L4Re::Util::Video::Goos_svr::op_info;
+  using L4Re::Util::Event_svr<Vc>::op_info;
+
+  explicit Vc() {}
+  ~Vc();
+
+  void setup_info(l4con_vc *vc);
+  void reg_fbds(l4_cap_idx_t c);
+  void send_event(l4input *ev);
+  int create_event();
+
+  long close();
+
+  long op_close(L4con::Rights)
+  { return close(); }
+
+  long op_pslim_fill(L4con::Rights, int x, int y, int w, int h,
+                     l4con_pslim_color_t color);
+
+  long op_pslim_copy(L4con::Rights, int x, int y, int w, int h,
+                     l4_int16_t dx, l4_int16_t dy);
+
+  long op_puts(L4con::Rights, short x, short y, l4con_pslim_color_t fg_color,
+               l4con_pslim_color_t bg_color,
+               L4::Ipc::Array_in_buf<char, unsigned long> const &text);
+
+  long op_puts_scale(L4con::Rights, short x, short y, l4con_pslim_color_t fg_color,
+                     l4con_pslim_color_t bg_color, short scale_x, short scale_y,
+                     L4::Ipc::Array_in_buf<char, unsigned long> const &text);
+
+  long op_get_font_size(L4con::Rights, short &w, short &h)
+  {
+    w = FONT_XRES;
+    h = FONT_YRES;
+    return L4_EOK;
+  }
+
+
+  virtual int refresh(int x, int y, int w, int h);
+
+  void reset_event_buffer() { evbuf.reset(); }
+private:
+  L4Re::Util::Event_buffer evbuf;
+};
+

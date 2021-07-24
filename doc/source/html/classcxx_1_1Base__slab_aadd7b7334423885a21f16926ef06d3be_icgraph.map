@@ -1,3 +1,4 @@
 <map id="cxx::Base_slab::total_objects" name="cxx::Base_slab::total_objects">
-<area shape="rect" id="node2" href="$classcxx_1_1Base__slab__static.html#a2cc4a45f0ff45b3d91afa6fccc0652ff" title="Get the total number of objects managed by the slab allocator. " alt="" coords="200,5,359,76"/>
+<area shape="rect" id="node1" title="Get the total number of objects managed by the slab allocator." alt="" coords="216,5,373,47"/>
+<area shape="rect" id="node2" href="$classcxx_1_1Base__slab__static.html#a2cc4a45f0ff45b3d91afa6fccc0652ff" title="Get the total number of objects managed by the slab allocator." alt="" coords="5,5,168,47"/>
 </map>

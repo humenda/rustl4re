@@ -17,7 +17,6 @@ static struct {
   { " -noscreen",          L4_kernel_options::F_noscreen          },
   { " -esc",               L4_kernel_options::F_esc               },
   { " -nojdb",             L4_kernel_options::F_nojdb             },
-  { " -nokdb",             L4_kernel_options::F_nokdb             },
   { " -nohlt",             L4_kernel_options::F_nohlt             },
   { " -apic",              L4_kernel_options::F_apic              },
   { " -loadcnt",           L4_kernel_options::F_loadcnt           },

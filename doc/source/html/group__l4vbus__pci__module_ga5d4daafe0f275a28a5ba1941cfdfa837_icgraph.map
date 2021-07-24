@@ -1,3 +1,4 @@
 <map id="l4vbus_pci_cfg_write" name="l4vbus_pci_cfg_write">
-<area shape="rect" id="node2" href="$classL4vbus_1_1Pci__host__bridge.html#ad316f6aeb09ecd36bc7aafa988dd272e" title="Write to the vPCI configuration space using the PCI root bridge. " alt="" coords="205,5,379,47"/>
+<area shape="rect" id="node1" title="Write to the vPCI configuration space using the PCI root bridge." alt="" coords="232,13,391,39"/>
+<area shape="rect" id="node2" href="$classL4vbus_1_1Pci__host__bridge.html#ad316f6aeb09ecd36bc7aafa988dd272e" title="Write to the vPCI configuration space using the PCI root bridge." alt="" coords="5,5,184,47"/>
 </map>

@@ -132,12 +132,12 @@ extern char libc_be_sig_return_trap[];
 
 static bool range_ok(l4_addr_t start, unsigned long size)
 {
-  l4_addr_t offset;
-  unsigned flags;
+  L4Re::Rm::Offset offset;
+  L4Re::Rm::Flags flags;
   L4::Cap<L4Re::Dataspace> ds;
 
   return !L4Re::Env::env()->rm()->find(&start, &size, &offset, &flags, &ds)
-         && !(flags & L4Re::Rm::Read_only);
+         && (flags.w());
 }
 
 static void dump_rm()
@@ -373,7 +373,6 @@ void libsig_be_set_dbg_name(const char *n)
 {
   char s[15];
   snprintf(s, sizeof(s) - 1, "&%s", n);
-  s[sizeof(s) - 1] = 0;
   l4_debugger_set_object_name(_sig_handling.thcap.cap(), s);
 }
 

@@ -25,7 +25,7 @@ sys_call_table:
   .long sys_kdb_ke         // +0x8  srr0 points to instr after 'sc', see
   SYSCALL(ipc)             // +0xC  system_call function below)
   .long sys_kdb_ke         // +0x10
-  SYSCALL(invoke_debug)    // +0x14
+  .long sys_kdb_ke         // +0x14
   .long sys_kdb_ke         // +0x18
   .long sys_kdb_ke         // +0x1C
   .long sys_kdb_ke         // +0x20
@@ -322,6 +322,12 @@ leave_by_trigger_exception:
 	.global vcpu_resume
 vcpu_resume:
 // XXX: end of just a build fix...
+
+
+        .global leave_and_kill_myself
+leave_and_kill_myself:
+        bl      thread_do_leave_and_kill_myself
+// XXX: end of just a another build fix...
 
 /*******************************************************************************
  * kdebug entry

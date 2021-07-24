@@ -3,6 +3,8 @@ INTERFACE:
 #include <cxx/dlist>
 #include "per_cpu_data.h"
 
+#include <cassert>
+
 class Pm_object : public cxx::D_list_item
 {
 private:
@@ -14,6 +16,9 @@ public:
 
   void register_pm(Cpu_number cpu)
   {
+    // A Pm_object can only be enqueued into one list as it is
+    // a list element itself.
+    assert(cxx::D_list_item_policy::next(this) == 0);
     _list.cpu(cpu).push_back(this);
   }
 
@@ -27,8 +32,8 @@ public:
   static void run_on_resume_hooks(Cpu_number cpu)
   {
     List &l = _list.cpu(cpu);
-    for (List::Iterator c = l.begin(); c != l.end(); ++c)
-      (*c)->pm_on_resume(cpu);
+    for (auto const &&c: l)
+      c->pm_on_resume(cpu);
   }
 
 private:

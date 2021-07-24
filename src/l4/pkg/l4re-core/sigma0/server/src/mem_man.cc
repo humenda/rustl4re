@@ -12,7 +12,7 @@
 #include "globals.h"
 
 #include <l4/cxx/iostream>
-#include <l4/sys/kdebug.h>
+#include <l4/sys/assert.h>
 
 Mem_man Mem_man::_ram;
 
@@ -42,13 +42,17 @@ Mem_man::add(Region const &r)
       rs.start(rs.start()-1);
 
       Tree::Node n = _tree.find_node(rs);
-      if (n && n->owner() == r.owner())
-	{
-	  r.start(n->start());
-	  int err = _tree.remove(*n);
-	  if (err < 0)
-	    { L4::cout << "err=" << err << " dump:\n"; dump();  enter_kdebug("BUG");}
-	}
+      if (n && n->owner() == r.owner() && n->rights() == r.rights())
+        {
+          r.start(n->start());
+          int err = _tree.remove(*n);
+          if (err < 0)
+            {
+              L4::cout << "err=" << err << " dump:\n";
+              dump();
+              l4_assert(!"BUG");
+            }
+        }
     }
 
   /* try to merge with next region */
@@ -58,13 +62,17 @@ Mem_man::add(Region const &r)
       rs.end(rs.end()+1);
 
       Tree::Node n = _tree.find_node(rs);
-      if (n && n->owner() == r.owner())
-	{
-	  r.end(n->end());
-	  int err = _tree.remove(*n);
-	  if (err < 0)
-	    { L4::cout << "err=" << err << " dump:\n"; dump();  enter_kdebug("BUG");}
-	}
+      if (n && n->owner() == r.owner() && n->rights() == r.rights())
+        {
+          r.end(n->end());
+          int err = _tree.remove(*n);
+          if (err < 0)
+            {
+              L4::cout << "err=" << err << " dump:\n";
+              dump();
+              l4_assert(!"BUG");
+            }
+        }
     }
 
   /* do throw away regions owned by myself */
@@ -74,9 +82,9 @@ Mem_man::add(Region const &r)
   while (_tree.insert(r).second == -_tree.E_nomem)
     if (!ram()->morecore())
       {
-	if (debug_errors)
-	  L4::cout << PROG_NAME": Out of memory\n";
-	return false;
+        if (debug_errors)
+          L4::cout << PROG_NAME": Out of memory\n";
+        return false;
       }
 
   return true;
@@ -94,16 +102,20 @@ Mem_man::add_free(Region const &r)
       Tree::Node n = _tree.find_node(r);
 
       if (!n)
-	break;
+        break;
 
       if (n->start() < r.start())
-	r.start(n->start());
+        r.start(n->start());
       if (n->end() > r.end())
-	r.end(n->end());
+        r.end(n->end());
 
       int err = _tree.remove(*n);
       if (err < 0)
-	{ L4::cout << "err=" << err << " dump:\n"; dump();  enter_kdebug("BUG");}
+        {
+          L4::cout << "err=" << err << " dump:\n";
+          dump();
+          l4_assert(!"BUG");
+        }
     }
 
   return add(r);
@@ -112,76 +124,216 @@ Mem_man::add_free(Region const &r)
 bool
 Mem_man::alloc_from(Region const *r2, Region const &_r)
 {
+  if (!_r.valid())
+    return false;
+
   Region r(_r);
   if (r2->owner() && r2->owner() != r.owner())
     return false;
 
-  if (r2->owner() == r.owner())
+  if (r2->owner() == r.owner() && r2->rights() == r.rights())
     return true;
 
   if (r == *r2)
     {
-      // L4::cout << "dump " << r << " " << *r2 << "\n"; dump();
+      if (0)
+        {
+          L4::cout << "dump " << r << " " << *r2 << "\n";
+          dump();
+        }
       int err = _tree.remove(*r2);
       if (err < 0)
-	{ L4::cout << "err=" << err << " dump:\n"; dump(); enter_kdebug("BUG"); }
+        {
+          L4::cout << "err=" << err << " dump:\n";
+          dump();
+          l4_assert(!"BUG");
+        }
       return add(r);
     }
 
+  Region r2_orig = *r2;
+
   if (r.start() == r2->start())
     {
-      r2->start(r.end()+1);
-      //L4::cout << "move start to " << *r2 << '\n';
-      add(r);
-      return true;
+      r2->start(r.end() + 1);
+      if (0)
+        L4::cout << "move start to " << *r2 << '\n';
     }
-
-  if (r.end() == r2->end())
+  else if (r.end() == r2->end())
     {
-      r2->end(r.start()-1);
-      //L4::cout << "shrink end to " << *r2 << '\n';
-      add(r);
-      return true;
+      r2->end(r.start() - 1);
+      if (0)
+        L4::cout << "shrink end to " << *r2 << '\n';
+    }
+  else
+    {
+      Region const nr(r.end() + 1, r2->end(), r2->owner(), r2->rights());
+      r2->end(r.start() - 1);
+      if (0)
+        L4::cout << "split to " << *r2 << "; " << nr << '\n';
+
+      if (nr.valid() && !add(nr))
+        {
+          r2->restore_range_from(r2_orig);
+          return false;
+        }
     }
 
-  Region const nr(r.end()+1, r2->end(),r2->owner());
-  r2->end(r.start()-1);
-  //L4::cout << "split to " << *r2 << "; " << nr << '\n';
-  if (r.valid())
-    add(r);
-  if (nr.valid())
-    add(nr);
+  if (!add(r))
+    {
+      r2->restore_range_from(r2_orig);
+      return false;
+    }
 
   return true;
 }
 
 unsigned long
-Mem_man::alloc(Region const &r, bool force)
+Mem_man::alloc(Region const &r)
 {
   if (!r.valid())
     return ~0UL;
-  Region const *r2 = find(r, force);
+  Region const *r2 = find(r);
   if (!r2)
     return ~0UL;
 
-  //L4::cout << "alloc_from(" << *r2 << ", " << r << ")\n";
+  if (0)
+    L4::cout << "alloc_from(" << *r2 << ", " << r << ")\n";
   if (!alloc_from(r2, r))
     return ~0UL;
 
   return r.start();
 }
 
+/**
+ * Allocate region from its containing region and inherit its rights.
+ *
+ * @param[in] r        Region to allocate. Its rights are the necessary minimal
+ *                     rights of the containing region.
+ * @param[out] rights  Address of the variable that will receive the full rights
+ *                     of the containing region.
+ *
+ * @retval true   The region was allocated.
+ * @retval false  The region was not allocated.
+ */
+bool
+Mem_man::alloc_get_rights(Region const &r, L4_fpage_rights *rights)
+{
+  Region q = r;
+  auto const *p = find(q);
+  if (!p)
+    return false;
+  if ((p->rights() & q.rights()) != q.rights())
+    return false;
+
+  *rights = p->rights();
+  q.rights(p->rights());
+  return alloc_from(p, q);
+}
+
+/**
+ * Add a reserved memory region into the map.
+ *
+ * \return true if the region could be reserved, or false in the case
+ * of an error. Note, any error is considered fatal and might create
+ * an inconsistent / incorrect memory map.
+ */
 bool
 Mem_man::reserve(Region const &r)
 {
   if (!r.valid())
     return false;
 
-  Region const *r2 = find(r, true);
-  if (!r2)
-    return true;
+  for (;;)
+    {
+      auto r2 = _tree.find(r);
 
-  return alloc_from(r2, r);
+      //Region const *r2 = find(r, true);
+      if (r2 == _tree.end())
+        {
+          if (0)
+            L4::cout << this << ": ADD: " << r << "\n";
+          return add(r);
+        }
+
+      if (0)
+        L4::cout << this << ":  RESERVE: " << r << " from " << (*r2) << "\n";
+
+      if (r2->owner() && r2->owner() != r.owner())
+        return false;
+
+      // allow exact matches to update owner and rights of the reserved region
+      if (*r2 == r && (r2->owner() != r.owner() || r2->rights() != r.rights()))
+        {
+          int err = _tree.remove(*r2);
+          if (err < 0)
+            {
+              L4::cout << "err=" << err << " dump:\n";
+              dump();
+              l4_assert(!"BUG");
+            }
+          return add(r);
+        }
+
+      // contained region will not get any updated rights
+      if (r2->contains(r) && r2->owner() == r.owner())
+        return true;
+
+      if (r2->contains(r))
+        {
+          Region r2_orig = *r2;
+
+          if (r2->start() == r.start())
+            r2->start(r.end() + 1);
+          else
+            {
+              Region const nr(r.end() + 1, r2->end(), r2->owner(), r2->rights());
+              r2->end(r.start() - 1);
+              if (0)
+                L4::cout << this << ": ADDnr: " << nr << "\n";
+              // FIXME: we could avoid the merge code for this add
+              //        because this region is per definition not mergeable
+              if (nr.valid() && !add(nr))
+                {
+                  r2->restore_range_from(r2_orig);
+                  return false;
+                }
+            }
+
+          if (0)
+            L4::cout << this << ": ADD: " << r << "\n";
+
+          if (!add(r))
+            {
+              r2->restore_range_from(r2_orig);
+              return false;
+            }
+          return true;
+        }
+
+      if (r.contains(*r2))
+        {
+          if (0)
+            L4::cout << this << ": REMOVE: " << *r2 << "\n";
+          _tree.remove(*r2);
+          continue;
+        }
+
+      if (r2->start() < r.start())
+        {
+          if (r2->owner())
+            r.start(r2->end() + 1);
+          else
+            r2->end(r.start() - 1);
+        }
+      else
+        {
+          if (r2->owner())
+            r.end(r2->start() - 1);
+          else
+            r2->start(r.end() + 1);
+        }
+    }
 }
 
 
@@ -191,26 +343,27 @@ Mem_man::morecore()
   Tree::Item_type *n = 0;
   for (Tree::Rev_iterator i = _tree.rbegin(); i != _tree.rend(); ++i)
     {
-	if (i->owner())
-	  continue;
+      if (i->owner())
+        continue;
 
-	l4_addr_t st = l4_round_page(i->start());
+      l4_addr_t st = l4_round_page(i->start());
 
-	if (st < i->end() && i->end()-st >= L4_PAGESIZE-1)
-	  {
-	    n = &(*i);
-	    break;
-	  }
+      if (st < i->end() && i->end() - st >= L4_PAGESIZE - 1)
+        {
+          n = &(*i);
+          break;
+        }
     }
 
   if (!n)
     {
       if (debug_memory_maps)
-	L4::cout << PROG_NAME": morecore did not find more free memory\n";
+        L4::cout << PROG_NAME": morecore did not find more free memory\n";
       return false;
     }
 
-  Region a = Region::bs(l4_round_page(n->end() - L4_PAGESIZE -1), L4_PAGESIZE, sigma0_taskno);
+  Region a = Region::bs(l4_round_page(n->end() - L4_PAGESIZE - 1),
+                        L4_PAGESIZE, sigma0_taskno);
 
   Page_alloc_base::free((void*)a.start());
 
@@ -231,14 +384,15 @@ Mem_man::alloc_first(unsigned long size, unsigned owner)
   for (Tree::Iterator i = _tree.begin(); i != _tree.end(); ++i)
     {
       if (i->owner())
-	continue;
+        continue;
 
       // wrap-around?
       if ((i->start() + size - 1) < i->start())
-	continue;
+        continue;
 
-      l4_addr_t st = (i->start() + size-1) & ~(size-1);
-      //L4::cout << "test: " << (void*)st << " - " << i->end() << '\n';
+      l4_addr_t st = (i->start() + size - 1) & ~(size - 1);
+      if (0)
+        L4::cout << "test: " << (void*)st << " - " << i->end() << '\n';
 
       if (st < i->end() && i->end() - st >= size - 1)
         {
@@ -250,9 +404,10 @@ Mem_man::alloc_first(unsigned long size, unsigned owner)
   if (!n)
     return ~0UL;
 
-  Region a = Region::bs((n->start() + size-1) & ~(size-1), size, owner);
+  Region a = Region::bs((n->start() + size - 1) & ~(size - 1), size, owner);
 
-  alloc_from(n, a);
+  if (!alloc_from(n, a))
+    return ~0UL;
 
   return a.start();
 }

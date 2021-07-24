@@ -1,3 +1,4 @@
 <map id="l4_utcb_exc_is_ex_regs_exception" name="l4_utcb_exc_is_ex_regs_exception">
-<area shape="rect" id="node2" href="$group__l4__utcb__exc__api.html#gad1b2921ad31b2d59b2e80feb42d6f4f3" title="Get the value out of an exception UTCB that describes the type of exception. " alt="" coords="227,13,376,39"/>
+<area shape="rect" id="node1" title="Check whether an exception IPC was triggered via l4_thread_ex_regs()." alt="" coords="5,5,180,47"/>
+<area shape="rect" id="node2" href="$group__l4__utcb__exc__api.html#gad1b2921ad31b2d59b2e80feb42d6f4f3" title="Get the value out of an exception UTCB that describes the type of exception." alt="" coords="228,13,383,39"/>
 </map>

@@ -18,21 +18,8 @@ ENTRY(_start)
 
 PHDRS {
   common PT_LOAD;
-#ifndef SINGLE_SECTION
   mods PT_LOAD;
-#endif
 }
-
-/* Some explanation for SINGLE_SECTION thing: For bootstrap we want to have
- * a single program header only because some boot-loaders require that.
- * Unfortunately it does not seem to be possible to have the following
- * order:
- *         text - data - bss - modules
- * because bss is smaller in the binary than unpacked and things get screwed
- * up. So what we do it the following:
- *         text - data_including_bss - modules
- * This way things seem to work and we only have one program header.
- */
 
 SECTIONS
 {
@@ -55,6 +42,8 @@ SECTIONS
   _etext = .;
   PROVIDE (etext = .);
 
+  .note.gnu.build-id : { *(.note.gnu.build-id) }
+
   /* ensure that data starts at a new L4 page */
   . = ALIGN(4096);
   .data :
@@ -64,34 +53,22 @@ SECTIONS
 
     CTORS
     PLATFORMS
-
-    . = ALIGN(4);
-    _module_info_start = .;
-    KEEP(*(.module_info))
-    _module_info_end   = .;
-
-#ifndef SINGLE_SECTION
   } : common
 
   /* exception frames for C++ */
   .eh_frame :
   {
-#endif
     KEEP (*(.eh_frame))
     LONG(0) /* terminate .eh_frame */
-#ifndef SINGLE_SECTION
   } : common
-#endif
 
   . = ALIGN(4);
   _edata  =  .;
   PROVIDE (edata = .);
 
   _bss_start = .;
-#ifndef SINGLE_SECTION
   .bss :
   {
-#endif
    *(.dynbss)
    *(.bss .gnu.linkonce.b.*)
    *(COMMON)
@@ -103,22 +80,15 @@ SECTIONS
 /* Only move modules to modaddr if bootstrap is being loaded by an elf
  * loader, and we do not need to copy images around at runtime (e.g. with
  * compression) */
-#if defined(PLACE_MODULES_AT_MODADDR) && !defined(SINGLE_SECTION)
+#if defined(PLACE_MODULES_AT_MODADDR)
   . = RAM_BASE + MODADDR;
 #endif
-  . = ALIGN(4096);
   .data.m :
   {
-    . = ALIGN(4096);
     _module_data_start = .;
-    *(EXCLUDE_FILE (*mod00.bin *mod01.bin *mod02.bin) .module_data)
     *(.module_data)
     _module_data_end = .;
-#ifndef SINGLE_SECTION
   } : mods
-#else
-  } : common
-#endif
 
   /* Moved here to ensure that these sections are located _after_ the text
    * section. In the other case we would get program sections with a virtual

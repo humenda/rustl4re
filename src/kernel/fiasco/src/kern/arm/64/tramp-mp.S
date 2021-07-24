@@ -79,9 +79,14 @@ _tramp_mp_entry:
 	b.eq	.Lno_gic
 	mov	w4, #0xffffffff
 	str	w4, [x16, 0x80]
+	mov	x4, #0xff
 	ldr	x14, _tramp_mp_gic_cpu_base
-	mov	w4, #0xf0
+	cmp	x14, #0
+	b.eq	.Lgic_v3_cpu
 	str	w4, [x14, 4]
+	b	.Lno_gic
+.Lgic_v3_cpu:
+	msr	S3_0_C4_C6_0, x4
 .Lno_gic:
 	// switch from EL3 to EL2...
 	tlbi	alle2is
@@ -137,7 +142,17 @@ _tramp_mp_entry:
 2:
 	msr	DAIFSet, #0xf
 
-	// enable SMP
+	// Enable SMP via implementation defined CPUECTRL_EL1 which
+	// is available on Arm Silicon implementations
+	mrs	x0, midr_el1
+	lsr	w1, w0, #24
+	cmp	w1, #0x41
+	b.ne	5f
+	and	w0, w0, #0xfff0   // Check for ARM FVP AEMv8
+	mov	w1, #0xd0f0
+	cmp	w0, w1
+	b.eq	5f
+
 	mrs	x0, S3_1_C15_C2_1 // CPUECTRL_EL1
 	tbnz	w0, #6, 5f
 	orr	x0, x0, #(1 << 6)

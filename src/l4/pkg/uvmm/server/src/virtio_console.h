@@ -23,6 +23,23 @@
 
 namespace Vdev {
 
+/**
+ * Virtio device that lets guests communicate with an L4::Vcon object.
+ *
+ * Example device tree entry to make it available to guests:
+ *   virtio_uart@20000 {
+ *     compatible = "virtio,mmio";
+ *     reg = <0x20000 0x100>;
+ *     interrupt-parent = <0x1>;
+ *     interrupts = <0x0 0x7a 0x4>;
+ *     l4vmm,vdev = "console";
+ *     l4vmm,virtiocap = "guest_log";
+ *   };
+ *
+ * "l4vmm,virtiocap" is a capability to a L4::Vcon passed to uvmm. If it is not
+ * given in the device tree or no such capability exists in uvmm's initial
+ * namespace, the log of L4Re::Env is used.
+ */
 template <typename DEV>
 class Virtio_console
 : public Virtio::Dev,
@@ -57,8 +74,8 @@ public:
     {}
   };
 
-  Virtio_console(Vmm::Vm_ram *iommu, L4::Cap<L4::Vcon> con)
-  : Virtio::Dev(iommu, 0x44, L4VIRTIO_ID_CONSOLE),
+  Virtio_console(Vmm::Vm_ram *ram, L4::Cap<L4::Vcon> con)
+  : Virtio::Dev(ram, 0x44, L4VIRTIO_ID_CONSOLE),
     _con(con)
   {
     Features feat(0);
@@ -281,9 +298,9 @@ class Virtio_console_mmio
   public Virtio::Mmio_connector<Virtio_console_mmio>
 {
 public:
-  Virtio_console_mmio(Vmm::Vm_ram *iommu,
+  Virtio_console_mmio(Vmm::Vm_ram *ram,
                       L4::Cap<L4::Vcon> con = L4Re::Env::env()->log())
-  : Virtio_console(iommu, con)
+  : Virtio_console(ram, con)
   {}
 
   Virtio::Event_connector_irq *event_connector() { return &_evcon; }

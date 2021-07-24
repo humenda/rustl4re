@@ -117,7 +117,7 @@ LibLocateHandleByDiskSignature (
     EFI_HANDLE            *BlockIoBuffer;
     EFI_DEVICE_PATH       *DevicePath;
     UINTN                 Index;
-    EFI_DEVICE_PATH       *Start, *Next, *DevPath;
+    EFI_DEVICE_PATH       *Next, *DevPath;
     HARDDRIVE_DEVICE_PATH *HardDriveDevicePath;
     BOOLEAN               Match;
     BOOLEAN               PreviousNodeIsHardDriveDevicePath;
@@ -126,6 +126,7 @@ LibLocateHandleByDiskSignature (
     // Initialize for GrowBuffer loop
     //
 
+    Status = EFI_SUCCESS;
     BlockIoBuffer = NULL;
     BufferSize = 50 * sizeof(EFI_HANDLE);
 
@@ -199,7 +200,6 @@ LibLocateHandleByDiskSignature (
             PreviousNodeIsHardDriveDevicePath = FALSE;
 
             DevPath = DevicePath;
-            Start = DevPath;
 
             //
             // Check for end of device path type
@@ -339,6 +339,7 @@ LibFileInfo (
     // Initialize for GrowBuffer loop
     //
 
+    Status = EFI_SUCCESS;
     Buffer = NULL;
     BufferSize = SIZE_OF_EFI_FILE_INFO + 200;
 
@@ -374,6 +375,7 @@ LibFileSystemInfo (
     // Initialize for GrowBuffer loop
     //
 
+    Status = EFI_SUCCESS;
     Buffer = NULL;
     BufferSize = SIZE_OF_EFI_FILE_SYSTEM_INFO + 200;
 
@@ -408,6 +410,7 @@ LibFileSystemVolumeLabelInfo (
     // Initialize for GrowBuffer loop
     //
 
+    Status = EFI_SUCCESS;
     Buffer = NULL;
     BufferSize = SIZE_OF_EFI_FILE_SYSTEM_VOLUME_LABEL_INFO + 200;
 

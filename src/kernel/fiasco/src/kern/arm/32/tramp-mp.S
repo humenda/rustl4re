@@ -10,55 +10,61 @@
 #endif
 
 .macro defvar name
-.global \name
-\name: .long 0
+	.global \name
+	.type   \name,%object
+	.p2align 2
+.LC\name:
+\name:	.long 0
+	.size \name, . - \name
 .endm
 
 	.section .mp_tramp, "awx"
 	.p2align 12
 
-#ifdef CONFIG_ARM_V7
-cache_invalidate_v7:
-	// B2.2.7
-	mrc     p15, 1, r0, c0, c0, 1
-	ands    r3, r0, #0x07000000
-	mov     r3, r3, lsr #23
+#if defined(CONFIG_ARM_V7) && !defined(CONFIG_ARM_PSCI)
+/* Similar to B2.2.7 but only consider L1 and use DCISW instead of DCCSW.
+ * Must be executed _before_ the cache is enabled!
+ *
+ * We would like to be able to invalidate all levels of non-shared caches.
+ * Unfortunately there is no information available regarding the layout of
+ * shared / non-shared caches in the system. As only non-PSCI platforms need to
+ * be considered (PSCI CPU_ON performs invalidation of caches on boot), assume
+ * that these only have L1 cache or they use bsp_early_init to perform further
+ * initialization.
+ */
+cache_invalidate_l1_v7:
+	mrc     p15, 1, r0, c0, c0, 1   @ read CLIDR
+	tst     r0, #0x07000000         @ CLIDR.LoC == 0?
 	beq     finished
-	mov     r10, #0
-loop1:
-	add     r2, r10, r10, lsr #1
-	mov     r1, r0, lsr r2
-	and     r1, r1, #7
+	and     r1, r0, #7              @ CLIDR.ctype0
 	cmp     r1, #2
-	blt     skip
-	mcr     p15, 2, r10, c0, c0, 0
+	blt     skip                    @ skip on no cache or I cache only
+	mov     r0, #0
+	mcr     p15, 2, r0, c0, c0, 0   @ CSSELR = 0 (L1)
 	isb
-	mrc     p15, 1, r1, c0, c0, 0
-	and     r2, r1, #7
+	mrc     p15, 1, r1, c0, c0, 0   @ read CCSIDR
+	and     r2, r1, #7              @ CCSIDR.LineSize
 	add     r2, r2, #4
 	movw    r4, #0x3ff
-	ands    r4, r4, r1, lsr #3
+	ands    r4, r4, r1, lsr #3      @ CCSIDR.Associativity
 	clz     r5, r4
 	mov     r9, r4
-loop2:
+loop1:
 	movw    r7, #0x7fff
-	ands    r7, r7, r1, lsr #13
-loop3:
-	orr     r11, r10, r9, lsl r5
+	ands    r7, r7, r1, lsr #13     @ CCSIDR.NumSets
+loop2:
+	orr     r11, r0, r9, lsl r5
 	orr     r11, r11, r7, lsl r2
-	mcr     p15, 0, r11, c7, c6, 2
+	mcr     p15, 0, r11, c7, c6, 2  @ DCISW
 	subs    r7, r7, #1
-	bge     loop3
-	subs    r9, r9, #1
 	bge     loop2
+	subs    r9, r9, #1
+	bge     loop1
 skip:
-	add     r10, r10, #2
-	cmp     r3, r10
-	bgt     loop1
 	dsb
 finished:
 	mov     r0, #0
-	mcr     p15, 2, r0, c0, c0, 0
+	mcr     p15, 2, r0, c0, c0, 0   @ reset CSSELR
 	dsb
 	isb
 	mov     pc, lr
@@ -104,8 +110,8 @@ _tramp_mp_entry:
 
 #endif
 
-#ifdef CONFIG_ARM_V7
-	bl    cache_invalidate_v7
+#if defined(CONFIG_ARM_V7) && !defined(CONFIG_ARM_PSCI)
+	bl    cache_invalidate_l1_v7
 #endif
 
 	mcr   p15, 0, r0, c7, c5, 0 // ICIALLU
@@ -148,15 +154,15 @@ _tramp_mp_entry:
         mcr p15, 4, r0, c8, c7, 4 /* TLBIALLNSNH */
 
         // init TTBCR
-        adr r0, _tramp_mp_startup_ttbcr
+        adr r0, .LC_tramp_mp_startup_ttbcr
         ldr r1, [r0]
         mcr p15, 4, r1, c2, c0, 2
 
-        adr r0, _tramp_mp_startup_mair0
+        adr r0, .LC_tramp_mp_startup_mair0
         ldr r0, [r0]
         mcr p15, 4, r0, c10, c2, 0  // MAIR0
 
-        adr r0, _tramp_mp_startup_pdbr
+        adr r0, .LC_tramp_mp_startup_pdbr
         ldr r0, [r0]
         mov r1, #0
         mcrr p15, 4, r0, r1, c2     // HTBR
@@ -167,7 +173,7 @@ _tramp_mp_entry:
 	// TLB flush
 	mcr p15, 0, r0, c8, c7, 0
 
-	adr r0, _tramp_mp_startup_dcr
+	adr r0, .LC_tramp_mp_startup_dcr
 	ldr r0, [r0]
 	mcr p15, 0, r0, c3, c0
 
@@ -176,21 +182,21 @@ _tramp_mp_entry:
 	mcr p15, 0, r0, c13, c0, 1
 
 	// init TTBCR
-	adr r0, _tramp_mp_startup_ttbcr
+	adr r0, .LC_tramp_mp_startup_ttbcr
 	ldr r1, [r0]
 	mcr p15, 0, r1, c2, c0, 2
 
-	adr r0, _tramp_mp_startup_mair0
+	adr r0, .LC_tramp_mp_startup_mair0
 	ldr r0, [r0]
 	mcr p15, 0, r0, c10, c2, 0  // MAIR0 / PRRR
-	adr r0, _tramp_mp_startup_mair1
+	adr r0, .LC_tramp_mp_startup_mair1
 	ldr r0, [r0]
 	mcr p15, 0, r0, c10, c2, 1  // MAIR1 / NMRR
 
 	mov r0, #0
 	mcr p15, 0, r0, c8, c7, 0
 
-	adr r0, _tramp_mp_startup_pdbr
+	adr r0, .LC_tramp_mp_startup_pdbr
 	ldr r0, [r0]
 	tst r1, #(1 << 31)
 	movne  r1, #0
@@ -198,7 +204,7 @@ _tramp_mp_entry:
 	mcreq  p15, 0, r0, c2, c0
 #endif
 
-	adr r0, _tramp_mp_startup_cp15_c1
+	adr r0, .LC_tramp_mp_startup_cp15_c1
 	ldr r0, [r0]
 	mcr p15, 0, r0, c1, c0
 
@@ -208,7 +214,7 @@ _tramp_mp_entry:
 	ldr r0, 1f
 	mov pc, r0
 1:
-	.long _tramp_mp_virt
+	.long .LC_tramp_mp_virt
 
 #if defined(CONFIG_ARM_MPCORE) || defined(CONFIG_ARM_CORTEX_A9) || defined(CONFIG_ARM_CORTEX_A5)
 .Lmpcore_phys_base:
@@ -227,9 +233,9 @@ defvar _tramp_mp_startup_mair0
 defvar _tramp_mp_startup_mair1
 
 	// we run paged now
-_tramp_mp_virt:
+.LC_tramp_mp_virt:
 	// spinlock on cpu-init
-	adr	r0, _tramp_mp_spinlock
+	adr	r0, .LC_tramp_mp_spinlock
 1:	ldr	r1, [r0]
 	teq	r1, #0
 	wfene
@@ -246,7 +252,8 @@ _tramp_mp_virt:
 	// TLB flush
 	mcr p15, 0, r0, c8, c7, 0
 
-	adr	sp, _tramp_mp_init_stack_top
+	adr	sp, .LC_tramp_mp_init_stack
+	add	sp, #(.LC_tramp_mp_init_stack_top-.LC_tramp_mp_init_stack)
 	nop
 	ldr	pc, [pc, #-4]
 
@@ -255,7 +262,8 @@ _tramp_mp_virt:
 .long 0
 defvar _tramp_mp_spinlock
 
-_tramp_mp_init_stack:
+	.p2align 3
+.LC_tramp_mp_init_stack:
 	.space 1024
-_tramp_mp_init_stack_top:
+.LC_tramp_mp_init_stack_top:
 

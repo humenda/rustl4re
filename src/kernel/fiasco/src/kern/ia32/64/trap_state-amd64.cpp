@@ -97,7 +97,6 @@ Trap_state::sanitize_user_state()
   if (EXPECT_FALSE(   (_cs != (Gdt::gdt_code_user | Gdt::Selector_user))
                    && (_cs != (Gdt::gdt_code_user32 | Gdt::Selector_user))))
     _cs = Gdt::gdt_code_user | Gdt::Selector_user;
-  _ss = Gdt::gdt_data_user | Gdt::Selector_user;
   _flags = (_flags & ~(EFLAGS_IOPL | EFLAGS_NT)) | EFLAGS_IF;
 }
 
@@ -217,11 +216,6 @@ PUBLIC inline NEEDS["atomic.h"]
 void
 Trap_state::consume_instruction(unsigned count)
 { cas ((Address*)(&_ip), _ip, _ip + count); }
-
-PUBLIC inline
-bool
-Trap_state::is_debug_exception() const
-{ return _trapno == 1 || _trapno == 3; }
 
 PUBLIC
 void

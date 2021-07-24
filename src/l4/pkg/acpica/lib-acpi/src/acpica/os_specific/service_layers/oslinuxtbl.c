@@ -8,7 +8,7 @@
  *
  * 1. Copyright Notice
  *
- * Some or all of this work - Copyright (c) 1999 - 2017, Intel Corp.
+ * Some or all of this work - Copyright (c) 1999 - 2019, Intel Corp.
  * All rights reserved.
  *
  * 2. License
@@ -111,6 +111,42 @@
  * other governmental approval, or letter of assurance, without first obtaining
  * such license, approval or letter.
  *
+ *****************************************************************************
+ *
+ * Alternatively, you may choose to be licensed under the terms of the
+ * following license:
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions, and the following disclaimer,
+ *    without modification.
+ * 2. Redistributions in binary form must reproduce at minimum a disclaimer
+ *    substantially similar to the "NO WARRANTY" disclaimer below
+ *    ("Disclaimer") and any redistribution must be conditioned upon
+ *    including a substantially similar Disclaimer requirement for further
+ *    binary redistribution.
+ * 3. Neither the names of the above-listed copyright holders nor the names
+ *    of any contributors may be used to endorse or promote products derived
+ *    from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+ * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * Alternatively, you may choose to be licensed under the terms of the
+ * GNU General Public License ("GPL") version 2 as published by the Free
+ * Software Foundation.
+ *
  *****************************************************************************/
 
 #include "acpidump.h"
@@ -131,7 +167,7 @@ typedef struct osl_table_info
 {
     struct osl_table_info   *Next;
     UINT32                  Instance;
-    char                    Signature[ACPI_NAME_SIZE];
+    char                    Signature[ACPI_NAMESEG_SIZE];
 
 } OSL_TABLE_INFO;
 
@@ -448,7 +484,7 @@ OslAddTableToList (
         return (AE_NO_MEMORY);
     }
 
-    ACPI_MOVE_NAME (NewInfo->Signature, Signature);
+    ACPI_COPY_NAMESEG (NewInfo->Signature, Signature);
 
     if (!Gbl_TableListHead)
     {
@@ -459,7 +495,7 @@ OslAddTableToList (
         Next = Gbl_TableListHead;
         while (1)
         {
-            if (ACPI_COMPARE_NAME (Next->Signature, Signature))
+            if (ACPI_COMPARE_NAMESEG (Next->Signature, Signature))
             {
                 if (Next->Instance == Instance)
                 {
@@ -952,7 +988,7 @@ OslListBiosTables (
 
         /* Skip NULL entries in RSDT/XSDT */
 
-        if (!TableAddress)
+        if (TableAddress == 0)
         {
             continue;
         }
@@ -1005,7 +1041,8 @@ OslGetBiosTable (
     UINT8                   NumberOfTables;
     UINT8                   ItemSize;
     UINT32                  CurrentInstance = 0;
-    ACPI_PHYSICAL_ADDRESS   TableAddress = 0;
+    ACPI_PHYSICAL_ADDRESS   TableAddress;
+    ACPI_PHYSICAL_ADDRESS   FirstTableAddress = 0;
     UINT32                  TableLength = 0;
     ACPI_STATUS             Status = AE_OK;
     UINT32                  i;
@@ -1013,64 +1050,86 @@ OslGetBiosTable (
 
     /* Handle special tables whose addresses are not in RSDT/XSDT */
 
-    if (ACPI_COMPARE_NAME (Signature, ACPI_RSDP_NAME) ||
-        ACPI_COMPARE_NAME (Signature, ACPI_SIG_RSDT) ||
-        ACPI_COMPARE_NAME (Signature, ACPI_SIG_XSDT) ||
-        ACPI_COMPARE_NAME (Signature, ACPI_SIG_DSDT) ||
-        ACPI_COMPARE_NAME (Signature, ACPI_SIG_FACS))
+    if (ACPI_COMPARE_NAMESEG (Signature, ACPI_RSDP_NAME) ||
+        ACPI_COMPARE_NAMESEG (Signature, ACPI_SIG_RSDT) ||
+        ACPI_COMPARE_NAMESEG (Signature, ACPI_SIG_XSDT) ||
+        ACPI_COMPARE_NAMESEG (Signature, ACPI_SIG_DSDT) ||
+        ACPI_COMPARE_NAMESEG (Signature, ACPI_SIG_FACS))
     {
-        if (Instance > 0)
-        {
-            return (AE_LIMIT);
-        }
+
+FindNextInstance:
+
+        TableAddress = 0;
 
         /*
          * Get the appropriate address, either 32-bit or 64-bit. Be very
          * careful about the FADT length and validate table addresses.
          * Note: The 64-bit addresses have priority.
          */
-        if (ACPI_COMPARE_NAME (Signature, ACPI_SIG_DSDT))
+        if (ACPI_COMPARE_NAMESEG (Signature, ACPI_SIG_DSDT))
         {
-            if ((Gbl_Fadt->Header.Length >= MIN_FADT_FOR_XDSDT) &&
-                Gbl_Fadt->XDsdt)
+            if (CurrentInstance < 2)
             {
-                TableAddress = (ACPI_PHYSICAL_ADDRESS) Gbl_Fadt->XDsdt;
-            }
-            else if ((Gbl_Fadt->Header.Length >= MIN_FADT_FOR_DSDT) &&
-                Gbl_Fadt->Dsdt)
-            {
-                TableAddress = (ACPI_PHYSICAL_ADDRESS) Gbl_Fadt->Dsdt;
+                if ((Gbl_Fadt->Header.Length >= MIN_FADT_FOR_XDSDT) &&
+                    Gbl_Fadt->XDsdt && CurrentInstance == 0)
+                {
+                    TableAddress = (ACPI_PHYSICAL_ADDRESS) Gbl_Fadt->XDsdt;
+                }
+                else if ((Gbl_Fadt->Header.Length >= MIN_FADT_FOR_DSDT) &&
+                    Gbl_Fadt->Dsdt != FirstTableAddress)
+                {
+                    TableAddress = (ACPI_PHYSICAL_ADDRESS) Gbl_Fadt->Dsdt;
+                }
             }
         }
-        else if (ACPI_COMPARE_NAME (Signature, ACPI_SIG_FACS))
+        else if (ACPI_COMPARE_NAMESEG (Signature, ACPI_SIG_FACS))
         {
-            if ((Gbl_Fadt->Header.Length >= MIN_FADT_FOR_XFACS) &&
-                Gbl_Fadt->XFacs)
+            if (CurrentInstance < 2)
             {
-                TableAddress = (ACPI_PHYSICAL_ADDRESS) Gbl_Fadt->XFacs;
-            }
-            else if ((Gbl_Fadt->Header.Length >= MIN_FADT_FOR_FACS) &&
-                Gbl_Fadt->Facs)
-            {
-                TableAddress = (ACPI_PHYSICAL_ADDRESS) Gbl_Fadt->Facs;
+                if ((Gbl_Fadt->Header.Length >= MIN_FADT_FOR_XFACS) &&
+                    Gbl_Fadt->XFacs && CurrentInstance == 0)
+                {
+                    TableAddress = (ACPI_PHYSICAL_ADDRESS) Gbl_Fadt->XFacs;
+                }
+                else if ((Gbl_Fadt->Header.Length >= MIN_FADT_FOR_FACS) &&
+                    Gbl_Fadt->Facs != FirstTableAddress)
+                {
+                    TableAddress = (ACPI_PHYSICAL_ADDRESS) Gbl_Fadt->Facs;
+                }
             }
         }
-        else if (ACPI_COMPARE_NAME (Signature, ACPI_SIG_XSDT))
+        else if (ACPI_COMPARE_NAMESEG (Signature, ACPI_SIG_XSDT))
         {
             if (!Gbl_Revision)
             {
                 return (AE_BAD_SIGNATURE);
             }
-            TableAddress = (ACPI_PHYSICAL_ADDRESS) Gbl_Rsdp.XsdtPhysicalAddress;
+            if (CurrentInstance == 0)
+            {
+                TableAddress =
+                    (ACPI_PHYSICAL_ADDRESS) Gbl_Rsdp.XsdtPhysicalAddress;
+            }
         }
-        else if (ACPI_COMPARE_NAME (Signature, ACPI_SIG_RSDT))
+        else if (ACPI_COMPARE_NAMESEG (Signature, ACPI_SIG_RSDT))
         {
-            TableAddress = (ACPI_PHYSICAL_ADDRESS) Gbl_Rsdp.RsdtPhysicalAddress;
+            if (CurrentInstance == 0)
+            {
+                TableAddress =
+                    (ACPI_PHYSICAL_ADDRESS) Gbl_Rsdp.RsdtPhysicalAddress;
+            }
         }
         else
         {
-            TableAddress = (ACPI_PHYSICAL_ADDRESS) Gbl_RsdpAddress;
-            Signature = ACPI_SIG_RSDP;
+            if (CurrentInstance == 0)
+            {
+                TableAddress = (ACPI_PHYSICAL_ADDRESS) Gbl_RsdpAddress;
+                Signature = ACPI_SIG_RSDP;
+            }
+        }
+
+        if (TableAddress == 0)
+        {
+            goto ExitFindTable;
         }
 
         /* Now we can get the requested special table */
@@ -1082,6 +1141,20 @@ OslGetBiosTable (
         }
 
         TableLength = ApGetTableLength (MappedTable);
+        if (FirstTableAddress == 0)
+        {
+            FirstTableAddress = TableAddress;
+        }
+
+        /* Match table instance */
+
+        if (CurrentInstance != Instance)
+        {
+            OslUnmapTable (MappedTable);
+            MappedTable = NULL;
+            CurrentInstance++;
+            goto FindNextInstance;
+        }
     }
     else /* Case for a normal ACPI table */
     {
@@ -1119,7 +1192,7 @@ OslGetBiosTable (
 
             /* Skip NULL entries in RSDT/XSDT */
 
-            if (!TableAddress)
+            if (TableAddress == 0)
             {
                 continue;
             }
@@ -1133,7 +1206,7 @@ OslGetBiosTable (
 
             /* Does this table match the requested signature? */
 
-            if (!ACPI_COMPARE_NAME (MappedTable->Signature, Signature))
+            if (!ACPI_COMPARE_NAMESEG (MappedTable->Signature, Signature))
             {
                 OslUnmapTable (MappedTable);
                 MappedTable = NULL;
@@ -1153,6 +1226,8 @@ OslGetBiosTable (
             break;
         }
     }
+
+ExitFindTable:
 
     if (!MappedTable)
     {
@@ -1202,7 +1277,7 @@ OslListCustomizedTables (
 {
     void                    *TableDir;
     UINT32                  Instance;
-    char                    TempName[ACPI_NAME_SIZE];
+    char                    TempName[ACPI_NAMESEG_SIZE];
     char                    *Filename;
     ACPI_STATUS             Status = AE_OK;
 
@@ -1302,7 +1377,7 @@ OslMapTable (
                 return (AE_BAD_SIGNATURE);
             }
         }
-        else if (!ACPI_COMPARE_NAME (Signature, MappedTable->Signature))
+        else if (!ACPI_COMPARE_NAMESEG (Signature, MappedTable->Signature))
         {
             AcpiOsUnmapMemory (MappedTable, sizeof (ACPI_TABLE_HEADER));
             return (AE_BAD_SIGNATURE);
@@ -1382,18 +1457,18 @@ OslTableNameFromFile (
 
     /* Ignore meaningless files */
 
-    if (strlen (Filename) < ACPI_NAME_SIZE)
+    if (strlen (Filename) < ACPI_NAMESEG_SIZE)
     {
         return (AE_BAD_SIGNATURE);
     }
 
     /* Extract instance number */
 
-    if (isdigit ((int) Filename[ACPI_NAME_SIZE]))
+    if (isdigit ((int) Filename[ACPI_NAMESEG_SIZE]))
     {
-        sscanf (&Filename[ACPI_NAME_SIZE], "%u", Instance);
+        sscanf (&Filename[ACPI_NAMESEG_SIZE], "%u", Instance);
     }
-    else if (strlen (Filename) != ACPI_NAME_SIZE)
+    else if (strlen (Filename) != ACPI_NAMESEG_SIZE)
     {
         return (AE_BAD_SIGNATURE);
     }
@@ -1404,7 +1479,7 @@ OslTableNameFromFile (
 
     /* Extract signature */
 
-    ACPI_MOVE_NAME (Signature, Filename);
+    ACPI_COPY_NAMESEG (Signature, Filename);
     return (AE_OK);
 }
 
@@ -1474,7 +1549,7 @@ OslReadTableFromFile (
                 goto Exit;
             }
         }
-        else if (!ACPI_COMPARE_NAME (Signature, Header.Signature))
+        else if (!ACPI_COMPARE_NAMESEG (Signature, Header.Signature))
         {
             fprintf (stderr, "Incorrect signature: Expecting %4.4s, found %4.4s\n",
                 Signature, Header.Signature);
@@ -1554,7 +1629,7 @@ OslGetCustomizedTable (
 {
     void                    *TableDir;
     UINT32                  CurrentInstance = 0;
-    char                    TempName[ACPI_NAME_SIZE];
+    char                    TempName[ACPI_NAMESEG_SIZE];
     char                    TableFilename[PATH_MAX];
     char                    *Filename;
     ACPI_STATUS             Status;
@@ -1574,7 +1649,7 @@ OslGetCustomizedTable (
     {
         /* Ignore meaningless files */
 
-        if (!ACPI_COMPARE_NAME (Filename, Signature))
+        if (!ACPI_COMPARE_NAMESEG (Filename, Signature))
         {
             continue;
         }

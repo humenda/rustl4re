@@ -8,7 +8,7 @@
  *
  * 1. Copyright Notice
  *
- * Some or all of this work - Copyright (c) 1999 - 2017, Intel Corp.
+ * Some or all of this work - Copyright (c) 1999 - 2019, Intel Corp.
  * All rights reserved.
  *
  * 2. License
@@ -110,6 +110,42 @@
  * United States government or any agency thereof requires an export license,
  * other governmental approval, or letter of assurance, without first obtaining
  * such license, approval or letter.
+ *
+ *****************************************************************************
+ *
+ * Alternatively, you may choose to be licensed under the terms of the
+ * following license:
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions, and the following disclaimer,
+ *    without modification.
+ * 2. Redistributions in binary form must reproduce at minimum a disclaimer
+ *    substantially similar to the "NO WARRANTY" disclaimer below
+ *    ("Disclaimer") and any redistribution must be conditioned upon
+ *    including a substantially similar Disclaimer requirement for further
+ *    binary redistribution.
+ * 3. Neither the names of the above-listed copyright holders nor the names
+ *    of any contributors may be used to endorse or promote products derived
+ *    from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+ * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * Alternatively, you may choose to be licensed under the terms of the
+ * GNU General Public License ("GPL") version 2 as published by the Free
+ * Software Foundation.
  *
  *****************************************************************************/
 
@@ -249,7 +285,7 @@ typedef enum
     ASL_MSG_NO_RETVAL,
     ASL_MSG_NO_WHILE,
     ASL_MSG_NON_ASCII,
-    ASL_MSG_NON_ZERO,
+    ASL_MSG_BUFFER_FIELD_LENGTH,
     ASL_MSG_NOT_EXIST,
     ASL_MSG_NOT_FOUND,
     ASL_MSG_NOT_METHOD,
@@ -315,6 +351,26 @@ typedef enum
     ASL_MSG_ARG_NOT_USED,
     ASL_MSG_CONSTANT_REQUIRED,
     ASL_MSG_CROSS_TABLE_SCOPE,
+    ASL_MSG_EXCEPTION_NOT_RECEIVED,
+    ASL_MSG_NULL_RESOURCE_TEMPLATE,
+    ASL_MSG_FOUND_HERE,
+    ASL_MSG_ILLEGAL_RECURSION,
+    ASL_MSG_DUPLICATE_INPUT_FILE,
+    ASL_MSG_WARNING_AS_ERROR,
+    ASL_MSG_OEM_TABLE_ID,
+    ASL_MSG_OEM_ID,
+    ASL_MSG_UNLOAD,
+    ASL_MSG_OFFSET,
+    ASL_MSG_LONG_SLEEP,
+    ASL_MSG_PREFIX_NOT_EXIST,
+    ASL_MSG_NAMEPATH_NOT_EXIST,
+    ASL_MSG_REGION_LENGTH,
+    ASL_MSG_TEMPORARY_OBJECT,
+    ASL_MSG_UNDEFINED_EXTERNAL,
+    ASL_MSG_BUFFER_FIELD_OVERFLOW,
+    ASL_MSG_INVALID_SPECIAL_NAME,
+    ASL_MSG_INVALID_PROCESSOR_UID,
+    ASL_MSG_LEGACY_PROCESSOR_OP,
 
     /* These messages are used by the Data Table compiler only */
 

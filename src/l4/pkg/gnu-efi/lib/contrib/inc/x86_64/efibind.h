@@ -23,7 +23,7 @@ Revision History
 #endif
 
 #if defined(GNU_EFI_USE_MS_ABI)
-    #if defined(__GNUC__) && (__GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 7))
+    #if (defined(__GNUC__) && (__GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 7)))||(defined(__clang__) && (__clang_major__ > 3 || (__clang_major__ == 3 && __clang_minor__ >= 2)))
         #define HAVE_USE_MS_ABI 1
     #else
         #error Compiler is too old for GNU_EFI_USE_MS_ABI
@@ -84,6 +84,8 @@ Revision History
        typedef unsigned char       uint8_t;
        typedef char                int8_t;
     #endif
+    typedef uint64_t            uintptr_t;
+    typedef int64_t             intptr_t;
 #elif defined(__GNUC__)
     #include <stdint.h>
 #endif
@@ -245,9 +247,13 @@ typedef uint64_t   UINTN;
 
 //
 // When build similiar to FW, then link everything together as
-// one big module.
+// one big module. For the MSVC toolchain, we simply tell the
+// linker what our driver init function is using /ENTRY.
 //
-
+#if defined(_MSC_EXTENSIONS)
+    #define EFI_DRIVER_ENTRY_POINT(InitFunction) \
+        __pragma(comment(linker, "/ENTRY:" # InitFunction))
+#else
     #define EFI_DRIVER_ENTRY_POINT(InitFunction)    \
         UINTN                                       \
         InitializeDriver (                          \
@@ -264,11 +270,12 @@ typedef uint64_t   UINTN;
             EFI_SYSTEM_TABLE *systab                \
             ) __attribute__((weak,                  \
                     alias ("InitializeDriver")));
+#endif
 
     #define LOAD_INTERNAL_DRIVER(_if, type, name, entry)    \
             (_if)->LoadInternal(type, name, entry)
 
-#endif // EFI_FW_NT 
+#endif // EFI_NT_EMULATOR
 
 //
 // Some compilers don't support the forward reference construct:
@@ -279,7 +286,7 @@ typedef uint64_t   UINTN;
 #ifdef NO_INTERFACE_DECL
 #define INTERFACE_DECL(x)
 #else
-#ifdef __GNUC__
+#if defined(__GNUC__) || defined(_MSC_EXTENSIONS)
 #define INTERFACE_DECL(x) struct x
 #else
 #define INTERFACE_DECL(x) typedef struct x
@@ -311,11 +318,6 @@ typedef uint64_t   UINTN;
 #define __VA_ARG_NSUFFIX_N_(prefix,nargs)       \
   prefix ## nargs
 
-// L4 addition
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 /* Prototypes of EFI cdecl -> stdcall trampolines */
 UINT64 efi_call0(void *func);
 UINT64 efi_call1(void *func, UINT64 arg1);
@@ -338,11 +340,6 @@ UINT64 efi_call9(void *func, UINT64 arg1, UINT64 arg2, UINT64 arg3,
 UINT64 efi_call10(void *func, UINT64 arg1, UINT64 arg2, UINT64 arg3,
                   UINT64 arg4, UINT64 arg5, UINT64 arg6, UINT64 arg7,
                   UINT64 arg8, UINT64 arg9, UINT64 arg10);
-
-// L4 addition
-#ifdef __cplusplus
-}
-#endif
 
 /* Front-ends to efi_callX to avoid compiler warnings */
 #define _cast64_efi_call0(f) \
@@ -381,7 +378,12 @@ UINT64 efi_call10(void *func, UINT64 arg1, UINT64 arg2, UINT64 arg3,
   __VA_ARG_NSUFFIX__(_cast64_efi_call, __VA_ARGS__) (func , ##__VA_ARGS__)
 
 #endif
-#define EFI_FUNCTION __attribute__((ms_abi))
+
+#if defined(HAVE_USE_MS_ABI) && !defined(_MSC_EXTENSIONS)
+    #define EFI_FUNCTION __attribute__((ms_abi))
+#else
+    #define EFI_FUNCTION
+#endif
 
 #ifdef _MSC_EXTENSIONS
 #pragma warning ( disable : 4731 )  // Suppress warnings about modification of EBP

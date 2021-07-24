@@ -18,8 +18,8 @@ var structl4__kernel__info__t =
     [ "frequency_bus", "structl4__kernel__info__t.html#a2bac86bae43e65f105e96107d83f35cf", null ],
     [ "frequency_cpu", "structl4__kernel__info__t.html#aefa0ae674fe4f0acba147bf0853935a3", null ],
     [ "kip_sys_calls", "structl4__kernel__info__t.html#a8810367561755cf9d597e5a335006294", null ],
-    [ "magic", "structl4__kernel__info__t.html#a59c2d0b6c5d62c2736c6ae8b5f6a90dc", null ],
     [ "magic", "structl4__kernel__info__t.html#ac27caf559ed9e0b9bb49e8f8ff76a060", null ],
+    [ "magic", "structl4__kernel__info__t.html#a59c2d0b6c5d62c2736c6ae8b5f6a90dc", null ],
     [ "mem_info", "structl4__kernel__info__t.html#aea3250c08ad8c5016698832d90ad75ce", null ],
     [ "offset_version_strings", "structl4__kernel__info__t.html#a863b789c965784509393ddec232d85fb", null ],
     [ "root_eip", "structl4__kernel__info__t.html#a5eae68b54614be6824e6710828700a31", null ],
@@ -30,7 +30,7 @@ var structl4__kernel__info__t =
     [ "sigma1_eip", "structl4__kernel__info__t.html#a1baa61870008e76dbfd9160039022f6d", null ],
     [ "sigma1_esp", "structl4__kernel__info__t.html#ab2efabec3afb4195e56df80ed5181738", null ],
     [ "user_ptr", "structl4__kernel__info__t.html#a3656a424423c9842b9b4c0507e4f5932", null ],
-    [ "version", "structl4__kernel__info__t.html#ad76ae01198b628b8fe2aa41d1b75a8b5", null ],
     [ "version", "structl4__kernel__info__t.html#a35efca7111ebf803952d6017344c7aea", null ],
+    [ "version", "structl4__kernel__info__t.html#ad76ae01198b628b8fe2aa41d1b75a8b5", null ],
     [ "vhw_offset", "structl4__kernel__info__t.html#a6f194b599c4a2d069cf0e00cec5acf0d", null ]
 ];

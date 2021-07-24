@@ -24,7 +24,8 @@ var group__l4__protocol__ops =
       [ "L4_TASK_UNMAP_OP", "group__l4__protocol__ops.html#gga23a759356490c4b1feffc9f36440a82dacf2f7d650b09524d1f2890c55ac42c04", null ],
       [ "L4_TASK_CAP_INFO_OP", "group__l4__protocol__ops.html#gga23a759356490c4b1feffc9f36440a82da6075e7dab8204f782790fc1279db0130", null ],
       [ "L4_TASK_ADD_KU_MEM_OP", "group__l4__protocol__ops.html#gga23a759356490c4b1feffc9f36440a82da361352c492a08a7426a986219b2058b3", null ],
-      [ "L4_TASK_LDT_SET_X86_OP", "group__l4__protocol__ops.html#gga23a759356490c4b1feffc9f36440a82da1dc147565402a8c98f9a19a087f0062a", null ]
+      [ "L4_TASK_LDT_SET_X86_OP", "group__l4__protocol__ops.html#gga23a759356490c4b1feffc9f36440a82da1dc147565402a8c98f9a19a087f0062a", null ],
+      [ "L4_TASK_MAP_VGICC_ARM_OP", "group__l4__protocol__ops.html#gga23a759356490c4b1feffc9f36440a82da317f1418430c7753e2a6655caa8ca420", null ]
     ] ],
     [ "L4_thread_ops", "group__l4__protocol__ops.html#ga2f876d49c3d78a1c0d62722c0546aa81", [
       [ "L4_THREAD_CONTROL_OP", "group__l4__protocol__ops.html#gga2f876d49c3d78a1c0d62722c0546aa81aacb3f3ae289e1f8caf576881c290be86", null ],

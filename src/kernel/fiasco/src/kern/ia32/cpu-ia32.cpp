@@ -1,9 +1,23 @@
 INTERFACE[ia32,amd64,ux]:
 
+#include "asm.h"
 #include "types.h"
 #include "initcalls.h"
 #include "regdefs.h"
 #include "per_cpu_data.h"
+
+#define FIASCO_IA32_LOAD_SEG_SAFE(seg, val) \
+  asm volatile ("mov %0, %%" #seg : : "rm"(val))
+
+#define FIASCO_IA32_LOAD_SEG(seg, val) \
+  asm volatile (                              \
+    "1: mov %0, %%" #seg "\n\t"               \
+    ".pushsection \".fixup.%=\", \"ax?\"\n\t" \
+    "2: movw  $0, %0                    \n\t" \
+    "   jmp 1b                          \n\t" \
+    ".popsection                        \n\t" \
+    ASM_KEX(1b, 2b)                           \
+    : : "rm" (val))
 
 EXTENSION
 class Cpu
@@ -64,9 +78,11 @@ private:
   Unsigned32 _features;
   Unsigned32 _ext_features;
   Unsigned32 _ext_07_ebx;
+  Unsigned32 _ext_07_edx;
   Unsigned32 _ext_8000_0001_ecx;
   Unsigned32 _ext_8000_0001_edx;
   Unsigned32 _local_features;
+  Unsigned64 _arch_capabilities;
 
   Unsigned16 _inst_tlb_4k_entries;
   Unsigned16 _data_tlb_4k_entries;
@@ -141,11 +157,24 @@ public:
   unsigned brand() const { return _brand & 0xFF; }
   unsigned features() const { return _features; }
   unsigned ext_features() const { return _ext_features; }
-  bool has_monitor_mwait() const { return _ext_features & (1 << 3); }
+  bool has_monitor_mwait() const { return _ext_features & FEATX_MONITOR; }
   bool has_monitor_mwait_irq() const { return _monitor_mwait_ecx & 3; }
+  bool has_pcid() const { return _ext_features & FEATX_PCID; }
 
   bool __attribute__((const)) has_smep() const
   { return _ext_07_ebx & FEATX_SMEP; }
+
+  bool __attribute__((const)) has_invpcid() const
+  { return _ext_07_ebx & FEATX_INVPCID; }
+
+  bool __attribute__((const)) has_l1d_flush() const
+  { return (_ext_07_edx & FEATX_L1D_FLUSH); }
+
+  bool __attribute__((const)) has_arch_capabilities() const
+  { return (_ext_07_edx & FEATX_IA32_ARCH_CAPABILITIES); }
+
+  bool __attribute ((const)) skip_l1dfl_vmentry() const
+  { return (_arch_capabilities & (1UL << 3)); }
 
   unsigned ext_8000_0001_ecx() const { return _ext_8000_0001_ecx; }
   unsigned ext_8000_0001_edx() const { return _ext_8000_0001_edx; }
@@ -305,6 +334,15 @@ public:
 
   static void set_tss() { set_tr(Gdt::gdt_tss); }
 
+  /// Return the CPU's microcode revision
+  static Unsigned32 ucode_revision()
+  {
+    Unsigned32 a, b, c, d;
+    Cpu::wrmsr(0, 0x8b); // IA32_BIOS_SIGN_ID
+    Cpu::cpuid(1, &a, &b, &c, &d);
+    return Cpu::rdmsr(0x8b) >> 32;
+  }
+
 private:
   void init_lbr_type();
   void init_bts_type();
@@ -428,9 +466,8 @@ struct Ia32_intel_microcode
 
   static Unsigned64 get_sig()
   {
-    Unsigned32 a, b, c, d;
     Cpu::wrmsr(0, 0x8b); // IA32_BIOS_SIGN_ID
-    Cpu::cpuid(1, &a, &b, &c, &d);
+    Unsigned32 a = Cpu::cpuid_eax(1);
     return (Cpu::rdmsr(0x8b) & 0xffffffff00000000) | a;
   }
 
@@ -929,11 +966,50 @@ Cpu::cpuid(Unsigned32 mode, Unsigned32 ecx_val,
                         : "a" (mode), "c" (ecx_val));
 }
 
+PUBLIC static inline FIASCO_INIT_CPU_AND_PM
+Unsigned32
+Cpu::cpuid_eax(Unsigned32 mode)
+{
+  Unsigned32 eax, dummy;
+  cpuid(mode, &eax, &dummy, &dummy, &dummy);
+  return eax;
+}
+
+PUBLIC static inline FIASCO_INIT_CPU_AND_PM
+Unsigned32
+Cpu::cpuid_ebx(Unsigned32 mode)
+{
+  Unsigned32 ebx, dummy;
+  cpuid(mode, &dummy, &ebx, &dummy, &dummy);
+  return ebx;
+}
+
+PUBLIC static inline FIASCO_INIT_CPU_AND_PM
+Unsigned32
+Cpu::cpuid_ecx(Unsigned32 mode)
+{
+  Unsigned32 ecx, dummy;
+  cpuid(mode, &dummy, &dummy, &ecx, &dummy);
+  return ecx;
+}
+
+PUBLIC static inline FIASCO_INIT_CPU_AND_PM
+Unsigned32
+Cpu::cpuid_edx(Unsigned32 mode)
+{
+  Unsigned32 edx, dummy;
+  cpuid(mode, &dummy, &dummy, &dummy, &edx);
+  return edx;
+}
+
 PUBLIC
 void
 Cpu::update_features_info()
 {
   cpuid(1, &_version, &_brand, &_ext_features, &_features);
+
+  if (family() == 6 && model() == 0x5c) // Apollo Lake
+    _ext_features &= ~FEATX_MONITOR;
 }
 
 PRIVATE FIASCO_INIT_CPU
@@ -1070,8 +1146,7 @@ PRIVATE FIASCO_INIT_CPU
 void
 Cpu::addr_size_info()
 {
-  Unsigned32 eax, ebx, ecx, edx;
-  cpuid(0x80000008, &eax, &ebx, &ecx, &edx);
+  Unsigned32 eax = cpuid_eax(0x80000008);
 
   _phys_bits = eax & 0xff;
   _virt_bits = (eax & 0xff00) >> 8;
@@ -1081,8 +1156,7 @@ PUBLIC static
 unsigned
 Cpu::amd_cpuid_mnc()
 {
-  Unsigned32 eax, ebx, ecx, edx;
-  cpuid(0x80000008, &eax, &ebx, &ecx, &edx);
+  Unsigned32 ecx = cpuid_ecx(0x80000008);
 
   unsigned apicidcoreidsize = (ecx >> 12) & 0xf;
   if (apicidcoreidsize == 0)
@@ -1135,20 +1209,10 @@ Cpu::get_features()
   if (!((get_flags() ^ eflags) & EFLAGS_ID))
     return 0;
 
-  Unsigned32 max;
-  char vendor_id[12];
-
-  cpuid(0, &max, (Unsigned32 *)(vendor_id),
-                 (Unsigned32 *)(vendor_id + 8),
-                 (Unsigned32 *)(vendor_id + 4));
-
-  if (!max)
+  if (cpuid_eax(0) < 1)
     return 0;
 
-  Unsigned32 dummy, dummy1, dummy2, features;
-  cpuid(1, &dummy, &dummy1, &dummy2, &features);
-
-  return features;
+  return cpuid_edx(1);
 }
 
 
@@ -1235,8 +1299,10 @@ Cpu::identify()
 
     if (max >= 7 && _vendor == Vendor_intel)
       {
-        Unsigned32 dummy1, dummy2, dummy3;
-        cpuid(0x7, 0, &dummy1, &_ext_07_ebx, &dummy2, &dummy3);
+        Unsigned32 dummy1, dummy2;
+        cpuid(0x7, 0, &dummy1, &_ext_07_ebx, &dummy2, &_ext_07_edx);
+        if (has_arch_capabilities())
+          _arch_capabilities = rdmsr(MSR_IA32_ARCH_CAPABILITIES);
       }
 
     if (_vendor == Vendor_intel)
@@ -1273,7 +1339,7 @@ Cpu::identify()
       }
 
     // Get maximum number for extended functions
-    cpuid(0x80000000, &max, &i, &i, &i);
+    max = cpuid_eax(0x80000000);
 
     if (max > 0x80000000)
       {
@@ -1389,9 +1455,8 @@ Cpu::show_cache_tlb_info(const char *indent) const
     putchar('\n');
 
   if (_l1_trace_cache_size)
-    printf("%s%3dK %c-ops T Cache (%d-way associative)\n",
-           indent, _l1_trace_cache_size, Config::char_micro,
-           _l1_trace_cache_asso);
+    printf("%s%3dK u-ops T Cache (%d-way associative)\n",
+           indent, _l1_trace_cache_size, _l1_trace_cache_asso);
 
   else if (_l1_inst_cache_size)
     printf("%s%4d KB L1 I Cache (%d-way associative, %d bytes per line)\n",
@@ -1467,19 +1532,31 @@ Cpu::get_ss()
   return val;
 }
 
-PUBLIC static inline
+PUBLIC static inline NEEDS["asm.h"]
 void
 Cpu::set_ds(Unsigned16 val)
-{ asm volatile ("mov %0, %%ds" : : "rm" (val)); }
+{
+  if (__builtin_constant_p(val))
+    FIASCO_IA32_LOAD_SEG_SAFE(ds, val);
+  else
+    FIASCO_IA32_LOAD_SEG(ds, val);
+}
 
-PUBLIC static inline
+PUBLIC static inline NEEDS["asm.h"]
 void
 Cpu::set_es(Unsigned16 val)
-{ asm volatile ("mov %0, %%es" : : "rm" (val)); }
+{
+  if (__builtin_constant_p(val))
+    FIASCO_IA32_LOAD_SEG_SAFE(es, val);
+  else
+    FIASCO_IA32_LOAD_SEG(es, val);
+}
+
 
 //----------------------------------------------------------------------------
 IMPLEMENTATION[ia32, amd64]:
 
+#include "asm.h"
 #include "config.h"
 #include "div32.h"
 #include "gdt.h"
@@ -1882,7 +1959,8 @@ Cpu::init()
   init_lbr_type();
   init_bts_type();
 
-  calibrate_tsc();
+  if (!tsc_frequency_from_cpuid_15h())
+    calibrate_tsc();
 
   Unsigned32 cr4 = get_cr4();
 
@@ -1892,11 +1970,18 @@ Cpu::init()
   if (features() & FEAT_SSE)
     cr4 |= CR4_OSXMMEXCPT;
 
-  // enable SMEP if available
   if (has_smep())
     cr4 |= CR4_SMEP;
 
   set_cr4 (cr4);
+
+  if (Config::Pcid_enabled)
+    {
+     if (!has_pcid())
+       panic("CONFIG_IA32_PCID enabled but CPU lacks this feature");
+     if (!has_invpcid())
+       panic("CONFIG_IA32_PCID enabled but CPU lacks 'invpcid' instruction");
+    }
 
   if ((features() & FEAT_TSC) && can_wrmsr())
     {
@@ -1907,6 +1992,15 @@ Cpu::init()
         wrmsr(0, 0, MSR_TSC);
     }
 
+  // See Attribs_enum on how PA0, PA2 and PA3 are used.
+  // PA0 (used):   Write back (WB).
+  // PA1 (unused): Write through (WT).
+  // PA2 (used):   Write combining (WC).
+  // PA3 (used:    Uncacheable (UC).
+  // PA4 (unused): Write back (WB).
+  // PA5 (unused): Write through (WT).
+  // PA6 (unused): Uncached, can be overridden by WC in MTRRs (UC-).
+  // PA7 (unused): Uncacheable (UC).
   if ((features() & FEAT_PAT) && can_wrmsr())
     wrmsr(0x00010406, 0x00070406, MSR_PAT);
 
@@ -1980,23 +2074,83 @@ Cpu::calibrate_tsc()
        :"=a" (tsc_to_ns_div), "=d" (dummy)
        :"r" ((Unsigned32)tsc_end), "a" (0), "d" (calibrate_time));
 
-  // scaler_tsc_to_ns = (tsc_to_ns_div * 1000) / 32
-  // not using muldiv(tsc_to_ns_div, 1000, 1 << 5), as div result > (1 << 32)
-  // will get trap0 if system frequency is too low
-  scaler_tsc_to_ns  = tsc_to_ns_div * 31;
-  scaler_tsc_to_ns += tsc_to_ns_div / 4;
+  // In 'A*1000/32', 'A*1000' could result in a value '>= 2^32' if A is too big
+  // (CPU is too slow). Use 'A*(1000/32) = A*31.25' instead.
+  scaler_tsc_to_ns  = tsc_to_ns_div * 31 + tsc_to_ns_div / 4;
   scaler_tsc_to_us  = tsc_to_ns_div;
   scaler_ns_to_tsc  = muldiv(1 << 31, ((Unsigned32)tsc_end),
                              calibrate_time * 1000 >> 1 * 1 << 5);
-
   if (scaler_tsc_to_ns)
     _frequency = ns_to_tsc(1000000000UL);
 
   return;
 
 bad_ctc:
-  if (Config::Kip_timer_uses_rdtsc)
+  if (Config::Kip_clock_uses_rdtsc)
     panic("Can't calibrate tsc");
+}
+
+PRIVATE
+void
+Cpu::set_frequency_and_scalers(Unsigned64 freq)
+{
+  scaler_tsc_to_ns = muldiv(1 << 27, 1000000000, freq);
+  scaler_tsc_to_us = muldiv(1 << 31, 1000000*2, freq);
+  scaler_ns_to_tsc = muldiv(1 << 27, freq, 1000000000);
+
+  _frequency = freq;
+}
+
+/**
+ * Determine the frequency of the TSC.
+ *
+ * See Intel Manual Volume 3 Chapter 18.7.3 for details.
+ *
+ * CPUID_15 is quite accurate.
+ *
+ * CPUID_16 is less accurate and should be probably only used for informational
+ * purposes. For instance, for a Kaby Lake processor, CPUID_16 returned a value
+ * of 2800MHz while the actual CPU frequency is 2808MHz.
+ *
+ * MSR_PLATFORM_INFO is less accurate as well. On the mentioned Kaby Lake CPU,
+ * bits 15:8 report 28 defining a frequency of 28*100=2800MHz.
+ *
+ * Calibrating the TSC delivers results which are still more accurate than the
+ * rounded information from CPUID_16 and MSR_PLATFORM_INFO, even on QEMU.
+ */
+PRIVATE
+bool
+Cpu::tsc_frequency_from_cpuid_15h()
+{
+  if (_vendor != Vendor_intel || cpuid_eax(0) < 0x15 || family() != 6)
+    return false;
+
+  Unsigned32 eax, ebx, ecx, edx;
+  cpuid(0x15, &eax, &ebx, &ecx, &edx);
+
+  if (eax == 0 || ebx == 0)
+    return false;
+
+  // See Intel Manual Volume 3 Chapter 18.7.3 / table 18-85.
+  Unsigned64 crystal_clock = 0;
+  if (ecx != 0)
+    crystal_clock = ecx;
+  else if (model() == 0x55)     // Cascade Lake
+    crystal_clock = 25000000;
+  else if (   model() == 0x4e   // Skylake
+           || model() == 0x5e   // Skylake
+           || model() == 0x8e   // Coffee Lake
+           || model() == 0x9e   // Coffee Lake
+          )
+    crystal_clock = 24000000;
+  else if (model() == 0x5c)     // Atom Goldmont
+    crystal_clock = 19200000;
+
+  if (!crystal_clock)
+    return false;
+
+  set_frequency_and_scalers((crystal_clock * ebx) / eax);
+  return true;
 }
 
 IMPLEMENT inline
@@ -2034,16 +2188,25 @@ Unsigned16
 Cpu::get_gs()
 { Unsigned16 val; asm volatile ("mov %%gs, %0" : "=rm" (val)); return val; }
 
-PUBLIC static inline
+PUBLIC static inline NEEDS["asm.h"]
 void
 Cpu::set_fs(Unsigned16 val)
-{ asm volatile ("mov %0, %%fs" : : "rm" (val)); }
+{
+  if (__builtin_constant_p(val))
+    FIASCO_IA32_LOAD_SEG_SAFE(fs, val);
+  else
+    FIASCO_IA32_LOAD_SEG(fs, val);
+}
 
-PUBLIC static inline
+PUBLIC static inline NEEDS["asm.h"]
 void
 Cpu::set_gs(Unsigned16 val)
-{ asm volatile ("mov %0, %%gs" : : "rm" (val)); }
-
+{
+  if (__builtin_constant_p(val))
+    FIASCO_IA32_LOAD_SEG_SAFE(gs, val);
+  else
+    FIASCO_IA32_LOAD_SEG(gs, val);
+}
 
 //----------------------------------------------------------------------------
 IMPLEMENTATION[(ia32 || amd64 || ux) && !intel_ia32_branch_barriers]:
@@ -2062,19 +2225,19 @@ Cpu::init_indirect_branch_mitigation()
 {
   if (_vendor == Vendor_intel)
     {
-      Unsigned32 a, b, c, d;
-      cpuid(0, &a, &b, &c, &d);
-      if (a < 7)
+      if (cpuid_eax(0) < 7)
         panic("intel CPU does not support IBRS, IBPB, STIBP (cpuid max < 7)\n");
 
-      cpuid(7, 0, &a, &b, &c, &d);
-      if (!(d & (1UL << 26)))
+      Unsigned32 d = cpuid_edx(7);
+      if (!(d & FEATX_IBRS_IBPB))
         panic("IBRS / IBPB not supported by CPU: %x\n", d);
 
-      if (!(d & (1UL << 27)))
+      if (!(d & FEATX_STIBP))
         panic("STIBP not supported by CPU: %x\n", d);
 
       // enable STIBP
       wrmsr(2, 0x48);
     }
+  else
+    panic("Kernel compiled with IBRS / IBPB, but not supported on non-Intel CPUs\n");
 }

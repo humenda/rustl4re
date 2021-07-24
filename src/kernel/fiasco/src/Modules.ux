@@ -11,7 +11,6 @@ PREPROCESS_PARTS	+= arch $(CONFIG_ABI) 32bit $(CONFIG_XARCH)    \
                            kernel_can_exit
 
 PREPROCESS_PARTS-$(CONFIG_MP)                += mp
-PREPROCESS_PARTS-$(CONFIG_LIST_ALLOC_SANITY) += list_alloc_debug
 PREPROCESS_PARTS-$(CONFIG_JDB)               += debug log
 PREPROCESS_PARTS-$(CONFIG_PERF_CNT)          += perf_cnt
 PREPROCESS_PARTS-$(CONFIG_CONTEXT_4K)        += context_4k
@@ -81,7 +80,7 @@ INTERFACES_KERNEL	:= string_buffer mem_region simpleio kernel_console panic warn
 			   bitmap buddy_alloc koptions context_base \
 			   mem_layout per_cpu_data pm globals loader vhw   \
 			   kip_init ipi queue_item queue cpu_mask rcupdate \
-			   boot_info config jdb_symbol jdb_util	          \
+			   boot_info config jdb_util	          \
 			   tb_entry perf_cnt jdb_tbuf x86desc		  \
 			   emulation irq_chip_ux_base pic cpu trampoline cpu_lock \
 			   spin_lock boot_alloc			  \
@@ -103,7 +102,7 @@ INTERFACES_KERNEL	:= string_buffer mem_region simpleio kernel_console panic warn
 			   mapping mapping_tree mappable                  \
 			   mapdb kobject_mapdb map_util \
 			   hostproc task sigma0_task kernel_task prio_list \
-			   thread_lock timeslice_timeout	  \
+			   timeslice_timeout	  \
 			   ipc_timeout thread_state	  \
 			   sender receiver ipc_sender thread thread_object \
 			   kobject_helper timer_tick platform_control     \
@@ -112,13 +111,13 @@ INTERFACES_KERNEL	:= string_buffer mem_region simpleio kernel_console panic warn
 			   irq_chip_ia32 irq_chip_ux \
 			   banner fpu_alloc irq icu_helper main 	  \
 			   startup libc_support reset semaphore          \
-			   jdb_dbinfo jdb fb net \
+			   jdb_types jdb fb net \
 			   jdb_core jdb_module jdb_table         	  \
 			   jdb_thread_list jdb_input jdb_input_task jdb_dump jdb_thread  \
-			   jdb_lines jdb_tcb jdb_prompt_module jdb_bt	  \
+			   jdb_tcb jdb_prompt_module jdb_bt	  \
 			   jdb_mapdb jdb_ptab jdb_kern_info jdb_counters  \
 			   glibc_getchar jdb_trace jdb_trace_set	  \
-			   jdb_tbuf_init kern_cnt  	  \
+			   jdb_tbuf_init kern_cnt jdb_tbuf_fe             \
 			   jdb_tbuf_output jdb_tbuf_show                  \
 			   jdb_misc checksum watchdog terminate		  \
 			   jdb_screen push_console jdb_bp		  \
@@ -150,8 +149,7 @@ cpu_IMPL		:= cpu cpu-ia32 cpu-ux cpu-32
 cpu_lock_IMPL		:= cpu_lock cpu_lock-generic
 dirq_IMPL		:= dirq-ia32-ux
 dirq_pic_pin_IMPL	:= dirq_pic_pin dirq_pic_pin-ia32-ux
-entry_frame_IMPL	:= entry_frame entry_frame-ia32-ux                   \
-			   entry_frame-abs-timeout-hack
+entry_frame_IMPL	:= entry_frame entry_frame-ia32-ux
 fpu_IMPL		:= fpu fpu-ia32-ux fpu-ux
 irq_IMPL		:= irq irq-ux
 ipi_IMPL		:= ipi ipi-ux
@@ -167,13 +165,12 @@ jdb_misc_IMPL		:= jdb_misc-ia32-amd64
 jdb_ptab_IMPL		:= jdb_ptab jdb_ptab-ia32-ux-arm
 jdb_screen_IMPL		:= jdb_screen jdb_screen-ia32
 jdb_trace_set_IMPL	:= jdb_trace_set jdb_trace_set-ia32-ux
-kdb_ke_IMPL		:= kdb_ke-ia32
+kdb_ke_IMPL		+= kdb_ke-ia32
 kernel_thread_IMPL	:= kernel_thread kernel_thread-std kernel_thread-ux
 kip_init_IMPL		:= kip_init-ia32 kip_init-ux
 kmem_IMPL		:= kmem-ia32 kmem-ux
 kmem_alloc_IMPL		:= kmem_alloc kmem_alloc-ia32
 main_IMPL		:= main-ia32-32 main-ux
-mapping_IMPL		:= mapping-ia32-32 mapping
 map_util_IMPL		:= map_util map_util-mem map_util-objs
 mem_layout_IMPL		:= mem_layout mem_layout-ia32 mem_layout-ux
 mem_space_IMPL		:= mem_space mem_space-user mem_space-ia32 \
@@ -202,7 +199,7 @@ vcpu_host_regs_IMPL	:= vcpu_host_regs-ia32
 spin_lock_IMPL		:= spin_lock spin_lock-ia32
 
 CXXSRC_KERNEL		:= libc_backend_nolock.cc glue_libc_ux.cc tb_entry_output.cc
-ASSRC_KERNEL		:= entry-ux.S entry.S sighandler.S \
+ASSRC_KERNEL		:= entry-ux.S entry.S sighandler.S kip-time.S \
                            sys_call_page-asm.S 
 
 ifeq ($(CONFIG_MP),y)
@@ -214,6 +211,7 @@ NOOPT			+= $(filter jdb%,\
 			     $(foreach in,$(INTERFACES_KERNEL), \
 			       $(if $($(in)_IMPL),$($(in)_IMPL),$(in))))
 NOOPT			+= tb_entry tb_entry_output
+NOOPT			+= $(patsubst %.o, %, $(OBJ_JDB))
 
 #
 # TCBOFFSET subsystem
@@ -242,16 +240,17 @@ OBJ_KERNEL		+= gblcfg.o
 #
 CXXLIB			:= libcxx.a
 VPATH			+= lib/cxxlib
-INTERFACES_CXXLIB	:= s_cruft paranoia
+INTERFACES_CXXLIB	:= paranoia
 
 #
 # LIBK subsystem
 #
 LIBK		:= libk.a
-VPATH		+= lib/libk/$(CONFIG_XARCH) lib/libk
-PRIVATE_INCDIR  += lib/libk/$(CONFIG_XARCH) lib/libk
+VPATH		+= lib/libk/$(CONFIG_XARCH) lib/libk/ia32 lib/libk
+PRIVATE_INCDIR  += lib/libk/$(CONFIG_XARCH) lib/libk/ia32 lib/libk
 INTERFACES_LIBK	:= atomic lock_guard std_macros
 CXXSRC_LIBK     += construction.cc
+atomic_IMPL     := atomic atomic-ia32
 
 
 ifneq ($(CONFIG_JDB_GZIP),)
@@ -268,6 +267,13 @@ ifneq ($(CONFIG_JDB_GZIP),)
  endif
 endif
 
+# SIMPLEMALLOC
+#
+SIMPLEMALLOC       := libsimple_malloc.a
+VPATH              += lib/simple_malloc
+PRIVATE_INCDIR     += lib/simple_malloc
+CXXSRC_SIMPLEMALLOC = simple_malloc.cc
+
 #
 # LIBDISASM subsystem (only for Jdb)
 #
@@ -282,15 +288,20 @@ ifeq ("$(CONFIG_JDB_DISASM)","y")
   PREPROCESS_PARTS  += jdb_disasm
 
   LIBDISASM         := libdisasm.a
-  VPATH	            += lib/disasm lib/disasm/elf lib/disasm/include \
-                       lib/disasm/include/opcode lib/disasm/opcodes \
-                       lib/disasm/libiberty lib/disasm/bfd
-  PRIVATE_INCDIR    += lib/disasm lib/disasm/elf lib/disasm/include \
-                       lib/disasm/include/opcode lib/disasm/opcodes \
-                       lib/disasm/libiberty lib/disasm/bfd
-  PRIVATE_INCDIR    += lib/disasm
+  VPATH             += lib/disasm lib/disasm/capstone \
+                       lib/disasm/capstone/arch/X86
+  PRIVATE_INCDIR    += lib/disasm lib/disasm/capstone/include
   CXXSRC_LIBDISASM  := disasm.cc
-  CSRC_LIBDISASM    := dis-init.c i386-dis.c dis-buf.c
+  CSRC_LIBDISASM    := cs.c utils.c \
+                       MCInst.c MCInstrDesc.c MCRegisterInfo.c SStream.c
+  CSRC_LIBDISASM    += X86Module.c X86Disassembler.c X86DisassemblerDecoder.c \
+                       X86Mapping.c X86IntelInstPrinter.c X86ATTInstPrinter.c
+  CPPFLAGS          += -DCAPSTONE_HAS_X86
+  CFLAGS_X86Mapping      = -Wno-unused-parameter -Wno-missing-field-initializers
+  CFLAGS_X86Disassembler = -Wno-unused-parameter
+  CFLAGS_X86IntelInstPrinter = -Wno-unused-parameter -Wno-sign-compare
+  CFLAGS_X86ATTInstPrinter   = -Wno-unused-parameter -Wno-sign-compare
+  CFLAGS_X86DisassemblerDecoder = -Wno-bad-function-cast
   NOOPT             += $(patsubst %.o, %, $(OBJ_LIBDISASM))
 endif
 
@@ -312,7 +323,7 @@ NOOPT		+= $(patsubst %.o, %, $(OBJ_LIBPERFCTR))
 LIBREGEX	:= libregex.a
 VPATH		+= lib/regex
 PRIVATE_INCDIR	+= lib/regex
-CSRC_LIBREGEX	:= alloc.c rx.c
+CSRC_LIBREGEX	:= rx.c
 NOOPT		+= $(patsubst %.o, %, $(OBJ_LIBREGEX))
 
 ifneq ($(wildcard $(srcdir)/lib/perfctr),)
@@ -325,6 +336,11 @@ ifneq ($(wildcard $(srcdir)/lib/regex),)
   SUBSYSTEMS		+= LIBREGEX
   KERNEL_EXTRA_LIBS	+= $(LIBREGEX)
   PREPROCESS_PARTS	+= jdb_regex
+endif
+
+ifneq ($(filter LIBREGEX LIBDISASM,$(SUBSYSTEMS)),)
+  SUBSYSTEMS          += SIMPLEMALLOC
+  KERNEL_EXTRA_LIBS   += $(SIMPLEMALLOC)
 endif
 
 #
@@ -348,7 +364,7 @@ MINILIBC	:= libc.a
 VPATH		+= lib/minilibc/ia32 lib/minilibc
 CSRC_MINILIBC	:= printf.c __v_printf.c \
 		   vprintf.c lltostr.c __ltostr.c \
-		   putchar.c puts.c gets.c sprintf.c \
+		   putchar.c puts.c sprintf.c \
 		   snprintf.c vsnprintf.c vsprintf.c fprintf.c \
 		   memccpy.c  memchr.c   memcpy.c   memmove.c  memset.c \
 		   strcpy.c   strlen.c   strstr.c   \

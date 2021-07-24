@@ -1,3 +1,4 @@
 <map id="L4Re::Video::Pixel_info::dump" name="L4Re::Video::Pixel_info::dump">
-<area shape="rect" id="node2" href="$structL4Re_1_1Video_1_1View_1_1Info.html#ab7dd87a779400ed0fca88f485b9a638b" title="Dump information on the view information to a stream. " alt="" coords="188,5,328,47"/>
+<area shape="rect" id="node1" title="Dump information on the pixel to a stream." alt="" coords="200,5,339,47"/>
+<area shape="rect" id="node2" href="$structL4Re_1_1Video_1_1View_1_1Info.html#ab7dd87a779400ed0fca88f485b9a638b" title="Dump information on the view information to a stream." alt="" coords="5,5,152,47"/>
 </map>

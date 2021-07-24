@@ -3,7 +3,6 @@
 #include "globalconfig.h"
 #include "config_tcbsize.h"
 #include "tcboffset.h"
-#include "asm_entry.h"
 
 #ifdef CONFIG_CPU_VIRT
 #define EL(x) x##_el2
@@ -42,7 +41,7 @@
 .endm
 
 .macro restore_gprs freg=sp
-	.if \freg != x0
+	.ifnes "\freg", "x0"
 		ldr	x0,        [\freg,   #8]
 	.endif
 	ldp	x1, x2,    [\freg,  #16]
@@ -71,6 +70,13 @@
 
 .section	.text.excp, "xa"
 
+.type   leave_and_kill_myself, function
+.global leave_and_kill_myself
+leave_and_kill_myself:
+        // make space for a dummy Return_frame accessible by the callee
+        sub     sp, sp, #EF_SIZE
+        bl      thread_do_leave_and_kill_myself
+
 .type	leave_by_trigger_exception, function
 .global	leave_by_trigger_exception
 leave_by_trigger_exception:
@@ -89,9 +95,17 @@ __iret:
 	add	sp, sp, #EF_SIZE
 	eret
 
+__return_from_user_invoke:
+// In case that a continuation is invoked before exit, make sure that
+// the handler returns to the normal exit ret_from_exception exit path and
+// finds the kernel stack address at the expected place.
+	adr x30, .Lret_from_exception
+	str x0, [sp, #EF_KSP]
+	b 6f
+
 .Lret_from_exception:
 	ldr	x0, [sp, #EF_KSP]
-__return_from_user_invoke:
+6:
 	ldr	x1, [x0, #EF_ERETW]
 	cbnz	x1, 1f // handle continuations
 	mov	sp, x0
@@ -123,7 +137,7 @@ vcpu_resume:
 
 .global kern_kdebug_ipi_entry
 kern_kdebug_ipi_entry:
-	brk #2
+	brk #3
 	ret
 
 .align 3
@@ -166,6 +180,9 @@ sys_call_table:
 	mov	x0, sp
 	str	x0, [sp, #EF_KSP]
 	adr	x30, .Lret_from_exception
+
+	.global __irq_handler_b_irq
+__irq_handler_b_irq:
 	b	irq_handler
 
 

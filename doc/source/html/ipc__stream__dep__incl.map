@@ -1,4 +1,5 @@
 <map id="l4/cxx/ipc_stream" name="l4/cxx/ipc_stream">
-<area shape="rect" id="node2" href="$vbus__generic_source.html" title="l4/vbus/vbus_generic" alt="" coords="5,80,157,107"/>
-<area shape="rect" id="node3" href="$cxx_2ipc__server.html" title="IPC server loop. " alt="" coords="181,80,309,107"/>
+<area shape="rect" id="node1" title="IPC stream." alt="" coords="87,5,224,32"/>
+<area shape="rect" id="node2" href="$cxx_2ipc__server.html" title="IPC server loop." alt="" coords="5,80,137,107"/>
+<area shape="rect" id="node3" href="$vbus__generic_source.html" title=" " alt="" coords="161,80,320,107"/>
 </map>

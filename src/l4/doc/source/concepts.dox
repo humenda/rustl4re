@@ -4,7 +4,7 @@
 \page l4re_concepts Programming for L4Re
 
 This part of the documentation discusses the concept of microkernel-based
-programming in more detail. You should have already a basic understanding
+programming in more detail. You should already have a basic understanding
 of the L4Re programming environment from the tutorial.
 
 \todo All subpages need cleaning. Level of detail here?
@@ -57,18 +57,18 @@ be multiplexed on some portion of the RAM. In the first case it
 is possible to eagerly insert all pages (more precisely
 page-frame capabilities) into the application's address space
 such that no further page faults occur when this data space is
-accessed. In general, however, only the pages for the some
+accessed. In general, however, only the pages for some
 portion are provided and further pages are inserted by the pager
 as a result of page faults.
 
 \subsection l4re_concept_regions Virtual Memory Handling
 
-The virtual memory of each task is constructed from data spaces, backing
+The virtual memory of each task is constructed from data spaces backing
 virtual memory regions (VMRs). The management of the VMRs is provided by an
 object called *region map*. A dedicated region-map object is associated
-with each task, it allows to attach and detach data spaces to an address space
-as well as to reserve areas of virtual memory. Since the region-map object
-possesses all knowledge about virtual memory layout of a task, it also serves
+with each task; it allows attaching and detaching data spaces to an address space
+as well as reserving areas of virtual memory. Since the region-map object
+possesses all knowledge about the virtual memory layout of a task, it also serves
 as an application's default pager.
 
 \subsection l4re_concept_mem_alloc Memory Allocation
@@ -89,15 +89,15 @@ capabilities to implement fine-grained access control.
 
 Generally, owning a capability means to be allowed to communicate with the
 object the capability points to. All user-visible kernel objects, such as
-tasks, threads, and IRQs, can be accessed only through a capability.
+tasks, threads, and IRQs, can only be accessed through a capability.
 Please refer to the \ref l4_kernel_object_api
 documentation for details. Capabilities are stored in per-task capability
 tables (the object space) and are referenced by capability selectors or
 object flex pages. In a simplified view, a capability selector is a natural
 number indexing into the capability table of the current task.
 
-As a matter of fact, a system designed solely based on capabilities, uses
-so-called 'local names', because each task can only access those objects made
+As a matter of fact, a system designed solely based on capabilities uses
+so-called 'local names' because each task can only access those objects made
 available to this task. Other objects are not visible to and accessible by the
 task.
 
@@ -105,11 +105,11 @@ task.
 \image latex l4-caps-basic.pdf "Capabilities and Local Naming in L4
 
 So how does an application get access to a service?
-In general all applications are started with an initial set of objects
-available.  This set of objects is predetermined by the creator of a new
-application process and granted directly to into the new task before starting
+In general all applications are started with an initial set of available
+objects. This set of objects is predetermined by the creator of a new
+application process and granted directly to the new task before starting
 the first application thread.  The application can then use these initial objects
-to request access to further objects or to transfer capabilities to own objects
+to request access to further objects or to transfer capabilities to its own objects
 to other applications.  A central L4Re object for exchanging capabilities at
 runtime is the name-space object, implementing a store of named capabilities.
 
@@ -173,8 +173,8 @@ L4.default_loader:start({ caps = { some_service = service } }, "rom/program --ar
 \section l4re_config_connection Connecting clients and servers
 
 In general, a connection between a client and a server is represented by a
-communication channel (IPC gate).  That is available to the client and the
-server.  You can see the simplest connection between a client and a server
+communication channel (IPC gate) that is available to both of them.
+You can see the simplest connection between a client and a server
 in the following example.
 ~~~
 local loader = L4.default_loader; -- which is Moe
@@ -232,7 +232,7 @@ The purpose of the memory allocator and of the factory is to provide
 the application with the means to allocate memory (in the form of data spaces)
 and kernel objects respectively.
 An initial memory allocator and an initial factory are accessible via the
-allocation L4Re environment.
+initial L4Re environment.
 
 \see L4Re::Mem_alloc
 
@@ -316,7 +316,7 @@ The second means to address a bunch of capabilities at once are
 flexpages. A flexpage describes a region of the application's
 address space that is of a power 2 size and size aligned. Thus
 the name flexpage. When capabilities are to be transferred (see
-IPC / MapItem) the flexpage decleared by the sender --- the send
+IPC / MapItem) the flexpage declared by the sender --- the send
 flexpage --- specifies which capabilities are to be transferred.
 These are at most those capabilities that are located within the
 region described by the flexpage and precisely those in the

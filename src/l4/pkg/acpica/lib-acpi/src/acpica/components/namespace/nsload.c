@@ -8,7 +8,7 @@
  *
  * 1. Copyright Notice
  *
- * Some or all of this work - Copyright (c) 1999 - 2017, Intel Corp.
+ * Some or all of this work - Copyright (c) 1999 - 2019, Intel Corp.
  * All rights reserved.
  *
  * 2. License
@@ -111,6 +111,42 @@
  * other governmental approval, or letter of assurance, without first obtaining
  * such license, approval or letter.
  *
+ *****************************************************************************
+ *
+ * Alternatively, you may choose to be licensed under the terms of the
+ * following license:
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions, and the following disclaimer,
+ *    without modification.
+ * 2. Redistributions in binary form must reproduce at minimum a disclaimer
+ *    substantially similar to the "NO WARRANTY" disclaimer below
+ *    ("Disclaimer") and any redistribution must be conditioned upon
+ *    including a substantially similar Disclaimer requirement for further
+ *    binary redistribution.
+ * 3. Neither the names of the above-listed copyright holders nor the names
+ *    of any contributors may be used to endorse or promote products derived
+ *    from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+ * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * Alternatively, you may choose to be licensed under the terms of the
+ * GNU General Public License ("GPL") version 2 as published by the Free
+ * Software Foundation.
+ *
  *****************************************************************************/
 
 #include "acpi.h"
@@ -137,7 +173,6 @@ AcpiNsDeleteSubtree (
 #endif
 
 
-#ifndef ACPI_NO_METHOD_EXECUTION
 /*******************************************************************************
  *
  * FUNCTION:    AcpiNsLoadTable
@@ -198,7 +233,7 @@ AcpiNsLoadTable (
         /*
          * On error, delete any namespace objects created by this table.
          * We cannot initialize these objects, so delete them. There are
-         * a couple of expecially bad cases:
+         * a couple of especially bad cases:
          * AE_ALREADY_EXISTS - namespace collision.
          * AE_NOT_FOUND - the target of a Scope operator does not
          * exist. This target of Scope must already exist in the
@@ -232,24 +267,6 @@ Unlock:
 
     ACPI_DEBUG_PRINT ((ACPI_DB_INFO,
         "**** Completed Table Object Initialization\n"));
-
-    /*
-     * Execute any module-level code that was detected during the table load
-     * phase. Although illegal since ACPI 2.0, there are many machines that
-     * contain this type of code. Each block of detected executable AML code
-     * outside of any control method is wrapped with a temporary control
-     * method object and placed on a global list. The methods on this list
-     * are executed below.
-     *
-     * This case executes the module-level code for each table immediately
-     * after the table has been loaded. This provides compatibility with
-     * other ACPI implementations. Optionally, the execution can be deferred
-     * until later, see AcpiInitializeObjects.
-     */
-    if (!AcpiGbl_ParseTableAsTermList && !AcpiGbl_GroupModuleLevelCode)
-    {
-        AcpiNsExecModuleCodeList ();
-    }
 
     return_ACPI_STATUS (Status);
 }
@@ -446,5 +463,4 @@ AcpiNsUnloadNamespace (
     Status = AcpiNsDeleteSubtree (Handle);
     return_ACPI_STATUS (Status);
 }
-#endif
 #endif

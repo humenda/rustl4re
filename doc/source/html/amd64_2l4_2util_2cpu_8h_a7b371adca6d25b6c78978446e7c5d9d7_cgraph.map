@@ -1,0 +1,4 @@
+<map id="l4util_cpu_capabilities_nocheck" name="l4util_cpu_capabilities_nocheck">
+<area shape="rect" id="node1" title="Returns the CPU capabilities." alt="" coords="5,5,172,47"/>
+<area shape="rect" id="node2" href="$amd64_2l4_2util_2cpu_8h.html#a210ddb09b799c674102ae776eaa9e003" title="Generic CPUID access function." alt="" coords="220,13,347,39"/>
+</map>

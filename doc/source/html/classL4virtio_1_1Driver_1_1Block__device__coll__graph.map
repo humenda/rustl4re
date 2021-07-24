@@ -1,0 +1,7 @@
+<map id="L4virtio::Driver::Block_device" name="L4virtio::Driver::Block_device">
+<area shape="rect" id="node1" title="Simple class for accessing a virtio block device synchronously." alt="" coords="39,1155,221,1349"/>
+<area shape="rect" id="node2" href="$classL4virtio_1_1Driver_1_1Device.html" title="Client&#45;side implementation for a general virtio device." alt="" coords="41,852,219,1105"/>
+<area shape="rect" id="node3" href="$classL4_1_1Cap.html" title=" " alt="" coords="59,595,201,789"/>
+<area shape="rect" id="node4" href="$classL4_1_1Cap__base.html" title="Base class for all kinds of capabilities." alt="" coords="5,5,244,303"/>
+<area shape="rect" id="node5" href="$classL4_1_1Cap.html" title="C++ interface for capabilities." alt="" coords="147,352,265,532"/>
+</map>

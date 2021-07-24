@@ -1,0 +1,9 @@
+<map id="L4::Ipc_svr::Timeout_queue::next_timeout" name="L4::Ipc_svr::Timeout_queue::next_timeout">
+<area shape="rect" id="node1" title="Get the time for the next timeout." alt="" coords="491,116,655,157"/>
+<area shape="rect" id="node2" href="$classL4_1_1Ipc__svr_1_1Timeout__queue__hooks.html#ae4a6bd9781bf97a37dbff039db58d47d" title="get the time for the next timeout" alt="" coords="263,79,438,120"/>
+<area shape="rect" id="node5" href="$classL4_1_1Ipc__svr_1_1Timeout__queue.html#aaac5ada3be0b3cd1749b89c79bb22342" title="Determine if a timeout has happened." alt="" coords="259,152,443,193"/>
+<area shape="rect" id="node3" href="$classL4_1_1Ipc__svr_1_1Timeout__queue__hooks.html#af6affbb704e771370cd0ae5486263784" title="Add a timout to the queue for time time." alt="" coords="5,5,211,47"/>
+<area shape="rect" id="node4" href="$classL4_1_1Ipc__svr_1_1Timeout__queue__hooks.html#ab1fba549749a3efc182d719e22d23a4e" title="Remove timeout from the queue." alt="" coords="21,71,195,127"/>
+<area shape="rect" id="node6" href="$classL4_1_1Ipc__svr_1_1Timeout__queue__hooks.html#a27b6731396dc52f3fd5bf35f6788e27b" title="server loop hook" alt="" coords="5,152,211,193"/>
+<area shape="rect" id="node7" href="$classL4_1_1Ipc__svr_1_1Timeout__queue__hooks.html#aa2441ebaedd9d9a3c3e7066d2696ba2f" title="setup_wait() for the server loop" alt="" coords="11,217,205,259"/>
+</map>

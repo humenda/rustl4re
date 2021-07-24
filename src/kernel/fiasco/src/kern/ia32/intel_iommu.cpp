@@ -350,11 +350,11 @@ public:
     regs[Reg_64::Irt_addr] = irt_pa | (order - 1);
     modify_cmd(Cmd_sirtp);
     invalidate(Inv_desc::global_iec());
-    modify_cmd(Cmd_ire);
+    modify_cmd(Cmd_ire, Cmd_cfi);
   }
 
-  void pm_on_resume(Cpu_number);
-  void pm_on_suspend(Cpu_number) {}
+  void pm_on_resume(Cpu_number) override;
+  void pm_on_suspend(Cpu_number) override {}
 
   /**
    * \return true for success, false if the queue is full
@@ -598,7 +598,9 @@ Intel::Io_mmu::init(Cpu_number cpu)
     return false;
 
   dmar_flags = d->flags;
-  hw_addr_width = d->haw;
+  // the value reported in the DMA remapping reporting structure is N but the
+  // host address width has to be computed as (N + 1)
+  hw_addr_width = d->haw + 1;
 
   // first count the units
   unsigned units = 0;
@@ -671,7 +673,7 @@ Intel::Io_mmu::pm_on_resume(Cpu_number cpu)
       regs[Reg_64::Irt_addr] = irt_pa | (_irq_remap_table_size - 1);
       modify_cmd(Cmd_sirtp);
       invalidate(Inv_desc::global_iec());
-      modify_cmd(Cmd_ire);
+      modify_cmd(Cmd_ire, Cmd_cfi);
     }
 
   if (_root_table)
@@ -699,7 +701,8 @@ Intel::Io_mmu::get_context_entry(Unsigned8 bus, Unsigned8 df, bool may_alloc)
     return 0;
 
   enum { Ct_size = 4096 };
-  void *ctx = Kmem_alloc::allocator()->unaligned_alloc(Ct_size);
+  const Bytes Ct_bytes = Bytes(Ct_size);
+  void *ctx = Kmem_alloc::allocator()->alloc(Ct_bytes);
   if (EXPECT_FALSE(!ctx))
     return 0; // out of memory
 
@@ -717,7 +720,7 @@ Intel::Io_mmu::get_context_entry(Unsigned8 bus, Unsigned8 df, bool may_alloc)
           // someone else allocated the context table meanwhile
           g.reset();
           // we assume context tables are never freed
-          Kmem_alloc::allocator()->unaligned_free(Ct_size, ctx);
+          Kmem_alloc::allocator()->free(Ct_bytes, ctx);
           return ((Cte *)Mem_layout::phys_to_pmem(rte->ctp())) + df;
         }
 

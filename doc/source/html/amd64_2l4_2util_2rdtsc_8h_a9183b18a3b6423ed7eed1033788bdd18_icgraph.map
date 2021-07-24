@@ -1,0 +1,4 @@
+<map id="l4_tsc_init" name="l4_tsc_init">
+<area shape="rect" id="node1" title="Initialize scaler for TSC calibrations." alt="" coords="177,5,265,32"/>
+<area shape="rect" id="node2" href="$amd64_2l4_2util_2rdtsc_8h.html#aa74c42ca03d6c73db1cbdd28486616cf" title="Calibrate scalers for time stamp calculations." alt="" coords="5,5,129,32"/>
+</map>

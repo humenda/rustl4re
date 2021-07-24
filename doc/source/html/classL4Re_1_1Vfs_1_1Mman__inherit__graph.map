@@ -1,3 +1,4 @@
 <map id="L4Re::Vfs::Mman" name="L4Re::Vfs::Mman">
-<area shape="rect" id="node2" href="$classL4Re_1_1Vfs_1_1Ops.html" title="Interface for the POSIX backends for an application. " alt="" coords="11,219,126,340"/>
+<area shape="rect" id="node1" title="Interface for the POSIX memory management." alt="" coords="5,5,137,171"/>
+<area shape="rect" id="node2" href="$classL4Re_1_1Vfs_1_1Ops.html" title="Interface for the POSIX backends for an application." alt="" coords="13,219,129,340"/>
 </map>

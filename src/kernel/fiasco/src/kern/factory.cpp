@@ -33,7 +33,7 @@ Factory::Factory()
 {}
 
 PRIVATE inline
-Factory::Factory(Ram_quota *q, unsigned long max)
+Factory::Factory(Ram_quota *q, Mword max)
   : Ram_quota(q, max)
 {}
 
@@ -50,11 +50,28 @@ Factory * FIASCO_PURE
 Factory::root()
 { return nonull_static_cast<Factory*>(Ram_quota::root); }
 
+PUBLIC
+void
+Factory::destroy(Kobject ***rl) override
+{
+  Kobject::destroy(rl);
+  take_and_invalidate();
+}
+
+PUBLIC inline
+bool
+Factory::put() override
+{
+  return Ram_quota::put();
+}
 
 PUBLIC inline NEEDS[Factory::Factory]
 Factory *
-Factory::create_factory(unsigned long max)
+Factory::create_factory(Mword max)
 {
+  if (!check_max(max))
+    return 0;
+
   Auto_quota<Ram_quota> q(this, sizeof(Factory) + max);
   if (EXPECT_FALSE(!q))
     return 0;
@@ -123,17 +140,13 @@ Factory::kinvoke(L4_obj_ref ref, L4_fpage::Rights rights, Syscall_frame *f,
   Context *const c_thread = ::current();
   Task *const c_space = static_cast<Task*>(c_thread->space());
 
-  if (EXPECT_FALSE(f->tag().proto() != L4_msg_tag::Label_factory))
-    return commit_result(-L4_err::EBadproto);
-
-  if (EXPECT_FALSE(!(rights & L4_fpage::Rights::CS())))
-    return commit_result(-L4_err::EPerm);
+  L4_msg_tag tag = f->tag();
+  if (!Ko::check_basics(&tag, rights, L4_msg_tag::Label_factory,
+                        L4_fpage::Rights::CS()))
+    return tag;
 
   if (EXPECT_FALSE(!ref.have_recv()))
     return commit_result(0);
-
-  if (f->tag().words() < 1)
-    return commit_result(-L4_err::EInval);
 
   L4_fpage buffer(0);
 

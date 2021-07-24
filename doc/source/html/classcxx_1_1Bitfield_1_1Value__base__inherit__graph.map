@@ -1,4 +1,5 @@
 <map id="cxx::Bitfield&lt; T, LSB, MSB &gt;::Value_base&lt; TT &gt;" name="cxx::Bitfield&lt; T, LSB, MSB &gt;::Value_base&lt; TT &gt;">
-<area shape="rect" id="node2" href="$classcxx_1_1Bitfield_1_1Value.html" title="Internal helper type. " alt="" coords="5,233,167,355"/>
-<area shape="rect" id="node3" href="$classcxx_1_1Bitfield_1_1Value__unshifted.html" title="Internal helper type. " alt="" coords="191,233,357,355"/>
+<area shape="rect" id="node1" title="Internal helper type." alt="" coords="100,5,299,185"/>
+<area shape="rect" id="node2" href="$classcxx_1_1Bitfield_1_1Value.html" title="Internal helper type." alt="" coords="5,233,172,369"/>
+<area shape="rect" id="node3" href="$classcxx_1_1Bitfield_1_1Value__unshifted.html" title="Internal helper type." alt="" coords="197,233,423,369"/>
 </map>

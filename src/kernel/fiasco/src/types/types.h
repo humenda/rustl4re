@@ -25,7 +25,7 @@ a nonull_static_cast( b p )
   return reinterpret_cast<a>( reinterpret_cast<Address>(p) + d);
 }
 
-template< typename T >
+template< typename T > inline
 T access_once(T const *a)
 {
 #if 1
@@ -50,12 +50,10 @@ template< typename T >
 class Static_object
 {
 public:
-#if 0 // GCC <= 4.5 does not allow this, when static objects are used in unions
   // prohibit copies
   Static_object(Static_object const &) = delete;
   Static_object &operator = (Static_object const &) = delete;
   Static_object() = default;
-#endif
 
   T *get() const
   {
@@ -77,6 +75,7 @@ private:
 };
 
 typedef cxx::int_type<unsigned, struct Order_t> Order;
+typedef cxx::int_type_order<unsigned long, struct Bytes_t, Order> Bytes;
 
 namespace Addr {
 
@@ -116,6 +115,7 @@ public:
   Addr_val(Addr_val const volatile &o) : B(o._v) {}
   Addr_val(Addr_val const &)  = default;
   Addr_val() = default;
+  Addr_val &operator = (Addr_val const &o) = default;
 
   template< int OSHIFT >
   T operator << (Order<OSHIFT> const &o) const
@@ -174,6 +174,9 @@ public:
   explicit Virt_addr(long a) : ::Addr::Addr<ARCH_PAGE_SHIFT>(a) {}
 
   Virt_addr(void *a) : ::Addr::Addr<ARCH_PAGE_SHIFT>(Address(a)) {}
+
+  explicit operator void * () const
+  { return (void *)_v; }
 
   Virt_addr() = default;
 };

@@ -54,7 +54,7 @@ Region_map::init()
           set_limits(start, end);
           break;
         case L4::Kip::Mem_desc::Reserved:
-          attach_area(start, end - start + 1, L4Re::Rm::Reserved);
+          attach_area(start, end - start + 1, L4Re::Rm::F::Reserved);
           break;
         default:
           break;
@@ -71,28 +71,32 @@ static l4_addr_t map_end;
 void Region_map::global_init()
 {
   L4Re::chksys(L4Re::Env::env()->rm()->reserve_area(&map_area, L4_PAGESIZE,
-                 L4Re::Rm::Reserved | L4Re::Rm::Search_addr));
+                 L4Re::Rm::F::Reserved | L4Re::Rm::F::Search_addr));
   map_end = map_area + L4_PAGESIZE -1;
   Dbg(Dbg::Boot, "rm").printf("map area %lx-%lx\n", map_area, map_end);
 }
 
 int
 Region_ops::map(Region_handler const *h, l4_addr_t local_adr,
-                Region const &r, bool writable, L4::Ipc::Snd_fpage *result)
+                Region const &r, bool need_w, L4::Ipc::Snd_fpage *result)
 {
-  if ((h->flags() & Rm::Reserved) || !h->memory().is_valid())
+  auto f = h->flags();
+
+  if ((f & Rm::F::Reserved) || !h->memory().is_valid())
     return -L4_ENOENT;
 
-  if (h->flags() & Rm::Pager)
+  if (f & Rm::F::Pager)
     return -L4_ENOENT;
 
-  if (h->is_ro() && writable)
-    Dbg(Dbg::Warn).printf("WARNING: Writable mapping request on read-only region at %lx!\n", local_adr);
+  auto mf = map_flags(f);
+
+  if (!need_w)
+    mf = mf & ~L4Re::Dataspace::F::W;
 
   l4_addr_t offset = local_adr - r.start() + h->offset();
   L4::Cap<L4Re::Dataspace> ds = L4::cap_cast<L4Re::Dataspace>(h->memory());
 
-  if (int err = ds->map(offset, writable, map_area, map_area, map_end))
+  if (int err = ds->map(offset, mf, map_area, map_area, map_end))
     return err;
 
   *result = L4::Ipc::Snd_fpage::mem(map_area, L4_PAGESHIFT, L4_FPAGE_RWX,
@@ -126,7 +130,7 @@ Region_map::debug_dump(unsigned long /*function*/) const
            i->second.flags());
   printf(" Region map:\n");
   for (Region_map::Const_iterator i = begin(); i != end(); ++i)
-    printf("  [%10lx-%10lx] -> (offs=%lx, ds=%lx, flags=%x)\n",
+    printf("  [%10lx-%10lx] -> (offs=%llx, ds=%lx, flags=%x)\n",
            i->first.start(), i->first.end(),
            i->second.offset(), i->second.memory().cap(),
            i->second.flags());
@@ -138,10 +142,10 @@ Region_ops::free(Region_handler const *h, l4_addr_t start, unsigned long size)
   if (h->is_ro())
     return;
 
-  if ((h->flags() & Rm::Reserved) || !h->memory().is_valid())
+  if ((h->flags() & Rm::F::Reserved) || !h->memory().is_valid())
     return;
 
-  if (h->flags() & Rm::Pager)
+  if (h->flags() & Rm::F::Pager)
     return;
 
   L4::Cap<L4Re::Dataspace> ds = L4::cap_cast<L4Re::Dataspace>(h->memory());
@@ -151,10 +155,9 @@ Region_ops::free(Region_handler const *h, l4_addr_t start, unsigned long size)
 long
 Region_map::op_io_page_fault(L4::Io_pager::Rights,
                              l4_fpage_t io_pfa, l4_umword_t pc,
-                             L4::Ipc::Opt<l4_mword_t> &result,
                              L4::Ipc::Opt<L4::Ipc::Snd_fpage> &)
 {
   Err().printf("IO-port-fault: port=0x%lx size=%d pc=0x%lx\n",
-               l4_fpage_ioport(io_pfa), 1 << l4_fpage_size(io_pfa), pc); result = ~0;
-  return -1;
+               l4_fpage_ioport(io_pfa), 1 << l4_fpage_size(io_pfa), pc);
+  return -L4_ENOMEM;
 }

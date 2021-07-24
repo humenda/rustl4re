@@ -1,4 +1,4 @@
-/*	$OpenBSD: arc4random_linux.h,v 1.8 2014/08/13 06:04:10 deraadt Exp $	*/
+/*	$OpenBSD: arc4random_freebsd.h,v 1.4 2016/06/30 12:19:51 bcook Exp $	*/
 
 /*
  * Copyright (c) 1996, David Mazieres <dm@uun.org>
@@ -32,7 +32,7 @@ static pthread_mutex_t arc4random_mtx = PTHREAD_MUTEX_INITIALIZER;
 #define _ARC4_LOCK()   pthread_mutex_lock(&arc4random_mtx)
 #define _ARC4_UNLOCK() pthread_mutex_unlock(&arc4random_mtx)
 
-#ifdef __GLIBC__
+#ifdef HAVE___REGISTER_ATFORK
 extern void *__dso_handle;
 extern int __register_atfork(void (*)(void), void(*)(void), void (*)(void), void *);
 #define _ARC4_ATFORK(f) __register_atfork(NULL, NULL, (f), __dso_handle)
@@ -84,6 +84,7 @@ _rs_allocate(struct _rs **rsp, struct _rsx **rsxp)
 	if ((*rsxp = mmap(NULL, sizeof(**rsxp), PROT_READ|PROT_WRITE,
 	    MAP_ANON|MAP_PRIVATE, -1, 0)) == MAP_FAILED) {
 		munmap(*rsp, sizeof(**rsp));
+		*rsp = NULL;
 		return (-1);
 	}
 

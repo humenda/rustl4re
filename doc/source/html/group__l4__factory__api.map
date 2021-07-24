@@ -1,3 +1,4 @@
 <map id="Factory" name="Factory">
-<area shape="rect" id="node2" href="$group__l4__kernel__object__api.html" title="API of kernel objects. " alt="" coords="5,5,120,32"/>
+<area shape="rect" id="node1" title="C factory interface to create kernel objects." alt="" coords="169,5,239,31"/>
+<area shape="rect" id="node2" href="$group__l4__kernel__object__api.html" title="API of kernel objects." alt="" coords="5,5,121,31"/>
 </map>

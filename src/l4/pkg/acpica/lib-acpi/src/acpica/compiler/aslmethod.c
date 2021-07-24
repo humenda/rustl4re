@@ -8,7 +8,7 @@
  *
  * 1. Copyright Notice
  *
- * Some or all of this work - Copyright (c) 1999 - 2017, Intel Corp.
+ * Some or all of this work - Copyright (c) 1999 - 2019, Intel Corp.
  * All rights reserved.
  *
  * 2. License
@@ -111,6 +111,42 @@
  * other governmental approval, or letter of assurance, without first obtaining
  * such license, approval or letter.
  *
+ *****************************************************************************
+ *
+ * Alternatively, you may choose to be licensed under the terms of the
+ * following license:
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions, and the following disclaimer,
+ *    without modification.
+ * 2. Redistributions in binary form must reproduce at minimum a disclaimer
+ *    substantially similar to the "NO WARRANTY" disclaimer below
+ *    ("Disclaimer") and any redistribution must be conditioned upon
+ *    including a substantially similar Disclaimer requirement for further
+ *    binary redistribution.
+ * 3. Neither the names of the above-listed copyright holders nor the names
+ *    of any contributors may be used to endorse or promote products derived
+ *    from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+ * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * Alternatively, you may choose to be licensed under the terms of the
+ * GNU General Public License ("GPL") version 2 as published by the Free
+ * Software Foundation.
+ *
  *****************************************************************************/
 
 #include "aslcompiler.h"
@@ -167,7 +203,7 @@ MtMethodAnalysisWalkBegin (
 
     /* Build cross-reference output file if requested */
 
-    if (Gbl_CrossReferenceOutput)
+    if (AslGbl_CrossReferenceOutput)
     {
         OtXrefWalkPart1 (Op, Level, MethodInfo);
     }
@@ -176,7 +212,7 @@ MtMethodAnalysisWalkBegin (
     {
     case PARSEOP_METHOD:
 
-        TotalMethods++;
+        AslGbl_TotalMethods++;
 
         /* Create and init method info */
 
@@ -192,7 +228,7 @@ MtMethodAnalysisWalkBegin (
          * 1) _PS0 - One of these must exist: _PS1, _PS2, _PS3
          * 2) _PS1/_PS2/_PS3: A _PS0 must exist
          */
-        if (ACPI_COMPARE_NAME (METHOD_NAME__PS0, Op->Asl.NameSeg))
+        if (ACPI_COMPARE_NAMESEG (METHOD_NAME__PS0, Op->Asl.NameSeg))
         {
             /* For _PS0, one of _PS1/_PS2/_PS3 must exist */
 
@@ -205,19 +241,19 @@ MtMethodAnalysisWalkBegin (
             }
         }
         else if (
-            ACPI_COMPARE_NAME (METHOD_NAME__PS1, Op->Asl.NameSeg) ||
-            ACPI_COMPARE_NAME (METHOD_NAME__PS2, Op->Asl.NameSeg) ||
-            ACPI_COMPARE_NAME (METHOD_NAME__PS3, Op->Asl.NameSeg))
+            ACPI_COMPARE_NAMESEG (METHOD_NAME__PS1, Op->Asl.NameSeg) ||
+            ACPI_COMPARE_NAMESEG (METHOD_NAME__PS2, Op->Asl.NameSeg) ||
+            ACPI_COMPARE_NAMESEG (METHOD_NAME__PS3, Op->Asl.NameSeg))
         {
             /* For _PS1/_PS2/_PS3, a _PS0 must exist */
 
             if (!ApFindNameInScope (METHOD_NAME__PS0, Op))
             {
-                sprintf (MsgBuffer,
+                sprintf (AslGbl_MsgBuffer,
                     "%4.4s requires _PS0 in same scope", Op->Asl.NameSeg);
 
                 AslError (ASL_WARNING, ASL_MSG_MISSING_DEPENDENCY, Op,
-                    MsgBuffer);
+                    AslGbl_MsgBuffer);
             }
         }
 
@@ -311,10 +347,31 @@ MtMethodAnalysisWalkBegin (
 
     case PARSEOP_METHODCALL:
 
+        /* Check for a recursive method call */
+
         if (MethodInfo &&
            (Op->Asl.Node == MethodInfo->Op->Asl.Node))
         {
-            AslError (ASL_REMARK, ASL_MSG_RECURSION, Op, Op->Asl.ExternalName);
+            if (MethodInfo->CreatesNamedObjects)
+            {
+                /*
+                 * This is an error, as it will fail at runtime on all ACPI
+                 * implementations. Any named object declarations will be
+                 * executed twice, causing failure the second time. Note,
+                 * this is independent of whether the method is declared
+                 * Serialized, because the same thread is attempting to
+                 * reenter the method, and this will always succeed.
+                 */
+                AslDualParseOpError (ASL_ERROR, ASL_MSG_ILLEGAL_RECURSION, Op,
+                    Op->Asl.Value.String, ASL_MSG_FOUND_HERE, MethodInfo->Op,
+                    MethodInfo->Op->Asl.ExternalName);
+            }
+            else
+            {
+                /* Method does not create objects, issue a remark */
+
+                AslError (ASL_REMARK, ASL_MSG_RECURSION, Op, Op->Asl.ExternalName);
+            }
         }
         break;
 
@@ -344,7 +401,7 @@ MtMethodAnalysisWalkBegin (
          * If the local is being used as a target, mark the local
          * initialized
          */
-        if (Op->Asl.CompileFlags & NODE_IS_TARGET)
+        if (Op->Asl.CompileFlags & OP_IS_TARGET)
         {
             MethodInfo->LocalInitialized[RegisterNumber] = TRUE;
         }
@@ -389,7 +446,7 @@ MtMethodAnalysisWalkBegin (
          * If the Arg is being used as a target, mark the local
          * initialized
          */
-        if (Op->Asl.CompileFlags & NODE_IS_TARGET)
+        if (Op->Asl.CompileFlags & OP_IS_TARGET)
         {
             MethodInfo->ArgInitialized[RegisterNumber] = TRUE;
         }
@@ -428,7 +485,7 @@ MtMethodAnalysisWalkBegin (
 
         /*
          * A child indicates a possible return value. A simple Return or
-         * Return() is marked with NODE_IS_NULL_RETURN by the parser so
+         * Return() is marked with OP_IS_NULL_RETURN by the parser so
          * that it is not counted as a "real" return-with-value, although
          * the AML code that is actually emitted is Return(0). The AML
          * definition of Return has a required parameter, so we are
@@ -436,7 +493,7 @@ MtMethodAnalysisWalkBegin (
          */
         if ((Op->Asl.Child) &&
             (Op->Asl.Child->Asl.ParseOpcode != PARSEOP_DEFAULT_ARG) &&
-            (!(Op->Asl.Child->Asl.CompileFlags & NODE_IS_NULL_RETURN)))
+            (!(Op->Asl.Child->Asl.CompileFlags & OP_IS_NULL_RETURN)))
         {
             MethodInfo->NumReturnWithValue++;
         }
@@ -586,20 +643,28 @@ MtCheckNamedObjectInMethod (
         return;
     }
 
-    /* Determine if we are creating a named object */
+    /* Determine if we are creating a named object within a method */
+
+    if (!MethodInfo)
+    {
+        return;
+    }
 
     OpInfo = AcpiPsGetOpcodeInfo (Op->Asl.AmlOpcode);
     if (OpInfo->Class == AML_CLASS_NAMED_OBJECT)
     {
         /*
-         * If we have a named object created within a non-serialized method,
-         * emit a remark that the method should be serialized.
+         * 1) Mark the method as a method that creates named objects.
+         *
+         * 2) If the method is non-serialized, emit a remark that the method
+         * should be serialized.
          *
          * Reason: If a thread blocks within the method for any reason, and
-         * another thread enters the method, the method will fail because an
-         * attempt will be made to create the same object twice.
+         * another thread enters the method, the method will fail because
+         * an attempt will be made to create the same object twice.
          */
-        if (MethodInfo && !MethodInfo->ShouldBeSerialized)
+        MethodInfo->CreatesNamedObjects = TRUE;
+        if (!MethodInfo->ShouldBeSerialized)
         {
             AslError (ASL_REMARK, ASL_MSG_SERIALIZED_REQUIRED, MethodInfo->Op,
                 "due to creation of named objects within");
@@ -668,7 +733,7 @@ MtMethodAnalysisWalkEnd (
          * of the method can possibly terminate without a return statement.
          */
         if ((!AnLastStatementIsReturn (Op)) &&
-            (!(Op->Asl.CompileFlags & NODE_HAS_NO_EXIT)))
+            (!(Op->Asl.CompileFlags & OP_HAS_NO_EXIT)))
         {
             /*
              * No return statement, and execution can possibly exit
@@ -700,11 +765,11 @@ MtMethodAnalysisWalkEnd (
         {
             if (MethodInfo->NumReturnWithValue)
             {
-                Op->Asl.CompileFlags |= NODE_METHOD_SOME_NO_RETVAL;
+                Op->Asl.CompileFlags |= OP_METHOD_SOME_NO_RETVAL;
             }
             else
             {
-                Op->Asl.CompileFlags |= NODE_METHOD_NO_RETVAL;
+                Op->Asl.CompileFlags |= OP_METHOD_NO_RETVAL;
             }
         }
 
@@ -748,7 +813,7 @@ MtMethodAnalysisWalkEnd (
          * The parent block does not "exit" and continue execution -- the
          * method is terminated here with the Return() statement.
          */
-        Op->Asl.Parent->Asl.CompileFlags |= NODE_HAS_NO_EXIT;
+        Op->Asl.Parent->Asl.CompileFlags |= OP_HAS_NO_EXIT;
 
         /* Used in the "typing" pass later */
 
@@ -768,7 +833,7 @@ MtMethodAnalysisWalkEnd (
 
     case PARSEOP_IF:
 
-        if ((Op->Asl.CompileFlags & NODE_HAS_NO_EXIT) &&
+        if ((Op->Asl.CompileFlags & OP_HAS_NO_EXIT) &&
             (Op->Asl.Next) &&
             (Op->Asl.Next->Asl.ParseOpcode == PARSEOP_ELSE))
         {
@@ -777,32 +842,32 @@ MtMethodAnalysisWalkEnd (
              * (it contains an unconditional Return)
              * mark the ELSE block to remember this fact.
              */
-            Op->Asl.Next->Asl.CompileFlags |= NODE_IF_HAS_NO_EXIT;
+            Op->Asl.Next->Asl.CompileFlags |= OP_IF_HAS_NO_EXIT;
         }
         break;
 
     case PARSEOP_ELSE:
 
-        if ((Op->Asl.CompileFlags & NODE_HAS_NO_EXIT) &&
-            (Op->Asl.CompileFlags & NODE_IF_HAS_NO_EXIT))
+        if ((Op->Asl.CompileFlags & OP_HAS_NO_EXIT) &&
+            (Op->Asl.CompileFlags & OP_IF_HAS_NO_EXIT))
         {
             /*
              * This ELSE block has no exit and the corresponding IF block
              * has no exit either. Therefore, the parent node has no exit.
              */
-            Op->Asl.Parent->Asl.CompileFlags |= NODE_HAS_NO_EXIT;
+            Op->Asl.Parent->Asl.CompileFlags |= OP_HAS_NO_EXIT;
         }
         break;
 
 
     default:
 
-        if ((Op->Asl.CompileFlags & NODE_HAS_NO_EXIT) &&
+        if ((Op->Asl.CompileFlags & OP_HAS_NO_EXIT) &&
             (Op->Asl.Parent))
         {
             /* If this node has no exit, then the parent has no exit either */
 
-            Op->Asl.Parent->Asl.CompileFlags |= NODE_HAS_NO_EXIT;
+            Op->Asl.Parent->Asl.CompileFlags |= OP_HAS_NO_EXIT;
         }
         break;
     }

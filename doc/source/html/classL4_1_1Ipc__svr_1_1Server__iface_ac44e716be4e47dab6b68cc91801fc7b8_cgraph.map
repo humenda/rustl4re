@@ -1,5 +1,4 @@
 <map id="L4::Ipc_svr::Server_iface::rcv_cap" name="L4::Ipc_svr::Server_iface::rcv_cap">
-<area shape="rect" id="node2" href="$namespaceL4.html#ab7194c6fc9267a3bf67a3888681ef3c5" title="static_cast for capabilities. " alt="" coords="213,5,315,32"/>
-<area shape="rect" id="node4" href="$classL4_1_1Ipc__svr_1_1Server__iface.html#a6d3b3d591214378fdc8af857f6eceeb1" title="Get capability slot allocated to the given receive buffer. " alt="" coords="192,57,336,98"/>
-<area shape="rect" id="node3" href="$classL4_1_1Cap__base.html#a6181bad79c41cdbf5c030877b94e25bf" title="Return capability selector. " alt="" coords="384,5,521,32"/>
+<area shape="rect" id="node1" title="Get given receive buffer as typed capability." alt="" coords="5,5,147,47"/>
+<area shape="rect" id="node2" href="$classL4_1_1Ipc__svr_1_1Server__iface.html#a6d3b3d591214378fdc8af857f6eceeb1" title="Get capability slot allocated to the given receive buffer." alt="" coords="195,5,341,47"/>
 </map>

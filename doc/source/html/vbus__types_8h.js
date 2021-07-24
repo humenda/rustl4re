@@ -2,6 +2,13 @@ var vbus__types_8h =
 [
     [ "l4vbus_resource_t", "structl4vbus__resource__t.html", "structl4vbus__resource__t" ],
     [ "l4vbus_device_t", "structl4vbus__device__t.html", "structl4vbus__device__t" ],
+    [ "l4vbus_device_flags_t", "vbus__types_8h.html#a6c6a03ad2b7caa2468e547b5c7f1f001", [
+      [ "L4VBUS_DEVICE_F_CHILDREN", "vbus__types_8h.html#a6c6a03ad2b7caa2468e547b5c7f1f001a8df6a7280a49ca3b9f1d93a6dcc746cd", null ]
+    ] ],
+    [ "l4vbus_resource_flags_t", "vbus__types_8h.html#a190a332eb46688a9a90e9c755dd7c25f", [
+      [ "L4VBUS_RESOURCE_F_MEM_MMIO_READ", "vbus__types_8h.html#a190a332eb46688a9a90e9c755dd7c25faf4103fab52c9a7515e588dbabf94afdf", null ],
+      [ "L4VBUS_RESOURCE_F_MEM_MMIO_WRITE", "vbus__types_8h.html#a190a332eb46688a9a90e9c755dd7c25faef0cde6e22f4f40e71e850d34380978e", null ]
+    ] ],
     [ "l4vbus_resource_type_t", "vbus__types_8h.html#afdd75342e00431682d1faf5d5ea5547a", [
       [ "L4VBUS_RESOURCE_INVALID", "vbus__types_8h.html#afdd75342e00431682d1faf5d5ea5547aaac14337b46475b276f5580c0a3494d54", null ],
       [ "L4VBUS_RESOURCE_IRQ", "vbus__types_8h.html#afdd75342e00431682d1faf5d5ea5547aa012ea5e67234dcbc00a16d0c5867329e", null ],

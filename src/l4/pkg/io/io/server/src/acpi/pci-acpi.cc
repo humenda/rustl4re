@@ -1,7 +1,9 @@
 #include "debug.h"
 #include "io_acpi.h"
-#include "pci.h"
 #include "__acpi.h"
+
+#include <pci-dev.h>
+#include <pci-bridge.h>
 
 #include <l4/cxx/list>
 
@@ -22,7 +24,7 @@ static void pci_acpi_wake_dev(ACPI_HANDLE, l4_uint32_t event, void *context)
 
 struct Acpi_pci_handler : Hw::Feature_manager<Pci::Dev, Acpi_dev>
 {
-  bool setup(Hw::Device *, Pci::Dev *pci, Acpi_dev *acpi_dev) const
+  bool setup(Hw::Device *, Pci::Dev *pci, Acpi_dev *acpi_dev) const override
   {
     ACPI_STATUS status;
 
@@ -62,16 +64,17 @@ public:
 
   int add_prt_entry(ACPI_HANDLE obj, ACPI_PCI_ROUTING_TABLE *e);
   int find(int device, int pin, struct acpica_pci_irq **irq);
-  bool request(Resource *parent, ::Device *, Resource *child, ::Device *cdev);
-  bool alloc(Resource *, ::Device *, Resource *, ::Device *, bool)
+  bool request(Resource *parent, ::Device *,
+               Resource *child, ::Device *cdev) override;
+  bool alloc(Resource *, ::Device *, Resource *, ::Device *, bool) override
   { return false; }
 
-  void assign(Resource *, Resource *)
+  void assign(Resource *, Resource *) override
   {
     d_printf(DBG_ERR, "internal error: cannot assign to root Acpi_pci_irq_router_rs\n");
   }
 
-  bool adjust_children(Resource *)
+  bool adjust_children(Resource *) override
   {
     d_printf(DBG_ERR, "internal error: cannot adjust root Acpi_pci_irq_router_rs\n");
     return false;
@@ -261,21 +264,21 @@ Resource *discover_prt(Acpi_dev *adev)
   return r;
 }
 
-struct Acpi_pci_bridge_handler : Hw::Feature_manager<Hw::Pci::Bus, Acpi_dev>
+struct Acpi_pci_bridge_handler : Hw::Feature_manager<Acpi_dev>
 {
-  bool setup(Hw::Device *dev, Hw::Pci::Bus *pci_bus, Acpi_dev *acpi_dev) const
+  bool setup(Hw::Device *dev, Acpi_dev *acpi_dev) const override
   {
-    Resource *router = discover_prt(acpi_dev);
-    if (router && !pci_bus->irq_router)
+    if (Resource *router = discover_prt(acpi_dev))
       {
-        pci_bus->irq_router = router;
+        if (dev->resources()->find_if(Resource::is_irq_provider_s))
+          {
+            d_printf(DBG_WARN, "warning: multiple IRQ routing tables for device: %s\n",
+                     dev->get_full_path().c_str());
+            delete router;
+            return false;
+          }
+
         dev->add_resource_rq(router);
-      }
-    else if(router)
-      {
-        d_printf(DBG_WARN, "warning: multiple IRQ routing tables for device: %s\n",
-                 dev->get_full_path().c_str());
-        delete router;
       }
 
     return false;

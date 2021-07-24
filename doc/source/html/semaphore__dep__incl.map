@@ -1,5 +1,7 @@
 <map id="l4/sys/semaphore" name="l4/sys/semaphore">
-<area shape="rect" id="node2" href="$vcon__stream_8h_source.html" title="l4/l4re_vfs/impl/vcon\l_stream.h" alt="" coords="89,80,240,121"/>
-<area shape="rect" id="node3" href="$vcon__stream__impl_8h_source.html" title="l4/l4re_vfs/impl/vcon\l_stream_impl.h" alt="" coords="5,169,156,211"/>
-<area shape="rect" id="node4" href="$vfs__impl_8h_source.html" title="l4/l4re_vfs/impl/vfs\l_impl.h" alt="" coords="181,169,319,211"/>
+<area shape="rect" id="node1" title="Semaphore class definition." alt="" coords="81,5,219,32"/>
+<area shape="rect" id="node2" href="$client_2virtio-block_source.html" title=" " alt="" coords="5,80,129,121"/>
+<area shape="rect" id="node3" href="$vcon__stream_8h_source.html" title=" " alt="" coords="153,80,312,121"/>
+<area shape="rect" id="node4" href="$vcon__stream__impl_8h_source.html" title=" " alt="" coords="64,169,223,211"/>
+<area shape="rect" id="node5" href="$vfs__impl_8h_source.html" title=" " alt="" coords="247,169,394,211"/>
 </map>

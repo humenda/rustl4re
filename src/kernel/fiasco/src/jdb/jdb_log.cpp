@@ -10,6 +10,7 @@ IMPLEMENTATION:
 #include "jdb_kobject.h"
 #include "jdb_list.h"
 #include "jdb_screen.h"
+#include "jdb_tbuf_fe.h"
 #include "kernel_console.h"
 #include "keycodes.h"
 #include "mem_unit.h"
@@ -23,8 +24,11 @@ class Jdb_log_list : public Jdb_list
 {
   friend class Jdb_log_list_hdl;
 public:
-  void *get_head() const { return _jdb_log_table; }
-  char const *show_head() const { return "[Log]"; }
+  void *get_head() const override
+  { return _jdb_log_table; }
+
+  char const *show_head() const override
+  { return "[Log]"; }
 
 private:
   static Tb_log_table_entry *_end;
@@ -35,12 +39,12 @@ Tb_log_table_entry *Jdb_log_list::_end;
 class Jdb_log_list_hdl : public Jdb_kobject_handler
 {
 public:
-  virtual bool show_kobject(Kobject_common *, int) { return true; }
+  bool show_kobject(Kobject_common *, int) override { return true; }
 };
 
 PUBLIC
 bool
-Jdb_log_list_hdl::invoke(Kobject_common *, Syscall_frame *f, Utcb *utcb)
+Jdb_log_list_hdl::invoke(Kobject_common *, Syscall_frame *f, Utcb *utcb) override
 {
   switch (utcb->values[0])
     {
@@ -116,14 +120,18 @@ Jdb_log_list_hdl::invoke(Kobject_common *, Syscall_frame *f, Utcb *utcb)
 
 PUBLIC
 void
-Jdb_log_list::show_item(String_buffer *buffer, void *item) const
+Jdb_log_list::show_item(String_buffer *buffer, String_buffer *,
+                        void *item) const override
 {
   Tb_log_table_entry const *e = static_cast<Tb_log_table_entry const*>(item);
   char const *sc = e->name;
   sc += strlen(e->name) + 1;
-  buffer->printf("%s %s (%s)",
-                 Jdb_tbuf::get_entry_status(e) ? "[on ]" : "[off]",
-                 e->name, sc);
+  if (buffer)
+    buffer->printf("[%s] %s (%s)",
+                   Jdb_tbuf_fe::get_entry_status(e)
+                   ? JDB_ANSI_COLOR(green) "ON " JDB_ANSI_END
+                   : JDB_ANSI_COLOR(red) "off" JDB_ANSI_END,
+                   e->name, sc);
 }
 
 PRIVATE static inline
@@ -145,10 +153,10 @@ Jdb_log_list::find_next_log(const char *name, const char *sc,
 
 PUBLIC
 bool
-Jdb_log_list::enter_item(void *item) const
+Jdb_log_list::enter_item(void *item) const override
 {
   Tb_log_table_entry const *e = static_cast<Tb_log_table_entry const*>(item);
-  patch_item(e, Jdb_tbuf::get_entry_status(e) ? 0 : patch_val(e));
+  patch_item(e, Jdb_tbuf_fe::get_entry_status(e) ? 0 : patch_val(e));
   return true;
 }
 
@@ -157,12 +165,12 @@ void
 Jdb_log_list::patch_item(Tb_log_table_entry const *e, unsigned char val)
 {
   if (e->patch)
-    Jdb_tbuf::set_entry_status(e, val);
+    Jdb_tbuf_fe::set_entry_status(e, val);
 
   for (Tb_log_table_entry *x = _end; x < &_jdb_log_table_end; ++x)
     {
       if (equal(x, e) && x->patch)
-        Jdb_tbuf::set_entry_status(x, val);
+        Jdb_tbuf_fe::set_entry_status(x, val);
     }
 }
 
@@ -230,7 +238,7 @@ Jdb_log_list::pref(void **item)
 
 PUBLIC
 int
-Jdb_log_list::seek(int cnt, void **item)
+Jdb_log_list::seek(int cnt, void **item) override
 {
   Tb_log_table_entry *e = static_cast<Tb_log_table_entry*>(*item);
   if (cnt > 0)
@@ -293,6 +301,7 @@ Jdb_log_list::move_dups()
 {
   _end = &_jdb_log_table_end;
   Tb_log_table_entry *const tab_end = &_jdb_log_table_end;
+  unsigned entries = &_jdb_log_table_end - _jdb_log_table;
   for (Tb_log_table_entry *p = _jdb_log_table + 1; p < _end;)
     {
       if (equal(p-1, p))
@@ -302,7 +311,7 @@ Jdb_log_list::move_dups()
 	    {
 	      Tb_log_table_entry tmp = *p;
 	      memmove(p, p + 1, sizeof(Tb_log_table_entry) * (tab_end - p - 1));
-	      *(tab_end - 1) = tmp;
+              _jdb_log_table[entries - 1] = tmp;
 	    }
 	  else
 	    break;
@@ -335,7 +344,7 @@ Jdb_log::Jdb_log()
 
 PUBLIC
 Jdb_module::Action_code
-Jdb_log::action(int, void *&, char const *&, int &)
+Jdb_log::action(int, void *&, char const *&, int &) override
 {
   if (_jdb_log_table >= &_jdb_log_table_end)
     return NOTHING;
@@ -349,7 +358,7 @@ Jdb_log::action(int, void *&, char const *&, int &)
 
 PUBLIC
 Jdb_module::Cmd const *
-Jdb_log::cmds() const
+Jdb_log::cmds() const override
 {
   static Cmd cs[] =
     {
@@ -360,7 +369,7 @@ Jdb_log::cmds() const
 
 PUBLIC
 int
-Jdb_log::num_cmds() const
+Jdb_log::num_cmds() const override
 { return 1; }
 
 static Jdb_log jdb_log INIT_PRIORITY(JDB_MODULE_INIT_PRIO);

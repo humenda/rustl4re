@@ -1,3 +1,4 @@
 <map id="L4virtio::Svr::Bad_descriptor" name="L4virtio::Svr::Bad_descriptor">
-<area shape="rect" id="node2" href="$classL4virtio_1_1Svr_1_1Request__processor.html" title="Encapsulate the state for processing a VIRTIO request. " alt="" coords="5,5,159,156"/>
+<area shape="rect" id="node1" title="Exception used by Queue to indicate descriptor errors." alt="" coords="14,219,158,325"/>
+<area shape="rect" id="node2" href="$classL4virtio_1_1Svr_1_1Request__processor.html" title="Encapsulate the state for processing a VIRTIO request." alt="" coords="5,5,167,156"/>
 </map>

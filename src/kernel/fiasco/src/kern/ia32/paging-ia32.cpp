@@ -10,10 +10,10 @@ public:
   enum Attribs_enum
   {
     MAX_ATTRIBS   = 0x00000006,
-    Cache_mask    = 0x00000018, ///< Cache attrbute mask
-    CACHEABLE     = 0x00000000,
-    BUFFERED      = 0x00000010,
-    NONCACHEABLE  = 0x00000018,
+    Cache_mask    = 0x00000018, ///< Cache attribute mask
+    CACHEABLE     = 0x00000000, ///< PAT=0, PCD=0, PWT=0: PAT0 (WB)
+    BUFFERED      = 0x00000010, ///< PAT=0, PCD=1, PWT=0: PAT2 (WC)
+    NONCACHEABLE  = 0x00000018, ///< PAT=0, PCD=1, PWT=1: PAT3 (UC)
   };
 };
 
@@ -306,8 +306,9 @@ Mword PF::is_read_error(Mword error)
 IMPLEMENT inline NEEDS["regdefs.h"]
 Mword PF::addr_to_msgword0(Address pfa, Mword error)
 {
-  Mword v = (pfa & ~0x7) | (error &  (PF_ERR_PRESENT | PF_ERR_WRITE));
-  if (error & (1 << 4)) v |= 0x4;
+  Mword v = (pfa & ~0x7) | (error & (PF_ERR_PRESENT | PF_ERR_WRITE));
+  if (error & PF_ERR_INSTFETCH)
+    v |= 0x4;
   return v;
 }
 

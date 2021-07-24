@@ -2,16 +2,16 @@
 
 struct Buffer
 {
-    Buffer()
-          : addr(0), size(0)
-	        {}
+  Buffer()
+  : addr(0), size(0)
+  {}
 
-      Buffer(char *a, unsigned s)
-	    : addr(a), size(s)
-	          {}
+  Buffer(unsigned char *a, unsigned s)
+  : addr(a), size(s)
+  {}
 
-        char *addr;
-	  unsigned size;
+  unsigned char *addr;
+  unsigned size;
 };
 
 struct Transfer
@@ -40,7 +40,7 @@ struct Transfer
       len = 0;
     }
 
-  void add(char *addr, unsigned size)
+  void add(unsigned char *addr, unsigned size)
     {
       if (num == Max)
 	return;

@@ -101,8 +101,6 @@ endif
 # We can give an internal rule for doxygen, as the directory specified
 # in the config-file should be the name of the config file with the
 # .cfg removed.
-# Use make DOXY_FAST=y to just build the HTML without graphics
-# Use make DOXY_FULL=y to build HTMl with graphics and the PDF
 # $(VERBOSE)$(ECHO) ENABLED_SECTIONS=WORKING_SUBPAGES >> $@.flags
 FORCE: ;
 $(OBJ_DIR)/% $(OBJ_DIR)/%/html:$(SRC_DIR)/%.cfg FORCE
@@ -113,12 +111,12 @@ $(OBJ_DIR)/% $(OBJ_DIR)/%/html:$(SRC_DIR)/%.cfg FORCE
 	$(VERBOSE)$(ECHO) 'INCLUDE_PATH += $(OBJ_BASE)/include'            >> $@.flags
 	$(VERBOSE)$(ECHO) $(DOXY_FLAGS)                                    >> $@.flags
 	$(VERBOSE)$(ECHO) OUTPUT_DIRECTORY=$(OBJ_DIR)/$(call OUTPUTDIR,$<) >> $@.flags
-	$(VERBOSE)if [ -n "$(DOXY_FAST)" ]; then $(ECHO) HAVE_DOT=NO;  $(ECHO) GENERATE_LATEX=NO;  fi   >> $@.flags
-	$(VERBOSE)if [ -n "$(DOXY_FULL)" ]; then $(ECHO) HAVE_DOT=YES; $(ECHO) GENERATE_LATEX=YES; fi   >> $@.flags
-	$(VERBOSE)if [ -n "$(DOXY_RELEASE)" ]; then \
+	$(VERBOSE)if [ "$(DOC_VARIANT)" = "fast" ]; then $(ECHO) HAVE_DOT=NO;  $(ECHO) GENERATE_LATEX=NO;  fi   >> $@.flags
+	$(VERBOSE)if [ "$(DOC_VARIANT)" = "full" ]; then $(ECHO) HAVE_DOT=YES; $(ECHO) GENERATE_LATEX=YES; fi   >> $@.flags
+	$(VERBOSE)if [ "$(DOC_VARIANT)" = "release" ]; then \
 	            $(ECHO) HAVE_DOT=YES; \
 	            $(ECHO) GENERATE_LATEX=YES; \
-		    $(ECHO) SHOW_FILES=YES; \
+	            $(ECHO) SHOW_FILES=YES; \
 	            $(ECHO) INTERNAL_DOCS=NO; \
 	            $(ECHO) GENERATE_TODOLIST=NO; \
 	            $(ECHO) GENERATE_TESTLIST=NO; \

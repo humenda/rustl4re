@@ -1,9 +1,10 @@
 <map id="L4vbus::Pm&lt; DEC &gt;" name="L4vbus::Pm&lt; DEC &gt;">
-<area shape="rect" id="node2" href="$classL4vbus_1_1Pm.html" title="{L4vbus::Pm\&lt; Device \&gt;\n||+ pm_suspend()\l+ pm_resume()\l}" alt="" coords="305,160,463,252"/>
-<area shape="rect" id="node3" href="$classL4vbus_1_1Device.html" title="Device on a L4vbus::Vbus. " alt="" coords="317,301,451,540"/>
-<area shape="rect" id="node4" href="$classL4vbus_1_1Gpio__module.html" title="A Gpio_module groups multiple GPIO pins together. " alt="" coords="5,611,160,777"/>
-<area shape="rect" id="node5" href="$classL4vbus_1_1Gpio__pin.html" title="A GPIO pin. " alt="" coords="185,589,314,799"/>
-<area shape="rect" id="node6" href="$classL4vbus_1_1Icu.html" title="Vbus Interrupt controller API. " alt="" coords="339,655,429,733"/>
-<area shape="rect" id="node7" href="$classL4vbus_1_1Pci__dev.html" title="A PCI device. " alt="" coords="453,641,576,747"/>
-<area shape="rect" id="node8" href="$classL4vbus_1_1Pci__host__bridge.html" title="A Pci host bridge. " alt="" coords="600,641,773,747"/>
+<area shape="rect" id="node1" title="Power&#45;management API mixin." alt="" coords="320,5,475,97"/>
+<area shape="rect" id="node2" href="$classL4vbus_1_1Pm.html" title=" " alt="" coords="311,160,483,252"/>
+<area shape="rect" id="node3" href="$classL4vbus_1_1Device.html" title="Device on a L4vbus::Vbus." alt="" coords="327,301,467,540"/>
+<area shape="rect" id="node4" href="$classL4vbus_1_1Gpio__module.html" title="A Gpio_module groups multiple GPIO pins together." alt="" coords="5,611,168,777"/>
+<area shape="rect" id="node5" href="$classL4vbus_1_1Gpio__pin.html" title="A GPIO pin." alt="" coords="192,589,325,799"/>
+<area shape="rect" id="node6" href="$classL4vbus_1_1Icu.html" title="Vbus Interrupt controller API." alt="" coords="350,655,445,733"/>
+<area shape="rect" id="node7" href="$classL4vbus_1_1Pci__dev.html" title="A PCI device." alt="" coords="469,641,595,747"/>
+<area shape="rect" id="node8" href="$classL4vbus_1_1Pci__host__bridge.html" title="A Pci host bridge." alt="" coords="620,641,799,747"/>
 </map>

@@ -31,16 +31,12 @@ namespace Hw {
   private:
     void setup()
     {
-      register_arm_specific_properties();
-      property("flags")->set(-1, DF_dma_supported);
-    }
-
-    void register_arm_specific_properties()
-    {
       register_property("iommu", &_iommu);
       register_property("sidreg", &_sidreg);
       register_property("offset", &_offset);
       register_property("utlb", &_utlb);
+
+      property("flags")->set(-1, DF_dma_supported);
     }
 
     Device_property<Hw::Device> _sidreg;

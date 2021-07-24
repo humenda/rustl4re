@@ -1,3 +1,8 @@
+/* SPDX-License-Identifier: GPL-2.0-only or License-Ref-kk-custom */
+/*
+ * Copyright (C) 2005-2009 Technische Universität Dresden.
+ * Copyright (C) 2018      Kernkonzept GmbH.
+ */
 #ifndef __BOOTSTRAP__GUNZIP_H__
 #define __BOOTSTRAP__GUNZIP_H__
 

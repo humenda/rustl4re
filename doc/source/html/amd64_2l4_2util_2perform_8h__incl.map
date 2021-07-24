@@ -1,8 +1,10 @@
 <map id="amd64/l4/util/perform.h" name="amd64/l4/util/perform.h">
-<area shape="rect" id="node2" href="$l4_2sys_2types_8h.html" title="Common L4 ABI Data Types. " alt="" coords="201,80,307,107"/>
-<area shape="rect" id="node4" href="$compiler_8h.html" title="L4 compiler related defines. " alt="" coords="5,229,132,256"/>
-<area shape="rect" id="node3" href="$l4_2sys_2l4int_8h.html" title="Fixed sized integer types, generic version. " alt="" coords="431,229,530,256"/>
-<area shape="rect" id="node6" href="$l4_2sys_2consts_8h.html" title="Common constants. " alt="" coords="274,155,389,181"/>
-<area shape="rect" id="node7" href="$____l4__fpage_8h_source.html" title="l4/sys/__l4_fpage.h" alt="" coords="106,155,250,181"/>
-<area shape="rect" id="node8" href="$____timeout_8h_source.html" title="l4/sys/__timeout.h" alt="" coords="413,155,548,181"/>
+<area shape="rect" id="node1" title="Perfomance Monitoring using P5/P6 Measurement Counters." alt="" coords="321,5,497,32"/>
+<area shape="rect" id="node2" href="$l4_2sys_2types_8h.html" title="Common L4 ABI Data Types." alt="" coords="242,80,354,107"/>
+<area shape="rect" id="node4" href="$compiler_8h.html" title="L4 compiler related defines." alt="" coords="335,229,467,256"/>
+<area shape="rect" id="node3" href="$l4_2sys_2l4int_8h.html" title="Fixed sized integer types, generic version." alt="" coords="42,229,147,256"/>
+<area shape="rect" id="node6" href="$l4_2sys_2consts_8h.html" title="Common constants." alt="" coords="190,155,308,181"/>
+<area shape="rect" id="node7" href="$____l4__fpage_8h_source.html" title=" " alt="" coords="384,155,530,181"/>
+<area shape="rect" id="node8" href="$____timeout_8h_source.html" title=" " alt="" coords="24,155,165,181"/>
+<area shape="rect" id="node5" title=" " alt="" coords="340,304,462,331"/>
 </map>

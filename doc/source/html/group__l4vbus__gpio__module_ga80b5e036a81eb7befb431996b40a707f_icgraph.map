@@ -1,3 +1,4 @@
 <map id="l4vbus_gpio_multi_config_pad" name="l4vbus_gpio_multi_config_pad">
-<area shape="rect" id="node2" href="$classL4vbus_1_1Gpio__module.html#a353f5c9e3e0c77b57308c0f2b21de582" title="Hardware specific configuration function for multiple GPIO pins. " alt="" coords="264,5,419,47"/>
+<area shape="rect" id="node1" title="Hardware specific configuration function for multiple GPIO pins." alt="" coords="216,13,435,39"/>
+<area shape="rect" id="node2" href="$classL4vbus_1_1Gpio__module.html#a353f5c9e3e0c77b57308c0f2b21de582" title="Hardware specific configuration function for multiple GPIO pins." alt="" coords="5,5,168,47"/>
 </map>

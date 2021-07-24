@@ -1,2 +1,3 @@
 <map id="L4::Kobject" name="L4::Kobject">
+<area shape="rect" id="node1" title="Base class for all kinds of kernel objects and remote objects, referenced by capabilities." alt="" coords="5,5,120,97"/>
 </map>

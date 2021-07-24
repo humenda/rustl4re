@@ -49,20 +49,20 @@ IMPLEMENTATION:
 
 PUBLIC
 bool
-Irq_chip_ux::alloc(Irq_base *irq, Mword irqn)
+Irq_chip_ux::alloc(Irq_base *irq, Mword irqn, bool init = true) override
 {
   if (irqn >= Num_irqs)
     return false;
 
   // PIC uses 16 vectors from Base_vector statically
   unsigned vector = _base_vect + irqn;
-  return valloc<Irq_chip_ux>(irq, irqn, vector);
+  return valloc<Irq_chip_ux>(irq, irqn, vector, init);
 }
 
 
 PUBLIC
 void
-Irq_chip_ux::unmask(Mword pin)
+Irq_chip_ux::unmask(Mword pin) override
 {
   assert (pin < Num_irqs);
   auto &p = pfd[pin];
@@ -102,6 +102,6 @@ IMPLEMENTATION [ux && debug]:
 
 PUBLIC
 char const *
-Irq_chip_ux::chip_type() const
+Irq_chip_ux::chip_type() const override
 { return "UX"; }
 

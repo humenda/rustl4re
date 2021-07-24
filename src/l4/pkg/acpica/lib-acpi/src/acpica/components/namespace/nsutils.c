@@ -9,7 +9,7 @@
  *
  * 1. Copyright Notice
  *
- * Some or all of this work - Copyright (c) 1999 - 2017, Intel Corp.
+ * Some or all of this work - Copyright (c) 1999 - 2019, Intel Corp.
  * All rights reserved.
  *
  * 2. License
@@ -112,6 +112,42 @@
  * other governmental approval, or letter of assurance, without first obtaining
  * such license, approval or letter.
  *
+ *****************************************************************************
+ *
+ * Alternatively, you may choose to be licensed under the terms of the
+ * following license:
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions, and the following disclaimer,
+ *    without modification.
+ * 2. Redistributions in binary form must reproduce at minimum a disclaimer
+ *    substantially similar to the "NO WARRANTY" disclaimer below
+ *    ("Disclaimer") and any redistribution must be conditioned upon
+ *    including a substantially similar Disclaimer requirement for further
+ *    binary redistribution.
+ * 3. Neither the names of the above-listed copyright holders nor the names
+ *    of any contributors may be used to endorse or promote products derived
+ *    from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+ * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * Alternatively, you may choose to be licensed under the terms of the
+ * GNU General Public License ("GPL") version 2 as published by the Free
+ * Software Foundation.
+ *
  *****************************************************************************/
 
 #include "acpi.h"
@@ -170,7 +206,7 @@ AcpiNsPrintNodePathname (
             AcpiOsPrintf ("%s ", Message);
         }
 
-        AcpiOsPrintf ("[%s] (Node %p)", (char *) Buffer.Pointer, Node);
+        AcpiOsPrintf ("%s", (char *) Buffer.Pointer);
         ACPI_FREE (Buffer.Pointer);
     }
 }
@@ -315,7 +351,7 @@ AcpiNsGetInternalNameLength (
         }
     }
 
-    Info->Length = (ACPI_NAME_SIZE * Info->NumSegments) +
+    Info->Length = (ACPI_NAMESEG_SIZE * Info->NumSegments) +
         4 + Info->NumCarats;
 
     Info->NextExternalChar = NextExternalChar;
@@ -366,7 +402,7 @@ AcpiNsBuildInternalName (
         }
         else
         {
-            InternalName[1] = AML_MULTI_NAME_PREFIX_OP;
+            InternalName[1] = AML_MULTI_NAME_PREFIX;
             InternalName[2] = (char) NumSegments;
             Result = &InternalName[3];
         }
@@ -397,7 +433,7 @@ AcpiNsBuildInternalName (
         }
         else
         {
-            InternalName[i] = AML_MULTI_NAME_PREFIX_OP;
+            InternalName[i] = AML_MULTI_NAME_PREFIX;
             InternalName[(ACPI_SIZE) i+1] = (char) NumSegments;
             Result = &InternalName[(ACPI_SIZE) i+2];
         }
@@ -407,7 +443,7 @@ AcpiNsBuildInternalName (
 
     for (; NumSegments; NumSegments--)
     {
-        for (i = 0; i < ACPI_NAME_SIZE; i++)
+        for (i = 0; i < ACPI_NAMESEG_SIZE; i++)
         {
             if (ACPI_IS_PATH_SEPARATOR (*ExternalName) ||
                (*ExternalName == 0))
@@ -436,7 +472,7 @@ AcpiNsBuildInternalName (
         /* Move on the next segment */
 
         ExternalName++;
-        Result += ACPI_NAME_SIZE;
+        Result += ACPI_NAMESEG_SIZE;
     }
 
     /* Terminate the string */
@@ -525,7 +561,7 @@ AcpiNsInternalizeName (
  *
  * FUNCTION:    AcpiNsExternalizeName
  *
- * PARAMETERS:  InternalNameLength  - Lenth of the internal name below
+ * PARAMETERS:  InternalNameLength  - Length of the internal name below
  *              InternalName        - Internal representation of name
  *              ConvertedNameLength - Where the length is returned
  *              ConvertedName       - Where the resulting external name
@@ -606,7 +642,7 @@ AcpiNsExternalizeName (
     {
         switch (InternalName[PrefixLength])
         {
-        case AML_MULTI_NAME_PREFIX_OP:
+        case AML_MULTI_NAME_PREFIX:
 
             /* <count> 4-byte names */
 
@@ -685,12 +721,12 @@ AcpiNsExternalizeName (
 
             /* Copy and validate the 4-char name segment */
 
-            ACPI_MOVE_NAME (&(*ConvertedName)[j],
+            ACPI_COPY_NAMESEG (&(*ConvertedName)[j],
                 &InternalName[NamesIndex]);
             AcpiUtRepairName (&(*ConvertedName)[j]);
 
-            j += ACPI_NAME_SIZE;
-            NamesIndex += ACPI_NAME_SIZE;
+            j += ACPI_NAMESEG_SIZE;
+            NamesIndex += ACPI_NAMESEG_SIZE;
         }
     }
 
@@ -770,24 +806,6 @@ AcpiNsTerminate (
 
     ACPI_FUNCTION_TRACE (NsTerminate);
 
-
-#ifdef ACPI_EXEC_APP
-    {
-        ACPI_OPERAND_OBJECT     *Prev;
-        ACPI_OPERAND_OBJECT     *Next;
-
-        /* Delete any module-level code blocks */
-
-        Next = AcpiGbl_ModuleCodeList;
-        while (Next)
-        {
-            Prev = Next;
-            Next = Next->Method.Mutex;
-            Prev->Method.Mutex = NULL; /* Clear the Mutex (cheated) field */
-            AcpiUtRemoveReference (Prev);
-        }
-    }
-#endif
 
     /*
      * Free the entire namespace -- all nodes and all objects

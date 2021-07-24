@@ -1,6 +1,9 @@
 <map id="l4_task_unmap" name="l4_task_unmap">
-<area shape="rect" id="node2" href="$classL4Re_1_1Util_1_1Cap__alloc__base.html#a31c89aaa2ab78ca277cedad435a52162" title="Free a capability slot. " alt="" coords="171,5,321,47"/>
-<area shape="rect" id="node3" href="$classL4Re_1_1Util_1_1Counting__cap__alloc.html#aecd7d5744bae1cbdc6da24a9c443f8bb" title="Free the capability. " alt="" coords="174,71,318,112"/>
-<area shape="rect" id="node5" href="$classL4Re_1_1Util_1_1Counting__cap__alloc.html#a256ec4df19309885a394418848121081" title="Decrease the reference counter for a capability. " alt="" coords="174,136,318,177"/>
-<area shape="rect" id="node4" href="$classL4Re_1_1Util_1_1Object__registry.html#aeeea59583ffddfef4e7c1c3e6eed41b6" title="Remove a server object from the handler list. " alt="" coords="369,71,541,112"/>
+<area shape="rect" id="node1" title="Revoke rights from the task." alt="" coords="436,78,557,105"/>
+<area shape="rect" id="node2" href="$classL4Re_1_1Util_1_1Cap__alloc__base.html#afe4cbd695e9050e2827d17e7e960e67d" title="Free a capability slot." alt="" coords="232,5,388,47"/>
+<area shape="rect" id="node3" href="$classL4Re_1_1Util_1_1Counting__cap__alloc.html#a4f65c951a2cc3aae899c67e1ef325a8a" title="Free the capability." alt="" coords="235,71,385,112"/>
+<area shape="rect" id="node6" href="$classL4Re_1_1Util_1_1Counting__cap__alloc.html#aa27af115ce976a4073a5c53f09a88ee4" title="Decrease the reference counter for a capability." alt="" coords="235,136,385,177"/>
+<area shape="rect" id="node4" href="$classL4Re_1_1Util_1_1Smart__cap__auto.html#a4dfba4f2c4731689f1a53992c83371a6" title="Free operation for L4::Smart_cap." alt="" coords="13,5,176,47"/>
+<area shape="rect" id="node5" href="$classL4Re_1_1Util_1_1Object__registry.html#aeeea59583ffddfef4e7c1c3e6eed41b6" title="Remove a server object from the handler list." alt="" coords="5,71,184,112"/>
+<area shape="rect" id="node7" href="$classL4Re_1_1Util_1_1Smart__count__cap.html#ab983007403f2b6e4dc3963bcaa70e80a" title="Free operation for L4::Smart_cap (decrement ref count and delete if 0)." alt="" coords="7,136,182,177"/>
 </map>

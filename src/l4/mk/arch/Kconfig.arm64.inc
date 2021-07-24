@@ -1,6 +1,7 @@
 # ARCH:       BUILD_ARCH_arm64 arm64
 # ARCHDESCR:  ARM64 architecture (AArch64)
 # ARCHSELECT: ARCH_ENABLE_STACK_PROTECTOR
+# ARCHDEFAULTPF: PLATFORM_TYPE_arm_virt
 
 choice
 	prompt "CPU variant"

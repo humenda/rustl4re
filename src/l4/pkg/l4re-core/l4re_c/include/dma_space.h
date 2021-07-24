@@ -47,8 +47,8 @@ enum l4re_dma_space_direction
  */
 enum l4re_dma_space_space_attribs
 {
-  L4RE_DMA_SPACE_COHERENT   = 1 << 0, /**< \copydoc L4Re::Dma_space::Space_attrib::Coherent */
-  L4RE_DMA_SPACE_PHYS_SPACE = 1 << 1, /**< \copydoc L4Re::Dma_space::Space_attrib::Phys_space */
+  L4RE_DMA_SPACE_COHERENT   = 1 << 0, ///< \copydoc L4Re::Dma_space::Coherent
+  L4RE_DMA_SPACE_PHYS_SPACE = 1 << 1, ///< \copydoc L4Re::Dma_space::Phys_space
 };
 
 /**
@@ -67,7 +67,8 @@ typedef l4_uint64_t l4re_dma_space_dma_addr_t;
  * \ingroup api_l4re_c_dma
  */
 L4_CV long
-l4re_dma_space_map(l4re_dma_space_t dma, l4re_ds_t src, l4_addr_t offset,
+l4re_dma_space_map(l4re_dma_space_t dma, l4re_ds_t src,
+                   l4re_ds_offset_t offset,
                    l4_size_t * size, unsigned long attrs,
                    enum l4re_dma_space_direction dir,
                    l4re_dma_space_dma_addr_t *dma_addr) L4_NOTHROW;
@@ -102,4 +103,3 @@ l4re_dma_space_disassociate(l4re_dma_space_t dma);
 
 
 EXTERN_C_END
-

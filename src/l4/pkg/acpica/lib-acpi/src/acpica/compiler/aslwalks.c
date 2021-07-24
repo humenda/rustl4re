@@ -8,7 +8,7 @@
  *
  * 1. Copyright Notice
  *
- * Some or all of this work - Copyright (c) 1999 - 2017, Intel Corp.
+ * Some or all of this work - Copyright (c) 1999 - 2019, Intel Corp.
  * All rights reserved.
  *
  * 2. License
@@ -111,6 +111,42 @@
  * other governmental approval, or letter of assurance, without first obtaining
  * such license, approval or letter.
  *
+ *****************************************************************************
+ *
+ * Alternatively, you may choose to be licensed under the terms of the
+ * following license:
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions, and the following disclaimer,
+ *    without modification.
+ * 2. Redistributions in binary form must reproduce at minimum a disclaimer
+ *    substantially similar to the "NO WARRANTY" disclaimer below
+ *    ("Disclaimer") and any redistribution must be conditioned upon
+ *    including a substantially similar Disclaimer requirement for further
+ *    binary redistribution.
+ * 3. Neither the names of the above-listed copyright holders nor the names
+ *    of any contributors may be used to endorse or promote products derived
+ *    from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+ * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * Alternatively, you may choose to be licensed under the terms of the
+ * GNU General Public License ("GPL") version 2 as published by the Free
+ * Software Foundation.
+ *
  *****************************************************************************/
 
 #include "aslcompiler.h"
@@ -128,6 +164,14 @@
 static void
 AnAnalyzeStoreOperator (
     ACPI_PARSE_OBJECT       *Op);
+
+static BOOLEAN
+AnIsValidBufferConstant (
+    ACPI_PARSE_OBJECT       *Op);
+
+static void
+AnValidateCreateBufferField (
+    ACPI_PARSE_OBJECT       *CreateBufferFieldOp);
 
 
 /*******************************************************************************
@@ -159,7 +203,7 @@ AnMethodTypingWalkEnd (
     {
     case PARSEOP_METHOD:
 
-        Op->Asl.CompileFlags |= NODE_METHOD_TYPED;
+        Op->Asl.CompileFlags |= OP_METHOD_TYPED;
         break;
 
     case PARSEOP_RETURN:
@@ -389,7 +433,7 @@ AnOperandTypecheckWalkEnd (
 
     case AML_BUFFER_OP:
     case AML_PACKAGE_OP:
-    case AML_VAR_PACKAGE_OP:
+    case AML_VARIABLE_PACKAGE_OP:
 
             /* If length is a constant, we are done */
 
@@ -580,14 +624,14 @@ AnOperandTypecheckWalkEnd (
             {
                 /* No match -- this is a type mismatch error */
 
-                AnFormatBtype (StringBuffer, ThisNodeBtype);
-                AnFormatBtype (StringBuffer2, RequiredBtypes);
+                AnFormatBtype (AslGbl_StringBuffer, ThisNodeBtype);
+                AnFormatBtype (AslGbl_StringBuffer2, RequiredBtypes);
 
-                sprintf (MsgBuffer, "[%s] found, %s operator requires [%s]",
-                    StringBuffer, OpInfo->Name, StringBuffer2);
+                sprintf (AslGbl_MsgBuffer, "[%s] found, %s operator requires [%s]",
+                    AslGbl_StringBuffer, OpInfo->Name, AslGbl_StringBuffer2);
 
                 AslError (ASL_ERROR, ASL_MSG_INVALID_TYPE,
-                    ArgOp, MsgBuffer);
+                    ArgOp, AslGbl_MsgBuffer);
             }
 
         NextArgument:
@@ -632,6 +676,14 @@ AnOtherSemanticAnalysisWalkBegin (
 
     OpInfo = AcpiPsGetOpcodeInfo (Op->Asl.AmlOpcode);
 
+
+    if (OpInfo->Flags & AML_CREATE)
+    {
+        /* This group contains all of the Create Buffer Field operators */
+
+        AnValidateCreateBufferField (Op);
+        return (AE_OK);
+    }
 
     /*
      * Determine if an execution class operator actually does something by
@@ -698,15 +750,15 @@ AnOtherSemanticAnalysisWalkBegin (
         }
     }
 
-
     /*
      * Semantic checks for individual ASL operators
      */
+
     switch (Op->Asl.ParseOpcode)
     {
     case PARSEOP_STORE:
 
-        if (Gbl_DoTypechecking)
+        if (AslGbl_DoTypechecking)
         {
             AnAnalyzeStoreOperator (Op);
         }
@@ -746,22 +798,6 @@ AnOtherSemanticAnalysisWalkBegin (
         {
             AslError (ASL_WARNING, ASL_MSG_TIMEOUT, ArgOp,
                 Op->Asl.ExternalName);
-        }
-        break;
-
-    case PARSEOP_CREATEFIELD:
-        /*
-         * Check for a zero Length (NumBits) operand. NumBits is the 3rd operand
-         */
-        ArgOp = Op->Asl.Child;
-        ArgOp = ArgOp->Asl.Next;
-        ArgOp = ArgOp->Asl.Next;
-
-        if ((ArgOp->Asl.ParseOpcode == PARSEOP_ZERO) ||
-           ((ArgOp->Asl.ParseOpcode == PARSEOP_INTEGER) &&
-            (ArgOp->Asl.Value.Integer == 0)))
-        {
-            AslError (ASL_ERROR, ASL_MSG_NON_ZERO, ArgOp, NULL);
         }
         break;
 
@@ -852,6 +888,194 @@ AnOtherSemanticAnalysisWalkBegin (
 
 /*******************************************************************************
  *
+ * FUNCTION:    AnValidateCreateBufferField
+ *
+ * PARAMETERS:  Op                  - A create buffer field operator
+ *
+ * RETURN:      None
+ *
+ * DESCRIPTION: Check if a buffer index argument to a create buffer field
+ *              operation is beyond the end of the target buffer.
+ *
+ *  Validates these AML operators:
+ *
+ *  AML_CREATE_FIELD_OP
+ *  AML_CREATE_BIT_FIELD_OP
+ *  AML_CREATE_BYTE_FIELD_OP
+ *  AML_CREATE_WORD_FIELD_OP
+ *  AML_CREATE_DWORD_FIELD_OP
+ *  AML_CREATE_QWORD_FIELD_OP
+ *
+ *  There are two conditions that must be satisfied in order to enable
+ *  validation at compile time:
+ *
+ *  1) The length of the target buffer must be an integer constant
+ *  2) The index specified in the create* must be an integer constant
+ *  3) For CreateField, the bit length argument must be non-zero.
+ *
+ ******************************************************************************/
+
+static void
+AnValidateCreateBufferField (
+    ACPI_PARSE_OBJECT       *CreateBufferFieldOp)
+{
+    ACPI_PARSE_OBJECT       *TargetBufferOp;
+    ACPI_PARSE_OBJECT       *ArgOp;
+    UINT32                  TargetBufferLength;
+    UINT32                  LastFieldByteIndex;
+
+
+    /*
+     * 1) Get the length of the target buffer
+     */
+    ArgOp = CreateBufferFieldOp->Asl.Child;     /* Reference to target buffer */
+
+    /*
+     * If no attached Node, the target buffer may be something like an
+     * ArgX or LocalX and cannot be evaluated at compile time.
+     */
+    if (!ArgOp->Asl.Node)
+    {
+        return;
+    }
+
+    TargetBufferOp = ArgOp->Asl.Node->Op;
+    TargetBufferOp = TargetBufferOp->Asl.Child; /* Target buffer */
+    TargetBufferOp = TargetBufferOp->Asl.Next;  /* "Buffer" keyword */
+    if (!TargetBufferOp)
+    {
+        /* Not a statement of the form NAME(XXXX, Buffer.... */
+
+        return;
+    }
+
+    /* Get the buffer length argument. It must be an integer constant */
+
+    ArgOp = TargetBufferOp->Asl.Child;
+    if (!AnIsValidBufferConstant (ArgOp))
+    {
+        return;
+    }
+
+    TargetBufferLength = (UINT32) ArgOp->Asl.Value.Integer;
+
+    /*
+     * 2) Get the value of the buffer index argument. It must be
+     * an integer constant.
+     */
+    ArgOp = CreateBufferFieldOp->Asl.Child;     /* Reference to target buffer */
+    ArgOp = ArgOp->Asl.Next;                    /* Buffer Index argument*/
+    if (!AnIsValidBufferConstant (ArgOp))
+    {
+        return;
+    }
+
+    LastFieldByteIndex =
+        (UINT32) ArgOp->Asl.Value.Integer;      /* Index can be in either bytes or bits */
+
+    /*
+     * 3) Get the length of the new buffer field, in bytes. Also,
+     * create the final target buffer index for the last byte of the field
+     */
+    switch (CreateBufferFieldOp->Asl.ParseOpcode)
+    {
+    case PARSEOP_CREATEBITFIELD:                /* A one bit field */
+
+        LastFieldByteIndex = ACPI_ROUND_BITS_DOWN_TO_BYTES (LastFieldByteIndex);
+        break;
+
+    case PARSEOP_CREATEBYTEFIELD:
+        break;
+
+    case PARSEOP_CREATEWORDFIELD:
+
+        LastFieldByteIndex += (sizeof (UINT16) - 1);
+        break;
+
+    case PARSEOP_CREATEDWORDFIELD:
+
+        LastFieldByteIndex += (sizeof (UINT32) - 1);
+        break;
+
+    case PARSEOP_CREATEQWORDFIELD:
+
+        LastFieldByteIndex += (sizeof (UINT64) - 1);
+        break;
+
+    case PARSEOP_CREATEFIELD:                   /* Multi-bit field */
+
+        ArgOp = ArgOp->Asl.Next;                /* Length argument, in bits */
+        if (!AnIsValidBufferConstant (ArgOp))
+        {
+            return;
+        }
+
+        /* The buffer field length is not allowed to be zero */
+
+        if (ArgOp->Asl.Value.Integer == 0)
+        {
+            AslError (ASL_WARNING,  ASL_MSG_BUFFER_FIELD_LENGTH, ArgOp, NULL);
+            return;
+        }
+
+        LastFieldByteIndex +=
+            ((UINT32) ArgOp->Asl.Value.Integer - 1);    /* Create final bit index */
+
+        /* Convert bit index to a byte index */
+
+        LastFieldByteIndex = ACPI_ROUND_BITS_DOWN_TO_BYTES (LastFieldByteIndex);
+        break;
+
+    default:
+        return;
+    }
+
+    /*
+     * 4) Check for an access (index) beyond the end of the target buffer,
+     * or a zero length target buffer.
+     */
+    if (!TargetBufferLength || (LastFieldByteIndex >= TargetBufferLength))
+    {
+        AslError (ASL_WARNING, ASL_MSG_BUFFER_FIELD_OVERFLOW, ArgOp, NULL);
+    }
+}
+
+
+/*******************************************************************************
+ *
+ * FUNCTION:    AnIsValidBufferConstant
+ *
+ * PARAMETERS:  Op                  - A buffer-related operand
+ *
+ * RETURN:      TRUE if operand is valid constant, FALSE otherwise
+ *
+ * DESCRIPTION: Check if the input Op is valid constant that can be used
+ *              in compile-time analysis.
+ *
+ ******************************************************************************/
+
+static BOOLEAN
+AnIsValidBufferConstant (
+    ACPI_PARSE_OBJECT       *Op)
+{
+    if (!Op)
+    {
+        return (FALSE);
+    }
+
+    if ((Op->Asl.ParseOpcode == PARSEOP_INTEGER) ||
+        (Op->Asl.ParseOpcode == PARSEOP_ZERO)    ||
+        (Op->Asl.ParseOpcode == PARSEOP_ONE))
+    {
+        return (TRUE);
+    }
+
+    return (FALSE);
+}
+
+
+/*******************************************************************************
+ *
  * FUNCTION:    AnAnalyzeStoreOperator
  *
  * PARAMETERS:  Op                  - Store() operator
@@ -899,7 +1123,7 @@ AnAnalyzeStoreOperator (
     case PARSEOP_INDEX:
     case PARSEOP_REFOF:
 
-        if (!Gbl_EnableReferenceTypechecking)
+        if (!AslGbl_EnableReferenceTypechecking)
         {
             return;
         }

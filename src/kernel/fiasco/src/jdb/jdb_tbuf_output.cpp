@@ -28,7 +28,6 @@ IMPLEMENTATION:
 #include "jdb.h"
 #include "jdb_kobject_names.h"
 #include "jdb_regex.h"
-#include "jdb_symbol.h"
 #include "jdb_tbuf.h"
 #include "kdb_ke.h"
 #include "kernel_console.h"
@@ -178,15 +177,17 @@ Jdb_tbuf_output::print_entry(String_buffer *buf, Tb_entry *tb)
   Thread const *t = static_cast<Thread const *>(tb->ctx());
 
   if (!t || !Kobject_dbg::is_kobj(t))
-    strcpy(tidstr, "????");
+    snprintf(tidstr, sizeof(tidstr), "p:%p", t);
   else
     {
+      int len = snprintf(tidstr, sizeof(tidstr), "%04lx", t->dbg_info()->dbg_id());
       Jdb_kobject_name *ex
         = Jdb_kobject_extension::find_extension<Jdb_kobject_name>(t);
       if (show_names && ex)
-        snprintf(tidstr, sizeof(tidstr), "%04lx %-*.*s", t->dbg_info()->dbg_id(), (int)ex->max_len(), (int)ex->max_len(), ex->name());
-      else
-        snprintf(tidstr, sizeof(tidstr), "%04lx", t->dbg_info()->dbg_id());
+        snprintf(tidstr + len, sizeof(tidstr) - len, " %-*.*s",
+                 (int)ex->max_len(), (int)ex->max_len(), ex->name());
+      else if (show_names && t == Context::kernel_context(t->home_cpu()))
+        snprintf(tidstr + len, sizeof(tidstr) - len, " {KERNEL}");
     }
 
   if (Config::Max_num_cpus > 1)
@@ -205,7 +206,9 @@ PUBLIC static
 bool
 Jdb_tbuf_output::set_filter(const char *filter_str, Mword *entries)
 {
-  if (*filter_str && Jdb_regex::avail() && !Jdb_regex::start(filter_str))
+  Jdb_regex regex;
+
+  if (!regex.start(filter_str))
     return false;
 
   if (!*filter_str)
@@ -227,23 +230,17 @@ Jdb_tbuf_output::set_filter(const char *filter_str, Mword *entries)
       String_buf<200> s;
 
       print_entry(&s, e);
-      if (Jdb_regex::avail())
-	{
-	  if (Jdb_regex::find(s.begin(), 0, 0))
-	    {
-	      e->unhide();
-	      cnt++;
-	      continue;
-	    }
-	}
-      else
-	{
-	  if (strstr(s.begin(), filter_str))
-	    {
-	      e->unhide();
-	      cnt++;
-	      continue;
-	    }
+      if (regex.find(s.begin(), 0, 0))
+        {
+          e->unhide();
+          cnt++;
+          continue;
+        }
+      else if (strstr(s.begin(), filter_str))
+        {
+          e->unhide();
+          cnt++;
+          continue;
 	}
       e->hide();
     }

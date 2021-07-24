@@ -1,5 +1,6 @@
 <map id="L4::Factory::create_irq" name="L4::Factory::create_irq">
-<area shape="rect" id="node2" href="$classL4_1_1Cap__base.html#a6181bad79c41cdbf5c030877b94e25bf" title="Return capability selector. " alt="" coords="231,5,369,32"/>
-<area shape="rect" id="node3" href="$classL4_1_1Kobject.html#a314161cb755de6fd0c50da0a757eb4c7" title="Return capability selector. " alt="" coords="241,56,359,83"/>
-<area shape="rect" id="node4" href="$group__l4__factory__api.html#ga1e57007da7cf96511572fc5c00e6e649" title="Create a new IRQ. " alt="" coords="215,107,385,133"/>
+<area shape="rect" id="node1" title="Create a new IRQ." alt="" coords="5,56,169,83"/>
+<area shape="rect" id="node2" href="$classL4_1_1Cap__base.html#a90ff089ca2442b128c2b2b0e1c22c6d7" title="Return capability selector." alt="" coords="235,5,374,32"/>
+<area shape="rect" id="node3" href="$classL4_1_1Kobject.html#a4f2117ae76762f4084e6a1adb915863c" title="Return capability selector." alt="" coords="243,56,367,83"/>
+<area shape="rect" id="node4" href="$group__l4__factory__api.html#ga1e57007da7cf96511572fc5c00e6e649" title="Create a new IRQ." alt="" coords="217,107,392,133"/>
 </map>

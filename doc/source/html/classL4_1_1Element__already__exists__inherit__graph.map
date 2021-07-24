@@ -1,5 +1,6 @@
 <map id="L4::Element_already_exists" name="L4::Element_already_exists">
-<area shape="rect" id="node2" href="$classL4_1_1Runtime__error.html" title="Exception for an abstract runtime error. " alt="" coords="35,315,178,451"/>
-<area shape="rect" id="node3" href="$classL4_1_1Base__exception.html" title="Base class for all exceptions, thrown by the L4Re framework. " alt="" coords="29,160,184,267"/>
-<area shape="rect" id="node4" href="$classL4_1_1Exception__tracer.html" title="Back&#45;trace support for exceptions. " alt="" coords="31,5,182,112"/>
+<area shape="rect" id="node1" title="Exception for duplicate element insertions." alt="" coords="5,499,220,605"/>
+<area shape="rect" id="node2" href="$classL4_1_1Runtime__error.html" title="Exception for an abstract runtime error." alt="" coords="37,315,188,451"/>
+<area shape="rect" id="node3" href="$classL4_1_1Base__exception.html" title="Base class for all exceptions, thrown by the L4Re framework." alt="" coords="32,160,193,267"/>
+<area shape="rect" id="node4" href="$classL4_1_1Exception__tracer.html" title="Back&#45;trace support for exceptions." alt="" coords="35,5,191,112"/>
 </map>

@@ -29,7 +29,7 @@ namespace L4Re { namespace Util {
 int
 kumem_alloc(l4_addr_t *v, unsigned pages_order,
             L4::Cap<L4::Task> task,
-            L4::Cap<L4Re::Rm> rm) throw()
+            L4::Cap<L4Re::Rm> rm) noexcept
 {
   int r;
   unsigned long sz = (1 << pages_order) * L4_PAGESIZE;
@@ -37,7 +37,7 @@ kumem_alloc(l4_addr_t *v, unsigned pages_order,
 
   *v = 0;
   if ((r = rm->reserve_area(v, sz,
-                            L4Re::Rm::Reserved | L4Re::Rm::Search_addr,
+                            L4Re::Rm::F::Reserved | L4Re::Rm::F::Search_addr,
                             sh)))
     return r;
 

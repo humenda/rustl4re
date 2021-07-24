@@ -7,9 +7,9 @@ var group__l4__fpage__api =
     [ "l4_snd_fpage_t", "structl4__snd__fpage__t.html", [
       [ "fpage", "structl4__snd__fpage__t.html#adddf1207c4cafb5754c32fcfefeae05a", null ],
       [ "snd_base", "structl4__snd__fpage__t.html#af6ab00233d8628dd13af14d4db9a8189", null ],
-      [ "L4_WHOLE_ADDRESS_SPACE", "group__l4__fpage__api.html#ggaae05225933a42f81e7c4a9fb286596f9ac173c35abf62068a3720e4a9dc257f17", null ],
-      [ "L4_WHOLE_IOADDRESS_SPACE", "group__l4__fpage__api.html#gga39fca1837c5ce7715cbf571669660c13a56842adf0290f2327a557c91dc590fde", null ],
-      [ "L4_IOPORT_MAX", "group__l4__fpage__api.html#gga39fca1837c5ce7715cbf571669660c13a96adafdf05a382f5d9e9882630098753", null ]
+      [ "L4_WHOLE_ADDRESS_SPACE", "group__l4__fpage__api.html#ggac36f475ca5b446f4fde4c9b90bec77c8ac173c35abf62068a3720e4a9dc257f17", null ],
+      [ "L4_WHOLE_IOADDRESS_SPACE", "group__l4__fpage__api.html#gga05589fbab0657f08285ebdfe93f5ec9ea56842adf0290f2327a557c91dc590fde", null ],
+      [ "L4_IOPORT_MAX", "group__l4__fpage__api.html#gga05589fbab0657f08285ebdfe93f5ec9ea96adafdf05a382f5d9e9882630098753", null ]
     ] ],
     [ "L4_cap_fpage_rights", "group__l4__fpage__api.html#gaee60789a48cab2782f5a368237591b39", [
       [ "L4_CAP_FPAGE_W", "group__l4__fpage__api.html#ggaee60789a48cab2782f5a368237591b39a561054fb4021ff4a22ab1881c7a7de5a", null ],

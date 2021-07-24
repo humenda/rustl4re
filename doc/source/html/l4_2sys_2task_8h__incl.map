@@ -1,0 +1,13 @@
+<map id="l4/sys/task.h" name="l4/sys/task.h">
+<area shape="rect" id="node1" title="Common task related definitions." alt="" coords="308,5,412,32"/>
+<area shape="rect" id="node2" href="$l4_2sys_2types_8h.html" title="Common L4 ABI Data Types." alt="" coords="349,229,461,256"/>
+<area shape="rect" id="node9" href="$l4_2sys_2utcb_8h.html" title="UTCB definitions." alt="" coords="308,155,412,181"/>
+<area shape="rect" id="node10" href="$l4_2sys_2ipc_8h.html" title="Common IPC interface." alt="" coords="226,80,321,107"/>
+<area shape="rect" id="node3" href="$l4_2sys_2l4int_8h.html" title="Fixed sized integer types, generic version." alt="" coords="553,379,658,405"/>
+<area shape="rect" id="node4" href="$compiler_8h.html" title="L4 compiler related defines." alt="" coords="181,379,313,405"/>
+<area shape="rect" id="node6" href="$l4_2sys_2consts_8h.html" title="Common constants." alt="" coords="395,304,514,331"/>
+<area shape="rect" id="node7" href="$____l4__fpage_8h_source.html" title=" " alt="" coords="173,304,320,331"/>
+<area shape="rect" id="node8" href="$____timeout_8h_source.html" title=" " alt="" coords="589,304,731,331"/>
+<area shape="rect" id="node5" title=" " alt="" coords="185,453,308,480"/>
+<area shape="rect" id="node11" href="$err_8h.html" title="Error codes." alt="" coords="5,229,99,256"/>
+</map>

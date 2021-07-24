@@ -1,0 +1,4 @@
+<map id="L4virtio::Driver::Device::config_queue" name="L4virtio::Driver::Device::config_queue">
+<area shape="rect" id="node1" title="Send the virtqueue configuration to the device." alt="" coords="5,5,177,47"/>
+<area shape="rect" id="node2" href="$classL4virtio_1_1Device.html#a47218ed005d79308d0e297d1a731a517" title="Trigger queue configuration of the given queue." alt="" coords="225,5,396,47"/>
+</map>

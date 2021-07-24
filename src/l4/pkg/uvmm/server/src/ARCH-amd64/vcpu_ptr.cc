@@ -1,10 +1,19 @@
+/*
+ * Copyright (C) 2017 Kernkonzept GmbH.
+ * Author(s): Philipp Eppelt <philipp.eppelt@kernkonzept.com>
+ *            Benjamin Lamowski <benjamin.lamowski@kernkonzept.com>
+ *
+ * This file is distributed under the terms of the GNU General Public
+ * License, version 2.  Please see the COPYING-GPL-2 file for details.
+ */
 
 #include <l4/util/cpu.h>
 
 #include "vcpu_ptr.h"
 #include "vm_state_vmx.h"
-#include "mad.h"
 #include "pt_walker.h"
+#include "mad.h"
+#include "guest.h"
 
 namespace Vmm {
 
@@ -48,8 +57,7 @@ Vcpu_ptr::decode_mmio() const
   try
     {
       // overwrite the virtual IP with the physical OP code
-      opcode = reinterpret_cast<Pt_walker *>(_s->user_data[Reg_ptw_ptr])
-          ->walk(vms->cr3(), vms->ip());
+      opcode = get_pt_walker()->walk(*this, vms->ip());
     }
   catch (L4::Runtime_error &e)
     {
@@ -113,4 +121,21 @@ Vcpu_ptr::decode_reg_ptr(int value) const
          + (L4mad::Num_registers - 1 - value);
 }
 
-} // namspace Vmm
+void
+Vcpu_ptr::reset()
+{
+  vm_state()->init_state();
+
+  // The guests's loader starts Linux in Protected Mode.
+  // However, following a Startup IPI, Application Processors are expected to
+  // come up in Real Mode.
+  if (get_vcpu_id() == 0)
+    vm_state()->setup_protected_mode(_s->r.ip);
+  else
+    vm_state()->setup_real_mode(_s->r.ip);
+
+  // TODO If SVM is implemented, we need to branch here for the Vm_state_t
+  // to use the correct handle_exit_* function.
+  Guest::get_instance()->run_vmx(*this);
+}
+} // namespace Vmm

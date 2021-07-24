@@ -85,6 +85,7 @@ public:
       Mword v = 0;
       if (r & R::W())    v |= Write;
       if (!(r & R::X())) v |= XI;
+      if (!(r & R::R())) v |= RI;
       return v;
     }
 
@@ -112,7 +113,8 @@ public:
     L4_fpage::Rights rights() const
     {
       typedef L4_fpage::Rights R;
-      R r = R::U() | R::R();
+      R r = R::U();
+      if (!(*e & RI)) r |= R::R();
       if (*e & Write) r |= R::W();
       if (!(*e & XI)) r |= R::X();
       return r;
@@ -164,7 +166,7 @@ public:
 
   struct Null_alloc
   {
-    static void *alloc(unsigned long) { return 0; }
+    static void *alloc(Bytes) { return 0; }
     static void free(void *) {}
     static bool valid() { return false; }
     static unsigned to_phys(void *) { return 0; }
@@ -239,13 +241,31 @@ PF::is_read_error(Mword cause)
 {
   // bit 0 in the exception code denotes a write / store access
   // in all TLB, Address, and bus errors
-  return !(cause & 4);
+  // 0x13 is triggered on a read access if the RI (read inhibit) bit is set.
+  return !(cause & 4) || ((cause & 0x7c) == (0x13 << 2));
 }
 
 PUBLIC static inline NEEDS["trap_state.h"]
 Mword
 PF::is_read_error(Trap_state::Cause const cause)
 { return is_read_error(cause.raw); }
+
+PUBLIC static inline
+Mword
+PF::is_xi_error(Mword cause)
+{
+  // TLBXI
+  auto code = cause & 0x7c;
+  return code == (0x14 << 2);
+}
+
+PUBLIC static inline
+Mword
+PF::is_tlb_rights_error(Mword cause)
+{
+  auto code = cause & 0x7c;
+  return code == (0x14 << 2) || code == (0x13 << 2);
+}
 
 PUBLIC static inline NEEDS["trap_state.h"]
 Mword
@@ -260,7 +280,7 @@ Mword
 PF::is_translation_error(Mword cause)
 { return is_translation_error(Trap_state::Cause(cause)); }
 
-IMPLEMENT inline NEEDS[PF::is_read_error]
+IMPLEMENT inline NEEDS[PF::is_read_error, PF::is_xi_error]
 Mword PF::addr_to_msgword0(Address pfa, Mword cause)
 {
   Mword a = pfa & ~7;
@@ -270,7 +290,12 @@ Mword PF::addr_to_msgword0(Address pfa, Mword cause)
   if(!is_read_error(cause))
     a |= 2;
 
-  // FIXME: flag instruction fetch faults with a |= 4
+  if (is_xi_error(cause))
+    {
+      // Executing non-executable page.
+      a |= 4;
+    }
+
   return a;
 }
 
@@ -334,7 +359,7 @@ Pdir::walk(Va _virt, unsigned isize = 0,
 
       if (do_alloc)
         {
-          p = (Mword*)alloc.alloc(sizeof(Mword) << size);
+          p = (Mword*)alloc.alloc(Bytes(sizeof(Mword) << size));
           if (!p)
             return r; // OOM
 
@@ -412,15 +437,24 @@ Pdir::destroy(Va _start, Va _end, ALLOC const &alloc)
               continue;
             }
 
-          alloc.free((void *)v, sizeof(Mword) << l_bits[n + 1]);
+          alloc.free((void *)v, Bytes(sizeof(Mword) << l_bits[n + 1]));
         }
 
       if (start >= end)
-        return;
+        break;
 
       start += (1UL << l_shift[n]);
       while (n && ((start >> l_shift[n]) & l_mask[n]) == 0)
-        --n;
+        {
+          alloc.free((void *)(p[n]), Bytes(sizeof(Mword) << l_bits[n]));
+          --n;
+        }
+    }
+
+  while (n)
+    {
+      alloc.free((void *)(p[n]), Bytes(sizeof(Mword) << l_bits[n]));
+      --n;
     }
 }
 

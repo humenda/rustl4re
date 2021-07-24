@@ -93,7 +93,8 @@ public:
     CXX_BITFIELD_MEMBER( 0,  1, src_context, raw);
     /// Exception code
     CXX_BITFIELD_MEMBER( 2,  6, exc_code, raw);
-    /// L4-extension: break point spec: 0 normal, 1 JSB sequence, 2 JDB IPI
+    /// L4-extension: break point spec:
+    /// 0 normal/cstr, 1 normal/nstr, 2 JDB sequence, 3 JDB IPI (fake)
     CXX_BITFIELD_MEMBER(16, 17, bp_spec, raw);
   };
 
@@ -121,6 +122,7 @@ public:
   void copy_and_sanitize(Return_frame const *f)
   {
     Mem::memcpy_mwords(&r[1], &f->r[1], 31u + 2u);
+    status = access_once(&f->status);
     status &= Cp0_status::ST_USER_MASK;
     status |= Cp0_status::ST_USER_MUST_SET;
 
@@ -172,12 +174,14 @@ Return_frame::dump() const
     "gp", "sp", "fp", "ra"
   };
 
-  printf("00[ 0]: 00000000 ");
-  for (unsigned i = 1; i < 32; ++i)
-    printf("%s[%2d]: %08lx%s", regs[i], i, r[i], (i & 3) == 3 ? "\n" : " ");
+  int sz = 2 * sizeof(Mword);
+  printf("00[ 0]: %0*x ", sz, 0);
 
-  printf("HI: %08lx LO: %08lx\n", hi, lo);
-  printf("Status %08lx Cause %08lx EPC %08lx\n", status, cause, epc);
-  //printf("Cause  %08lx BadVaddr %08lx\n", cause, badvaddr);
+  for (unsigned i = 1; i < 32; ++i)
+    printf("%s[%2d]: %0*lx%s", regs[i], i, sz, r[i], (i & 3) == 3 ? "\n" : " ");
+
+  printf("HI: %*lx LO: %*lx\n", sz, hi, sz, lo);
+  printf("Status %0*lx Cause %0*lx EPC %0*lx\n", sz, status, sz, cause, sz, epc);
+  //printf("Cause  %0*lx BadVaddr %0*lx\n", sz, cause, sz, badvaddr);
 }
 

@@ -8,7 +8,7 @@
  *
  * 1. Copyright Notice
  *
- * Some or all of this work - Copyright (c) 1999 - 2017, Intel Corp.
+ * Some or all of this work - Copyright (c) 1999 - 2019, Intel Corp.
  * All rights reserved.
  *
  * 2. License
@@ -111,10 +111,45 @@
  * other governmental approval, or letter of assurance, without first obtaining
  * such license, approval or letter.
  *
+ *****************************************************************************
+ *
+ * Alternatively, you may choose to be licensed under the terms of the
+ * following license:
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions, and the following disclaimer,
+ *    without modification.
+ * 2. Redistributions in binary form must reproduce at minimum a disclaimer
+ *    substantially similar to the "NO WARRANTY" disclaimer below
+ *    ("Disclaimer") and any redistribution must be conditioned upon
+ *    including a substantially similar Disclaimer requirement for further
+ *    binary redistribution.
+ * 3. Neither the names of the above-listed copyright holders nor the names
+ *    of any contributors may be used to endorse or promote products derived
+ *    from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+ * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * Alternatively, you may choose to be licensed under the terms of the
+ * GNU General Public License ("GPL") version 2 as published by the Free
+ * Software Foundation.
+ *
  *****************************************************************************/
 
 #include "aslcompiler.h"
-#include "dtcompiler.h"
 #include "dtparser.y.h"
 
 #define _COMPONENT          DT_COMPILER
@@ -133,7 +168,7 @@ DtLookupLabel (
 
 /* Global used for errors during parse and related functions */
 
-DT_FIELD                *Gbl_CurrentField;
+DT_FIELD                *AslGbl_CurrentField;
 
 
 /******************************************************************************
@@ -161,7 +196,7 @@ DtResolveIntegerExpression (
     DbgPrint (ASL_DEBUG_OUTPUT, "Full Integer expression: %s\n",
         Field->Value);
 
-    Gbl_CurrentField = Field;
+    AslGbl_CurrentField = Field;
 
     Result = DtEvaluateExpression (Field->Value);
     *ReturnValue = Result;
@@ -174,7 +209,7 @@ DtResolveIntegerExpression (
  * FUNCTION:    DtDoOperator
  *
  * PARAMETERS:  LeftValue           - First 64-bit operand
- *              Operator            - Parse token for the operator (EXPOP_*)
+ *              Operator            - Parse token for the operator (OP_EXP_*)
  *              RightValue          - Second 64-bit operand
  *
  * RETURN:      64-bit result of the requested operation
@@ -196,115 +231,115 @@ DtDoOperator (
 
     switch (Operator)
     {
-    case EXPOP_ONES_COMPLIMENT:
+    case OP_EXP_ONES_COMPLIMENT:
 
         Result = ~RightValue;
         break;
 
-    case EXPOP_LOGICAL_NOT:
+    case OP_EXP_LOGICAL_NOT:
 
         Result = !RightValue;
         break;
 
-    case EXPOP_MULTIPLY:
+    case OP_EXP_MULTIPLY:
 
         Result = LeftValue * RightValue;
         break;
 
-    case EXPOP_DIVIDE:
+    case OP_EXP_DIVIDE:
 
         if (!RightValue)
         {
             DtError (ASL_ERROR, ASL_MSG_DIVIDE_BY_ZERO,
-                Gbl_CurrentField, NULL);
+                AslGbl_CurrentField, NULL);
             return (0);
         }
 
         Result = LeftValue / RightValue;
         break;
 
-    case EXPOP_MODULO:
+    case OP_EXP_MODULO:
 
         if (!RightValue)
         {
             DtError (ASL_ERROR, ASL_MSG_DIVIDE_BY_ZERO,
-                Gbl_CurrentField, NULL);
+                AslGbl_CurrentField, NULL);
             return (0);
         }
 
         Result = LeftValue % RightValue;
         break;
 
-    case EXPOP_ADD:
+    case OP_EXP_ADD:
         Result = LeftValue + RightValue;
         break;
 
-    case EXPOP_SUBTRACT:
+    case OP_EXP_SUBTRACT:
 
         Result = LeftValue - RightValue;
         break;
 
-    case EXPOP_SHIFT_RIGHT:
+    case OP_EXP_SHIFT_RIGHT:
 
         Result = LeftValue >> RightValue;
         break;
 
-    case EXPOP_SHIFT_LEFT:
+    case OP_EXP_SHIFT_LEFT:
 
         Result = LeftValue << RightValue;
         break;
 
-    case EXPOP_LESS:
+    case OP_EXP_LESS:
 
         Result = LeftValue < RightValue;
         break;
 
-    case EXPOP_GREATER:
+    case OP_EXP_GREATER:
 
         Result = LeftValue > RightValue;
         break;
 
-    case EXPOP_LESS_EQUAL:
+    case OP_EXP_LESS_EQUAL:
 
         Result = LeftValue <= RightValue;
         break;
 
-    case EXPOP_GREATER_EQUAL:
+    case OP_EXP_GREATER_EQUAL:
 
         Result = LeftValue >= RightValue;
         break;
 
-    case EXPOP_EQUAL:
+    case OP_EXP_EQUAL:
 
         Result = LeftValue == RightValue;
         break;
 
-    case EXPOP_NOT_EQUAL:
+    case OP_EXP_NOT_EQUAL:
 
         Result = LeftValue != RightValue;
         break;
 
-    case EXPOP_AND:
+    case OP_EXP_AND:
 
         Result = LeftValue & RightValue;
         break;
 
-    case EXPOP_XOR:
+    case OP_EXP_XOR:
 
         Result = LeftValue ^ RightValue;
         break;
 
-    case EXPOP_OR:
+    case OP_EXP_OR:
 
         Result = LeftValue | RightValue;
         break;
 
-    case EXPOP_LOGICAL_AND:
+    case OP_EXP_LOGICAL_AND:
 
         Result = LeftValue && RightValue;
         break;
 
-    case EXPOP_LOGICAL_OR:
+    case OP_EXP_LOGICAL_OR:
 
         Result = LeftValue || RightValue;
         break;
@@ -314,7 +349,7 @@ DtDoOperator (
         /* Unknown operator */
 
         DtFatal (ASL_MSG_INVALID_EXPRESSION,
-            Gbl_CurrentField, NULL);
+            AslGbl_CurrentField, NULL);
         return (0);
     }
 
@@ -337,7 +372,7 @@ DtDoOperator (
  *
  * RETURN:      Table offset associated with the label
  *
- * DESCRIPTION: Lookup a lable and return its value.
+ * DESCRIPTION: Lookup a label and return its value.
  *
  *****************************************************************************/
 
@@ -361,7 +396,7 @@ DtResolveLabel (
     if (!LabelField)
     {
         DtError (ASL_ERROR, ASL_MSG_UNKNOWN_LABEL,
-            Gbl_CurrentField, LabelString);
+            AslGbl_CurrentField, LabelString);
         return (0);
     }
 
@@ -396,7 +431,7 @@ DtDetectAllLabels (
     UINT32                  TableOffset;
 
 
-    TableOffset = Gbl_CurrentTableOffset;
+    TableOffset = AslGbl_CurrentTableOffset;
     GenericField = FieldList;
 
     /*
@@ -450,8 +485,8 @@ DtInsertLabelField (
         "DtInsertLabelField: Found Label : %s at output table offset %X\n",
         Field->Value, Field->TableOffset);
 
-    Field->NextLabel = Gbl_LabelList;
-    Gbl_LabelList = Field;
+    Field->NextLabel = AslGbl_LabelList;
+    AslGbl_LabelList = Field;
 }
 
 
@@ -484,7 +519,7 @@ DtLookupLabel (
 
     /* Search global list */
 
-    LabelField = Gbl_LabelList;
+    LabelField = AslGbl_LabelList;
     while (LabelField)
     {
         if (!strcmp (Name, LabelField->Value))

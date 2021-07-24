@@ -25,7 +25,6 @@ var dir_57b23affb30111293db30b1adc1928ce =
     [ "object_registry", "object__registry_source.html", null ],
     [ "poll_timeout_kipclock", "poll__timeout__kipclock_source.html", null ],
     [ "region_mapping", "region__mapping.html", null ],
-    [ "region_mapping_svr", "region__mapping__svr_source.html", null ],
     [ "region_mapping_svr_2", "region__mapping__svr__2_source.html", null ],
     [ "shared_cap", "util_2shared__cap.html", "util_2shared__cap" ],
     [ "unique_cap", "util_2unique__cap.html", "util_2unique__cap" ],

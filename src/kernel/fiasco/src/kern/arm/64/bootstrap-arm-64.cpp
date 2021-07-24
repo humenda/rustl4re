@@ -25,7 +25,7 @@ EXTENSION class Bootstrap
 
     static bool valid() { return true; }
 
-    void *alloc(unsigned size)
+    void *alloc(Bytes size)
     {
       (void) size;
       // assert (size == Config::PAGE_SIZE);
@@ -82,6 +82,9 @@ Bootstrap::map_ram_range(Kpdir *kd, Bs_alloc &alloc,
           if (s & pg_mask)
             continue;
 
+          if ((s - va_offset) & pg_mask)
+            continue;
+
           if (s + pg_sz > e)
             continue;
 
@@ -116,13 +119,12 @@ Bootstrap::map_ram(Kpdir *kd, Bs_alloc &alloc)
         continue;
 
       if (md.type() == Mem_desc::Conventional)
-          map_ram_range(kd, alloc, md.start(), md.end(), Virt_ofs);
+        map_ram_range(kd, alloc, md.start(), md.end(), Virt_ofs);
   }
-
 }
 
 
-IMPLEMENTATION [arm && pic_gic]:
+IMPLEMENTATION [arm && pic_gic && !have_arm_gicv3]:
 
 PUBLIC static void
 Bootstrap::config_gic_ns()
@@ -135,11 +137,11 @@ Bootstrap::config_gic_ns()
   for (unsigned i = 0; i < n / 32; ++i)
     dist.write<Unsigned32>(~0U, 0x80 + i * 4);
 
-  cpu.write<Unsigned32>(0xf0, 4 /*PMR*/);
+  cpu.write<Unsigned32>(0xff, 4 /*PMR*/);
   Mmu<Bootstrap::Cache_flush_area, true>::flush_cache();
 }
 
-IMPLEMENTATION [arm && !pic_gic]:
+IMPLEMENTATION [arm && (!pic_gic || have_arm_gicv3)]:
 
 PUBLIC static inline void
 Bootstrap::config_gic_ns() {}
@@ -175,7 +177,7 @@ switch_from_el3_to_el1()
   if (((pfr0 >> 8) & 0xf) != 0)
     {
       // EL2 supported, set HCR (RW and HCD)
-      asm volatile ("msr HCR_EL2, %0" : : "r"((1 << 29) | (1 << 31)));
+      asm volatile ("msr HCR_EL2, %0" : : "r"((1UL << 29) | (1UL << 31)));
     }
 
   // flush all E1 TLBs
@@ -189,7 +191,7 @@ switch_from_el3_to_el1()
   // setup SCR (disable monitor completely)
   asm volatile ("msr scr_el3, %0"
                 : :
-                "r"(Cpu::Scr_ns | Cpu::Scr_rw | Cpu::Scr_smd));
+                "r"((Mword)(Cpu::Scr_ns | Cpu::Scr_rw | Cpu::Scr_smd)));
 
   Mword sctlr_el3;
   Mword sctlr_el1;
@@ -212,7 +214,7 @@ switch_from_el3_to_el1()
       "   eret                 \n"
       "1: mov sp, %[tmp]       \n"
       : [tmp]"=&r"(tmp)
-      : [psr]"r"((0xf << 6) | 5)
+      : [psr]"r"((0xfUL << 6) | 5UL)
       : "cc", "x4");
 }
 
@@ -235,7 +237,7 @@ Bootstrap::leave_hyp_mode()
       // flush all E1 TLBs
       asm volatile ("tlbi alle1");
       // set HCR (RW and HCD)
-      asm volatile ("msr HCR_EL2, %0" : : "r"((1 << 29) | (1 << 31)));
+      asm volatile ("msr HCR_EL2, %0" : : "r"((1UL << 29) | (1UL << 31)));
       asm volatile ("   mov %[tmp], sp       \n"
                     "   msr spsr_el2, %[psr] \n"
                     "   adr x4, 1f           \n"
@@ -243,7 +245,7 @@ Bootstrap::leave_hyp_mode()
                     "   eret                 \n"
                     "1: mov sp, %[tmp]       \n"
                     : [tmp]"=&r"(tmp)
-                    : [psr]"r"((0xf << 6) | 5)
+                    : [psr]"r"((0xfUL << 6) | 5UL)
                     : "cc", "x4");
       break;
     case 1:
@@ -251,12 +253,6 @@ Bootstrap::leave_hyp_mode()
       break;
     }
 }
-
-constexpr unsigned l0_idx(Unsigned64 va)
-{ return (va >> 39) & 0x1ff; }
-
-constexpr unsigned l1_idx(Unsigned64 va)
-{ return (va >> 30) & 0x1ff; }
 
 PUBLIC static Bootstrap::Phys_addr
 Bootstrap::init_paging()
@@ -285,8 +281,6 @@ Bootstrap::init_paging()
       "isb               \n"
       : :
       "r"(ud), "r"(kd), "r"(Page::Ttbcr_bits));
-
-
 
   return Phys_addr(0);
 }
@@ -366,7 +360,7 @@ Bootstrap::leave_el3()
         ;
     }
 
-  asm volatile ("msr HCR_EL2, %0" : : "r"(1 << 31));
+  asm volatile ("msr HCR_EL2, %0" : : "r"(1UL << 31));
 
   // flush all E2 TLBs
   asm volatile ("tlbi alle2is");
@@ -374,7 +368,7 @@ Bootstrap::leave_el3()
   // setup SCR (disable monitor completely)
   asm volatile ("msr scr_el3, %0"
                 : :
-                "r"(Cpu::Scr_ns | Cpu::Scr_rw | Cpu::Scr_smd | Cpu::Scr_hce));
+                "r"((Mword)(Cpu::Scr_ns | Cpu::Scr_rw | Cpu::Scr_smd | Cpu::Scr_hce)));
 
   Mword sctlr_el3;
   Mword sctlr;
@@ -382,7 +376,7 @@ Bootstrap::leave_el3()
   sctlr = Cpu::Sctlr_generic & ~Cpu::Sctlr_m;
   sctlr |= sctlr_el3 & Cpu::Sctlr_ee;
   asm volatile ("dsb sy" : : : "memory");
-  // drain the data and instrcution caches as we might switch from
+  // drain the data and instruction caches as we might switch from
   // secure to non-secure mode and only secure mode can clear
   // caches for secure memory.
   Mmu<Bootstrap::Cache_flush_area, true>::flush_cache();
@@ -399,15 +393,9 @@ Bootstrap::leave_el3()
       "   eret                 \n"
       "1: mov sp, %[tmp]       \n"
       : [tmp]"=&r"(tmp)
-      : [psr]"r"((0xf << 6) | 9)
+      : [psr]"r"((0xfUL << 6) | 9)
       : "cc", "x4");
 }
-
-constexpr unsigned l0_idx(Unsigned64 va)
-{ return (va >> 39) & 0x1ff; }
-
-constexpr unsigned l1_idx(Unsigned64 va)
-{ return (va >> 30) & 0x1ff; }
 
 PUBLIC static Bootstrap::Phys_addr
 Bootstrap::init_paging()
@@ -427,9 +415,7 @@ Bootstrap::init_paging()
       "msr ttbr0_el2, %0 \n"
       "isb               \n"
       : :
-      "r"(d), "r"(Page::Ttbcr_bits));
+      "r"(d), "r"((Mword)Page::Ttbcr_bits));
 
   return Phys_addr(0);
 }
-
-

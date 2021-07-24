@@ -11,14 +11,19 @@ CPPFLAGS = -DHAVE_CONFIG_H \
            -DLIBBSD_OVERLAY -DLIBBSD_DISABLE_DEPRECATED -D__REENTRANT
 WARNINGS = $(WARNINGS_MINIMAL)
 
+LDFLAGS = --version-script=$(LIBBSD_DIR)/src/libbsd.map
+
 SRC_C = bsd_getopt.c closefrom.c dehumanize_number.c err.c expand_number.c \
         explicit_bzero.c \
         fgetln.c flopen.c fmtcheck.c fparseln.c fpurge.c getbsize.c \
         getpeereid.c hash/md5.c hash/sha512c.c heapsort.c humanize_number.c \
         inet_net_pton.c merge.c pidfile.c progname.c radixsort.c \
         readpassphrase.c reallocarray.c reallocf.c setmode.c stringlist.c \
-        strlcat.c strmode.c strnstr.c strtonum.c timeconv.c \
-        unvis.c vis.c
+        strlcat.c strmode.c strnstr.c strtoi.c strtou.c strtonum.c timeconv.c \
+        unvis.c
+
+# requires uclibc wide char support
+# SRC_C += vis.c
 
 SRR_C_NOT_INCLUDED = getentropy.c \
                      getentropy_aix.c \

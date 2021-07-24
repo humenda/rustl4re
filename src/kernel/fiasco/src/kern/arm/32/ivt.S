@@ -322,7 +322,7 @@ inst_abort_entry:
 
 	switch_to_kernel 4 0 1
 /**************************************************************************/
-/*prefetch_abort: @ A real prefetch abort occured --- handled as a page fault */
+/*prefetch_abort: @ A real prefetch abort occurred --- handled as a page fault */
 	stmdb	sp!, {r0 - r3, r12} 	@ Stack rest of user state
 	ldr	lr, [sp, #RF(PSR, 5*4)]	@ get spsr from stack
 	ands	lr, lr, #0x0f		@ Mask all but relevant mode bits
@@ -347,7 +347,7 @@ kernel_prefetch_abort:			@ Kernel generated IAbort
 					@ Should not get IAborts in kernel
 					@ Kernel Panic
 	adr	r0, kernel_prefetch_abort_label
-	b	kern_kdebug_entry
+	b	kern_kdebug_cstr_entry
 
 
 kernel_prefetch_abort_label: .string "Kernel prefetch abort"
@@ -357,6 +357,7 @@ kernel_prefetch_abort_label: .string "Kernel prefetch abort"
 /*****************************************************************************/
 GEN_SYSCALL_TABLE
 GEN_LEAVE_BY_TRIGGER_EXCEPTION
+GEN_LEAVE_AND_KILL_MYSELF
 
 
 /****************************************************************************
@@ -543,6 +544,9 @@ irq_entry:
 	disable_irqs
 	add	sp, sp, #20
 	return_from_exception
+
+	.global __irq_handler_irq
+__irq_handler_irq:
 1:	.word	irq_handler
 
 
@@ -636,6 +640,9 @@ fiq_entry:
 	disable_irqs
 	add	sp, sp, #20
 	return_from_exception
+
+	.global __irq_handler_fiq
+__irq_handler_fiq:
 1:	.word	irq_handler
 
 

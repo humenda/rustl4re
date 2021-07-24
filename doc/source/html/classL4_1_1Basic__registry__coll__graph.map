@@ -1,2 +1,3 @@
 <map id="L4::Basic_registry" name="L4::Basic_registry">
+<area shape="rect" id="node1" title="This registry returns the corresponding server object based on the label of an Ipc_gate." alt="" coords="5,5,143,97"/>
 </map>

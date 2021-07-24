@@ -8,7 +8,7 @@
  *
  * 1. Copyright Notice
  *
- * Some or all of this work - Copyright (c) 1999 - 2017, Intel Corp.
+ * Some or all of this work - Copyright (c) 1999 - 2019, Intel Corp.
  * All rights reserved.
  *
  * 2. License
@@ -111,6 +111,42 @@
  * other governmental approval, or letter of assurance, without first obtaining
  * such license, approval or letter.
  *
+ *****************************************************************************
+ *
+ * Alternatively, you may choose to be licensed under the terms of the
+ * following license:
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions, and the following disclaimer,
+ *    without modification.
+ * 2. Redistributions in binary form must reproduce at minimum a disclaimer
+ *    substantially similar to the "NO WARRANTY" disclaimer below
+ *    ("Disclaimer") and any redistribution must be conditioned upon
+ *    including a substantially similar Disclaimer requirement for further
+ *    binary redistribution.
+ * 3. Neither the names of the above-listed copyright holders nor the names
+ *    of any contributors may be used to endorse or promote products derived
+ *    from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+ * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * Alternatively, you may choose to be licensed under the terms of the
+ * GNU General Public License ("GPL") version 2 as published by the Free
+ * Software Foundation.
+ *
  *****************************************************************************/
 
 #ifndef _AECOMMON
@@ -153,8 +189,22 @@ typedef struct ae_debug_regions
 } AE_DEBUG_REGIONS;
 
 
+/*
+ * Init file entry
+ */
+typedef struct init_file_entry
+{
+    char                    *Name;
+    UINT64                  Value;
+} INIT_FILE_ENTRY;
+
+extern BOOLEAN              AcpiGbl_UseLocalFaultHandler;
+extern BOOLEAN              AcpiGbl_VerboseHandlers;
 extern BOOLEAN              AcpiGbl_IgnoreErrors;
+extern BOOLEAN              AcpiGbl_AbortLoopOnTimeout;
 extern UINT8                AcpiGbl_RegionFillValue;
+extern INIT_FILE_ENTRY      *AcpiGbl_InitEntries;
+extern UINT32               AcpiGbl_InitFileLineCount;
 extern UINT8                AcpiGbl_UseHwReducedFadt;
 extern BOOLEAN              AcpiGbl_DisplayRegionAccess;
 extern BOOLEAN              AcpiGbl_DoInterfaceTests;
@@ -162,15 +212,29 @@ extern BOOLEAN              AcpiGbl_LoadTestTables;
 extern FILE                 *AcpiGbl_NamespaceInitFile;
 extern ACPI_CONNECTION_INFO AeMyContext;
 
+extern UINT8                Ssdt2Code[];
+extern UINT8                Ssdt3Code[];
+extern UINT8                Ssdt4Code[];
+
 
 #define TEST_OUTPUT_LEVEL(lvl)          if ((lvl) & OutputLevel)
 
 #define OSD_PRINT(lvl,fp)               TEST_OUTPUT_LEVEL(lvl) {\
                                             AcpiOsPrintf PARAM_LIST(fp);}
 
+#define AE_PREFIX                       "ACPI Exec: "
+
 void ACPI_SYSTEM_XFACE
-AeCtrlCHandler (
+AeSignalHandler (
     int                     Sig);
+
+ACPI_STATUS
+AeExceptionHandler (
+    ACPI_STATUS             AmlStatus,
+    ACPI_NAME               Name,
+    UINT16                  Opcode,
+    UINT32                  AmlOffset,
+    void                    *Context);
 
 ACPI_STATUS
 AeBuildLocalTables (
@@ -217,17 +281,17 @@ ACPI_STATUS
 AeDisplayAllMethods (
     UINT32                  DisplayCount);
 
-ACPI_STATUS
-AeInstallEarlyHandlers (
-    void);
-
-ACPI_STATUS
-AeInstallLateHandlers (
-    void);
+/* aetests */
 
 void
 AeMiscellaneousTests (
     void);
+
+void
+AeLateTest (
+    void);
+
+/* aeregion */
 
 ACPI_STATUS
 AeRegionHandler (
@@ -237,6 +301,30 @@ AeRegionHandler (
     UINT64                  *Value,
     void                    *HandlerContext,
     void                    *RegionContext);
+
+/* aeinstall */
+
+ACPI_STATUS
+AeInstallDeviceHandlers (
+    void);
+
+void
+AeInstallRegionHandlers (
+    void);
+
+void
+AeOverrideRegionHandlers (
+    void);
+
+/* aehandlers */
+
+ACPI_STATUS
+AeInstallEarlyHandlers (
+    void);
+
+ACPI_STATUS
+AeInstallLateHandlers (
+    void);
 
 UINT32
 AeGpeHandler (
@@ -251,21 +339,6 @@ AeGlobalEventHandler (
     UINT32                  EventNumber,
     void                    *Context);
 
-/* aeregion */
-
-ACPI_STATUS
-AeInstallDeviceHandlers (
-    void);
-
-void
-AeInstallRegionHandlers (
-    void);
-
-void
-AeOverrideRegionHandlers (
-    void);
-
-
 /* aeinitfile */
 
 int
@@ -273,7 +346,48 @@ AeOpenInitializationFile (
     char                    *Filename);
 
 void
-AeDoObjectOverrides (
+AeProcessInitFile (
     void);
+
+ACPI_STATUS
+AeSetupConfiguration (
+    void                    *RegionAddr);
+
+ACPI_STATUS
+AeLookupInitFileEntry (
+    char                    *Pathname,
+    UINT64                  *Value);
+
+/* aeexec */
+
+void
+AeTestBufferArgument (
+    void);
+
+void
+AeTestPackageArgument (
+    void);
+
+ACPI_STATUS
+AeGetDevices (
+    ACPI_HANDLE             ObjHandle,
+    UINT32                  NestingLevel,
+    void                    *Context,
+    void                    **ReturnValue);
+
+ACPI_STATUS
+ExecuteOSI (
+    char                    *OsiString,
+    UINT64                  ExpectedResult);
+
+void
+AeGenericRegisters (
+    void);
+
+#if (!ACPI_REDUCED_HARDWARE)
+void
+AfInstallGpeBlock (
+    void);
+#endif /* !ACPI_REDUCED_HARDWARE */
 
 #endif /* _AECOMMON */

@@ -8,7 +8,7 @@
  *
  * 1. Copyright Notice
  *
- * Some or all of this work - Copyright (c) 1999 - 2017, Intel Corp.
+ * Some or all of this work - Copyright (c) 1999 - 2019, Intel Corp.
  * All rights reserved.
  *
  * 2. License
@@ -111,6 +111,42 @@
  * other governmental approval, or letter of assurance, without first obtaining
  * such license, approval or letter.
  *
+ *****************************************************************************
+ *
+ * Alternatively, you may choose to be licensed under the terms of the
+ * following license:
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions, and the following disclaimer,
+ *    without modification.
+ * 2. Redistributions in binary form must reproduce at minimum a disclaimer
+ *    substantially similar to the "NO WARRANTY" disclaimer below
+ *    ("Disclaimer") and any redistribution must be conditioned upon
+ *    including a substantially similar Disclaimer requirement for further
+ *    binary redistribution.
+ * 3. Neither the names of the above-listed copyright holders nor the names
+ *    of any contributors may be used to endorse or promote products derived
+ *    from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+ * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * Alternatively, you may choose to be licensed under the terms of the
+ * GNU General Public License ("GPL") version 2 as published by the Free
+ * Software Foundation.
+ *
  *****************************************************************************/
 
 #include "acpi.h"
@@ -119,6 +155,7 @@
 #include "amlcode.h"
 #include "acnamesp.h"
 #include "acdispat.h"
+#include "acconvert.h"
 
 #define _COMPONENT          ACPI_PARSER
         ACPI_MODULE_NAME    ("psargs")
@@ -277,21 +314,21 @@ AcpiPsGetNextNamestring (
 
         /* Two name segments */
 
-        End += 1 + (2 * ACPI_NAME_SIZE);
+        End += 1 + (2 * ACPI_NAMESEG_SIZE);
         break;
 
-    case AML_MULTI_NAME_PREFIX_OP:
+    case AML_MULTI_NAME_PREFIX:
 
         /* Multiple name segments, 4 chars each, count in next byte */
 
-        End += 2 + (*(End + 1) * ACPI_NAME_SIZE);
+        End += 2 + (*(End + 1) * ACPI_NAMESEG_SIZE);
         break;
 
     default:
 
         /* Single name segment */
 
-        End += ACPI_NAME_SIZE;
+        End += ACPI_NAMESEG_SIZE;
         break;
     }
 
@@ -441,7 +478,7 @@ AcpiPsGetNextNamepath (
 
         /* 2) NotFound during a CondRefOf(x) is ok by definition */
 
-        else if (WalkState->Op->Common.AmlOpcode == AML_COND_REF_OF_OP)
+        else if (WalkState->Op->Common.AmlOpcode == AML_CONDITIONAL_REF_OF_OP)
         {
             Status = AE_OK;
         }
@@ -453,7 +490,7 @@ AcpiPsGetNextNamepath (
          */
         else if ((Arg->Common.Parent) &&
             ((Arg->Common.Parent->Common.AmlOpcode == AML_PACKAGE_OP) ||
-             (Arg->Common.Parent->Common.AmlOpcode == AML_VAR_PACKAGE_OP)))
+             (Arg->Common.Parent->Common.AmlOpcode == AML_VARIABLE_PACKAGE_OP)))
         {
             Status = AE_OK;
         }
@@ -463,7 +500,7 @@ AcpiPsGetNextNamepath (
 
     if (ACPI_FAILURE (Status))
     {
-        ACPI_ERROR_NAMESPACE (Path, Status);
+        ACPI_ERROR_NAMESPACE (WalkState->ScopeInfo, Path, Status);
 
         if ((WalkState->ParseFlags & ACPI_PARSE_MODE_MASK) ==
             ACPI_PARSE_EXECUTE)
@@ -615,6 +652,7 @@ AcpiPsGetNextField (
     ACPI_FUNCTION_TRACE (PsGetNextField);
 
 
+    ASL_CV_CAPTURE_COMMENTS_ONLY (ParserState);
     Aml = ParserState->Aml;
 
     /* Determine field type */
@@ -661,6 +699,7 @@ AcpiPsGetNextField (
 
     /* Decode the field type */
 
+    ASL_CV_CAPTURE_COMMENTS_ONLY (ParserState);
     switch (Opcode)
     {
     case AML_INT_NAMEDFIELD_OP:
@@ -669,7 +708,24 @@ AcpiPsGetNextField (
 
         ACPI_MOVE_32_TO_32 (&Name, ParserState->Aml);
         AcpiPsSetName (Field, Name);
-        ParserState->Aml += ACPI_NAME_SIZE;
+        ParserState->Aml += ACPI_NAMESEG_SIZE;
+
+
+        ASL_CV_CAPTURE_COMMENTS_ONLY (ParserState);
+
+#ifdef ACPI_ASL_COMPILER
+        /*
+         * Because the package length isn't represented as a parse tree object,
+         * take comments surrounding this and add to the previously created
+         * parse node.
+         */
+        if (Field->Common.InlineComment)
+        {
+            Field->Common.NameComment = Field->Common.InlineComment;
+        }
+        Field->Common.InlineComment  = AcpiGbl_CurrentInlineComment;
+        AcpiGbl_CurrentInlineComment = NULL;
+#endif
 
         /* Get the length which is encoded as a package length */
 
@@ -727,10 +783,12 @@ AcpiPsGetNextField (
         {
             ParserState->Aml++;
 
+            ASL_CV_CAPTURE_COMMENTS_ONLY (ParserState);
             PkgEnd = ParserState->Aml;
             PkgLength = AcpiPsGetNextPackageLength (ParserState);
             PkgEnd += PkgLength;
 
+            ASL_CV_CAPTURE_COMMENTS_ONLY (ParserState);
             if (ParserState->Aml < PkgEnd)
             {
                 /* Non-empty list */
@@ -747,6 +805,7 @@ AcpiPsGetNextField (
                 Opcode = ACPI_GET8 (ParserState->Aml);
                 ParserState->Aml++;
 
+                ASL_CV_CAPTURE_COMMENTS_ONLY (ParserState);
                 switch (Opcode)
                 {
                 case AML_BYTE_OP:       /* AML_BYTEDATA_ARG */
@@ -775,6 +834,7 @@ AcpiPsGetNextField (
 
                 /* Fill in bytelist data */
 
+                ASL_CV_CAPTURE_COMMENTS_ONLY (ParserState);
                 Arg->Named.Value.Size = BufferLength;
                 Arg->Named.Data = ParserState->Aml;
             }
@@ -991,6 +1051,9 @@ AcpiPsGetNextArg (
 
             if (Arg->Common.AmlOpcode == AML_INT_METHODCALL_OP)
             {
+                /* Free method call op and corresponding namestring sub-ob */
+
+                AcpiPsFreeOp (Arg->Common.Value.Arg);
                 AcpiPsFreeOp (Arg);
                 Arg = NULL;
                 WalkState->ArgCount = 1;
@@ -1007,10 +1070,9 @@ AcpiPsGetNextArg (
     case ARGP_DATAOBJ:
     case ARGP_TERMARG:
 
-
-    ACPI_DEBUG_PRINT ((ACPI_DB_PARSE,
-        "**** TermArg/DataObj: %s (%2.2X)\n",
-        AcpiUtGetArgumentTypeName (ArgType), ArgType));
+        ACPI_DEBUG_PRINT ((ACPI_DB_PARSE,
+            "**** TermArg/DataObj: %s (%2.2X)\n",
+            AcpiUtGetArgumentTypeName (ArgType), ArgType));
 
         /* Single complex argument, nothing returned */
 

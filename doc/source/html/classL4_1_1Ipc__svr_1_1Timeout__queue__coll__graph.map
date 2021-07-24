@@ -1,2 +1,3 @@
 <map id="L4::Ipc_svr::Timeout_queue" name="L4::Ipc_svr::Timeout_queue">
+<area shape="rect" id="node1" title="Timeout queue to be used in l4re server loop." alt="" coords="5,5,217,156"/>
 </map>

@@ -1,5 +1,6 @@
 <map id="L4::Ipc::Iostream::call" name="L4::Ipc::Iostream::call">
-<area shape="rect" id="node2" href="$group__l4__ipc__api.html#gab96d1669dcd54657237ee27b7f6862c6" title="Object call (usual invocation). " alt="" coords="231,5,319,32"/>
-<area shape="rect" id="node4" href="$classL4_1_1Ipc_1_1Istream.html#a685d93c237cbf66ff368e17639109411" title="Get the message tag of a received IPC. " alt="" coords="204,56,347,83"/>
-<area shape="rect" id="node3" href="$group__l4__ipc__api.html#ga0e7e5b18d784b1d3439ea6e5b4bea4e2" title="Generic L4 object invocation. " alt="" coords="395,5,453,32"/>
+<area shape="rect" id="node1" title="Do an IPC call using the message in the output stream and receive the reply in the input stream." alt="" coords="5,31,167,57"/>
+<area shape="rect" id="node2" href="$group__l4__ipc__api.html#gab96d1669dcd54657237ee27b7f6862c6" title="Object call (usual invocation)." alt="" coords="245,5,335,32"/>
+<area shape="rect" id="node4" href="$classL4_1_1Ipc_1_1Istream.html#a685d93c237cbf66ff368e17639109411" title="Get the message tag of a received IPC." alt="" coords="215,56,365,83"/>
+<area shape="rect" id="node3" href="$group__l4__ipc__api.html#ga0e7e5b18d784b1d3439ea6e5b4bea4e2" title="Generic L4 object invocation." alt="" coords="413,5,473,32"/>
 </map>

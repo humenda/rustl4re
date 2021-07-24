@@ -70,8 +70,6 @@ Region_list::find_free_rev(Region const &search, unsigned long long _size,
 void
 Region_list::add_nolimitcheck(Region const &region, bool may_overlap)
 {
-  Region const *r;
-
   /* Do not add empty regions */
   if (region.begin() == region.end())
     return;
@@ -85,18 +83,28 @@ Region_list::add_nolimitcheck(Region const &region, bool may_overlap)
         panic("Bootstrap: %s: Region overflow\n", __func__);
     }
 
-  if (!may_overlap && (r = find(region)))
-    {
-      printf("  New region for list %s:\t", _name);
-      region.vprint();
-      printf("  overlaps with:         \t");
-      r->vprint();
+  Region *r;
+  if (begin() == end() || *(end() - 1) < region)
+    r = end(); // optimized case: append region
+  else
+    for (r = begin(); r != end(); ++r)
+      if (!(*r < region))
+        {
+          if (!may_overlap && !(region < *r))
+            {
+              printf("  New region for list %s:\t", _name);
+              region.vprint();
+              printf("  overlaps with:         \t");
+              r->vprint();
 
-      dump();
-      panic("region overlap");
-    }
+              dump();
+              panic("region overlap");
+            }
+          memmove(r + 1, r, (end() - r) * sizeof(Region));
+          break;
+        }
 
-  *_end = region;
+  *r = region;
   ++_end;
   _combined_size += region.size();
 }
@@ -225,37 +233,6 @@ Region_list::dump()
     }
 }
 
-void
-Region_list::swap(Region *a, Region *b)
-{
-  Region t = *a; *a = *b; *b = t;
-}
-
-void
-Region_list::sort()
-{
-  if (end() - begin() < 2)
-    return;
-  bool swapped;
-
-  Region *e = end() - 1;
-
-  do
-    {
-      swapped = false;
-      for (Region *c = begin(); c < e; ++c)
-	{
-	  Region *n = c; ++n;
-	  if (*n < *c)
-	    {
-	      swap(c,n);
-	      swapped = true;
-	    }
-	}
-    }
-  while (swapped);
-}
-
 Region *
 Region_list::remove(Region *r)
 {
@@ -267,7 +244,6 @@ Region_list::remove(Region *r)
 void
 Region_list::optimize()
 {
-  sort();
   Region *c = begin();
   while (c < end())
     {

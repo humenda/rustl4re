@@ -8,7 +8,7 @@
  *
  * 1. Copyright Notice
  *
- * Some or all of this work - Copyright (c) 1999 - 2017, Intel Corp.
+ * Some or all of this work - Copyright (c) 1999 - 2019, Intel Corp.
  * All rights reserved.
  *
  * 2. License
@@ -111,6 +111,42 @@
  * other governmental approval, or letter of assurance, without first obtaining
  * such license, approval or letter.
  *
+ *****************************************************************************
+ *
+ * Alternatively, you may choose to be licensed under the terms of the
+ * following license:
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions, and the following disclaimer,
+ *    without modification.
+ * 2. Redistributions in binary form must reproduce at minimum a disclaimer
+ *    substantially similar to the "NO WARRANTY" disclaimer below
+ *    ("Disclaimer") and any redistribution must be conditioned upon
+ *    including a substantially similar Disclaimer requirement for further
+ *    binary redistribution.
+ * 3. Neither the names of the above-listed copyright holders nor the names
+ *    of any contributors may be used to endorse or promote products derived
+ *    from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+ * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * Alternatively, you may choose to be licensed under the terms of the
+ * GNU General Public License ("GPL") version 2 as published by the Free
+ * Software Foundation.
+ *
  *****************************************************************************/
 
 #include "acpidump.h"
@@ -139,22 +175,29 @@ static int
 ApIsExistingFile (
     char                    *Pathname)
 {
-#ifndef _GNU_EFI
+#if !defined(_GNU_EFI) && !defined(_EDK2_EFI)
     struct stat             StatInfo;
+    int                     InChar;
 
 
     if (!stat (Pathname, &StatInfo))
     {
         fprintf (stderr, "Target path already exists, overwrite? [y|n] ");
 
-        if (getchar () != 'y')
+        InChar = fgetc (stdin);
+        if (InChar == '\n')
+        {
+            InChar = fgetc (stdin);
+        }
+
+        if (InChar != 'y' && InChar != 'Y')
         {
             return (-1);
         }
     }
 #endif
 
-    return 0;
+    return (0);
 }
 
 
@@ -221,7 +264,7 @@ ApWriteToBinaryFile (
     ACPI_TABLE_HEADER       *Table,
     UINT32                  Instance)
 {
-    char                    Filename[ACPI_NAME_SIZE + 16];
+    char                    Filename[ACPI_NAMESEG_SIZE + 16];
     char                    InstanceStr [16];
     ACPI_FILE               File;
     ACPI_SIZE               Actual;
@@ -236,18 +279,18 @@ ApWriteToBinaryFile (
 
     if (ACPI_VALIDATE_RSDP_SIG (Table->Signature))
     {
-        ACPI_MOVE_NAME (Filename, ACPI_RSDP_NAME);
+        ACPI_COPY_NAMESEG (Filename, ACPI_RSDP_NAME);
     }
     else
     {
-        ACPI_MOVE_NAME (Filename, Table->Signature);
+        ACPI_COPY_NAMESEG (Filename, Table->Signature);
     }
 
     Filename[0] = (char) tolower ((int) Filename[0]);
     Filename[1] = (char) tolower ((int) Filename[1]);
     Filename[2] = (char) tolower ((int) Filename[2]);
     Filename[3] = (char) tolower ((int) Filename[3]);
-    Filename[ACPI_NAME_SIZE] = 0;
+    Filename[ACPI_NAMESEG_SIZE] = 0;
 
     /* Handle multiple SSDTs - create different filenames for each */
 

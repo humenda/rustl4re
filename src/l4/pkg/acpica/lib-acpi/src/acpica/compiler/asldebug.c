@@ -8,7 +8,7 @@
  *
  * 1. Copyright Notice
  *
- * Some or all of this work - Copyright (c) 1999 - 2017, Intel Corp.
+ * Some or all of this work - Copyright (c) 1999 - 2019, Intel Corp.
  * All rights reserved.
  *
  * 2. License
@@ -111,6 +111,42 @@
  * other governmental approval, or letter of assurance, without first obtaining
  * such license, approval or letter.
  *
+ *****************************************************************************
+ *
+ * Alternatively, you may choose to be licensed under the terms of the
+ * following license:
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions, and the following disclaimer,
+ *    without modification.
+ * 2. Redistributions in binary form must reproduce at minimum a disclaimer
+ *    substantially similar to the "NO WARRANTY" disclaimer below
+ *    ("Disclaimer") and any redistribution must be conditioned upon
+ *    including a substantially similar Disclaimer requirement for further
+ *    binary redistribution.
+ * 3. Neither the names of the above-listed copyright holders nor the names
+ *    of any contributors may be used to endorse or promote products derived
+ *    from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+ * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * Alternatively, you may choose to be licensed under the terms of the
+ * GNU General Public License ("GPL") version 2 as published by the Free
+ * Software Foundation.
+ *
  *****************************************************************************/
 
 #include "aslcompiler.h"
@@ -128,6 +164,44 @@ UtDumpParseOpName (
     ACPI_PARSE_OBJECT       *Op,
     UINT32                  Level,
     UINT32                  DataLength);
+
+static char *
+UtCreateEscapeSequences (
+    char                    *InString);
+
+
+/*******************************************************************************
+ *
+ * FUNCTION:    CvDbgPrint
+ *
+ * PARAMETERS:  Type                - Type of output
+ *              Fmt                 - Printf format string
+ *              ...                 - variable printf list
+ *
+ * RETURN:      None
+ *
+ * DESCRIPTION: Print statement for debug messages within the converter.
+ *
+ ******************************************************************************/
+
+void
+CvDbgPrint (
+    char                    *Fmt,
+    ...)
+{
+    va_list                 Args;
+
+
+    if (!AcpiGbl_CaptureComments || !AcpiGbl_DebugAslConversion)
+    {
+        return;
+    }
+
+    va_start (Args, Fmt);
+    (void) vfprintf (AcpiGbl_ConvDebugFile, Fmt, Args);
+    va_end (Args);
+    return;
+}
 
 
 /*******************************************************************************
@@ -165,7 +239,7 @@ UtDumpIntegerOp (
     case 8: /* Dword */
 
         DbgPrint (ASL_TREE_OUTPUT,
-            "%*.*X", IntegerLength, IntegerLength, Op->Asl.Value.Integer);
+            "%*.*X", IntegerLength, IntegerLength, (UINT32) Op->Asl.Value.Integer);
         break;
 
     case 16: /* Qword and Integer */
@@ -202,7 +276,6 @@ UtDumpStringOp (
 
 
     String = Op->Asl.Value.String;
-
     if (Op->Asl.ParseOpcode != PARSEOP_STRING_LITERAL)
     {
         /*
@@ -224,10 +297,92 @@ UtDumpStringOp (
         return;
     }
 
+    String = UtCreateEscapeSequences (String);
+
     /* Emit the ParseOp name, leaving room for the string */
 
     UtDumpParseOpName (Op, Level, strlen (String));
     DbgPrint (ASL_TREE_OUTPUT, "%s", String);
+}
+
+
+/*******************************************************************************
+ *
+ * FUNCTION:    UtCreateEscapeSequences
+ *
+ * PARAMETERS:  InString            - ASCII string to be expanded
+ *
+ * RETURN:      Expanded string
+ *
+ * DESCRIPTION: Expand all non-printable ASCII bytes (0-0x1F) to escape
+ *              sequences. For example, hex 14 becomes \x14
+ *
+ * NOTE:        Since this function is used for debug output only, it does
+ *              not attempt to translate into the "known" escape sequences
+ *              such as \a, \f, \t, etc.
+ *
+ ******************************************************************************/
+
+static char *
+UtCreateEscapeSequences (
+    char                    *InString)
+{
+    char                    *String = InString;
+    char                    *OutString;
+    char                    *OutStringPtr;
+    UINT32                  InStringLength = 0;
+    UINT32                  EscapeCount = 0;
+
+
+    /*
+     * Determine up front how many escapes are within the string.
+     * Obtain the input string length while doing so.
+     */
+    while (*String)
+    {
+        if ((*String <= 0x1F) || (*String >= 0x7F))
+        {
+            EscapeCount++;
+        }
+
+        InStringLength++;
+        String++;
+    }
+
+    if (!EscapeCount)
+    {
+        return (InString); /* No escapes, nothing to do */
+    }
+
+    /* New string buffer, 3 extra chars per escape (4 total) */
+
+    OutString = UtLocalCacheCalloc (InStringLength + (EscapeCount * 3));
+    OutStringPtr = OutString;
+
+    /* Convert non-ascii or non-printable chars to escape sequences */
+
+    while (*InString)
+    {
+        if ((*InString <= 0x1F) || (*InString >= 0x7F))
+        {
+            /* Insert a \x hex escape sequence */
+
+            OutStringPtr[0] = '\\';
+            OutStringPtr[1] = 'x';
+            OutStringPtr[2] = AcpiUtHexToAsciiChar (*InString, 4);
+            OutStringPtr[3] = AcpiUtHexToAsciiChar (*InString, 0);
+            OutStringPtr += 4;
+        }
+        else /* Normal ASCII character */
+        {
+            *OutStringPtr = *InString;
+            OutStringPtr++;
+        }
+
+        InString++;
+    }
+
+    return (OutString);
 }
 
 

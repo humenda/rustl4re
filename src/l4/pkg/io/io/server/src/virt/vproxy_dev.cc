@@ -17,27 +17,25 @@ Proxy_dev::Proxy_dev(Hw::Device *d)
 {
   d->add_client(this);
   // suck features from real dev
-  for (Hw::Device::Feature_list::const_iterator i = d->features()->begin();
-       i != d->features()->end(); ++i)
+  for (auto i: *d->features())
     {
-      Dev_feature *vf = Feature_factory::match(*i);
+      Dev_feature *vf = Feature_factory::match(i);
       if (vf)
-	add_feature(vf);
+        add_feature(vf);
     }
 
   // suck resources from our real dev
-  for (Resource_list::const_iterator i = d->resources()->begin();
-       i != d->resources()->end(); ++i)
+  for (auto i: *d->resources())
     {
-      if (!*i)
+      if (!i)
         continue;
 
-      if ((*i)->disabled())
-	continue;
+      if (i->disabled() || i->internal())
+        continue;
 
-      Resource *vr = Resource_factory::match(*i);
+      Resource *vr = Resource_factory::match(i);
       if (!vr)
-	vr = *i;
+        vr = i;
 
       add_resource(vr);
     }

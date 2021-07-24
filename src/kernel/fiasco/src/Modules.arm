@@ -5,11 +5,16 @@
 
 include $(srcdir)/Modules.generic
 
-SUBSYSTEMS := 	ABI KERNEL LIBK DRIVERS MINILIBC \
+SUBSYSTEMS := 	ABI KERNEL LIBK DRIVERS MINILIBC LIBUART \
 		CXXLIB VERSION JABI TCBOFFSET CRT0
 
+ifeq ($(CONFIG_UNIT_TEST),y)
+	# UTEST depends on KERNEL and CHECKSUM, must be listed after them
+	SUBSYSTEMS += UTEST
+endif
 
-PREPROCESS_PARTS 	+= $(CONFIG_ABI) $(CONFIG_XARCH)
+
+PREPROCESS_PARTS 	+= $(CONFIG_ABI) $(CONFIG_XARCH) libuart
 
 ifeq ($(CONFIG_BIT64),y)
 PREPROCESS_PARTS += 64bit arm_esr_traps
@@ -19,7 +24,6 @@ PREPROCESS_PARTS += 32bit abs_syscalls
 BITS := 32
 endif
 
-PREPROCESS_PARTS-$(CONFIG_LIST_ALLOC_SANITY)  += list_alloc_debug
 PREPROCESS_PARTS-$(CONFIG_JDB)                += debug log
 PREPROCESS_PARTS-$(CONFIG_ARM_CACHE_L2CXX0)   += outer_cache outer_cache_l2cxx0
 
@@ -49,12 +53,21 @@ INTERFACES_DRIVERS 	:= sa1100 mux_console console uart filter_console \
 io_IMPL			:= io io-arm
 mmu_IMPL		:= mmu mmu-arm mmu-arm-$(BITS)
 mem_IMPL		:= mem mem-arm
-uart_IMPL		:= uart uart-mmio
+uart_IMPL		:= uart uart-libuart
 reset_IMPL		:=
 processor_IMPL		:= processor processor-arm-$(BITS) processor-arm
 CXXSRC_DRIVERS		:= glue_libc.cc
 NOOPT			+= $(patsubst %.o, %, $(OBJ_DRIVERS))
 ALWAYS_INLINE           += mem
+
+#
+# LIBREGEX subsystem (only for Jdb)
+#
+LIBREGEX	:= libregex.a
+VPATH		+= lib/regex
+PRIVATE_INCDIR	+= lib/regex
+CSRC_LIBREGEX	:= rx.c
+NOOPT		+= $(patsubst %.o, %, $(OBJ_LIBREGEX))
 
 #
 # MINILIBC Subsystem
@@ -63,17 +76,16 @@ MINILIBC	:= libc.a
 VPATH		+= lib/minilibc/$(CONFIG_XARCH)/$(BITS) lib/minilibc/$(CONFIG_XARCH) lib/minilibc
 PRIVATE_INCDIR	+= lib/minilibc/$(CONFIG_XARCH)/$(BITS)/include lib/minilibc/$(CONFIG_XARCH)/include lib/minilibc/include
 CSRC_MINILIBC	:= atexit.c memccpy.c memcmp.c memmove.c memset.c memcpy.c \
-		   memchr.c panic.c strchr.c strcmp.c strcpy.c strlen.c \
+		   memchr.c panic.c strchr.c strrchr.c strcmp.c strcpy.c strlen.c \
 		   strncmp.c strncpy.c strstr.c printf.c \
 		   __v_printf.c vprintf.c strtol.c strtoul.c __lltostr.c \
-		   __ltostr.c putchar.c puts.c getchar.c gets.c \
+		   __ltostr.c putchar.c puts.c getchar.c \
 		   sprintf.c snprintf.c vsnprintf.c vsprintf.c \
 		   longjmp.c isalnum.c isalpha.c isascii.c isblank.c \
 		   iscntrl.c isdigit.c isgraph.c islower.c isprint.c \
 		   ispunct.c isspace.c isupper.c isxdigit.c strspn.c \
 		   strcspn.c tolower.c raise.c aeabi.c
 ASSRC_MINILIBC	:= setjmp.S
-NOOPT		+= $(patsubst %.o, %, $(OBJ_MINILIBC))
 
 
 #
@@ -116,7 +128,7 @@ kip_IMPL	:= kip kip-debug kip-arm
 # KERNEL subsystem
 #
 KERNEL 		:= fiasco
-KERNEL_EXTRA 	:= Symbols kernel.arm.lds
+KERNEL_EXTRA 	:= Symbols kernel.arm.lds fiasco.debug
 VPATH 		+= kern/$(CONFIG_XARCH)/$(BITS) kern/$(CONFIG_XARCH) kern
 VPATH		+= jdb/arm/$(BITS) jdb/arm jdb
 PRIVATE_INCDIR 	+= kern/$(CONFIG_XARCH)/$(BITS) kern/$(CONFIG_XARCH) kern
@@ -124,15 +136,22 @@ PRIVATE_INCDIR 	+= kern/$(CONFIG_XARCH)/$(BITS) kern/$(CONFIG_XARCH) kern
 INTERFACES_KERNEL += 	__main mem_op kmem_space boot_uart_init     \
 			irq_chip_generic bootstrap                  \
 			outer_cache utcb_support cascade_irq   \
-			irq_mgr_multi_chip smc_call
+			irq_mgr_multi_chip smc_call psci
 
 INTERFACES_KERNEL-$(CONFIG_ARM_MPCORE) += scu
 INTERFACES_KERNEL-$(CONFIG_ARM_CORTEX_A9) += scu
 INTERFACES_KERNEL-$(CONFIG_BIT32) += kern_lib_page
 INTERFACES_KERNEL-$(CONFIG_SERIAL) += uart_console
 INTERFACES_KERNEL-$(CONFIG_ARM_EM_TZ) += vm
-INTERFACES_KERNEL-$(CONFIG_CPU_VIRT) += vgic
+INTERFACES_KERNEL-$(CONFIG_CPU_VIRT) += hyp_vm_state vgic vgic_global
+INTERFACES_KERNEL-$(CONFIG_CPU_VIRT)-$(CONFIG_HAVE_ARM_GICV2) += vgic_v2
+INTERFACES_KERNEL-$(CONFIG_CPU_VIRT)-$(CONFIG_HAVE_ARM_GICV3) += vgic_v3
 INTERFACES_KERNEL-$(CONFIG_ARM_SMC_USER) += smc_user
+INTERFACES_KERNEL-$(CONFIG_ARM_GIC) += gic_dist gic
+INTERFACES_KERNEL-$(CONFIG_HAVE_ARM_GICV3) += gic_redist
+INTERFACES_KERNEL-$(CONFIG_HAVE_ARM_GICV2) += gic_v2 gic_cpu_v2
+INTERFACES_KERNEL-$(CONFIG_HAVE_ARM_GICV3) += gic_v3 gic_cpu_v3
+
 INTERFACES_KERNEL += boot_infos
 
 
@@ -147,20 +166,22 @@ continuation_IMPL	:= continuation-arm
 cpu_IMPL	  	:= cpu cpu-arm cpu-arm-hyp cpu-arm-$(BITS)
 cpu_lock_IMPL  	  	:= cpu_lock cpu_lock-generic
 ifeq ($(CONFIG_BIT64),y)
-  entry_frame_IMPL	:= entry_frame-arm entry_frame-abs-timeout-hack
+  entry_frame_IMPL	:= entry_frame-arm
 else
-  entry_frame_IMPL	:= entry_frame entry_frame-arm                       \
-                  	   entry_frame-abs-timeout-hack
+  entry_frame_IMPL	:= entry_frame entry_frame-arm
 endif
 fpu_IMPL		:= fpu fpu-arm
+gic_IMPL		:= gic
+gic_cpu_v3_IMPL		:= gic_cpu_v3 gic_cpu_v3-$(BITS)
+gic_dist_IMPL		:= gic_dist
+hyp_vm_state_IMPL	:= hyp_vm_state hyp_vm_state-$(BITS)
 ipi_IMPL		:= ipi ipi-arm
-kdb_ke_IMPL		:= kdb_ke-arm
+kdb_ke_IMPL		+= kdb_ke-arm
 kernel_task_IMPL	:= kernel_task kernel_task-arm
 kernel_thread_IMPL	:= kernel_thread kernel_thread-std kernel_thread-arm \
 			   kernel_thread-arm-$(BITS)
-kernel_uart_IMPL  	:= kernel_uart
+kernel_uart_IMPL  	:= kernel_uart kernel_uart-libuart
 map_util_IMPL		:= map_util map_util-mem map_util-objs
-mapping_IMPL		:= mapping-arm mapping
 mem_layout_IMPL		:= mem_layout mem_layout-arm-$(BITS) \
 			   mem_layout-arm mem_layout-noncont
 mem_op_IMPL		:= mem_op mem_op-arm-$(BITS)
@@ -174,9 +195,8 @@ outer_cache_IMPL	:= outer_cache outer_cache-l2cxx0
 paging_IMPL	  	:= paging paging-arm paging-arm-$(BITS)
 perf_cnt_IMPL		:= perf_cnt perf_cnt-arm perf_cnt-arm-$(BITS)
 pic_IMPL		:= pic
-ifeq ($(CONFIG_ARM_PSCI),y)
-platform_control_IMPL	+= platform_control-arm-psci
-endif
+platform_control_IMPL   += platform_control-arm-psci
+psci_IMPL		:= psci-arm
 sched_context_IMPL	:= sched_context-wfq sched_context-fixed_prio \
 			   sched_context-fp_wfq sched_context
 scu_IMPL                := scu
@@ -192,6 +212,8 @@ timer_IMPL		:= timer timer-arm
 timer_tick_IMPL		:= timer_tick timer_tick-arm
 utcb_init_IMPL		:= utcb_init utcb_init-arm
 utcb_support_IMPL       := utcb_support utcb_support-arm
+vgic_IMPL		:= vgic
+vgic_v3_IMPL		:= vgic_v3 vgic_v3-$(BITS)
 vmem_alloc_IMPL	  	:= vmem_alloc vmem_alloc-arch
 tb_entry_IMPL		:= tb_entry tb_entry-arm
 
@@ -199,8 +221,8 @@ tb_entry_IMPL		:= tb_entry tb_entry-arm
 ifeq ("$(CONFIG_JDB)","y")
 JDB			:= jdb_compound.o
 SUBSYSTEMS		+= JDB
-INTERFACES_JDB		+= jdb_ptab jdb_trace_set jdb_ipi jdb_log  \
-			   jdb_perf jdb_console_buffer jdb_idle_stats
+INTERFACES_JDB		+= jdb_ptab jdb_trace_set jdb_log jdb_perf \
+			   jdb_console_buffer jdb_idle_stats
 
 CXXSRC_JDB := tb_entry_output.cc
 
@@ -217,14 +239,7 @@ jdb_trace_set_IMPL	:= jdb_trace_set jdb_trace_set-arm \
 			   jdb_trace_set-arm-$(BITS)
 jdb_bp_IMPL		:= jdb_bp-arm
 thread_IMPL		+= thread-debug
-
-ifneq ($(CONFIG_JDB_GZIP),)
- ifneq ($(wildcard $(srcdir)/lib/gzip),)
-  SUBSYSTEMS		+= LIBGZIP
-  KERNEL_EXTRA_LIBS	+= $(LIBGZIP)
-  INTERFACES_KERNEL	+= jdb_gzip
- endif
-endif
+jdb_tbuf_fe_IMPL        := jdb_tbuf_fe jdb_tbuf_fe-arm
 
 endif
 
@@ -252,7 +267,7 @@ ASSRC_CRT0	:= crt0.S
 #
 CXXLIB 			:= libcxx.a
 VPATH			+= lib/cxxlib
-INTERFACES_CXXLIB 	:= paranoia s_cruft
+INTERFACES_CXXLIB 	:= paranoia
 
 #
 # LIBK subsystem
@@ -264,7 +279,15 @@ PRIVATE_INCDIR 	+= lib/libk/$(CONFIG_XARCH)/$(BITS) lib/libk/$(CONFIG_XARCH) lib
 #INTERFACES_LIBK:= atomic lock_guard profile uuencode gmon unistd panic
 INTERFACES_LIBK := std_macros atomic lock_guard
 CXXSRC_LIBK     += construction.cc
-atomic_IMPL     := atomic atomic-arm-up atomic-arm-$(BITS) atomic-arm
+atomic_IMPL     := atomic atomic-arm-$(BITS) atomic-arm
+
+#
+# SIMPLEMALLOC
+#
+SIMPLEMALLOC     := libsimple_malloc.a
+VPATH             += lib/simple_malloc
+PRIVATE_INCDIR    += lib/simple_malloc
+CXXSRC_SIMPLEMALLOC = simple_malloc.cc
 
 ifeq ("$(CONFIG_JDB_DISASM)","y")
   # $(srcdir)/lib/disasm may be removed
@@ -273,18 +296,57 @@ ifeq ("$(CONFIG_JDB_DISASM)","y")
   endif
   SUBSYSTEMS          += LIBDISASM
   KERNEL_EXTRA_LIBS   += $(LIBDISASM)
+  PREPROCESS_PARTS    += jdb_disasm
 
   LIBDISASM           := libdisasm.a
-  VPATH               += lib/disasm lib/disasm/elf lib/disasm/include \
-                         lib/disasm/include/opcode lib/disasm/opcodes \
-                         lib/disasm/libiberty lib/disasm/bfd
-  PRIVATE_INCDIR      += lib/disasm lib/disasm/elf lib/disasm/include \
-                         lib/disasm/include/opcode lib/disasm/opcodes \
-                         lib/disasm/libiberty lib/disasm/bfd
-  PRIVATE_INCDIR      += lib/disasm
+  VPATH               += lib/disasm lib/disasm/capstone
+  PRIVATE_INCDIR      += lib/disasm lib/disasm/capstone/include
   CXXSRC_LIBDISASM    := disasm.cc
-  CSRC_LIBDISASM      := arm-dis.c dis-init.c dis-buf.c safe-ctype.c
-  NOOPT               += $(patsubst %.o, %, $(OBJ_LIBDISASM))
+  CSRC_LIBDISASM      := cs.c utils.c \
+                         MCInst.c MCInstrDesc.c MCRegisterInfo.c SStream.c
+  ifeq ("$(CONFIG_BIT32)","y")
+    VPATH             += lib/disasm/capstone/arch/ARM
+    CSRC_LIBDISASM    += ARMModule.c ARMInstPrinter.c \
+			 ARMDisassembler.c ARMMapping.c
+    CPPFLAGS          += -DCAPSTONE_HAS_ARM
+    CFLAGS_ARMDisassembler = -Wno-unused-parameter
+    CFLAGS_ARMMapping      = -Wno-unused-parameter
+    CFLAGS_ARMInstPrinter  = -Wno-bad-function-cast -Wno-unused-parameter
+    $(foreach f, $(patsubst %.c, %, $(CSRC_LIBDISASM)), \
+      $(eval CFLAGS_$(f) += -mno-unaligned-access))
+  else
+    VPATH             += lib/disasm/capstone/arch/AArch64
+    CSRC_LIBDISASM    += AArch64Module.c AArch64InstPrinter.c \
+			 AArch64Disassembler.c AArch64Mapping.c \
+			 AArch64BaseInfo.c
+    CPPFLAGS          += -DCAPSTONE_HAS_ARM64
+    CFLAGS_AArch64Mapping      = -Wno-unused-parameter
+    CFLAGS_AArch64Disassembler = -Wno-unused-parameter
+    CFLAGS_AArch64InstPrinter  = -Wno-bad-function-cast -Wno-unused-parameter
+  endif
+endif
+
+ifeq ("$(CONFIG_JDB)","y")
+
+ifneq ($(CONFIG_JDB_GZIP),)
+ ifneq ($(wildcard $(srcdir)/lib/gzip),)
+  SUBSYSTEMS		+= LIBGZIP
+  KERNEL_EXTRA_LIBS	+= $(LIBGZIP)
+  INTERFACES_KERNEL	+= jdb_gzip
+ endif
+endif
+
+ifneq ($(wildcard $(srcdir)/lib/regex),)
+  SUBSYSTEMS            += LIBREGEX
+  KERNEL_EXTRA_LIBS     += $(LIBREGEX)
+  PREPROCESS_PARTS      += jdb_regex
+endif
+
+ifneq ($(filter LIBREGEX LIBDISASM,$(SUBSYSTEMS)),)
+  SUBSYSTEMS          += SIMPLEMALLOC
+  KERNEL_EXTRA_LIBS   += $(SIMPLEMALLOC)
+endif
+
 endif
 
 #
@@ -305,7 +367,7 @@ endif
 include $(MODULES_FILE_BSP)
 VPATH                   += $(BSP_SRC_DIR)
 PREPROCESS_PARTS	+= $(PREPROCESS_PARTS-y)
-INTERFACES_KERNEL       += $(INTERFACES_KERNEL-y)
+INTERFACES_KERNEL       += $(INTERFACES_KERNEL-y) $(INTERFACES_KERNEL-y-y)
 INTERFACES_JDB		+= $(INTERFACES_JDB-y)
 TRAMP_MP_ASM_INCLUDE    ?= kern/arm/tramp-mp-asm-default.h
 CPPFLAGS                += -DTRAMP_MP_ASM_INCLUDE=\"$(srcdir)/$(TRAMP_MP_ASM_INCLUDE)\"
@@ -326,12 +388,17 @@ endif
 
 ifneq ($(CONFIG_CPU_VIRT),)
   ifeq ($(CC_TYPE),gcc)
-    ifneq ($(findstring $(CCVER_MAJOR),4 5 6 7 8),)
+    ifneq ($(findstring $(CCVER_MAJOR),4 5 6 7 8 9 10 11),)
       ifeq ($(CCVER_MAJOR),4)
 	ARM_CC_OK_FOR_VIRT := $(if $(findstring $(CCVER_MINOR),0 1 2 3 4 5 6),,y)
       else
         ARM_CC_OK_FOR_VIRT := y
       endif
+    endif
+  endif
+  ifeq ($(CC_TYPE),clang)
+    ifneq ($(findstring $(CCVER_MAJOR),7 8 9 10 11),)
+      ARM_CC_OK_FOR_VIRT := y
     endif
   endif
 
@@ -341,4 +408,4 @@ ifneq ($(CONFIG_CPU_VIRT),)
   endif
 endif
 
-MODULES_FILES = $(MODULES_FILE) $(MODULES_FILE_BSP)
+MODULES_FILES += $(MODULES_FILE) $(MODULES_FILE_BSP)

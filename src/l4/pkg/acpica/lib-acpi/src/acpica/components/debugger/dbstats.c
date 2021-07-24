@@ -8,7 +8,7 @@
  *
  * 1. Copyright Notice
  *
- * Some or all of this work - Copyright (c) 1999 - 2017, Intel Corp.
+ * Some or all of this work - Copyright (c) 1999 - 2019, Intel Corp.
  * All rights reserved.
  *
  * 2. License
@@ -110,6 +110,42 @@
  * United States government or any agency thereof requires an export license,
  * other governmental approval, or letter of assurance, without first obtaining
  * such license, approval or letter.
+ *
+ *****************************************************************************
+ *
+ * Alternatively, you may choose to be licensed under the terms of the
+ * following license:
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions, and the following disclaimer,
+ *    without modification.
+ * 2. Redistributions in binary form must reproduce at minimum a disclaimer
+ *    substantially similar to the "NO WARRANTY" disclaimer below
+ *    ("Disclaimer") and any redistribution must be conditioned upon
+ *    including a substantially similar Disclaimer requirement for further
+ *    binary redistribution.
+ * 3. Neither the names of the above-listed copyright holders nor the names
+ *    of any contributors may be used to endorse or promote products derived
+ *    from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+ * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * Alternatively, you may choose to be licensed under the terms of the
+ * GNU General Public License ("GPL") version 2 as published by the Free
+ * Software Foundation.
  *
  *****************************************************************************/
 
@@ -508,14 +544,14 @@ AcpiDbDisplayStatistics (
 
         for (i = 0; i < ACPI_TYPE_NS_NODE_MAX; i++)
         {
-            AcpiOsPrintf ("%16.16s % 10ld% 10ld\n", AcpiUtGetTypeName (i),
+            AcpiOsPrintf ("%16.16s %10u %10u\n", AcpiUtGetTypeName (i),
                 AcpiGbl_NodeTypeCount [i], AcpiGbl_ObjTypeCount [i]);
         }
 
-        AcpiOsPrintf ("%16.16s % 10ld% 10ld\n", "Misc/Unknown",
+        AcpiOsPrintf ("%16.16s %10u %10u\n", "Misc/Unknown",
             AcpiGbl_NodeTypeCountMisc, AcpiGbl_ObjTypeCountMisc);
 
-        AcpiOsPrintf ("%16.16s % 10ld% 10ld\n", "TOTALS:",
+        AcpiOsPrintf ("%16.16s %10u %10u\n", "TOTALS:",
             AcpiGbl_NumNodes, AcpiGbl_NumObjects);
         break;
 
@@ -541,17 +577,15 @@ AcpiDbDisplayStatistics (
     case CMD_STAT_MISC:
 
         AcpiOsPrintf ("\nMiscellaneous Statistics:\n\n");
-        AcpiOsPrintf ("Calls to AcpiPsFind:..  ........% 7ld\n",
+        AcpiOsPrintf ("%-28s:       %7u\n", "Calls to AcpiPsFind",
             AcpiGbl_PsFindCount);
-        AcpiOsPrintf ("Calls to AcpiNsLookup:..........% 7ld\n",
+        AcpiOsPrintf ("%-28s:       %7u\n", "Calls to AcpiNsLookup",
             AcpiGbl_NsLookupCount);
 
-        AcpiOsPrintf ("\n");
-
-        AcpiOsPrintf ("Mutex usage:\n\n");
+        AcpiOsPrintf ("\nMutex usage:\n\n");
         for (i = 0; i < ACPI_NUM_MUTEX; i++)
         {
-            AcpiOsPrintf ("%-28s:       % 7ld\n",
+            AcpiOsPrintf ("%-28s:       %7u\n",
                 AcpiUtGetMutexName (i), AcpiGbl_MutexInfo[i].UseCount);
         }
         break;
@@ -560,50 +594,50 @@ AcpiDbDisplayStatistics (
 
         AcpiOsPrintf ("\nInternal object sizes:\n\n");
 
-        AcpiOsPrintf ("Common           %3d\n", sizeof (ACPI_OBJECT_COMMON));
-        AcpiOsPrintf ("Number           %3d\n", sizeof (ACPI_OBJECT_INTEGER));
-        AcpiOsPrintf ("String           %3d\n", sizeof (ACPI_OBJECT_STRING));
-        AcpiOsPrintf ("Buffer           %3d\n", sizeof (ACPI_OBJECT_BUFFER));
-        AcpiOsPrintf ("Package          %3d\n", sizeof (ACPI_OBJECT_PACKAGE));
-        AcpiOsPrintf ("BufferField      %3d\n", sizeof (ACPI_OBJECT_BUFFER_FIELD));
-        AcpiOsPrintf ("Device           %3d\n", sizeof (ACPI_OBJECT_DEVICE));
-        AcpiOsPrintf ("Event            %3d\n", sizeof (ACPI_OBJECT_EVENT));
-        AcpiOsPrintf ("Method           %3d\n", sizeof (ACPI_OBJECT_METHOD));
-        AcpiOsPrintf ("Mutex            %3d\n", sizeof (ACPI_OBJECT_MUTEX));
-        AcpiOsPrintf ("Region           %3d\n", sizeof (ACPI_OBJECT_REGION));
-        AcpiOsPrintf ("PowerResource    %3d\n", sizeof (ACPI_OBJECT_POWER_RESOURCE));
-        AcpiOsPrintf ("Processor        %3d\n", sizeof (ACPI_OBJECT_PROCESSOR));
-        AcpiOsPrintf ("ThermalZone      %3d\n", sizeof (ACPI_OBJECT_THERMAL_ZONE));
-        AcpiOsPrintf ("RegionField      %3d\n", sizeof (ACPI_OBJECT_REGION_FIELD));
-        AcpiOsPrintf ("BankField        %3d\n", sizeof (ACPI_OBJECT_BANK_FIELD));
-        AcpiOsPrintf ("IndexField       %3d\n", sizeof (ACPI_OBJECT_INDEX_FIELD));
-        AcpiOsPrintf ("Reference        %3d\n", sizeof (ACPI_OBJECT_REFERENCE));
-        AcpiOsPrintf ("Notify           %3d\n", sizeof (ACPI_OBJECT_NOTIFY_HANDLER));
-        AcpiOsPrintf ("AddressSpace     %3d\n", sizeof (ACPI_OBJECT_ADDR_HANDLER));
-        AcpiOsPrintf ("Extra            %3d\n", sizeof (ACPI_OBJECT_EXTRA));
-        AcpiOsPrintf ("Data             %3d\n", sizeof (ACPI_OBJECT_DATA));
+        AcpiOsPrintf ("Common           %3d\n", (UINT32) sizeof (ACPI_OBJECT_COMMON));
+        AcpiOsPrintf ("Number           %3d\n", (UINT32) sizeof (ACPI_OBJECT_INTEGER));
+        AcpiOsPrintf ("String           %3d\n", (UINT32) sizeof (ACPI_OBJECT_STRING));
+        AcpiOsPrintf ("Buffer           %3d\n", (UINT32) sizeof (ACPI_OBJECT_BUFFER));
+        AcpiOsPrintf ("Package          %3d\n", (UINT32) sizeof (ACPI_OBJECT_PACKAGE));
+        AcpiOsPrintf ("BufferField      %3d\n", (UINT32) sizeof (ACPI_OBJECT_BUFFER_FIELD));
+        AcpiOsPrintf ("Device           %3d\n", (UINT32) sizeof (ACPI_OBJECT_DEVICE));
+        AcpiOsPrintf ("Event            %3d\n", (UINT32) sizeof (ACPI_OBJECT_EVENT));
+        AcpiOsPrintf ("Method           %3d\n", (UINT32) sizeof (ACPI_OBJECT_METHOD));
+        AcpiOsPrintf ("Mutex            %3d\n", (UINT32) sizeof (ACPI_OBJECT_MUTEX));
+        AcpiOsPrintf ("Region           %3d\n", (UINT32) sizeof (ACPI_OBJECT_REGION));
+        AcpiOsPrintf ("PowerResource    %3d\n", (UINT32) sizeof (ACPI_OBJECT_POWER_RESOURCE));
+        AcpiOsPrintf ("Processor        %3d\n", (UINT32) sizeof (ACPI_OBJECT_PROCESSOR));
+        AcpiOsPrintf ("ThermalZone      %3d\n", (UINT32) sizeof (ACPI_OBJECT_THERMAL_ZONE));
+        AcpiOsPrintf ("RegionField      %3d\n", (UINT32) sizeof (ACPI_OBJECT_REGION_FIELD));
+        AcpiOsPrintf ("BankField        %3d\n", (UINT32) sizeof (ACPI_OBJECT_BANK_FIELD));
+        AcpiOsPrintf ("IndexField       %3d\n", (UINT32) sizeof (ACPI_OBJECT_INDEX_FIELD));
+        AcpiOsPrintf ("Reference        %3d\n", (UINT32) sizeof (ACPI_OBJECT_REFERENCE));
+        AcpiOsPrintf ("Notify           %3d\n", (UINT32) sizeof (ACPI_OBJECT_NOTIFY_HANDLER));
+        AcpiOsPrintf ("AddressSpace     %3d\n", (UINT32) sizeof (ACPI_OBJECT_ADDR_HANDLER));
+        AcpiOsPrintf ("Extra            %3d\n", (UINT32) sizeof (ACPI_OBJECT_EXTRA));
+        AcpiOsPrintf ("Data             %3d\n", (UINT32) sizeof (ACPI_OBJECT_DATA));
 
         AcpiOsPrintf ("\n");
 
-        AcpiOsPrintf ("ParseObject      %3d\n", sizeof (ACPI_PARSE_OBJ_COMMON));
-        AcpiOsPrintf ("ParseObjectNamed %3d\n", sizeof (ACPI_PARSE_OBJ_NAMED));
-        AcpiOsPrintf ("ParseObjectAsl   %3d\n", sizeof (ACPI_PARSE_OBJ_ASL));
-        AcpiOsPrintf ("OperandObject    %3d\n", sizeof (ACPI_OPERAND_OBJECT));
-        AcpiOsPrintf ("NamespaceNode    %3d\n", sizeof (ACPI_NAMESPACE_NODE));
-        AcpiOsPrintf ("AcpiObject       %3d\n", sizeof (ACPI_OBJECT));
+        AcpiOsPrintf ("ParseObject      %3d\n", (UINT32) sizeof (ACPI_PARSE_OBJ_COMMON));
+        AcpiOsPrintf ("ParseObjectNamed %3d\n", (UINT32) sizeof (ACPI_PARSE_OBJ_NAMED));
+        AcpiOsPrintf ("ParseObjectAsl   %3d\n", (UINT32) sizeof (ACPI_PARSE_OBJ_ASL));
+        AcpiOsPrintf ("OperandObject    %3d\n", (UINT32) sizeof (ACPI_OPERAND_OBJECT));
+        AcpiOsPrintf ("NamespaceNode    %3d\n", (UINT32) sizeof (ACPI_NAMESPACE_NODE));
+        AcpiOsPrintf ("AcpiObject       %3d\n", (UINT32) sizeof (ACPI_OBJECT));
 
         AcpiOsPrintf ("\n");
 
-        AcpiOsPrintf ("Generic State    %3d\n", sizeof (ACPI_GENERIC_STATE));
-        AcpiOsPrintf ("Common State     %3d\n", sizeof (ACPI_COMMON_STATE));
-        AcpiOsPrintf ("Control State    %3d\n", sizeof (ACPI_CONTROL_STATE));
-        AcpiOsPrintf ("Update State     %3d\n", sizeof (ACPI_UPDATE_STATE));
-        AcpiOsPrintf ("Scope State      %3d\n", sizeof (ACPI_SCOPE_STATE));
-        AcpiOsPrintf ("Parse Scope      %3d\n", sizeof (ACPI_PSCOPE_STATE));
-        AcpiOsPrintf ("Package State    %3d\n", sizeof (ACPI_PKG_STATE));
-        AcpiOsPrintf ("Thread State     %3d\n", sizeof (ACPI_THREAD_STATE));
-        AcpiOsPrintf ("Result Values    %3d\n", sizeof (ACPI_RESULT_VALUES));
-        AcpiOsPrintf ("Notify Info      %3d\n", sizeof (ACPI_NOTIFY_INFO));
+        AcpiOsPrintf ("Generic State    %3d\n", (UINT32) sizeof (ACPI_GENERIC_STATE));
+        AcpiOsPrintf ("Common State     %3d\n", (UINT32) sizeof (ACPI_COMMON_STATE));
+        AcpiOsPrintf ("Control State    %3d\n", (UINT32) sizeof (ACPI_CONTROL_STATE));
+        AcpiOsPrintf ("Update State     %3d\n", (UINT32) sizeof (ACPI_UPDATE_STATE));
+        AcpiOsPrintf ("Scope State      %3d\n", (UINT32) sizeof (ACPI_SCOPE_STATE));
+        AcpiOsPrintf ("Parse Scope      %3d\n", (UINT32) sizeof (ACPI_PSCOPE_STATE));
+        AcpiOsPrintf ("Package State    %3d\n", (UINT32) sizeof (ACPI_PKG_STATE));
+        AcpiOsPrintf ("Thread State     %3d\n", (UINT32) sizeof (ACPI_THREAD_STATE));
+        AcpiOsPrintf ("Result Values    %3d\n", (UINT32) sizeof (ACPI_RESULT_VALUES));
+        AcpiOsPrintf ("Notify Info      %3d\n", (UINT32) sizeof (ACPI_NOTIFY_INFO));
         break;
 
     case CMD_STAT_STACK:

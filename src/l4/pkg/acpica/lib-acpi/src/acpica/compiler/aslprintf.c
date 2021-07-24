@@ -8,7 +8,7 @@
  *
  * 1. Copyright Notice
  *
- * Some or all of this work - Copyright (c) 1999 - 2017, Intel Corp.
+ * Some or all of this work - Copyright (c) 1999 - 2019, Intel Corp.
  * All rights reserved.
  *
  * 2. License
@@ -111,6 +111,42 @@
  * other governmental approval, or letter of assurance, without first obtaining
  * such license, approval or letter.
  *
+ *****************************************************************************
+ *
+ * Alternatively, you may choose to be licensed under the terms of the
+ * following license:
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions, and the following disclaimer,
+ *    without modification.
+ * 2. Redistributions in binary form must reproduce at minimum a disclaimer
+ *    substantially similar to the "NO WARRANTY" disclaimer below
+ *    ("Disclaimer") and any redistribution must be conditioned upon
+ *    including a substantially similar Disclaimer requirement for further
+ *    binary redistribution.
+ * 3. Neither the names of the above-listed copyright holders nor the names
+ *    of any contributors may be used to endorse or promote products derived
+ *    from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+ * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * Alternatively, you may choose to be licensed under the terms of the
+ * GNU General Public License ("GPL") version 2 as published by the Free
+ * Software Foundation.
+ *
  *****************************************************************************/
 
 #include "aslcompiler.h"
@@ -155,7 +191,7 @@ OpcDoPrintf (
 
     /* Store destination is the Debug op */
 
-    DestOp = TrAllocateNode (PARSEOP_DEBUG);
+    DestOp = TrAllocateOp (PARSEOP_DEBUG);
     DestOp->Asl.AmlOpcode = AML_DEBUG_OP;
     DestOp->Asl.Parent = Op;
     DestOp->Asl.LogicalLineNumber = Op->Asl.LogicalLineNumber;
@@ -203,7 +239,7 @@ OpcDoFprintf (
  * RETURN:      None
  *
  * DESCRIPTION: Convert printf macro to a Store AML operation. The printf
- *              macro parse tree is layed out as follows:
+ *              macro parse tree is laid out as follows:
  *
  *              Op        - printf parse op
  *              Op->Child - Format string
@@ -257,10 +293,10 @@ OpcParsePrintf (
 
         if (StringToProcess)
         {
-            NewString = UtStringCacheCalloc (StringLength + 1);
+            NewString = UtLocalCacheCalloc (StringLength + 1);
             strncpy (NewString, StartPosition, StringLength);
 
-            NewOp = TrAllocateNode (PARSEOP_STRING_LITERAL);
+            NewOp = TrAllocateOp (PARSEOP_STRING_LITERAL);
             NewOp->Asl.Value.String = NewString;
             NewOp->Asl.AmlOpcode = AML_STRING_OP;
             NewOp->Asl.AcpiBtype = ACPI_BTYPE_STRING;
@@ -321,7 +357,7 @@ OpcParsePrintf (
              */
             if (!Op->Asl.Child)
             {
-                NewOp = TrAllocateNode (PARSEOP_STRING_LITERAL);
+                NewOp = TrAllocateOp (PARSEOP_STRING_LITERAL);
                 NewOp->Asl.Value.String = "";
                 NewOp->Asl.AmlOpcode = AML_STRING_OP;
                 NewOp->Asl.AcpiBtype = ACPI_BTYPE_STRING;
@@ -346,10 +382,10 @@ OpcParsePrintf (
 
     if (StringToProcess)
     {
-        NewString = UtStringCacheCalloc (StringLength + 1);
+        NewString = UtLocalCacheCalloc (StringLength + 1);
         strncpy (NewString, StartPosition, StringLength);
 
-        NewOp = TrAllocateNode (PARSEOP_STRING_LITERAL);
+        NewOp = TrAllocateOp (PARSEOP_STRING_LITERAL);
         NewOp->Asl.Value.String = NewString;
         NewOp->Asl.AcpiBtype = ACPI_BTYPE_STRING;
         NewOp->Asl.AmlOpcode = AML_STRING_OP;
@@ -387,7 +423,7 @@ OpcParsePrintf (
 
     /* Disable further optimization */
 
-    Op->Asl.CompileFlags &= ~NODE_COMPILE_TIME_CONST;
+    Op->Asl.CompileFlags &= ~OP_COMPILE_TIME_CONST;
     UtSetParseOpName (Op);
 
     /* Set Store destination */
@@ -425,8 +461,8 @@ OpcCreateConcatenateNode (
         return;
     }
 
-    NewConcatOp = TrAllocateNode (PARSEOP_CONCATENATE);
-    NewConcatOp->Asl.AmlOpcode = AML_CONCAT_OP;
+    NewConcatOp = TrAllocateOp (PARSEOP_CONCATENATE);
+    NewConcatOp->Asl.AmlOpcode = AML_CONCATENATE_OP;
     NewConcatOp->Asl.AcpiBtype = 0x7;
     NewConcatOp->Asl.LogicalLineNumber = Op->Asl.LogicalLineNumber;
 
@@ -443,7 +479,7 @@ OpcCreateConcatenateNode (
     /* Third arg is Zero (not used) */
 
     NewConcatOp->Asl.Child->Asl.Next->Asl.Next =
-        TrAllocateNode (PARSEOP_ZERO);
+        TrAllocateOp (PARSEOP_ZERO);
     NewConcatOp->Asl.Child->Asl.Next->Asl.Next->Asl.Parent =
         NewConcatOp;
 

@@ -7,6 +7,13 @@ AM_CPPFLAGS = \
 	-DLIBBSD_OVERLAY -DLIBBSD_DISABLE_DEPRECATED \
 	-D__REENTRANT
 
+if OS_WINDOWS
+AM_CPPFLAGS += \
+	-D_CRT_SECURE_NO_WARNINGS \
+	-D_CRT_NONSTDC_NO_WARNINGS \
+	$(nil)
+endif
+
 libbsd_la_included_sources = \
 	hash/helper.c \
 	getentropy_aix.c \
@@ -16,6 +23,7 @@ libbsd_la_included_sources = \
 	getentropy_linux.c \
 	getentropy_osx.c \
 	getentropy_solaris.c \
+	getentropy_win.c \
 	$(nil)
 
 EXTRA_DIST = \
@@ -53,16 +61,20 @@ libbsd_la_DEPENDENCIES = \
 	$(libbsd_la_included_sources) \
 	libbsd.map
 libbsd_la_LIBADD = \
-	$(CLOCK_GETTIME_LIBS)
+	$(CLOCK_GETTIME_LIBS) \
+	$(ARC4RANDOM_ATFORK_LIBS) \
+	$(nil)
 libbsd_la_LDFLAGS = \
 	-Wl,--version-script=$(srcdir)/libbsd.map \
 	-version-number $(LIBBSD_ABI)
 libbsd_la_SOURCES = \
 	arc4random.c \
 	arc4random.h \
-	arc4random_unix.h \
+	arc4random_linux.h \
 	arc4random_openbsd.h \
 	arc4random_uniform.c \
+	arc4random_unix.h \
+	arc4random_win.h \
 	bsd_getopt.c \
 	chacha_private.h \
 	closefrom.c \
@@ -103,7 +115,9 @@ libbsd_la_SOURCES = \
 	stringlist.c \
 	strmode.c \
 	strnstr.c \
+	strtoi.c \
 	strtonum.c \
+	strtou.c \
 	timeconv.c \
 	unvis.c \
 	vis.c \

@@ -19,9 +19,14 @@
 
 #include <sys/cdefs.h>
 #include <sys/types.h>
+#ifdef _WIN32
+#define WIN32_LEAN_AND_MEAN
+#include <WinSock2.h>
+#else
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#endif
 
 #include <assert.h>
 #include <ctype.h>

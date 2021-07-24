@@ -1,6 +1,5 @@
 #include <features.h>
 
-#include <l4/util/atomic.h>
 #include <l4/re/log>
 #include <l4/re/env>
 
@@ -29,7 +28,7 @@ using cxx::Ref_ptr;
     } } while (0)
 
 #define L4B_REDIRECT(ret, func, ptlist, plist) \
-  ret func ptlist __THROW \
+  ret func ptlist noexcept(noexcept(func plist)) \
   {               \
     L4Re::Vfs::Ops *o = L4Re::Vfs::vfs_ops; \
     cxx::Ref_ptr<L4Re::Vfs::File> f = o->get_file(_a1); \

@@ -8,7 +8,7 @@
  *
  * 1. Copyright Notice
  *
- * Some or all of this work - Copyright (c) 1999 - 2017, Intel Corp.
+ * Some or all of this work - Copyright (c) 1999 - 2019, Intel Corp.
  * All rights reserved.
  *
  * 2. License
@@ -111,6 +111,42 @@
  * other governmental approval, or letter of assurance, without first obtaining
  * such license, approval or letter.
  *
+ *****************************************************************************
+ *
+ * Alternatively, you may choose to be licensed under the terms of the
+ * following license:
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions, and the following disclaimer,
+ *    without modification.
+ * 2. Redistributions in binary form must reproduce at minimum a disclaimer
+ *    substantially similar to the "NO WARRANTY" disclaimer below
+ *    ("Disclaimer") and any redistribution must be conditioned upon
+ *    including a substantially similar Disclaimer requirement for further
+ *    binary redistribution.
+ * 3. Neither the names of the above-listed copyright holders nor the names
+ *    of any contributors may be used to endorse or promote products derived
+ *    from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+ * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * Alternatively, you may choose to be licensed under the terms of the
+ * GNU General Public License ("GPL") version 2 as published by the Free
+ * Software Foundation.
+ *
  *****************************************************************************/
 
 #include "aecommon.h"
@@ -151,8 +187,11 @@ AeDoOptions (
 
 /* Globals */
 
+BOOLEAN                     AcpiGbl_UseLocalFaultHandler = TRUE;
+BOOLEAN                     AcpiGbl_VerboseHandlers = FALSE;
 UINT8                       AcpiGbl_RegionFillValue = 0;
 BOOLEAN                     AcpiGbl_IgnoreErrors = FALSE;
+BOOLEAN                     AcpiGbl_AbortLoopOnTimeout = FALSE;
 BOOLEAN                     AcpiGbl_DbOpt_NoRegionSupport = FALSE;
 UINT8                       AcpiGbl_UseHwReducedFadt = FALSE;
 BOOLEAN                     AcpiGbl_DoInterfaceTests = FALSE;
@@ -160,11 +199,11 @@ BOOLEAN                     AcpiGbl_LoadTestTables = FALSE;
 BOOLEAN                     AcpiGbl_AeLoadOnly = FALSE;
 static UINT8                AcpiGbl_ExecutionMode = AE_MODE_COMMAND_LOOP;
 static char                 BatchBuffer[AE_BUFFER_SIZE];    /* Batch command buffer */
-static char                 AeBuildDate[] = __DATE__;
-static char                 AeBuildTime[] = __TIME__;
+INIT_FILE_ENTRY             *AcpiGbl_InitEntries = NULL;
+UINT32                      AcpiGbl_InitFileLineCount = 0;
 
 #define ACPIEXEC_NAME               "AML Execution/Debug Utility"
-#define AE_SUPPORTED_OPTIONS        "?b:d:e:f^ghi:lm^rv^:x:"
+#define AE_SUPPORTED_OPTIONS        "?b:d:e:f^ghlm^rt^v^:x:"
 
 
 /* Stubs for the disassembler */
@@ -213,6 +252,7 @@ usage (
     printf ("\n");
 
     ACPI_OPTION ("-da",                 "Disable method abort on error");
+    ACPI_OPTION ("-df",                 "Disable Local fault handler");
     ACPI_OPTION ("-di",                 "Disable execution of STA/INI methods during init");
     ACPI_OPTION ("-do",                 "Disable Operation Region address simulation");
     ACPI_OPTION ("-dr",                 "Disable repair of method return values");
@@ -224,8 +264,7 @@ usage (
     ACPI_OPTION ("-ef",                 "Enable display of final memory statistics");
     ACPI_OPTION ("-ei",                 "Enable additional tests for ACPICA interfaces");
     ACPI_OPTION ("-el",                 "Enable loading of additional test tables");
-    ACPI_OPTION ("-em",                 "Enable grouping of module-level code");
-    ACPI_OPTION ("-ep",                 "Enable TermList parsing for scope objects");
+    ACPI_OPTION ("-eo",                 "Enable object evaluation log");
     ACPI_OPTION ("-es",                 "Enable Interpreter Slack Mode");
     ACPI_OPTION ("-et",                 "Enable debug semaphore timeout");
     printf ("\n");
@@ -234,11 +273,16 @@ usage (
     ACPI_OPTION ("-fv <Value>",         "Operation Region initialization fill value");
     printf ("\n");
 
-    ACPI_OPTION ("-i <Count>",          "Maximum iterations for AML while loops");
     ACPI_OPTION ("-l",                  "Load tables and namespace only");
     ACPI_OPTION ("-r",                  "Use hardware-reduced FADT V5");
+    ACPI_OPTION ("-te",                 "Exit loop on timeout instead of aborting method");
+    ACPI_OPTION ("-to <Seconds>",       "Set timeout period for AML while loops");
+    printf ("\n");
+
     ACPI_OPTION ("-v",                  "Display version information");
+    ACPI_OPTION ("-va",                 "Display verbose dump of any memory leaks");
     ACPI_OPTION ("-vd",                 "Display build date and time");
+    ACPI_OPTION ("-vh",                 "Verbose exception handler output");
     ACPI_OPTION ("-vi",                 "Verbose initialization output");
     ACPI_OPTION ("-vr",                 "Verbose region handler output");
     ACPI_OPTION ("-x <DebugLevel>",     "Debug output level");
@@ -275,7 +319,7 @@ AeDoOptions (
 
         if (strlen (AcpiGbl_Optarg) > (AE_BUFFER_SIZE -1))
         {
-            printf ("**** The length of command line (%u) exceeded maximum (%u)\n",
+            printf ("**** The length of command line (%u) exceeded maximum (%d)\n",
                 (UINT32) strlen (AcpiGbl_Optarg), (AE_BUFFER_SIZE -1));
             return (-1);
         }
@@ -290,6 +334,11 @@ AeDoOptions (
         case 'a':
 
             AcpiGbl_IgnoreErrors = TRUE;
+            break;
+
+        case 'f':
+
+            AcpiGbl_UseLocalFaultHandler = FALSE;
             break;
 
         case 'i':
@@ -352,14 +401,10 @@ AeDoOptions (
             AcpiGbl_LoadTestTables = TRUE;
             break;
 
-        case 'm':
+        case 'o':
 
-            AcpiGbl_GroupModuleLevelCode = TRUE;
-            break;
-
-        case 'p':
-
-            AcpiGbl_ParseTableAsTermList = TRUE;
+            AcpiDbgLevel |= ACPI_LV_EVALUATION;
+            AcpiGbl_DbConsoleDebugLevel |= ACPI_LV_EVALUATION;
             break;
 
         case 's':
@@ -425,20 +470,6 @@ AeDoOptions (
         usage();
         return (1);
 
-    case 'i':
-
-        Temp = strtoul (AcpiGbl_Optarg, NULL, 0);
-        if (!Temp || (Temp > ACPI_UINT16_MAX))
-        {
-            printf ("%s: Invalid max loops value\n", AcpiGbl_Optarg);
-            return (-1);
-        }
-
-        AcpiGbl_MaxLoopIterations = (UINT16) Temp;
-        printf ("Max Loop Iterations is %u (0x%X)\n",
-            AcpiGbl_MaxLoopIterations, AcpiGbl_MaxLoopIterations);
-        break;
-
     case 'l':
 
         AcpiGbl_AeLoadOnly = TRUE;
@@ -467,19 +498,64 @@ AeDoOptions (
         printf ("Using ACPI 5.0 Hardware Reduced Mode via version 5 FADT\n");
         break;
 
+    case 't':
+
+        switch (AcpiGbl_Optarg[0])
+        {
+        case 'o':  /* -to: Set loop timeout in seconds */
+
+            if (AcpiGetoptArgument (argc, argv))
+            {
+                return (-1);
+            }
+
+            Temp = strtoul (AcpiGbl_Optarg, NULL, 0);
+            if (!Temp || (Temp > ACPI_UINT16_MAX))
+            {
+                printf ("%s: Invalid loop timeout value\n",
+                    AcpiGbl_Optarg);
+                return (-1);
+            }
+
+            AcpiGbl_MaxLoopIterations = (UINT16) Temp;
+            printf ("Automatic loop timeout after %u seconds\n",
+                AcpiGbl_MaxLoopIterations);
+            break;
+
+        case 'e':
+
+            AcpiGbl_AbortLoopOnTimeout = TRUE;
+            break;
+
+        default:
+
+            printf ("Unknown option: -t%s\n", AcpiGbl_Optarg);
+            return (-1);
+        }
+        break;
+
     case 'v':
 
         switch (AcpiGbl_Optarg[0])
         {
         case '^':  /* -v: (Version): signon already emitted, just exit */
 
-            (void) AcpiOsTerminate ();
             return (1);
+
+        case 'a':
+
+            AcpiGbl_VerboseLeakDump = TRUE;
+            break;
 
         case 'd':
 
-            printf ("Build date/time: %s %s\n", AeBuildDate, AeBuildTime);
+            printf (ACPI_COMMON_BUILD_TIME);
             return (1);
+
+        case 'h':
+
+            AcpiGbl_VerboseHandlers = TRUE;
+            break;
 
         case 'i':
 
@@ -500,7 +576,7 @@ AeDoOptions (
 
     case 'x':
 
-        AcpiDbgLevel = strtoul (AcpiGbl_Optarg, NULL, 0);
+        AcpiDbgLevel = strtoul (AcpiGbl_Optarg, NULL, 16);
         AcpiGbl_DbConsoleDebugLevel = AcpiDbgLevel;
         printf ("Debug Level: 0x%8.8X\n", AcpiDbgLevel);
         break;
@@ -539,7 +615,8 @@ main (
 
 
     ACPI_DEBUG_INITIALIZE (); /* For debug version only */
-    signal (SIGINT, AeCtrlCHandler);
+
+    signal (SIGINT, AeSignalHandler);
 
     /* Init debug globals */
 
@@ -560,10 +637,9 @@ main (
         goto ErrorExit;
     }
 
-    /* ACPICA runtime configuration */
+    /* Use a shorter timeout value for acpiexec */
 
-    AcpiGbl_MaxLoopIterations = 400;
-
+    AcpiGbl_MaxLoopIterations = 1;
 
     /* Initialize the AML debugger */
 
@@ -593,6 +669,13 @@ main (
 
         goto ErrorExit;
     }
+
+    if (AcpiGbl_UseLocalFaultHandler)
+    {
+        signal (SIGSEGV, AeSignalHandler);
+    }
+
+    AeProcessInitFile();
 
     /* The remaining arguments are filenames for ACPI tables */
 
@@ -651,6 +734,25 @@ main (
         goto EnterDebugger;
     }
 
+    Status = AeLoadTables ();
+
+    /*
+     * Exit namespace initialization for the "load namespace only" option.
+     * No control methods will be executed. However, still enter the
+     * the debugger.
+     */
+    if (AcpiGbl_AeLoadOnly)
+    {
+        goto EnterDebugger;
+    }
+
+    if (ACPI_FAILURE (Status))
+    {
+        printf ("**** Could not load ACPI tables, %s\n",
+            AcpiFormatException (Status));
+        goto EnterDebugger;
+    }
+
     /* Setup initialization flags for ACPICA */
 
     InitFlags = (ACPI_NO_HANDLER_INIT | ACPI_NO_ACPI_ENABLE);
@@ -673,25 +775,6 @@ main (
     if (ACPI_FAILURE (Status))
     {
         printf ("**** Could not EnableSubsystem, %s\n",
-            AcpiFormatException (Status));
-        goto EnterDebugger;
-    }
-
-    Status = AeLoadTables ();
-
-    /*
-     * Exit namespace initialization for the "load namespace only" option.
-     * No control methods will be executed. However, still enter the
-     * the debugger.
-     */
-    if (AcpiGbl_AeLoadOnly)
-    {
-        goto EnterDebugger;
-    }
-
-    if (ACPI_FAILURE (Status))
-    {
-        printf ("**** Could not load ACPI tables, %s\n",
             AcpiFormatException (Status));
         goto EnterDebugger;
     }
@@ -749,10 +832,17 @@ EnterDebugger:
 
     AcpiTerminateDebugger ();
 
+    /* re-enable debug output for AcpiTerminate output */
+
+    AcpiGbl_DbOutputFlags = ACPI_DB_CONSOLE_OUTPUT;
+
 NormalExit:
     ExitCode = 0;
 
 ErrorExit:
-    (void) AcpiOsTerminate ();
+    AeLateTest ();
+    (void) AcpiTerminate ();
+    AcDeleteTableList (ListHead);
+    AcpiOsFree (AcpiGbl_InitEntries);
     return (ExitCode);
 }

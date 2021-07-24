@@ -1,3 +1,4 @@
+#include <l4/drivers/hw_mmio_register_block>
 #include <l4/util/util.h>
 
 #include <l4/cxx/unique_ptr>
@@ -7,7 +8,6 @@
 #include "debug.h"
 #include "gpio"
 #include "hw_device.h"
-#include "hw_mmio_register_block.h"
 #include "hw_irqs.h"
 #include "server.h"
 #include "gpio_irq.h"
@@ -37,7 +37,7 @@ class Gpio_irq_server;
 
 class Gpio_irq_pin : public Gpio_irq_base_t<Gpio_irq_pin>
 {
-  Hw::Register_block<32> _regs;
+  L4drivers::Register_block<32> _regs;
 
   void write_reg_pin(unsigned reg, unsigned val)
   {
@@ -48,7 +48,7 @@ class Gpio_irq_pin : public Gpio_irq_base_t<Gpio_irq_pin>
   }
 
 public:
-  Gpio_irq_pin(unsigned vpin, Hw::Register_block<32> const &regs)
+  Gpio_irq_pin(unsigned vpin, L4drivers::Register_block<32> const &regs)
   : Gpio_irq_base_t<Gpio_irq_pin>(vpin), _regs(regs)
   {}
 
@@ -127,10 +127,11 @@ public:
 class Gpio_irq_server : public Irq_demux_t<Gpio_irq_server>
 {
   l4_uint32_t _pins_mask;
-  Hw::Register_block<32> _regs;
+  L4drivers::Register_block<32> _regs;
 
 public:
-  Gpio_irq_server(int irq, unsigned pins, Hw::Register_block<32> const &regs)
+  Gpio_irq_server(int irq, unsigned pins,
+                  L4drivers::Register_block<32> const &regs)
   : Irq_demux_t<Gpio_irq_server>(irq, 0, pins),
     _pins_mask(pins >= 32 ? ~l4_uint32_t(0) : (1UL << pins) - 1),
     _regs(regs)
@@ -195,7 +196,7 @@ private:
     Pud     = 0x94,
   };
 
-  Hw::Register_block<32> _regs[2];
+  L4drivers::Register_block<32> _regs[2];
   Gpio_irq_server *_irq_svr[2];
 
   Int_property _nr_pins;
@@ -480,6 +481,8 @@ Gpio_bcm2835_chip::get_irq(unsigned pin)
     throw -L4_EINVAL;
 
   unsigned svr = pin / 32;
+  if (!_irq_svr[svr])
+    return nullptr;
   return _irq_svr[svr]->get_pin<Gpio_irq_pin>(pin % 32, _regs[svr]);
 }
 
@@ -548,8 +551,8 @@ Gpio_bcm2835_chip::init()
   d_printf(DBG_DEBUG2, "%s: Gpio_bcm2835: mapped registers to %08lx\n",
            name(), vbase);
 
-  _regs[0] = new Hw::Mmio_register_block<32>(vbase);
-  _regs[1] = new Hw::Mmio_register_block<32>(vbase + 4);
+  _regs[0] = new L4drivers::Mmio_register_block<32>(vbase);
+  _regs[1] = new L4drivers::Mmio_register_block<32>(vbase + 4);
 
   Resource *irq0 = resources()->find("int0");
   if (irq0 && irq0->type() == Resource::Irq_res)

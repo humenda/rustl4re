@@ -22,14 +22,32 @@
 #include <string>
 #include <map>
 
+template<typename D> class Device_tree_mixin;
+
+/**
+ * The device tree consists of nodes with links to their parent, child and
+ * sibling nodes. If there is no parent node, this node is a root node.
+ * After setup, there must only be one root node.
+ *
+ * The parent has only one pointer to a child node.
+ * Sibling nodes have the same parent node and the same depth in the tree.
+ * The siblings form a single-linked list via their next pointer.
+ * The head of this single-linked list is the child pointer in the parent node.
+ *
+ * The depth describes the number of parent nodes until the root node is
+ * reached.
+ * The root node has depth zero.
+ */
 template< typename D >
 class Device_tree
 {
+  friend class Device_tree_mixin<D>;
+
 private:
-  D *_n;
-  D *_p;
-  D *_c;
-  int _depth;
+  D *_n;        ///< next sibling node
+  D *_p;        ///< parent node
+  D *_c;        ///< child node
+  int _depth;   ///< depth of this node
 
 public:
   Device_tree() : _n(0), _p(0), _c(0), _depth(0) {}
@@ -39,6 +57,7 @@ public:
   D *next() const { return _n; }
   int depth() const { return _depth; }
 
+private:
   /**
    * Set \a p as parent device
    *
@@ -57,9 +76,6 @@ public:
    */
   void add_child(D *d, D *self)
   {
-    for (iterator i = iterator(0, d, L4VBUS_MAX_DEPTH); i != iterator(); ++i)
-      i->set_depth(i->depth() + depth() + 1);
-
     if (d->parent())
       {
          d_printf(DBG_ERR, "warning: device %s already has a parent. Ignoring.\n",
@@ -67,32 +83,52 @@ public:
          return;
       }
 
+    for (iterator i = iterator(0, d, L4VBUS_MAX_DEPTH); i != iterator(); ++i)
+      i->set_depth(i->depth() + depth() + 1);
+
     d->set_parent(self);
 
     if (!_c)
       _c = d;
     else
       {
-	D *p;
-	for (p = _c; p->next(); p = p->next())
-	  ;
-	p->add_sibling(d);
+        D *p;
+        for (p = _c; p->next(); p = p->next())
+          ;
+        p->add_sibling(d);
       }
   }
 
   void set_depth(int d) { _depth = d; }
 
+public:
   class iterator
   {
   public:
+    /**
+     * Construct an iterator for a subtree of devices.
+     *
+     * \param p      Root node of the subtree to iterate.
+     * \param c      Node to start iterating from.
+     * \param depth  Maximum depth of the iteratable subtree relative to `p`.
+     */
     iterator(D *p, D *c, int depth = 0)
     : _p(p), _c(c), _d(depth + (p ? p->depth() : 0))
     {}
 
+    /**
+     * Construct an iterator for a subtree of devices with root node `p`.
+     *
+     * \param p      Root node of the subtree to iterate.
+     * \param depth  Maximum depth of the iteratable subtree relative to `p`.
+     *
+     * \pre `p` must not be nullptr.
+     */
     iterator(D const *p, int depth = 0)
     : _p(p), _c(p->children()), _d(depth + p->depth())
     {}
 
+    /// Construct an invalid interator.
     iterator()
     : _c(0)
     {}
@@ -100,7 +136,7 @@ public:
     bool operator == (iterator const &i) const
     {
       if (!_c && !i._c)
-	return true;
+        return true;
 
       return _p == i._p && _c == i._c && _d == i._d;
     }
@@ -111,29 +147,32 @@ public:
     D *operator -> () const { return _c; }
     D *operator * () const { return _c; }
 
+    /// Advance to next device; if there is none, return an invalid iterator.
     iterator operator ++ ()
     {
       if (!_c)
         return *this;
 
+      // This performs a limited-depth, depth-first search algorithm.
+
       if (_d > _c->depth() && _c->children())
-	// go to a child if not at max depth and there are children
-	_c = _c->children();
+        // go to a child if not at max depth and there are children
+        _c = _c->children();
       else if (_c->next())
-	// go to the next sibling
-	_c = _c->next();
+        // go to the next sibling
+        _c = _c->next();
       else if (_c == _p)
         _c = 0;
       else
-	{
-	  for (D *x = _c->parent(); x && x != _p; x = x->parent())
-	    if (x->next())
-	      {
-		_c = x->next();
-		return *this;
-	      }
-	  _c = 0;
-	}
+        {
+          for (D *x = _c->parent(); x && x != _p; x = x->parent())
+            if (x->next())
+              {
+                _c = x->next();
+                return *this;
+              }
+          _c = 0;
+        }
 
       return *this;
     }
@@ -146,15 +185,17 @@ public:
     }
 
   private:
-    D const *_p;
-    D *_c;
-    int _d;
+    D const *_p;  ///< parent device
+    D *_c;        ///< current device or end()
+    int _d;       ///< max depth to iterate up to
   };
 };
 
 template< typename D >
 class Device_tree_mixin
 {
+  friend class Device_tree<D>;
+
 protected:
   Device_tree<D> _dt;
 
@@ -175,11 +216,13 @@ public:
     return 0;
   }
 
+  virtual void add_child(D *c) { _dt.add_child(c, static_cast<D*>(this)); }
+  virtual ~Device_tree_mixin() {}
+
+private:
   void set_depth(int d) { return _dt.set_depth(d); }
   void set_parent(D *p) { _dt.set_parent(p); }
   void add_sibling(D *s) { _dt.add_sibling(s); }
-  virtual void add_child(D *c) { _dt.add_child(c, static_cast<D*>(this)); }
-  virtual ~Device_tree_mixin() {}
 };
 
 class Resource_container
@@ -196,8 +239,12 @@ class Device : public Resource_container
 public:
   struct Msi_src_info
   {
-    unsigned v = 0;
-    Msi_src_info(unsigned v) : v(v) {}
+    l4_uint64_t v = 0;
+    Msi_src_info(l4_uint64_t v) : v(v) {}
+    CXX_BITFIELD_MEMBER(63, 63, is_dev_handle, v);
+    CXX_BITFIELD_MEMBER( 0, 62, dev_handle, v);
+
+
     CXX_BITFIELD_MEMBER(18, 19, svt, v);
     CXX_BITFIELD_MEMBER(16, 17, sq, v);
 
@@ -217,8 +264,8 @@ public:
   virtual Device *next() const = 0;
   virtual int depth() const = 0;
 
-  virtual bool request_child_resource(Resource *, Device *) = 0;
-  virtual bool alloc_child_resource(Resource *, Device *)  = 0;
+  bool request_child_resource(Resource *, Device *);
+  bool alloc_child_resource(Resource *, Device *);
 
   void request_resource(Resource *r);
   void request_resources();
@@ -226,11 +273,8 @@ public:
   void allocate_pending_child_resources();
   void allocate_pending_resources();
 
-  virtual void setup_resources() = 0;
-
   virtual char const *name() const = 0;
   virtual char const *hid() const = 0;
-  virtual bool name(cxx::String const &)  = 0;
 
   virtual void dump(int) const {};
 
@@ -257,7 +301,7 @@ private:
 public:
   //typedef gen_iterator<Generic_device> iterator;
 
-  Resource_list const *resources() const { return &_resources; }
+  Resource_list const *resources() const override { return &_resources; }
   void add_resource(Resource *r)
   { _resources.push_back(r); }
 
@@ -269,18 +313,13 @@ public:
 
   virtual bool match_cid(cxx::String const &) const { return false; }
 
-  char const *name() const { return "(noname)"; }
-  char const *hid() const { return 0; }
-  bool name(cxx::String const &) { return false; }
+  char const *name() const override { return "(noname)"; }
+  char const *hid() const override { return 0; }
 
-  bool request_child_resource(Resource *, Device *);
-  bool alloc_child_resource(Resource *, Device *);
-  void setup_resources();
+  int pm_suspend() override { return 0; }
+  int pm_resume() override { return 0; }
 
-  int pm_suspend() { return 0; }
-  int pm_resume() { return 0; }
-
-  std::string get_full_path() const;
+  std::string get_full_path() const override;
 
   /**
    * Register a property
@@ -311,7 +350,7 @@ public:
  * Base class to define device driver properties
  *
  * This class is not intended to be used directly. Instead you should inherit
- * from this class to define your own property type if neccessary.
+ * from this class to define your own property type if necessary.
  */
 class Property
 {
@@ -356,7 +395,7 @@ private:
   std::string _s;
 
 public:
-  int set(int k, std::string const &str)
+  int set(int k, std::string const &str) override
   {
     if (k != -1)
       return -EINVAL;
@@ -365,9 +404,9 @@ public:
     return 0;
   }
 
-  int set(int, l4_int64_t) { return -EINVAL; }
-  int set(int, Generic_device *) { return -EINVAL; }
-  int set(int, Resource *) { return -EINVAL; }
+  int set(int, l4_int64_t) override { return -EINVAL; }
+  int set(int, Generic_device *) override { return -EINVAL; }
+  int set(int, Resource *) override { return -EINVAL; }
 
   /// Read property value
   std::string const &val() const { return _s; }
@@ -376,12 +415,12 @@ public:
 /**
  * This class implements an integer property
  *
- * The value of this property is stored as a 64bit signed integer
+ * The value of this property is stored as a 64-bit signed integer
  */
 class Int_property : public Property
 {
 private:
-  l4_int64_t _i;
+  l4_int64_t _i = 0;
 
 public:
   Int_property() = default;
@@ -390,9 +429,9 @@ public:
 
   operator l4_int64_t () const { return _i; }
 
-  int set(int, std::string const &) { return -EINVAL; }
+  int set(int, std::string const &) override { return -EINVAL; }
 
-  int set(int k, l4_int64_t i)
+  int set(int k, l4_int64_t i) override
   {
     if (k != -1)
       return -EINVAL;
@@ -401,8 +440,8 @@ public:
     return 0;
   }
 
-  int set(int, Generic_device *) { return -EINVAL; }
-  int set(int, Resource *) { return -EINVAL; }
+  int set(int, Generic_device *) override { return -EINVAL; }
+  int set(int, Resource *) override { return -EINVAL; }
 
   l4_int64_t val() const { return _i; }
 };
@@ -417,9 +456,9 @@ private:
 public:
   Device_property(): _dev(0) {}
 
-  int set(int, std::string const &) { return -EINVAL; }
-  int set(int, l4_int64_t) { return -EINVAL; }
-  int set(int k, Generic_device *d)
+  int set(int, std::string const &) override { return -EINVAL; }
+  int set(int, l4_int64_t) override { return -EINVAL; }
+  int set(int k, Generic_device *d) override
   {
     if (k != -1)
       return -EINVAL;
@@ -430,12 +469,12 @@ public:
 
     return 0;
   }
-  int set(int, Resource *) { return -EINVAL; }
+  int set(int, Resource *) override { return -EINVAL; }
 
   DEVICE *dev() { return _dev; }
 };
 
-////This class implements a resource property
+/// This class implements a resource property
 class Resource_property : public Property
 {
 private:
@@ -444,10 +483,10 @@ private:
 public:
   Resource_property() : _res(0) {}
 
-  int set(int, std::string const &) { return -EINVAL; }
-  int set(int, l4_int64_t) { return -EINVAL; }
-  int set(int, Generic_device *) { return -EINVAL; }
-  int set(int k, Resource *r)
+  int set(int, std::string const &) override { return -EINVAL; }
+  int set(int, l4_int64_t) override { return -EINVAL; }
+  int set(int, Generic_device *) override { return -EINVAL; }
+  int set(int k, Resource *r) override
   {
     if (k != -1)
       return -EINVAL;

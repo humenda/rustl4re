@@ -1,0 +1,5 @@
+<map id="L4Re::Util::Counting_cap_alloc::free" name="L4Re::Util::Counting_cap_alloc::free">
+<area shape="rect" id="node1" title="Free the capability." alt="" coords="5,23,156,65"/>
+<area shape="rect" id="node2" href="$group__l4__cap__api.html#ga539da15c2a1be4803ed7a3f3a5742194" title="Test if a capability selector is a valid selector." alt="" coords="204,5,325,32"/>
+<area shape="rect" id="node3" href="$group__l4__task__api.html#gaa5558855716b35c1790b61249cf2974b" title="Revoke rights from the task." alt="" coords="204,56,325,83"/>
+</map>

@@ -8,7 +8,7 @@
  *
  * 1. Copyright Notice
  *
- * Some or all of this work - Copyright (c) 1999 - 2017, Intel Corp.
+ * Some or all of this work - Copyright (c) 1999 - 2019, Intel Corp.
  * All rights reserved.
  *
  * 2. License
@@ -111,6 +111,42 @@
  * other governmental approval, or letter of assurance, without first obtaining
  * such license, approval or letter.
  *
+ *****************************************************************************
+ *
+ * Alternatively, you may choose to be licensed under the terms of the
+ * following license:
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions, and the following disclaimer,
+ *    without modification.
+ * 2. Redistributions in binary form must reproduce at minimum a disclaimer
+ *    substantially similar to the "NO WARRANTY" disclaimer below
+ *    ("Disclaimer") and any redistribution must be conditioned upon
+ *    including a substantially similar Disclaimer requirement for further
+ *    binary redistribution.
+ * 3. Neither the names of the above-listed copyright holders nor the names
+ *    of any contributors may be used to endorse or promote products derived
+ *    from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+ * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * Alternatively, you may choose to be licensed under the terms of the
+ * GNU General Public License ("GPL") version 2 as published by the Free
+ * Software Foundation.
+ *
  *****************************************************************************/
 
 #include "aecommon.h"
@@ -184,14 +220,14 @@ AeTableOverride (
 
     /* This code exercises the table override mechanism in the core */
 
-    if (ACPI_COMPARE_NAME (ExistingTable->Signature, ACPI_SIG_DSDT))
+    if (ACPI_COMPARE_NAMESEG (ExistingTable->Signature, ACPI_SIG_DSDT))
     {
         *NewTable = DsdtToInstallOverride;
     }
 
     /* This code tests override of dynamically loaded tables */
 
-    else if (ACPI_COMPARE_NAME (ExistingTable->Signature, "OEM9"))
+    else if (ACPI_COMPARE_NAMESEG (ExistingTable->Signature, "OEM9"))
     {
         *NewTable = ACPI_CAST_PTR (ACPI_TABLE_HEADER, Ssdt3Code);
     }
@@ -219,13 +255,13 @@ AeInitializeTableHeader (
     UINT32                  Length)
 {
 
-    ACPI_MOVE_NAME (Header->Signature, Signature);
+    ACPI_COPY_NAMESEG (Header->Signature, Signature);
     Header->Length = Length;
 
     Header->OemRevision = 0x1001;
-    strncpy (Header->OemId, "Intel", ACPI_OEM_ID_SIZE);
-    strncpy (Header->OemTableId, "AcpiExec", ACPI_OEM_TABLE_ID_SIZE);
-    strncpy (Header->AslCompilerId, "INTL", ACPI_NAME_SIZE);
+    memcpy (Header->OemId, "Intel ", ACPI_OEM_ID_SIZE);
+    memcpy (Header->OemTableId, "AcpiExec", ACPI_OEM_TABLE_ID_SIZE);
+    ACPI_COPY_NAMESEG (Header->AslCompilerId, "INTL");
     Header->AslCompilerRevision = ACPI_CA_VERSION;
 
     /* Set the checksum, must set to zero first */
@@ -270,8 +306,8 @@ AeBuildLocalTables (
     NextTable = ListHead;
     while (NextTable)
     {
-        if (!ACPI_COMPARE_NAME (NextTable->Table->Signature, ACPI_SIG_DSDT) &&
-            !ACPI_COMPARE_NAME (NextTable->Table->Signature, ACPI_SIG_FADT))
+        if (!ACPI_COMPARE_NAMESEG (NextTable->Table->Signature, ACPI_SIG_DSDT) &&
+            !ACPI_COMPARE_NAMESEG (NextTable->Table->Signature, ACPI_SIG_FADT))
         {
             TableCount++;
         }
@@ -309,7 +345,7 @@ AeBuildLocalTables (
          * Incoming DSDT or FADT are special cases. All other tables are
          * just immediately installed into the XSDT.
          */
-        if (ACPI_COMPARE_NAME (NextTable->Table->Signature, ACPI_SIG_DSDT))
+        if (ACPI_COMPARE_NAMESEG (NextTable->Table->Signature, ACPI_SIG_DSDT))
         {
             if (DsdtAddress)
             {
@@ -322,7 +358,7 @@ AeBuildLocalTables (
             DsdtAddress = ACPI_PTR_TO_PHYSADDR (NextTable->Table);
             DsdtToInstallOverride = NextTable->Table;
         }
-        else if (ACPI_COMPARE_NAME (NextTable->Table->Signature, ACPI_SIG_FADT))
+        else if (ACPI_COMPARE_NAMESEG (NextTable->Table->Signature, ACPI_SIG_FADT))
         {
             ExternalFadt = ACPI_CAST_PTR (ACPI_TABLE_FADT, NextTable->Table);
             LocalXSDT->TableOffsetEntry[0] = ACPI_PTR_TO_PHYSADDR (NextTable->Table);
@@ -461,12 +497,12 @@ AeBuildLocalTables (
 
         /* Miscellaneous FADT fields */
 
-        LocalFADT.Gpe0BlockLength = 0x08;
-        LocalFADT.Gpe0Block = 0x00001234;
+        LocalFADT.Gpe0BlockLength = 0x20;
+        LocalFADT.Gpe0Block = 0x00003210;
 
-        LocalFADT.Gpe1BlockLength = 0x80;
-        LocalFADT.Gpe1Block = 0x00005678;
-        LocalFADT.Gpe1Base = 100;
+        LocalFADT.Gpe1BlockLength = 0x20;
+        LocalFADT.Gpe1Block = 0x0000BA98;
+        LocalFADT.Gpe1Base = 0x80;
 
         LocalFADT.Pm1EventLength = 4;
         LocalFADT.Pm1aEventBlock = 0x00001aaa;
@@ -495,7 +531,7 @@ AeBuildLocalTables (
     /* Build a FACS */
 
     memset (&LocalFACS, 0, sizeof (ACPI_TABLE_FACS));
-    ACPI_MOVE_NAME (LocalFACS.Signature, ACPI_SIG_FACS);
+    ACPI_COPY_NAMESEG (LocalFACS.Signature, ACPI_SIG_FACS);
 
     LocalFACS.Length = sizeof (ACPI_TABLE_FACS);
     LocalFACS.GlobalLock = 0x11AA0011;
@@ -509,7 +545,7 @@ AeBuildLocalTables (
          * ACPICA core ignores it
          */
         memset (&LocalTEST, 0, sizeof (ACPI_TABLE_HEADER));
-        ACPI_MOVE_NAME (LocalTEST.Signature, "TEST");
+        ACPI_COPY_NAMESEG (LocalTEST.Signature, "TEST");
 
         LocalTEST.Revision = 1;
         LocalTEST.Length = sizeof (ACPI_TABLE_HEADER);
@@ -523,7 +559,7 @@ AeBuildLocalTables (
          * sure that the ACPICA core ignores it
          */
         memset (&LocalBADTABLE, 0, sizeof (ACPI_TABLE_HEADER));
-        ACPI_MOVE_NAME (LocalBADTABLE.Signature, "BAD!");
+        ACPI_COPY_NAMESEG (LocalBADTABLE.Signature, "BAD!");
 
         LocalBADTABLE.Revision = 1;
         LocalBADTABLE.Length = sizeof (ACPI_TABLE_HEADER);
@@ -561,6 +597,14 @@ AeInstallTables (
 
     Status = AcpiInitializeTables (NULL, ACPI_MAX_INIT_TABLES, TRUE);
     ACPI_CHECK_OK (AcpiInitializeTables, Status);
+
+    /*
+     * The following code is prepared to test the deferred table
+     * verification mechanism. When AcpiGbl_EnableTableValidation is set
+     * to FALSE by default, AcpiReallocateRootTable() sets it back to TRUE
+     * and triggers the deferred table verification mechanism accordingly.
+     */
+    (void) AcpiReallocateRootTable ();
 
     if (AcpiGbl_LoadTestTables)
     {
@@ -631,18 +675,10 @@ AeLoadTables (
      * for an existing name.
      */
     Status = AcpiInstallMethod (MethodCode);
-    if (ACPI_FAILURE (Status))
-    {
-        AcpiOsPrintf ("%s, Could not install method\n",
-            AcpiFormatException (Status));
-    }
+    ACPI_CHECK_OK (AcpiInstallMethod, Status);
 
     Status = AcpiInstallMethod (MethodCode);
-    if (ACPI_FAILURE (Status))
-    {
-        AcpiOsPrintf ("%s, Could not install method\n",
-            AcpiFormatException (Status));
-    }
+    ACPI_CHECK_OK (AcpiInstallMethod, Status);
 
     return (AE_OK);
 }

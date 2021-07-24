@@ -1,4 +1,5 @@
 <map id="L4vbus::Pci_host_bridge::cfg_write" name="L4vbus::Pci_host_bridge::cfg_write">
-<area shape="rect" id="node2" href="$classL4vbus_1_1Device.html#a86e2a0b4eb5abb5ce6443690c6e2361f" title="Access the Vbus capability of the underlying virtual bus. " alt="" coords="227,5,400,32"/>
-<area shape="rect" id="node3" href="$group__l4vbus__pci__module.html#ga5d4daafe0f275a28a5ba1941cfdfa837" title="Write to the vPCI configuration space using the PCI root bridge. " alt="" coords="237,56,389,83"/>
+<area shape="rect" id="node1" title="Write to the vPCI configuration space using the PCI root bridge." alt="" coords="5,23,184,65"/>
+<area shape="rect" id="node2" href="$classL4vbus_1_1Device.html#a86e2a0b4eb5abb5ce6443690c6e2361f" title="Access the Vbus capability of the underlying virtual bus." alt="" coords="232,5,415,32"/>
+<area shape="rect" id="node3" href="$group__l4vbus__pci__module.html#ga5d4daafe0f275a28a5ba1941cfdfa837" title="Write to the vPCI configuration space using the PCI root bridge." alt="" coords="244,56,403,83"/>
 </map>

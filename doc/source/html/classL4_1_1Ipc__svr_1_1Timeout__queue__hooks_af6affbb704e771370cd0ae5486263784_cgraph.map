@@ -1,0 +1,12 @@
+<map id="L4::Ipc_svr::Timeout_queue_hooks::add_timeout" name="L4::Ipc_svr::Timeout_queue_hooks::add_timeout">
+<area shape="rect" id="node1" title="Add a timout to the queue for time time." alt="" coords="5,164,211,205"/>
+<area shape="rect" id="node2" href="$classL4_1_1Ipc__svr_1_1Timeout__queue.html#ae31fed715901774759e1786b5e633a07" title="Add a timeout to the queue." alt="" coords="269,109,423,151"/>
+<area shape="rect" id="node6" href="$classL4_1_1Ipc__svr_1_1Timeout__queue__hooks.html#ae4a6bd9781bf97a37dbff039db58d47d" title="get the time for the next timeout" alt="" coords="259,196,433,237"/>
+<area shape="rect" id="node3" href="$classcxx_1_1Bits_1_1Basic__list.html#af857846edcaf6cbc84827c585b45fd49" title="Return an iterator to the beginning of the list." alt="" coords="497,5,645,47"/>
+<area shape="rect" id="node4" href="$classcxx_1_1Bits_1_1Basic__list.html#a08f2ae0b9f0379ce1778ba1f2d163330" title="Return a const iterator to the end of the list." alt="" coords="481,71,661,98"/>
+<area shape="rect" id="node5" href="$classcxx_1_1H__list.html#a6d51f7db1f61e1e2175e03ca8d034cfc" title="Insert an element before the iterator position." alt="" coords="504,123,639,164"/>
+<area shape="rect" id="node7" href="$group__l4__timeout__api.html#ga3345aebfb9e55eccf20ff8b765197bae" title="Combine send and receive timeout in a timeout." alt="" coords="525,189,617,215"/>
+<area shape="rect" id="node8" href="$group__l4__timeout__api.html#gab3eeabba0542c7723fbd5628c6e4d6c3" title="Set an absolute timeout." alt="" coords="510,239,633,266"/>
+<area shape="rect" id="node9" href="$classL4_1_1Ipc__svr_1_1Timeout__queue.html#a4d3404d1f551f06f9ef98121bd150569" title="Get the time for the next timeout." alt="" coords="489,291,653,332"/>
+<area shape="rect" id="node10" href="$classcxx_1_1Bits_1_1Basic__list.html#afe4330106fdfcc338e7c01b1e32cdbac" title="Return the first element in the list." alt="" coords="709,291,857,332"/>
+</map>

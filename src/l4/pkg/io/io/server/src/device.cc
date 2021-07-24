@@ -23,55 +23,80 @@ Generic_device::get_full_path() const
 }
 
 
+// The resource setup works in two phases:
+//
+// (1) The REQUEST phase tries to map preconfigured child resources into
+//     provided resources of their parents.
+// (2) Child resources which are not yet configured are configured in the
+//     ALLOCATE phase.
+//
+// The rationale behind this strategy is to try hard to not change any setup
+// done by previous instances in the boot chain (BIOS, EFI, firmware, etc).
+// Changing such an existing setup can lead to a hanging system if firmware
+// (e.g. System Management Mode on x86 systems) continues to use the old setup.
+
 bool
-Generic_device::alloc_child_resource(Resource *r, Device *cld)
+Device::alloc_child_resource(Resource *r, Device *cld)
 {
   bool found_as = false;
-  for (Resource_list::const_iterator br = resources()->begin();
-       br != resources()->end(); ++br)
+  // The first run requires exact match between client and parent resource.
+  // The second run allows to assign a prefetchable MMIO client region to a
+  // non-prefetchable MMIO parent resource.
+  bool exact = true;
+  auto const *rl = resources();
+  while (true)
     {
-      if (!*br)
-        continue;
-
-      if ((*br)->disabled())
-	continue;
-
-      if (!(*br)->provided())
-	continue;
-
-      if (!(*br)->compatible(r, true))
-	continue;
-
-      found_as = true;
-
-      if (parent() && !parent()->resource_allocated(*br))
+      for (auto *br: *rl)
         {
-          (*br)->provided()->assign(*br, r);
-          d_printf(DBG_ALL, "assigned resource: ");
-          if (dlevel(DBG_ALL))
-            r->dump();
+          if (!br)
+            continue;
+
+          if (br->disabled())
+            continue;
+
+          if (!br->provided())
+            continue;
+
+          if (!br->compatible(r, exact))
+            continue;
+
+          found_as = true;
+
+          if (parent() && !parent()->resource_allocated(br))
+            {
+              br->provided()->assign(br, r);
+              d_printf(DBG_ALL, "assigned resource: ");
+              if (dlevel(DBG_ALL))
+                r->dump();
+
+              return true;
+            }
+          else if (br->provided()->alloc(br, this, r, cld, false))
+            {
+              r->enable();
+              d_printf(DBG_ALL, "allocated resource: ");
+              if (dlevel(DBG_ALL))
+                r->dump();
+
+              return true;
+            }
         }
-      else if ((*br)->provided()->alloc(*br, this, r, cld, false))
-	{
-	  r->enable();
-	  d_printf(DBG_ALL, "allocated resource: ");
-	  if (dlevel(DBG_ALL))
-	    r->dump();
 
-	  return true;
-	}
+      if (exact)
+        exact = false;
+      else
+        {
+          if (!found_as && parent())
+            return parent()->alloc_child_resource(r, cld);
+
+          d_printf(DBG_ERR, "ERROR: could not reserve resource\n");
+          if (dlevel(DBG_ERR))
+            r->dump();
+
+          r->disable();
+          return false;
+        }
     }
-
-  if (!found_as && parent())
-    return parent()->alloc_child_resource(r, cld);
-
-
-  d_printf(DBG_ERR, "ERROR: could not reserve resource\n");
-  if (dlevel(DBG_ERR))
-    r->dump();
-
-  r->disable();
-  return false;
 }
 
 
@@ -126,7 +151,7 @@ Device::request_child_resources()
 {
   for (iterator dev = begin(0); dev != end(); ++dev)
     {
-      // First, try to map all our resources of out child (dev) into
+      // First, try to map all our resources of our child (dev) into
       // provided resources of ourselves
       (*dev)->request_resources();
 
@@ -144,7 +169,7 @@ struct Res_dev
   Resource *r;
   Device *d;
 
-  Res_dev() {}
+  Res_dev() = default;
   Res_dev(Resource *r, Device *d) : r(r), d(d) {}
 };
 
@@ -158,34 +183,46 @@ static bool _allocate_pending_resources(Device *dev, UAD *to_allocate)
 {
   Device *p = dev->parent();
   assert (p);
-  for (Resource_list::const_iterator r = dev->resources()->begin();
-       r != dev->resources()->end(); ++r)
+  auto const *rl = dev->resources();
+  for (auto *r: *rl)
     {
-      if (!*r)
+      if (!r)
         continue;
 
-      if ((*r)->empty())
+      if (r->empty())
         continue;
 
-      if (p->resource_allocated(*r))
+      if (p->resource_allocated(r))
         continue;
 
-      if ((*r)->fixed_addr())
+      if (r->fixed_addr())
         continue;
 
       if (0)
         {
-          printf("unallocated resource: %s ", typeid(**r).name());
-          (*r)->dump(0);
+          printf("unallocated resource: %s ", typeid(*r).name());
+          r->dump(0);
         }
 
-      to_allocate->insert(Res_dev(*r, dev));
+      to_allocate->insert(Res_dev(r, dev));
     }
   return true;
 }
 
 }
 
+/**
+ * Allocate all unallocated child resources.
+ *
+ * The allocation of a resource includes its relocation so that PCI device
+ * resources are located inside the respective resource window of their PCI
+ * bridge. Allocated resources are fixed until the device is removed.
+ *
+ * It is not possible for IO clients to perform a resource relocation on a
+ * physical device as physical devices are accessible by clients only through
+ * respective proxy devices. The proxy device for PCI devices emulates accesses
+ * to the BARs.
+ */
 void
 Device::allocate_pending_resources()
 {
@@ -219,40 +256,36 @@ Device::allocate_pending_child_resources()
 }
 
 
-void
-Generic_device::setup_resources()
-{
-  for (iterator i = begin(0); i != end(); ++i)
-    i->setup_resources();
-}
-
 bool
-Generic_device::request_child_resource(Resource *r, Device *cld)
+Device::request_child_resource(Resource *r, Device *cld)
 {
   bool found_as = false;
+  // The first run requires exact match between client and parent resource.
+  // The second run allows to assign a prefetchable MMIO client region to a
+  // non-prefetchable MMIO parent resource.
   bool exact = true;
+  auto const *rl = resources();
   while (true)
     {
       // scan through all our resources and try to find a
       // provided resource that is consumed by resource 'r'
-      for (Resource_list::const_iterator br = resources()->begin();
-	   br != resources()->end(); ++br)
+      for (auto *br: *rl)
 	{
-          if (!*br)
+          if (!br)
             continue;
 
-	  if ((*br)->disabled())
+	  if (br->disabled())
 	    continue;
 
-	  if (!(*br)->provided())
+	  if (!br->provided())
 	    continue;
 
-	  if (!(*br)->compatible(r, exact))
+	  if (!br->compatible(r, exact))
 	    continue;
 
 	  found_as = true;
 
-	  if ((*br)->provided()->request(*br, this, r, cld))
+	  if (br->provided()->request(br, this, r, cld))
 	    return true;
 	}
 

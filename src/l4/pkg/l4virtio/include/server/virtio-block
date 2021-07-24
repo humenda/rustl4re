@@ -1,10 +1,9 @@
 // vi:ft=cpp
+/* SPDX-License-Identifier: GPL-2.0-only or License-Ref-kk-custom */
 /*
- * Copyright (C) 2017 Kernkonzept GmbH.
+ * Copyright (C) 2017-2020 Kernkonzept GmbH.
  * Author(s): Sarah Hoffmann <sarah.hoffmann@kernkonzept.com>
  *
- * This file is distributed under the terms of the GNU General Public
- * License, version 2.  Please see the COPYING-GPL-2 file for details.
  */
 #pragma once
 
@@ -20,7 +19,7 @@
 
 namespace L4virtio { namespace Svr {
 
-template <typename Ds_data> class Block_dev;
+template <typename Ds_data> class Block_dev_base;
 
 /**
  * A request to read or write data.
@@ -28,7 +27,7 @@ template <typename Ds_data> class Block_dev;
 template<typename Ds_data>
 class Block_request
 {
-  friend Block_dev<Ds_data>;
+  friend class Block_dev_base<Ds_data>;
   enum { Header_size = sizeof(l4virtio_block_header_t) };
 
 public:
@@ -236,8 +235,16 @@ struct Block_features : public Dev_config::Features
   CXX_BITFIELD_MEMBER( 5,  5, ro, raw);
   /** Block size of disk is in blk_size. */
   CXX_BITFIELD_MEMBER( 6,  6, blk_size, raw);
+  /** Cache flush command support. */
+  CXX_BITFIELD_MEMBER( 9,  9, flush, raw);
   /** Device exports information about optimal IO alignment. */
   CXX_BITFIELD_MEMBER(10, 10, topology, raw);
+  /** Device can toggle its cache between writeback and writethrough modes. */
+  CXX_BITFIELD_MEMBER(11, 11, config_wce, raw);
+  /** Device can support discard command. */
+  CXX_BITFIELD_MEMBER(13, 13, discard, raw);
+  /** Device can support write zeroes command. */
+  CXX_BITFIELD_MEMBER(14, 14, write_zeroes, raw);
 };
 
 
@@ -247,15 +254,13 @@ struct Block_features : public Dev_config::Features
  * Use this class as a base to implement your own specific block device.
  */
 template <typename Ds_data>
-class Block_dev
-: public L4virtio::Svr::Device_t<Ds_data>,
-  public L4::Epiface_t<Block_dev<Ds_data>, L4virtio::Device>
+class Block_dev_base : public L4virtio::Svr::Device_t<Ds_data>
 {
 private:
   class Irq_object : public L4::Irqep_t<Irq_object>
   {
   public:
-    Irq_object(Block_dev<Ds_data> *parent) : _parent(parent) {}
+    Irq_object(Block_dev_base<Ds_data> *parent) : _parent(parent) {}
 
     void handle_irq()
     {
@@ -263,10 +268,15 @@ private:
     }
 
   private:
-    Block_dev<Ds_data> *_parent;
+    Block_dev_base<Ds_data> *_parent;
   };
   Irq_object _irq_handler;
 
+protected:
+  L4::Epiface *irq_iface()
+  { return &_irq_handler; }
+
+private:
   L4Re::Util::Unique_cap<L4::Irq> _kick_guest_irq;
   Virtqueue _queue;
   unsigned _vq_max;
@@ -277,6 +287,9 @@ public:
   typedef Block_request<Ds_data> Request;
 
 protected:
+  Block_features negotiated_features() const
+  { return _dev_config.negotiated_features(0); }
+
   Block_features device_features() const
   { return _dev_config.host_features(0); }
 
@@ -365,6 +378,77 @@ protected:
     set_device_features(df);
   }
 
+  /** Enables the flush command. */
+  void set_flush()
+  {
+    Block_features df = device_features();
+    df.flush() = true;
+    set_device_features(df);
+  }
+
+  /** Sets cache mode and enables the the writeback toggle.
+   *
+   * \param writeback Mode of the cache (0 for writethrough, 1 for writeback).
+   */
+  void set_config_wce(l4_uint8_t writeback)
+  {
+    l4virtio_block_config_t volatile *pc = _dev_config.priv_config();
+    pc->writeback = writeback;
+    Block_features df = device_features();
+    df.config_wce() = true;
+    set_device_features(df);
+  }
+
+  /** Get the writeback field from the configuration space.
+   *
+   * \return Value of the writeback field.
+   */
+  l4_uint8_t get_writeback()
+  {
+    l4virtio_block_config_t volatile *pc = _dev_config.priv_config();
+    return pc->writeback;
+  }
+
+  /**
+   * Sets constraints for and enables the discard command.
+   *
+   * \param max_discard_sectors Maximum discard sectors size.
+   * \param max_discard_seg Maximum discard segment number.
+   * \param discard_sector_alignment Can be used by the driver when splitting a
+   *                                 request based on alignment.
+   */
+  void set_discard(l4_uint32_t max_discard_sectors, l4_uint32_t max_discard_seg,
+                   l4_uint32_t discard_sector_alignment)
+  {
+    l4virtio_block_config_t volatile *pc = _dev_config.priv_config();
+    pc->max_discard_sectors = max_discard_sectors;
+    pc->max_discard_seg = max_discard_seg;
+    pc->discard_sector_alignment = discard_sector_alignment;
+    Block_features df = device_features();
+    df.discard() = true;
+    set_device_features(df);
+  }
+
+  /**
+   * Sets constraints for and enables the write zeroes command.
+   *
+   * \param max_write_zeroes_sectors Maximum write zeroes sectors size.
+   * \param max_write_zeroes_seg maximum write zeroes segment number.
+   * \param write_zeroes_may_unmap Set if a write zeroes request can result in
+   *                               deallocating one or more sectors.
+   */
+  void set_write_zeroes(l4_uint32_t max_write_zeroes_sectors,
+                        l4_uint32_t max_write_zeroes_seg,
+                        l4_uint8_t write_zeroes_may_unmap)
+  {
+    l4virtio_block_config_t volatile *pc = _dev_config.priv_config();
+    pc->max_write_zeroes_sectors = max_write_zeroes_sectors;
+    pc->max_write_zeroes_seg = max_write_zeroes_seg;
+    pc->write_zeroes_may_unmap = write_zeroes_may_unmap;
+    Block_features df = device_features();
+    df.write_zeroes() = true;
+    set_device_features(df);
+  }
 
 public:
   /**
@@ -375,11 +459,10 @@ public:
    * \param capacity   Size of the device in 512-byte sectors.
    * \param read_only  True, if the device should not be writable.
    */
-  Block_dev(l4_uint32_t vendor, unsigned queue_size,
-            l4_uint64_t capacity, bool read_only)
-  : L4virtio::Svr::Device_t<Ds_data>(&_dev_config),
-    _irq_handler(this), _vq_max(queue_size),
-    _dev_config(vendor, L4VIRTIO_ID_BLOCK, 1)
+  Block_dev_base(l4_uint32_t vendor, unsigned queue_size, l4_uint64_t capacity,
+                 bool read_only)
+  : L4virtio::Svr::Device_t<Ds_data>(&_dev_config), _irq_handler(this),
+    _vq_max(queue_size), _dev_config(vendor, L4VIRTIO_ID_BLOCK, 1)
   {
     this->reset_queue_config(0, queue_size);
 
@@ -402,7 +485,7 @@ public:
    * For asynchronous mode, the function should set up the worker
    * and then return false. In synchronous mode, the function should
    * return true, once processing is complete. If there is an error
-   * and processing is aborted, the status flag of @req needs to be set
+   * and processing is aborted, the status flag of `req` needs to be set
    * accordingly and the request immediately finished with finish_request()
    * if the client is to be answered.
    */
@@ -412,15 +495,6 @@ public:
    * Reset the actual hardware device.
    */
   virtual void reset_device() = 0;
-
-  /**
-   * The client requests reinitialisation of the connection.
-   *
-   * \return False if reinitialisation is not supported.
-   * \return True if reinitialisation is supported and the client has been
-   *         reinitialised successfully.
-   */
-  virtual bool reset_client() { return false; }
 
   /**
    * Return true, if the queues should not be processed further.
@@ -441,7 +515,7 @@ public:
   void finalize_request(cxx::unique_ptr<Request> req, unsigned sz,
                         l4_uint8_t status = L4VIRTIO_BLOCK_S_OK)
   {
-    if (_dev_config.status().failed())
+    if (_dev_config.status().fail_state() || !_queue.ready())
       return;
 
     if (req->release_request(&_queue, status, sz) < 0)
@@ -462,50 +536,21 @@ public:
     return -L4_EINVAL;
   }
 
-  /**
-   * Attach device to an object registry.
-   *
-   * \param registry Object registry that will be responsible for dispatching
-   *                 requests.
-   * \param service  Name of an existing capability the device should use.
-   *
-   * This functions registers the general virtio interface as well as the
-   * interrupt handler which is used for receiving client notifications.
-   */
-  L4::Cap<void> register_obj(L4::Registry_iface *registry,
-                             char const *service = 0)
+  void reset()
   {
-    L4Re::chkcap(registry->register_irq_obj(&_irq_handler));
-    L4::Cap<void> ret;
-    if (service)
-      ret = registry->register_obj(this, service);
-    else
-      ret = registry->register_obj(this);
-    L4Re::chkcap(ret);
-
-    return ret;
-  }
-
-  L4::Cap<void> register_obj(L4::Registry_iface *registry,
-                             L4::Cap<L4::Rcv_endpoint> ep)
-  {
-    L4Re::chkcap(registry->register_irq_obj(&_irq_handler));
-
-    return L4Re::chkcap(registry->register_obj(this, ep));
+    _queue.disable();
+    _dev_config.reset_queue(0, _vq_max);
+    _dev_config.reset_hdr();
+    reset_device();
   }
 
 protected:
-  L4::Ipc_svr::Server_iface *server_iface() const
-  {
-    return L4::Epiface::server_iface();
-  }
-
   void kick()
   {
-    if (queue_stopped())
+    if (!_queue.ready() || queue_stopped())
       return;
 
-    while (!_dev_config.status().failed())
+    while (!_dev_config.status().fail_state())
       {
         auto r = _queue.next_avail();
         if (!r)
@@ -535,26 +580,15 @@ private:
 
   void register_single_driver_irq()
   {
-    if (_kick_guest_irq)
-      {
-        // client has changed, purge all old state
-        reset();
-        if (!reset_client())
-          L4Re::chksys(-L4_EINVAL, "Client already connected.");
-      }
-
     _kick_guest_irq = L4Re::Util::Unique_cap<L4::Irq>(
-        L4Re::chkcap(server_iface()->template rcv_cap<L4::Irq>(0)));
+      L4Re::chkcap(this->server_iface()->template rcv_cap<L4::Irq>(0)));
 
-    L4Re::chksys(server_iface()->realloc_rcv_cap(0));
+    L4Re::chksys(this->server_iface()->realloc_rcv_cap(0));
   }
 
-  void reset()
+  void trigger_driver_config_irq() const override
   {
-    _queue.disable();
-    _dev_config.reset_queue(0, _vq_max);
-    _dev_config.reset_hdr();
-    reset_device();
+    _kick_guest_irq->trigger();
   }
 
   bool check_queues()
@@ -566,6 +600,52 @@ private:
       }
 
     return true;
+  }
+};
+
+template <typename Ds_data>
+struct Block_dev
+: Block_dev_base<Ds_data>,
+  L4::Epiface_t<Block_dev<Ds_data>, L4virtio::Device>
+{
+  using Block_dev_base<Ds_data>::Block_dev_base;
+
+  /**
+   * Attach device to an object registry.
+   *
+   * \param registry Object registry that will be responsible for dispatching
+   *                 requests.
+   * \param service  Name of an existing capability the device should use.
+   *
+   * This functions registers the general virtio interface as well as the
+   * interrupt handler which is used for receiving client notifications.
+   */
+  L4::Cap<void> register_obj(L4::Registry_iface *registry,
+                             char const *service = 0)
+  {
+    L4Re::chkcap(registry->register_irq_obj(this->irq_iface()));
+    L4::Cap<void> ret;
+    if (service)
+      ret = registry->register_obj(this, service);
+    else
+      ret = registry->register_obj(this);
+    L4Re::chkcap(ret);
+
+    return ret;
+  }
+
+  L4::Cap<void> register_obj(L4::Registry_iface *registry,
+                             L4::Cap<L4::Rcv_endpoint> ep)
+  {
+    L4Re::chkcap(registry->register_irq_obj(this->irq_iface()));
+
+    return L4Re::chkcap(registry->register_obj(this, ep));
+  }
+
+protected:
+  L4::Ipc_svr::Server_iface *server_iface() const override
+  {
+    return this->L4::Epiface::server_iface();
   }
 };
 

@@ -5,7 +5,7 @@ template< unsigned long Flush_area, bool Ram >
 Mword Mmu<Flush_area, Ram>::dcache_line_size()
 {
   Mword v;
-  __asm__ __volatile__("msr CSSELR_EL1, %1; mrs %0, CCSIDR_EL1" : "=r" (v) : "r"(0));
+  __asm__ __volatile__("msr CSSELR_EL1, %1; mrs %0, CCSIDR_EL1" : "=r" (v) : "r"(0UL));
   return 16 << (v & 0x7);
 }
 
@@ -14,7 +14,7 @@ template< unsigned long Flush_area, bool Ram >
 Mword Mmu<Flush_area, Ram>::icache_line_size()
 {
   Mword v;
-  __asm__ __volatile__("msr CSSELR_EL1, %1; mrs %0, CCSIDR_EL1" : "=r" (v) : "r"(1));
+  __asm__ __volatile__("msr CSSELR_EL1, %1; mrs %0, CCSIDR_EL1" : "=r" (v) : "r"(1UL));
   return 16 << (v & 0x7);
 }
 
@@ -26,7 +26,7 @@ template< unsigned long Flush_area, bool Ram >
 void Mmu<Flush_area, Ram>::flush_cache(void const *start,
 				       void const *end)
 {
-  unsigned i = icache_line_size(), d = dcache_line_size();
+  unsigned long i = icache_line_size(), d = dcache_line_size();
   __asm__ __volatile__ (
       "1:  dc civac, %[i]  \n"
       "    ic ivau,  %[i]  \n"

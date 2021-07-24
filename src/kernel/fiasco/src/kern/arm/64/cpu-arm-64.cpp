@@ -111,7 +111,8 @@ public:
     Mdcr_tdosa     = 1UL << 10,
     Mdcr_tdra      = 1UL << 11,
 
-    Mdcr_bits      = Mdcr_tpmcr | Mdcr_tpm,
+    Mdcr_bits      = Mdcr_tpmcr | Mdcr_tpm
+                     | Mdcr_tda | Mdcr_tdosa | Mdcr_tdra,
     Mdcr_vm_mask   = 0xf00,
   };
 };
@@ -130,11 +131,9 @@ Cpu::init_hyp_mode()
                     // sl = 1       PS = 40bit   t0sz = 40bit
                     | (1UL << 6) | (2UL << 16) | 25));
 
-  asm volatile (
-        "msr MDCR_EL2, %0"
-        : : "r"(Mdcr_bits));
+  asm volatile ("msr MDCR_EL2, %0" : : "r"((Mword)Mdcr_bits));
 
-  asm volatile ("msr SCTLR_EL1, %0" : : "r"(Sctlr_el1_generic));
+  asm volatile ("msr SCTLR_EL1, %0" : : "r"((Mword)Sctlr_el1_generic));
   asm volatile ("msr HCR_EL2, %0" : : "r" (Hcr_host_bits));
 
   Mem::dsb();
@@ -142,7 +141,7 @@ Cpu::init_hyp_mode()
 
   // HCPTR
   asm volatile("msr CPTR_EL2, %0" : :
-               "r" (  0x33ff       // TCP: 0-9, 12-13
+               "r" (  0x33ffUL     // TCP: 0-9, 12-13
                     | (1 << 20))); // TTA
 }
 //--------------------------------------------------------------------------
@@ -160,6 +159,15 @@ Cpu::midr()
   Mword m;
   asm volatile ("mrs %0, midr_el1" : "=r" (m));
   return m;
+}
+
+PUBLIC static inline
+Mword
+Cpu::mpidr()
+{
+  Mword mpid;
+  asm volatile("mrs %0, mpidr_el1" : "=r"(mpid));
+  return mpid;
 }
 
 IMPLEMENT
@@ -190,7 +198,7 @@ Cpu::enable_dcache()
   asm volatile("mrs     %0, SCTLR_EL1 \n"
                "orr     %0, %0, %1    \n"
                "msr     SCTLR_EL1, %0 \n"
-               : "=&r" (r) : "r" (Sctlr_c | Sctlr_i));
+               : "=&r" (r) : "r" ((Mword)(Sctlr_c | Sctlr_i)));
 }
 
 PUBLIC static inline
@@ -201,26 +209,27 @@ Cpu::disable_dcache()
   asm volatile("mrs     %0, SCTLR_EL1 \n"
                "bic     %0, %0, %1    \n"
                "msr     SCTLR_EL1, %0 \n"
-               : "=&r" (r) : "r" (Sctlr_c | Sctlr_i));
+               : "=&r" (r) : "r" ((Mword)(Sctlr_c | Sctlr_i)));
 }
 
 //--------------------------------------------------------------------------
 IMPLEMENTATION [arm && arm_v8]:
 
-PUBLIC static inline NEEDS[Cpu::midr]
+PRIVATE static inline NEEDS[Cpu::midr]
 bool
-Cpu::is_smp_capable()
+Cpu::needs_ectl_enable()
 {
-  // Check for ARM Cortex A53+ CPUs
   Mword id = midr();
+  if ((id & 0xff0ffff0) == 0x410fd0f0) // FVP AEM-V8
+    return false;
   return (id & 0xff0fff00) == 0x410fd000;
 }
 
-PUBLIC static inline
+PUBLIC static inline NEEDS[Cpu::needs_ectl_enable]
 void
 Cpu::enable_smp()
 {
-  if (!is_smp_capable())
+  if (!needs_ectl_enable())
     return;
 
   Mword cpuectl;
@@ -229,11 +238,11 @@ Cpu::enable_smp()
     asm volatile ("msr S3_1_C15_C2_1, %0" : : "r" (cpuectl | (1 << 6)));
 }
 
-PUBLIC static inline
+PUBLIC static inline NEEDS[Cpu::needs_ectl_enable]
 void
 Cpu::disable_smp()
 {
-  if (!is_smp_capable())
+  if (!needs_ectl_enable())
     return;
 
   Mword cpuectl;

@@ -1,0 +1,8 @@
+<map id="L4::Epiface_t&lt; Derived, IFACE, BASE, bool &gt;" name="L4::Epiface_t&lt; Derived, IFACE, BASE, bool &gt;">
+<area shape="rect" id="node1" title="Epiface implementation for Kobject&#45;based interface implementations." alt="" coords="117,589,292,681"/>
+<area shape="rect" id="node5" href="$structL4_1_1Epiface__t.html" title=" " alt="" coords="5,759,199,865"/>
+<area shape="rect" id="node6" href="$structL4_1_1Epiface__t.html" title=" " alt="" coords="223,766,395,858"/>
+<area shape="rect" id="node2" href="$structL4_1_1Epiface__t0.html" title=" " alt="" coords="118,433,291,540"/>
+<area shape="rect" id="node3" href="$structL4_1_1Epiface.html" title="Base class for interface implementations." alt="" coords="113,5,286,215"/>
+<area shape="rect" id="node4" href="$structL4_1_1Epiface__t0.html" title="Epiface mixin for generic Kobject&#45;based interfaces." alt="" coords="221,264,394,371"/>
+</map>

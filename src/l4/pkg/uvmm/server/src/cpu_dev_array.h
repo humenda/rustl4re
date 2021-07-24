@@ -8,21 +8,24 @@
 #pragma once
 
 #include <l4/re/env>
-#include <l4/re/rm>
-#include <l4/sys/task>
 #include <l4/sys/scheduler>
 
-#include <debug.h>
-#include <device.h>
-#include <cpu_dev.h>
+#include "debug.h"
+#include "device.h"
+#include "cpu_dev.h"
+#include "monitor/cpu_dev_array_cmd_handler.h"
 
 namespace Vmm {
 
 /**
  * Abstract CPU container.
  */
-class Cpu_dev_array : public virtual Vdev::Dev_ref
+class Cpu_dev_array
+: public virtual Vdev::Dev_ref,
+  public Monitor::Cpu_dev_array_cmd_handler<Monitor::Enabled, Cpu_dev_array>
 {
+  friend Cpu_dev_array_cmd_handler<Monitor::Enabled, Cpu_dev_array>;
+
   /**
    * Helper class that distributes threads evenly to all available
    * physical CPUs.
@@ -111,14 +114,16 @@ public:
   cxx::Ref_ptr<Vdev::Device>
   create_vcpu(Vdev::Dt_node const *node);
 
-  void show_state_registers(FILE *f);
-
   cxx::Ref_ptr<Cpu_dev> *begin() { return _cpus; }
-  cxx::Ref_ptr<Cpu_dev> *end() { return _cpus + Cpu_dev::Max_cpus; }
+  cxx::Ref_ptr<Cpu_dev> *end() { return _cpus + _ncpus; }
+
+  unsigned capacity() const { return Cpu_dev::Max_cpus; }
+  unsigned size() const { return _ncpus; }
 
 protected:
   Vcpu_placement _placement;
   cxx::Ref_ptr<Cpu_dev> _cpus[Cpu_dev::Max_cpus];
+  unsigned _ncpus = 0;
 };
 
 } // namespace

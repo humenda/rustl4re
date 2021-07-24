@@ -17,7 +17,7 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
  * Emulation of getentropy(2) as documented at:
- * http://www.openbsd.org/cgi-bin/man.cgi/OpenBSD-current/man2/getentropy.2
+ * http://man.openbsd.org/getentropy.2
  */
 
 #define	_POSIX_C_SOURCE	199309L
@@ -110,7 +110,7 @@ getentropy(void *buf, size_t len)
 	 *     - Do the best under the circumstances....
 	 *
 	 * This code path exists to bring light to the issue that Hurd
-	 * does not provide a failsafe API for entropy collection.
+	 * still does not provide a failsafe API for entropy collection.
 	 *
 	 * We hope this demonstrates that Hurd should either get a
 	 * sysctl ABI, or consider providing a new failsafe API which

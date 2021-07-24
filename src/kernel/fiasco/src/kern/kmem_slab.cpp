@@ -67,18 +67,18 @@ class Kmem_buddy_for_size
 {
 public:
   static void *alloc()
-  { return Kmem_alloc::allocator()->unaligned_alloc(SIZE); }
+  { return Kmem_alloc::allocator()->alloc(Bytes(SIZE)); }
 
   template<typename Q> static
   void *q_alloc(Q *q)
-  { return Kmem_alloc::allocator()->q_unaligned_alloc(q, SIZE); }
+  { return Kmem_alloc::allocator()->q_alloc(q, Bytes(SIZE)); }
 
   static void free(void *e)
-  { Kmem_alloc::allocator()->unaligned_free(SIZE, e); }
+  { Kmem_alloc::allocator()->free(Bytes(SIZE), e); }
 
   template<typename Q> static
   void q_free(Q *q, void *e)
-  { Kmem_alloc::allocator()->q_unaligned_free(q, SIZE, e); }
+  { Kmem_alloc::allocator()->q_free(q, Bytes(SIZE), e); }
 };
 
 /**
@@ -208,19 +208,19 @@ Kmem_slab::~Kmem_slab()
 // allocate or free blocks
 
 virtual void *
-Kmem_slab::block_alloc(unsigned long size, unsigned long)
+Kmem_slab::block_alloc(unsigned long size, unsigned long) override
 {
   assert (size >= Buddy_alloc::Min_size);
   assert (size <= Buddy_alloc::Max_size);
   assert (!(size & (size - 1)));
   (void)size;
-  return Kmem_alloc::allocator()->unaligned_alloc(size);
+  return Kmem_alloc::allocator()->alloc(Bytes(size));
 }
 
 virtual void
-Kmem_slab::block_free(void *block, unsigned long size)
+Kmem_slab::block_free(void *block, unsigned long size) override
 {
-  Kmem_alloc::allocator()->unaligned_free(size, block);
+  Kmem_alloc::allocator()->free(Bytes(size), block);
 }
 
 // 
@@ -232,8 +232,7 @@ Kmem_slab::reap_all (bool desperate)
 {
   size_t freed = 0;
 
-  for (Reap_list::Const_iterator alloc = reap_list.begin();
-       alloc != reap_list.end(); ++alloc)
+  for (auto *alloc: reap_list)
     {
       size_t got;
       do

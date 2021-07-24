@@ -1,3 +1,6 @@
 <map id="cxx::Bitmap_base::bit" name="cxx::Bitmap_base::bit">
-<area shape="rect" id="node2" href="$classcxx_1_1Bitmap__base.html#a15db5e4d5366a13cb5a49aeb357635a7" title="Get the bit at index bit. " alt="" coords="204,5,403,32"/>
+<area shape="rect" id="node1" title="Set the value of bit bit to on." alt="" coords="264,71,427,98"/>
+<area shape="rect" id="node2" href="$classcxx_1_1Bitmap__base.html#a63b497caf4cba8376deb2b8831d3fb4f" title="Get the bit index within word_type for the given bit." alt="" coords="29,5,192,47"/>
+<area shape="rect" id="node3" href="$classcxx_1_1Bitmap__base.html#a15db5e4d5366a13cb5a49aeb357635a7" title="Get the bit at index bit." alt="" coords="5,71,216,98"/>
+<area shape="rect" id="node4" href="$classcxx_1_1Bitmap__base.html#a7a9d9e1459ab5508c071f3989c3bbf4e" title="Get the word index for the given bit." alt="" coords="21,123,200,164"/>
 </map>

@@ -252,8 +252,8 @@ static void wid_set_parent(WIDGET *w, void *new_parent)   {
 
 
 /*** GET/SET POINTER TO ASSOCIATED 'USER' DATA ***/
-static void *wid_get_context(WIDGET *w) {
-	return w->wd->context;
+static long wid_get_context(WIDGET *w) {
+	return (long)w->wd->context;
 }
 static void wid_set_context(WIDGET *w, void *c) {
 	w->wd->context = c;

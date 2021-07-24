@@ -13,6 +13,7 @@ IMPLEMENTATION:
 #include "jdb_screen.h"
 #include "kernel_console.h"
 #include "keycodes.h"
+#include "kip.h"
 #include "kmem.h"
 #include "simpleio.h"
 #include "static_init.h"
@@ -233,7 +234,7 @@ Jdb_list_timeouts::list_timeouts_show_timeout(Timeout *t)
   char const *type;
   char ownerstr[32] = "";
   Thread *owner;
-  Signed64 timeout = t->get_timeout(Kip::k()->clock);
+  Signed64 timeout = t->get_timeout(Kip::k()->clock());
 
   Kconsole::console()->getchar_chance();
 
@@ -283,14 +284,13 @@ void
 Jdb_list_timeouts::complete_show()
 {
   typedef Rnd_container<Timeout_iter> Cont;
-  typedef Cont::Iterator Iter;
 
   Cont to_cont(Timeout_iter(&Timeout_q::timeout_queue.cpu(Cpu_number::first())),
                Timeout_iter(&Timeout_q::timeout_queue.cpu(Cpu_number::first()), true));
 
   show_header();
-  for (Iter i = to_cont.begin(); i != to_cont.end(); ++i)
-    list_timeouts_show_timeout(*i);
+  for (auto const &&i: to_cont)
+    list_timeouts_show_timeout(i);
 }
 
 static
@@ -418,7 +418,7 @@ Jdb_list_timeouts::list()
 
 PUBLIC
 Jdb_module::Action_code
-Jdb_list_timeouts::action(int cmd, void *&, char const *&, int &)
+Jdb_list_timeouts::action(int cmd, void *&, char const *&, int &) override
 {
   if (cmd == 0)
     list();
@@ -430,7 +430,7 @@ Jdb_list_timeouts::action(int cmd, void *&, char const *&, int &)
 
 PUBLIC
 Jdb_module::Cmd const *
-Jdb_list_timeouts::cmds() const
+Jdb_list_timeouts::cmds() const override
 {
   static Cmd cs[] =
     {
@@ -443,7 +443,7 @@ Jdb_list_timeouts::cmds() const
 
 PUBLIC
 int
-Jdb_list_timeouts::num_cmds() const
+Jdb_list_timeouts::num_cmds() const override
 {
   return 2;
 }

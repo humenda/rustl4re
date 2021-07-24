@@ -1,6 +1,7 @@
 INTERFACE [arm]:
 
 #include "types.h"
+#include "mem.h"
 
 class Mem_op
 {
@@ -13,9 +14,6 @@ public:
     Op_cache_coherent          = 0x03,
     Op_cache_dma_coherent      = 0x04,
     Op_cache_dma_coherent_full = 0x05,
-    Op_cache_l2_clean          = 0x06,
-    Op_cache_l2_flush          = 0x07,
-    Op_cache_l2_inv            = 0x08,
   };
 
   enum Op_mem
@@ -59,23 +57,35 @@ Mem_op::l1_inv_dcache(Address start, Address end)
     Mem_unit::inv_dcache((void *)start, (void *)end);
 }
 
+// ------------------------------------------------------------------------
+IMPLEMENTATION [arm]:
 
 PRIVATE static inline void
-Mem_op::__arm_kmem_l1_cache_maint(int op, void const *kstart, void const *kend)
+Mem_op::__arm_kmem_cache_maint(int op, void const *kstart, void const *kend)
 {
   switch (op)
     {
     case Op_cache_clean_data:
       Mem_unit::clean_dcache(kstart, kend);
+      Mem::barrier();
+      outer_cache_op(Address(kstart), Address(kend),
+                     [](Address s, Address e, bool sync)
+                     { Outer_cache::clean(s, e, sync); });
       break;
 
     case Op_cache_flush_data:
     case Op_cache_inv_data:
       Mem_unit::flush_dcache(kstart, kend);
+      Mem::barrier();
+      outer_cache_op(Address(kstart), Address(kend),
+                     [](Address s, Address e, bool sync)
+                     { Outer_cache::flush(s, e, sync); });
       break;
 
     case Op_cache_coherent:
       Mem_unit::clean_dcache(kstart, kend);
+      // Our outer cache model assumes a unified outer cache, so there is no
+      // need to clean it in order to achieve cache coherency
       Mem::dsb();
       Mem_unit::btc_inv();
       inv_icache(Address(kstart), Address(kend));
@@ -84,12 +94,18 @@ Mem_op::__arm_kmem_l1_cache_maint(int op, void const *kstart, void const *kend)
 
     case Op_cache_dma_coherent:
       Mem_unit::flush_dcache(kstart, kend);
+      Mem::barrier();
+      outer_cache_op(Address(kstart), Address(kend),
+                     [](Address s, Address e, bool sync)
+                     { Outer_cache::flush(s, e, sync); });
       break;
 
     // We might not want to implement this one but single address outer
     // cache flushing can be really slow
     case Op_cache_dma_coherent_full:
       Mem_unit::flush_dcache();
+      Mem::barrier();
+      Outer_cache::flush();
       break;
 
     default:
@@ -101,18 +117,18 @@ Mem_op::__arm_kmem_l1_cache_maint(int op, void const *kstart, void const *kend)
 IMPLEMENTATION [arm && !cpu_virt]:
 
 PRIVATE static inline void
-Mem_op::__arm_mem_l1_cache_maint(int op, void const *start, void const *end)
-{ __arm_kmem_l1_cache_maint(op, start, end); }
+Mem_op::__arm_mem_cache_maint(int op, void const *start, void const *end)
+{ __arm_kmem_cache_maint(op, start, end); }
 
 // ------------------------------------------------------------------------
 IMPLEMENTATION [arm && cpu_virt]:
 
 PRIVATE static inline void
-Mem_op::__arm_mem_l1_cache_maint(int op, void const *start, void const *end)
+Mem_op::__arm_mem_cache_maint(int op, void const *start, void const *end)
 {
   if (op == Op_cache_dma_coherent_full)
     {
-      __arm_kmem_l1_cache_maint(Op_cache_dma_coherent_full, 0, 0);
+      __arm_kmem_cache_maint(Op_cache_dma_coherent_full, 0, 0);
       return;
     }
 
@@ -139,8 +155,7 @@ Mem_op::__arm_mem_l1_cache_maint(int op, void const *start, void const *end)
         {
           Virt_addr vstart = Virt_addr(phys_addr) | offs;
           Virt_addr vend = vstart + sz;
-          __arm_kmem_l1_cache_maint(op, (void*)Virt_addr::val(vstart),
-                                    (void*)Virt_addr::val(vend));
+          __arm_kmem_cache_maint(op, (void *)vstart, (void *)vend);
         }
       v += sz;
     }
@@ -166,30 +181,8 @@ Mem_op::arm_mem_cache_maint(int op, void const *start, void const *end)
   Context *c = current();
 
   c->set_ignore_mem_op_in_progress(true);
-  __arm_mem_l1_cache_maint(op, start, end);
+  __arm_mem_cache_maint(op, start, end);
   c->set_ignore_mem_op_in_progress(false);
-  switch (op)
-    {
-    case Op_cache_l2_clean:
-    case Op_cache_l2_flush:
-    case Op_cache_l2_inv:
-      outer_cache_op(op, Address(start), Address(end));
-      break;
-
-    case Op_cache_dma_coherent:
-      outer_cache_op(Op_cache_l2_flush, Address(start), Address(end));
-      break;
-
-    // We might not want to implement this one but single address outer
-    // cache flushing can be really slow
-    case Op_cache_dma_coherent_full:
-      Outer_cache::flush();
-      break;
-
-    default:
-      break;
-    };
-
 }
 
 // ------------------------------------------------------------------------
@@ -272,17 +265,17 @@ extern "C" void sys_arm_mem_op()
 // ------------------------------------------------------------------------
 IMPLEMENTATION [arm && !outer_cache]:
 
-PRIVATE static inline
+PRIVATE template<typename FUNC> static inline
 void
-Mem_op::outer_cache_op(int, Address, Address)
+Mem_op::outer_cache_op(Address, Address, FUNC &&)
 {}
 
 // ------------------------------------------------------------------------
 IMPLEMENTATION [arm && outer_cache]:
 
-PRIVATE static
+PRIVATE template<typename FUNC> static
 void
-Mem_op::outer_cache_op(int op, Address start, Address end)
+Mem_op::outer_cache_op(Address start, Address end, FUNC &&f)
 {
 
   Virt_addr v = Virt_addr(start);
@@ -308,18 +301,7 @@ Mem_op::outer_cache_op(int op, Address start, Address end)
         {
           Virt_addr vstart = Virt_addr(phys_addr) | offs;
           Virt_addr vend = vstart + sz;
-          switch (op)
-            {
-            case Op_cache_l2_clean:
-              Outer_cache::clean(Virt_addr::val(vstart), Virt_addr::val(vend), false);
-              break;
-            case Op_cache_l2_flush:
-              Outer_cache::flush(Virt_addr::val(vstart), Virt_addr::val(vend), false);
-              break;
-            case Op_cache_l2_inv:
-              Outer_cache::invalidate(Virt_addr::val(vstart), Virt_addr::val(vend), false);
-              break;
-            }
+          f(cxx::int_value<Virt_addr>(vstart), cxx::int_value<Virt_addr>(vend), false);
         }
       v += sz;
     }

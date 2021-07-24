@@ -12,8 +12,7 @@
 #include <l4/sys/compiler.h>
 #include <l4/sys/types.h>
 
-namespace L4 {
-namespace Driver {
+namespace L4drivers {
 
 class Hpet
 {
@@ -152,4 +151,4 @@ private:
   l4_uint64_t _main_counter;
 } __attribute__((packed));
 
-}}
+}

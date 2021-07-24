@@ -31,7 +31,12 @@
 
 #ifndef LIBBSD_STRINGLIST_H
 #define LIBBSD_STRINGLIST_H
+
+#ifdef LIBBSD_OVERLAY
 #include <sys/cdefs.h>
+#else
+#include <bsd/sys/cdefs.h>
+#endif
 #include <sys/types.h>
 
 /*

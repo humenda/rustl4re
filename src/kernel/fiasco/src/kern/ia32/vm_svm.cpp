@@ -12,16 +12,6 @@ private:
   static void resume_vm_svm(Mword phys_vmcb, Trex *regs)
     asm("resume_vm_svm") __attribute__((__regparm__(3)));
 
-  struct Asid_info
-  {
-    Unsigned32 asid;
-    Unsigned32 generation;
-  };
-
-  typedef Per_cpu_array<Asid_info> Asid_array;
-
-  Asid_array _asid;
-
   enum
   {
     EFER_LME = 1 << 8,
@@ -90,11 +80,11 @@ Vm_svm::restore_segments(Context *ctxt, Unsigned16 fs, Unsigned16 gs)
 {
   Cpu::set_fs(fs);
   if (!fs)
-    Cpu::wrmsr(ctxt->fs_base(), MSR_FS_BASE);
+    Cpu::set_fs_base(ctxt->fs_base());
 
   Cpu::set_gs(gs);
   if (!gs)
-    Cpu::wrmsr(ctxt->gs_base(), MSR_GS_BASE);
+    Cpu::set_gs_base(ctxt->gs_base());
 }
 
 PRIVATE inline NEEDS["assert_opt.h", "virt.h"]
@@ -157,27 +147,10 @@ Vm_svm::get_vm_cr3(Vmcb *v)
 //----------------------------------------------------------------------------
 IMPLEMENTATION [svm]:
 
-PRIVATE inline NOEXPORT
-void
-Vm_svm::new_asid(Cpu_number cpu, Svm *svm)
-{
-  Asid_info *a = &_asid[cpu];
-  a->asid = svm->next_asid();
-  if (svm->global_asid_generation() == a->generation)
-    a->generation = svm->global_asid_generation();
-}
-
-PRIVATE inline NOEXPORT
-Vm_svm::Asid_info const *
-Vm_svm::asid(Cpu_number cpu) const
-{ return &_asid[cpu]; }
-
 PUBLIC
 Vm_svm::Vm_svm(Ram_quota *q)
   : Vm(q)
-{
-  memset(&_asid, 0, sizeof(_asid));
-}
+{}
 
 PUBLIC inline
 void *
@@ -382,7 +355,7 @@ Vm_svm::do_resume_vcpu(Context *ctxt, Vcpu_state *vcpu, Vmcb *vmcb_s)
   if(vmcb_s->state_save_area.cr4 & 0x20)
     return -L4_err::EInval;
 #endif
-
+#ifdef CONFIG_LAZY_FPU
   // XXX:
   // This generates a circular dep between thread<->task, this cries for a
   // new abstraction...
@@ -394,6 +367,7 @@ Vm_svm::do_resume_vcpu(Context *ctxt, Vcpu_state *vcpu, Vmcb *vmcb_s)
           return -L4_err::EInval;
         }
     }
+#endif
 
 #if 0  //should never happen
   host_cr0 = Cpu::get_cr0();
@@ -511,19 +485,10 @@ Vm_svm::do_resume_vcpu(Context *ctxt, Vcpu_state *vcpu, Vmcb *vmcb_s)
   kernel_vmcb_s->control_area.msrpm_base_pa = msrpm_base_pa;
 
   Cpu_number ccpu = current_cpu();
-  // XXX: must handle ASIDs correctly ...
-  //      need to flush NP TLBs on unmaps, not on VMM request
-  //      prevent VMM from using ASIDs on its own a VMM cany use
-  //      multiple Vm objects instead
-  if (// vmm requests flush
-      (vmcb_s->control_area.tlb_ctl & 1) == 1
-      // our asid is not valid or expired
-      || !(s.asid_valid(asid(ccpu)->asid, asid(ccpu)->generation)))
-    new_asid(ccpu, &s);
 
-  s.flush_asids_if_needed();
-
-  kernel_vmcb_s->control_area.guest_asid = asid(ccpu)->asid;
+  // always use asid 1, and flush asids on each entry
+  kernel_vmcb_s->control_area.guest_asid = 1;
+  kernel_vmcb_s->control_area.tlb_ctl |= 1;
 
 #if 0
   // 0/1 NP_ENABLE, 31:1 reserved SBZ
@@ -679,7 +644,7 @@ Vm_svm::do_resume_vcpu(Context *ctxt, Vcpu_state *vcpu, Vmcb *vmcb_s)
 
 PUBLIC
 int
-Vm_svm::resume_vcpu(Context *ctxt, Vcpu_state *vcpu, bool user_mode)
+Vm_svm::resume_vcpu(Context *ctxt, Vcpu_state *vcpu, bool user_mode) override
 {
   (void)user_mode;
   assert (user_mode);

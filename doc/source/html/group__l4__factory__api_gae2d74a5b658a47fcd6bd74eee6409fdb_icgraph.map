@@ -1,4 +1,5 @@
 <map id="l4_factory_create_thread_u" name="l4_factory_create_thread_u">
-<area shape="rect" id="node2" href="$classL4_1_1Factory.html#a684b3479c8829c7b3ec1d0ef074afb5c" title="Create a new thread. " alt="" coords="271,5,409,47"/>
-<area shape="rect" id="node3" href="$group__l4__factory__api.html#ga26aad57304812d2a73597b591f1b3630" title="Create a new thread. " alt="" coords="249,71,431,98"/>
+<area shape="rect" id="node1" title="Create a new thread." alt="" coords="237,42,436,69"/>
+<area shape="rect" id="node2" href="$classL4_1_1Factory.html#a0a5a8f18ac13a39f583c37ea42657246" title="Create a new thread." alt="" coords="27,5,167,47"/>
+<area shape="rect" id="node3" href="$group__l4__factory__api.html#ga26aad57304812d2a73597b591f1b3630" title="Create a new thread." alt="" coords="5,71,189,98"/>
 </map>

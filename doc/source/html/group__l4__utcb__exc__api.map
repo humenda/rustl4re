@@ -1,3 +1,4 @@
 <map id="Exception registers" name="Exception registers">
-<area shape="rect" id="node1" href="$group__l4__utcb__mr__api.html" title="Message Registers (MRs)" alt="" coords="5,5,192,32"/>
+<area shape="rect" id="node1" href="$group__l4__utcb__mr__api.html" title=" " alt="" coords="5,5,192,31"/>
+<area shape="rect" id="node2" title="Overly definition of the MRs for exception messages." alt="" coords="240,5,387,31"/>
 </map>

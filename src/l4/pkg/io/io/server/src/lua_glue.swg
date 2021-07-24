@@ -1,5 +1,7 @@
 %module Io
 
+%ignore std::string;
+
 %include <typemaps.i>
 %include <lua_typemap.i>
 %include "std_string.i"
@@ -20,7 +22,6 @@ void dump_devs(Device *d);
 
 %ignore Resource_space;
 %ignore Resource_list;
-%ignore Resource_provider;
 %ignore Root_resource;
 %ignore Vi::Dev_feature;
 %ignore Hw::Dev_feature;

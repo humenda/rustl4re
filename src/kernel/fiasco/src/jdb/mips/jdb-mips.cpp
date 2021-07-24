@@ -53,23 +53,13 @@ Jdb::handle_debug_traps(Cpu_number cpu)
 {
   Jdb_entry_frame *ef = Jdb::entry_frame.cpu(cpu);
   error_buffer.cpu(cpu).clear();
-  const char *str = "<break>";
-  bool from_user = ef->status & Trap_state::S_ksu;
-
-  if (!from_user)
-    {
-      // kernel kdb_ke provides a string pointer in a0
-      auto x = (char const *)ef->r[Entry_frame::R_a0];
-      if ((uintptr_t)x >= Mem_layout::KSEG0
-          && (uintptr_t)x <= Mem_layout::KSEG0e
-          && memchr(x, 0, 100))
-        str = x;
-    }
 
   if (ef->debug_ipi())
     error_buffer.cpu(cpu).printf("IPI ENTRY");
-  else if (ef->debug_trap())
-    error_buffer.cpu(cpu).printf("%s", str);
+  else if (ef->debug_entry_kernel_str())
+    error_buffer.cpu(cpu).printf("%s", ef->text());
+  else if (ef->debug_entry_user_str())
+    error_buffer.cpu(cpu).printf("user: \"%.*s\"", ef->textlen(), ef->text());
   else
     error_buffer.cpu(cpu).printf("ENTRY");
 
@@ -81,14 +71,12 @@ bool
 Jdb::handle_user_request(Cpu_number cpu)
 {
   Jdb_entry_frame *ef = Jdb::entry_frame.cpu(cpu);
-  const char *str = (char const *)ef->r[Entry_frame::R_a0];
-  Space * task = get_task(cpu);
 
   if (ef->debug_ipi())
     return cpu != Cpu_number::boot_cpu();
 
-  if (ef->debug_sequence())
-    return execute_command_ni(task, str);
+  if (ef->debug_entry_kernel_sequence())
+    return execute_command_ni(ef->text(), ef->textlen());
 
   return false;
 }
@@ -113,91 +101,42 @@ Jdb::init()
 
 
 PRIVATE static
-void *
-Jdb::access_mem_task(Address virt, Space * task)
+unsigned char *
+Jdb::access_mem_task(Jdb_address addr, bool write)
 {
-  // align
-  virt &= ~0x03;
+  // no special need for MIPS here all returned mappings are writable
+  (void) write;
 
   Address phys;
-  if (task)
+  if (addr.is_phys())
+    phys = addr.phys();
+  else if (addr.is_kmem())
     {
-      phys = task->virt_to_phys_s0((void *)virt);
+      if (addr.addr() >= Mem_layout::KSEG0 && addr.addr() <= Mem_layout::KSEG0e)
+        return (unsigned char *)addr.virt();
+
+      phys = addr.addr();
+    }
+  else
+    {
+      phys = addr.space()->virt_to_phys_s0(addr.virt());
 
       if (phys == (Address)-1)
         return 0;
     }
-  else
-    {
-      if (virt >= Mem_layout::KSEG0 && virt <= Mem_layout::KSEG0e)
-        return (void*)virt;
-
-      phys = virt;
-    }
 
   // physical memory accessible via unmapped KSEG0
   if (phys <= Mem_layout::KSEG0e - Mem_layout::KSEG0)
-    return (void *)(phys + Mem_layout::KSEG0);
+    return (unsigned char *)(phys + Mem_layout::KSEG0);
 
   // FIXME: temp mapping for the physical memory needed
   return 0;
 }
 
 PUBLIC static
-Space *
-Jdb::translate_task(Address addr, Space * task)
-{
-  return (Kmem::is_kmem_page_fault(addr, 0)) ? 0 : task;
-}
-
-PUBLIC static
 int
-Jdb::peek_task(Address virt, Space * task, void *value, int width)
+Jdb::is_adapter_memory(Jdb_address)
 {
-
-  void const *mem = access_mem_task(virt, task);
-  if (!mem)
-    return -1;
-
-  switch (width)
-    {
-    case 1:
-        {
-          Mword dealign = (virt & 0x3) * 8;
-          *(Mword*)value = (*(Mword*)mem & (0xff << dealign)) >> dealign;
-          break;
-        }
-    case 2:
-        {
-          Mword dealign = ((virt & 0x2) >> 1) * 16;
-          *(Mword*)value = (*(Mword*)mem & (0xffff << dealign)) >> dealign;
-          break;
-        }
-    case 4:
-    case 8:
-      memcpy(value, mem, width);
-      break;
-    }
-
-  return 0;
-}
-
-PUBLIC static
-int
-Jdb::is_adapter_memory(Address, Space *)
-{
-  return 0;
-}
-
-PUBLIC static
-int
-Jdb::poke_task(Address virt, Space * task, void const *val, int width)
-{
-  void *mem = access_mem_task(virt, task);
-  if (!mem)
-    return -1;
-
-  memcpy(mem, val, width);
   return 0;
 }
 
@@ -211,16 +150,17 @@ void
 Jdb::leave_getchar()
 {}
 
-PUBLIC static
+IMPLEMENT_OVERRIDE
 void
 Jdb::write_tsc_s(String_buffer *buf, Signed64 tsc, bool sign)
 {
-  if (sign)
-    buf->printf("%c", (tsc < 0) ? '-' : (tsc == 0) ? ' ' : '+');
-  buf->printf("%lld c", tsc);
+  if (sign && tsc != 0)
+    buf->printf("%+lld c", tsc);
+  else
+    buf->printf("%lld c", tsc);
 }
 
-PUBLIC static
+IMPLEMENT_OVERRIDE
 void
 Jdb::write_tsc(String_buffer *buf, Signed64 tsc, bool sign)
 {

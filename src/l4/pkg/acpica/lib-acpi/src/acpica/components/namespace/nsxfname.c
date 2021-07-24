@@ -9,7 +9,7 @@
  *
  * 1. Copyright Notice
  *
- * Some or all of this work - Copyright (c) 1999 - 2017, Intel Corp.
+ * Some or all of this work - Copyright (c) 1999 - 2019, Intel Corp.
  * All rights reserved.
  *
  * 2. License
@@ -111,6 +111,42 @@
  * United States government or any agency thereof requires an export license,
  * other governmental approval, or letter of assurance, without first obtaining
  * such license, approval or letter.
+ *
+ *****************************************************************************
+ *
+ * Alternatively, you may choose to be licensed under the terms of the
+ * following license:
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions, and the following disclaimer,
+ *    without modification.
+ * 2. Redistributions in binary form must reproduce at minimum a disclaimer
+ *    substantially similar to the "NO WARRANTY" disclaimer below
+ *    ("Disclaimer") and any redistribution must be conditioned upon
+ *    including a substantially similar Disclaimer requirement for further
+ *    binary redistribution.
+ * 3. Neither the names of the above-listed copyright holders nor the names
+ *    of any contributors may be used to endorse or promote products derived
+ *    from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+ * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * Alternatively, you may choose to be licensed under the terms of the
+ * GNU General Public License ("GPL") version 2 as published by the Free
+ * Software Foundation.
  *
  *****************************************************************************/
 
@@ -340,7 +376,7 @@ AcpiNsCopyDeviceId (
  *              namespace node and possibly by running several standard
  *              control methods (Such as in the case of a device.)
  *
- * For Device and Processor objects, run the Device _HID, _UID, _CID, _STA,
+ * For Device and Processor objects, run the Device _HID, _UID, _CID,
  * _CLS, _ADR, _SxW, and _SxD methods.
  *
  * Note: Allocates the return buffer, must be freed by the caller.
@@ -349,8 +385,9 @@ AcpiNsCopyDeviceId (
  * discovery namespace traversal. Therefore, no complex methods can be
  * executed, especially those that access operation regions. Therefore, do
  * not add any additional methods that could cause problems in this area.
- * this was the fate of the _SUB method which was found to cause such
- * problems and was removed (11/2015).
+ * Because of this reason support for the following methods has been removed:
+ * 1) _SUB method was removed (11/2015)
+ * 2) _STA method was removed (02/2018)
  *
  ******************************************************************************/
 
@@ -481,25 +518,12 @@ AcpiGetObjectInfo (
     {
         /*
          * Get extra info for ACPI Device/Processor objects only:
-         * Run the _STA, _ADR and, SxW, and _SxD methods.
+         * Run the _ADR and, SxW, and _SxD methods.
          *
          * Notes: none of these methods are required, so they may or may
          * not be present for this device. The Info->Valid bitfield is used
          * to indicate which methods were found and run successfully.
-         *
-         * For _STA, if the method does not exist, then (as per the ACPI
-         * specification), the returned CurrentStatus flags will indicate
-         * that the device is present/functional/enabled. Otherwise, the
-         * CurrentStatus flags reflect the value returned from _STA.
          */
-
-        /* Execute the Device._STA method */
-
-        Status = AcpiUtExecute_STA (Node, &Info->CurrentStatus);
-        if (ACPI_SUCCESS (Status))
-        {
-            Valid |= ACPI_VALID_STA;
-        }
 
         /* Execute the Device._ADR method */
 
@@ -667,8 +691,8 @@ AcpiInstallMethod (
 
     /* Table must be a DSDT or SSDT */
 
-    if (!ACPI_COMPARE_NAME (Table->Signature, ACPI_SIG_DSDT) &&
-        !ACPI_COMPARE_NAME (Table->Signature, ACPI_SIG_SSDT))
+    if (!ACPI_COMPARE_NAMESEG (Table->Signature, ACPI_SIG_DSDT) &&
+        !ACPI_COMPARE_NAMESEG (Table->Signature, ACPI_SIG_SSDT))
     {
         return (AE_BAD_HEADER);
     }

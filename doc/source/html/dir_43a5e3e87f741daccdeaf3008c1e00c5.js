@@ -9,7 +9,9 @@ var dir_43a5e3e87f741daccdeaf3008c1e00c5 =
     [ "l4int.h", "arm_2l4_2sys_2l4int_8h.html", "arm_2l4_2sys_2l4int_8h" ],
     [ "linkage.h", "arm_2l4_2sys_2linkage_8h.html", "arm_2l4_2sys_2linkage_8h" ],
     [ "mem_op.h", "mem__op_8h.html", "mem__op_8h" ],
+    [ "task.h", "arm_2l4_2sys_2task_8h_source.html", null ],
     [ "thread.h", "arm_2l4_2sys_2thread_8h.html", "arm_2l4_2sys_2thread_8h" ],
     [ "utcb.h", "arm_2l4_2sys_2utcb_8h.html", "arm_2l4_2sys_2utcb_8h" ],
+    [ "vm", "arm_2l4_2sys_2vm_source.html", null ],
     [ "vm.h", "arm_2l4_2sys_2vm_8h.html", null ]
 ];

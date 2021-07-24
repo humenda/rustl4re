@@ -28,13 +28,11 @@ public:
     // address space size is different, do not go below 2GB (0x80000000)
     Host_as_size       = 0xc0000000U,
 
-    Kip_timer_uses_rdtsc = false,
+    Kip_clock_uses_rdtsc = false,
     Pic_prio_modify = true,
   };
 
   static const bool hlt_works_ok		= true;
-
-  static const char char_micro;
 
   enum {
     Is_ux = 1,
@@ -46,7 +44,6 @@ IMPLEMENTATION[ux]:
 #include <feature.h>
 KIP_KERNEL_FEATURE("io_prot");
 
-char const Config::char_micro = '\265';
 const char *const Config::kernel_warn_config_string = 0;
 
 IMPLEMENT FIASCO_INIT

@@ -1,8 +1,10 @@
 <map id="cxx::max" name="cxx::max">
-<area shape="rect" id="node2" href="$classcxx_1_1List__alloc.html#a6add9811cb611b9a1e7ee21c92809131" title="Allocate a memory block of min &lt;= size &lt;=max. " alt="" coords="128,5,305,32"/>
-<area shape="rect" id="node3" href="$classcxx_1_1List__alloc.html#a1fdfc49fafa608f60c191916629b61a4" title="Initializes an empty list allocator. " alt="" coords="353,23,489,65"/>
-<area shape="rect" id="node4" href="$structL4virtio_1_1Svr_1_1Data__buffer.html#a0ae0d4405b3a3ae5aa554b3adece0138" title="Copy contents from this buffer to the destination buffer. " alt="" coords="151,107,282,149"/>
-<area shape="rect" id="node5" href="$classL4_1_1Scheduler.html#af890a68842a65a05293ff844fa11043f" title="Get scheduler information. " alt="" coords="149,173,285,200"/>
-<area shape="rect" id="node6" href="$classL4virtio_1_1Svr_1_1Driver__mem__list__t.html#a8b6a1e1abadf68d73ceb813ac4cbc703" title="Make a fresh list with capacity max. " alt="" coords="135,224,298,280"/>
-<area shape="rect" id="node7" href="$classL4_1_1Type__info_1_1Demand.html#a861457733ac26b5aea5a31ac2387b183" title="get the combined demand of this and rhs " alt="" coords="133,305,300,346"/>
+<area shape="rect" id="node1" title="Get the maximum of a and b." alt="" coords="444,152,527,179"/>
+<area shape="rect" id="node2" href="$classcxx_1_1List__alloc.html#a9028a4d3bf8a79f61b2d6ee16736f51a" title="Allocate a memory block of min &lt;= size &lt;= max." alt="" coords="207,5,396,32"/>
+<area shape="rect" id="node3" href="$structL4virtio_1_1Svr_1_1Data__buffer.html#a0ae0d4405b3a3ae5aa554b3adece0138" title="Copy contents from this buffer to the destination buffer." alt="" coords="232,57,371,98"/>
+<area shape="rect" id="node4" href="$classL4_1_1Scheduler.html#abb665b2f094984fe782c78d2293a79c6" title="Get scheduler information." alt="" coords="230,123,373,149"/>
+<area shape="rect" id="node5" href="$classL4virtio_1_1Svr_1_1Driver__mem__list__t.html#a8b6a1e1abadf68d73ceb813ac4cbc703" title="Make a fresh list with capacity max." alt="" coords="227,174,375,215"/>
+<area shape="rect" id="node7" href="$classL4Re_1_1Util_1_1Dataspace__svr.html#ac4277eb3cc3e5790d7438bc0d3c69a4a" title="A hook that is called as the first operation in each map request." alt="" coords="220,239,383,281"/>
+<area shape="rect" id="node8" href="$classL4_1_1Type__info_1_1Demand.html#af012ede0c0b8f60b8be1846e68d66400" title="get the combined demand of this and rhs" alt="" coords="216,305,387,346"/>
+<area shape="rect" id="node6" href="$classL4virtio_1_1Svr_1_1Device__t.html#ac13ae09cfc41fad98bd25c2d76bfac63" title="Initialize the memory region list to the given maximum." alt="" coords="5,174,159,215"/>
 </map>

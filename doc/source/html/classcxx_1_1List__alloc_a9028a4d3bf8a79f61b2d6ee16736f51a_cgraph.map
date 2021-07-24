@@ -1,0 +1,7 @@
+<map id="cxx::List_alloc::alloc_max" name="cxx::List_alloc::alloc_max">
+<area shape="rect" id="node1" title="Allocate a memory block of min &lt;= size &lt;= max." alt="" coords="5,81,195,108"/>
+<area shape="rect" id="node2" href="$group__l4__memory__api.html#gae876a4c6e0f21b2ecbf17863dc7d11e4" title="Round value up to the next alignment with bits size." alt="" coords="243,5,353,32"/>
+<area shape="rect" id="node3" href="$group__l4__memory__api.html#ga792959ba1e87fecf90018876f32d7bc9" title="Round an address down to the next lower flex page with size bits." alt="" coords="245,56,351,83"/>
+<area shape="rect" id="node4" href="$group__cxx__api.html#ga1d7a566ab5b06016155d693f91a7ee2d" title="Get the maximum of a and b." alt="" coords="257,107,339,133"/>
+<area shape="rect" id="node5" href="$group__cxx__api.html#ga0bd9662898a7499fcd3feefe594a699b" title="Get the minimum of a and b." alt="" coords="259,157,337,184"/>
+</map>

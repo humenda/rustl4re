@@ -25,16 +25,6 @@ IMPLEMENTATION:
 #include "config.h"
 #include "kernel_console.h"
 
-int 
-creat(const char* fname, int)
-{
-  printf("starting to output: %s.uu -- hit Return\n", fname);
-//  Kconsole::console()->getchar();
-  Kconsole::console()->start_exclusive(Console::GZIP);
-
-  return 6; 
-}
-
 void 
 perror(const char *s)
 {
@@ -64,7 +54,7 @@ void *
 sbrk(size_t size)
 {
   void *ret = Kmem_alloc::allocator()
-    ->unaligned_alloc((size+Config::PAGE_SIZE-1) & ~(Config::PAGE_SIZE-1));
+    ->alloc(Bytes((size+Config::PAGE_SIZE-1) & ~(Config::PAGE_SIZE-1)));
   if (ret == 0) 
     ret = (void*)-1;
   else
@@ -77,7 +67,7 @@ void
 sbrk_free(void* buf, size_t size)
 {
   Kmem_alloc::allocator()
-    ->unaligned_free((size+Config::PAGE_SIZE-1)/Config::PAGE_SIZE, buf);
+    ->free(Bytes((size+Config::PAGE_SIZE-1)/Config::PAGE_SIZE), buf);
 }
 
 char *pr_base;

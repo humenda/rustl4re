@@ -1,67 +1,62 @@
+/*	$NetBSD: strtonum.c,v 1.5 2018/01/04 20:57:29 kamil Exp $	*/
 /*-
- * Copyright (c) 2004 Ted Unangst and Todd Miller
+ * Copyright (c) 2014 The NetBSD Foundation, Inc.
  * All rights reserved.
  *
- * Permission to use, copy, modify, and distribute this software for any
- * purpose with or without fee is hereby granted, provided that the above
- * copyright notice and this permission notice appear in all copies.
+ * This code is derived from software contributed to The NetBSD Foundation
+ * by Christos Zoulas.
  *
- * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
- * WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
- * MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
- * ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
- * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
- * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
- * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
  *
- *	$OpenBSD: strtonum.c,v 1.6 2004/08/03 19:38:01 millert Exp $
+ * THIS SOFTWARE IS PROVIDED BY THE NETBSD FOUNDATION, INC. AND CONTRIBUTORS
+ * ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
+ * TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL THE FOUNDATION OR CONTRIBUTORS
+ * BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include <sys/cdefs.h>
 
-#include <errno.h>
-#include <limits.h>
+#include <stdio.h>
 #include <stdlib.h>
-
-#define INVALID 	1
-#define TOOSMALL 	2
-#define TOOLARGE 	3
+#include <errno.h>
+#include <inttypes.h>
 
 long long
-strtonum(const char *numstr, long long minval, long long maxval,
-    const char **errstrp)
+strtonum(const char *nptr, long long minval, long long maxval,
+         const char **errstr)
 {
-	long long ll = 0;
-	char *ep;
-	int error = 0;
-	struct errval {
-		const char *errstr;
-		int err;
-	} ev[4] = {
-		{ NULL,		0 },
-		{ "invalid",	EINVAL },
-		{ "too small",	ERANGE },
-		{ "too large",	ERANGE },
-	};
+	int e;
+	long long rv;
+	const char *resp;
 
-	ev[0].err = errno;
-	errno = 0;
-	if (minval > maxval)
-		error = INVALID;
-	else {
-		ll = strtoll(numstr, &ep, 10);
-		if (errno == EINVAL || numstr == ep || *ep != '\0')
-			error = INVALID;
-		else if ((ll == LLONG_MIN && errno == ERANGE) || ll < minval)
-			error = TOOSMALL;
-		else if ((ll == LLONG_MAX && errno == ERANGE) || ll > maxval)
-			error = TOOLARGE;
+	if (errstr == NULL)
+		errstr = &resp;
+
+	rv = (long long)strtoi(nptr, NULL, 10, minval, maxval, &e);
+
+	if (e == 0) {
+		*errstr = NULL;
+		return rv;
 	}
-	if (errstrp != NULL)
-		*errstrp = ev[error].errstr;
-	errno = ev[error].err;
-	if (error)
-		ll = 0;
 
-	return (ll);
+	if (e == ERANGE)
+		*errstr = (rv == maxval ? "too large" : "too small");
+	else
+		*errstr = "invalid";
+
+	return 0;
 }

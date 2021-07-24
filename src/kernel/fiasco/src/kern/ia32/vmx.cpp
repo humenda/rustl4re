@@ -120,6 +120,7 @@ public:
     PRB2_enable_ept      = 1,
     PRB2_enable_vpid     = 5,
     PRB2_unrestricted    = 7,
+    PRB2_enable_pml      = 17,
     PRB2_enable_xsaves   = 20,
   };
 
@@ -643,6 +644,9 @@ Vmx_info::init()
       // as done for AMDs ASIDs
       procbased_ctls2.enforce(Vmx_info::PRB2_enable_vpid, false);
 
+      // we do not (yet) support Page Modification Logging (PML)
+      procbased_ctls2.enforce(Vmx_info::PRB2_enable_pml, false);
+
       // EPT only in conjunction with unrestricted guest !!!
       if (procbased_ctls2.allowed(Vmx_info::PRB2_enable_ept))
         {
@@ -783,7 +787,7 @@ Vmx::handle_bios_lock()
 
 PUBLIC
 void
-Vmx::pm_on_resume(Cpu_number)
+Vmx::pm_on_resume(Cpu_number) override
 {
   check (handle_bios_lock());
 
@@ -804,7 +808,7 @@ Vmx::pm_on_resume(Cpu_number)
 
 PUBLIC
 void
-Vmx::pm_on_suspend(Cpu_number)
+Vmx::pm_on_suspend(Cpu_number) override
 {
   Mword eflags;
   asm volatile("vmclear %1 \n\t"
@@ -872,7 +876,7 @@ Vmx::Vmx(Cpu_number cpu)
 
   // allocate a 4kb region for kernel vmcs
   // FIXME: MUST NOT PANIC ON CPU HOTPLUG
-  check(_kernel_vmcs = Kmem_alloc::allocator()->alloc(12));
+  check(_kernel_vmcs = Kmem_alloc::allocator()->alloc(Order(12)));
   _kernel_vmcs_pa = Kmem::virt_to_phys(_kernel_vmcs);
   // clean vmcs
   memset(_kernel_vmcs, 0, vmcs_size);
@@ -881,7 +885,7 @@ Vmx::Vmx(Cpu_number cpu)
 
   // allocate a 4kb aligned region for VMXON
   // FIXME: MUST NOT PANIC ON CPU HOTPLUG
-  check(_vmxon = Kmem_alloc::allocator()->alloc(12));
+  check(_vmxon = Kmem_alloc::allocator()->alloc(Order(12)));
 
   _vmxon_base_pa = Kmem::virt_to_phys(_vmxon);
 

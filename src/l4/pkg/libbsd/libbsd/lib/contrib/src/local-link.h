@@ -29,5 +29,19 @@
 
 #define libbsd_link_warning(symbol, msg) \
 	static const char libbsd_emit_link_warning_##symbol[] \
-		__attribute__((used,section(".gnu.warning." #symbol))) = msg;
+		__attribute__((__used__,__section__(".gnu.warning." #symbol))) = msg;
+
+#ifdef __ELF__
+#define libbsd_symver_default(alias, symbol, version) \
+	__asm__(".symver " #symbol "," #alias "@@" #version)
+
+#define libbsd_symver_variant(alias, symbol, version) \
+	__asm__(".symver " #symbol "," #alias "@" #version)
+#else
+#define libbsd_symver_default(alias, symbol, version) \
+	extern __typeof(symbol) alias __attribute__((__alias__(#symbol)))
+
+#define libbsd_symver_variant(alias, symbol, version)
+#endif
+
 #endif

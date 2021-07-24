@@ -9,38 +9,32 @@
 
 #include "cpu_dev.h"
 #include "cpu_dev_subarch.h"
+#include "arm_hyp.h"
 
-extern "C" void vcpu_entry(l4_vcpu_state_t *vcpu);
+#include <l4/sys/ipc.h>
 
 namespace Vmm {
-
-// we enumerate the CPUs as they are listed in the device tree and
-// boot on logical cpu 0
-static unsigned logical_cpu_num = 0;
-
-unsigned
-Cpu_dev::dtid_to_cpuid(l4_umword_t)
-{
-  // ignore topology information and simply return the next logical
-  // cpu number
-  return logical_cpu_num++;
-}
 
 Cpu_dev::Cpu_dev(unsigned idx, unsigned phys_id, Vdev::Dt_node const *node)
 : Generic_cpu_dev(idx, phys_id)
 {
+  // use idx as default affinity, overwritten by device tree
+  _dt_affinity = idx;
+
   if (node)
     {
       int prop_size;
       auto *prop = node->get_prop<fdt32_t>("reg", &prop_size);
       if (prop && prop_size > 0)
         {
-          _dt_affinity = node->get_prop_val(prop, prop_size, true);
-          return;
+          _dt_affinity = node->get_prop_val(prop, prop_size, true)
+            & Mpidr_aff_mask;
         }
-    }
 
-  _dt_affinity = idx;
+      prop = node->get_prop<fdt32_t>("l4vmm,vpidr", &prop_size);
+      if (prop && prop_size > 0)
+        _dt_vpidr = node->get_prop_val(prop, prop_size, true);
+    }
 }
 
 void
@@ -52,7 +46,7 @@ Cpu_dev::reset()
   //
   // initialize hardware related virtualization state
   //
-  init_vgic(*_vcpu);
+  Vmm::Arm::Gic_h::init_vcpu(*_vcpu);
 
   // we set FB, and BSU to inner sharable to tolerate migrations
   l4_umword_t hcr = 0x30023f; // VM, PTW, AMO, IMO, FMO, FB, SWIO, TIDCP, TAC
@@ -74,7 +68,14 @@ Cpu_dev::reset()
   // remove mt/up bit and replace affinity with value from device tree
   l4_vcpu_e_write(*_vcpu, L4_VCPU_E_VMPIDR,
                   (vmpidr & ~(Mpidr_up_sys | Mpidr_mt_sys | Mpidr_aff_mask))
-                  | (_dt_affinity & Mpidr_aff_mask));
+                  | _dt_affinity);
+
+  if (_dt_vpidr)
+    {
+      l4_uint32_t vpidr = l4_vcpu_e_read_32(*_vcpu, L4_VCPU_E_VPIDR);
+      Dbg().printf("Using VPIDR %lx instead of %x\n", _dt_vpidr, vpidr);
+      l4_vcpu_e_write_32(*_vcpu, L4_VCPU_E_VPIDR,  _dt_vpidr);
+    }
 
   arm_subarch_setup(*_vcpu, !(_vcpu->r.flags & Flags_mode_32));
 
@@ -87,8 +88,14 @@ Cpu_dev::reset()
     | L4_VCPU_F_PAGE_FAULTS
     | L4_VCPU_F_EXCEPTIONS;
   _vcpu->entry_ip = (l4_umword_t) &vcpu_entry;
-  // entry_sp is derived from thread local stack pointer
-  asm volatile ("mov %0, sp" : "=r"(_vcpu->entry_sp));
+
+  if (!_vcpu->entry_sp)
+    {
+      // entry_sp is derived from thread local stack pointer
+      asm volatile ("mov %0, sp" : "=r"(_vcpu->entry_sp));
+    }
+  else
+    Dbg().printf("Re-using stack address %lx\n", _vcpu->entry_sp);
 
   Dbg().printf("Starting Cpu%d @ 0x%lx in %dBit mode (handler @ %lx,"
                " stack: %lx, task: %lx, mpidr: %llx (orig: %llx)\n",
@@ -98,9 +105,48 @@ Cpu_dev::reset()
                static_cast<l4_uint64_t>(l4_vcpu_e_read(*_vcpu, L4_VCPU_E_VMPIDR)),
                vmpidr);
 
+  mark_on();
   L4::Cap<L4::Thread> myself;
   myself->vcpu_resume_commit(myself->vcpu_resume_start());
   // XXX Error handling?
+}
+
+/**
+ * Stub function used to invoke Cpu_dev::reset()
+ */
+void
+reset_helper(Cpu_dev *cpu)
+{ cpu->reset(); }
+
+
+bool
+Cpu_dev::restart()
+{
+  assert(_vcpu->entry_sp);
+
+  auto sp = _vcpu->entry_sp - sizeof(this);
+
+  Dbg().printf("Triggering reset using exregs on %lx\n",
+               pthread_l4_cap(_thread));
+
+  *(l4_umword_t *)sp = (l4_umword_t)this;
+  l4_msgtag_t res = thread_cap()->ex_regs((l4_addr_t)reset_helper_trampoline,
+                                          sp, L4_THREAD_EX_REGS_CANCEL);
+
+  // XXX What to do here?
+  if (!l4_error(res))
+    return true;
+
+  Dbg().printf("Error in exregs: %lx\n", l4_error(res));
+  return false;
+}
+
+void
+Cpu_dev::stop()
+{
+  mark_off();
+  for (;;)
+    l4_ipc_sleep(L4_IPC_NEVER);
 }
 
 }

@@ -8,7 +8,7 @@
  *
  * 1. Copyright Notice
  *
- * Some or all of this work - Copyright (c) 1999 - 2017, Intel Corp.
+ * Some or all of this work - Copyright (c) 1999 - 2019, Intel Corp.
  * All rights reserved.
  *
  * 2. License
@@ -110,6 +110,42 @@
  * United States government or any agency thereof requires an export license,
  * other governmental approval, or letter of assurance, without first obtaining
  * such license, approval or letter.
+ *
+ *****************************************************************************
+ *
+ * Alternatively, you may choose to be licensed under the terms of the
+ * following license:
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions, and the following disclaimer,
+ *    without modification.
+ * 2. Redistributions in binary form must reproduce at minimum a disclaimer
+ *    substantially similar to the "NO WARRANTY" disclaimer below
+ *    ("Disclaimer") and any redistribution must be conditioned upon
+ *    including a substantially similar Disclaimer requirement for further
+ *    binary redistribution.
+ * 3. Neither the names of the above-listed copyright holders nor the names
+ *    of any contributors may be used to endorse or promote products derived
+ *    from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+ * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * Alternatively, you may choose to be licensed under the terms of the
+ * GNU General Public License ("GPL") version 2 as published by the Free
+ * Software Foundation.
  *
  *****************************************************************************/
 
@@ -531,21 +567,23 @@
  * the plist contains a set of parens to allow variable-length lists.
  * These macros are used for both the debug and non-debug versions of the code.
  */
-#define ACPI_ERROR_NAMESPACE(s, e)          AcpiUtNamespaceError (AE_INFO, s, e);
+#define ACPI_ERROR_NAMESPACE(s, p, e)       AcpiUtPrefixedNamespaceError (AE_INFO, s, p, e);
 #define ACPI_ERROR_METHOD(s, n, p, e)       AcpiUtMethodError (AE_INFO, s, n, p, e);
 #define ACPI_WARN_PREDEFINED(plist)         AcpiUtPredefinedWarning plist
 #define ACPI_INFO_PREDEFINED(plist)         AcpiUtPredefinedInfo plist
 #define ACPI_BIOS_ERROR_PREDEFINED(plist)   AcpiUtPredefinedBiosError plist
+#define ACPI_ERROR_ONLY(s)                  s
 
 #else
 
 /* No error messages */
 
-#define ACPI_ERROR_NAMESPACE(s, e)
+#define ACPI_ERROR_NAMESPACE(s, p, e)
 #define ACPI_ERROR_METHOD(s, n, p, e)
 #define ACPI_WARN_PREDEFINED(plist)
 #define ACPI_INFO_PREDEFINED(plist)
 #define ACPI_BIOS_ERROR_PREDEFINED(plist)
+#define ACPI_ERROR_ONLY(s)
 
 #endif /* ACPI_NO_ERROR_MESSAGES */
 
@@ -570,5 +608,40 @@
 
 #define ACPI_IS_OCTAL_DIGIT(d)              (((char)(d) >= '0') && ((char)(d) <= '7'))
 
+
+/*
+ * Macros used for the ASL-/ASL+ converter utility
+ */
+#ifdef ACPI_ASL_COMPILER
+
+#define ASL_CV_LABEL_FILENODE(a)         CvLabelFileNode(a);
+#define ASL_CV_CAPTURE_COMMENTS_ONLY(a)   CvCaptureCommentsOnly (a);
+#define ASL_CV_CAPTURE_COMMENTS(a)       CvCaptureComments (a);
+#define ASL_CV_TRANSFER_COMMENTS(a)      CvTransferComments (a);
+#define ASL_CV_CLOSE_PAREN(a,b)          CvCloseParenWriteComment(a,b);
+#define ASL_CV_CLOSE_BRACE(a,b)          CvCloseBraceWriteComment(a,b);
+#define ASL_CV_SWITCH_FILES(a,b)         CvSwitchFiles(a,b);
+#define ASL_CV_CLEAR_OP_COMMENTS(a)       CvClearOpComments(a);
+#define ASL_CV_PRINT_ONE_COMMENT(a,b,c,d) CvPrintOneCommentType (a,b,c,d);
+#define ASL_CV_PRINT_ONE_COMMENT_LIST(a,b) CvPrintOneCommentList (a,b);
+#define ASL_CV_FILE_HAS_SWITCHED(a)       CvFileHasSwitched(a)
+#define ASL_CV_INIT_FILETREE(a,b,c)      CvInitFileTree(a,b,c);
+
+#else
+
+#define ASL_CV_LABEL_FILENODE(a)
+#define ASL_CV_CAPTURE_COMMENTS_ONLY(a)
+#define ASL_CV_CAPTURE_COMMENTS(a)
+#define ASL_CV_TRANSFER_COMMENTS(a)
+#define ASL_CV_CLOSE_PAREN(a,b)          AcpiOsPrintf (")");
+#define ASL_CV_CLOSE_BRACE(a,b)          AcpiOsPrintf ("}");
+#define ASL_CV_SWITCH_FILES(a,b)
+#define ASL_CV_CLEAR_OP_COMMENTS(a)
+#define ASL_CV_PRINT_ONE_COMMENT(a,b,c,d)
+#define ASL_CV_PRINT_ONE_COMMENT_LIST(a,b)
+#define ASL_CV_FILE_HAS_SWITCHED(a)       0
+#define ASL_CV_INIT_FILETREE(a,b,c)
+
+#endif
 
 #endif /* ACMACROS_H */

@@ -1,7 +1,5 @@
 var l4_2sys_2irq_8h =
 [
-    [ "l4_irq_attach", "group__l4__irq__api.html#ga33a90f914ea574aec2d9795288bd1f3e", null ],
-    [ "l4_irq_attach_u", "group__l4__irq__api.html#ga4c223bd014d16a6e114ac22376e1bfa1", null ],
     [ "l4_irq_detach", "group__l4__irq__api.html#ga1d9b0812f3bc01d6d5ff7010df231e56", null ],
     [ "l4_irq_detach_u", "group__l4__irq__api.html#ga52ad27a5a0d6a21bc7449a69a820db71", null ],
     [ "l4_irq_mux_chain", "group__l4__irq__api.html#ga3176fd8767eeabcf521356c6f1b21ac4", null ],

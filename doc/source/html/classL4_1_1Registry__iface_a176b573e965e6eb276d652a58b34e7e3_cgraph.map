@@ -1,0 +1,4 @@
+<map id="L4::Registry_iface::register_obj" name="L4::Registry_iface::register_obj">
+<area shape="rect" id="node1" title="Register o as server&#45;side object for a pre&#45;allocated capability." alt="" coords="5,5,144,47"/>
+<area shape="rect" id="node2" href="$classL4_1_1Registry__iface.html#a5467da542075321062daab1bda1768bb" title="Register an L4::Epiface for an IPC gate available in the applications environment under the name serv..." alt="" coords="192,5,331,47"/>
+</map>

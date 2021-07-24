@@ -1,3 +1,6 @@
+Taken from
 
-git://git.kernel.org/pub/scm/utils/dtc/dtc.git
-ea10f953878feea45ccdae846dbd3382e79e7f7e
+  git://git.kernel.org/pub/scm/utils/dtc/dtc.git
+  72d09e2682a41589b46b8cdd4c393b8ed47ac266
+
+Version 1.6.1 + additional fixes

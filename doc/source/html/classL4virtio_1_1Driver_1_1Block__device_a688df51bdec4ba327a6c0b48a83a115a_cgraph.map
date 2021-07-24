@@ -1,0 +1,35 @@
+<map id="L4virtio::Driver::Block_device::setup_device" name="L4virtio::Driver::Block_device::setup_device">
+<area shape="rect" id="node1" title="Setup a connection to a device and set up shared memory." alt="" coords="5,578,172,619"/>
+<area shape="rect" id="node2" href="$classL4virtio_1_1Virtqueue.html#a5a4db3f2c9356da05cd5b472ebc2f0e6" title="Get the offset of the available ring from the descriptor table." alt="" coords="244,49,387,90"/>
+<area shape="rect" id="node3" href="$namespaceL4Re.html#a64b057254a760643ba67a9ed452fede8" title="Check for valid capability or raise C++ exception." alt="" coords="507,5,615,32"/>
+<area shape="rect" id="node5" href="$namespaceL4Re.html#a3f17984019f06676a7e3eecb41bbb0bb" title="Generate C++ exception on error." alt="" coords="507,173,614,200"/>
+<area shape="rect" id="node6" href="$classL4virtio_1_1Driver_1_1Device.html#aa557ba0e56fbfc194b07440ecc796061" title="Send the virtqueue configuration to the device." alt="" coords="229,610,401,651"/>
+<area shape="rect" id="node8" href="$classL4virtio_1_1Driver_1_1Device.html#af06d27e63124749456ddc8d959231741" title="Finalize handshake with the device." alt="" coords="229,166,401,207"/>
+<area shape="rect" id="node11" href="$classL4virtio_1_1Driver_1_1Device.html#a4f8b3d73188c3b6664755b81b80e441c" title="Contacts the device and starts the initial handshake." alt="" coords="229,326,401,367"/>
+<area shape="rect" id="node18" href="$classL4Re_1_1Env.html#a0e7a55ebbac0dedc9fa6859d32687d35" title="Returns the initial environment for the current task." alt="" coords="502,457,619,484"/>
+<area shape="rect" id="node20" href="$namespaceL4_1_1Ipc.html#a71861fba8b1db3d4fb5768ba65c89d94" title="Make an L4::Ipc::Cap&lt;T&gt; for the given capability with L4_CAP_FPAGE_RW rights." alt="" coords="480,508,641,535"/>
+<area shape="rect" id="node21" href="$classL4virtio_1_1Driver_1_1Virtqueue.html#a8b7ef703e8e55d889419f43dc28dd40e" title="Initialize this virtqueue." alt="" coords="220,675,411,717"/>
+<area shape="rect" id="node26" href="$group__l4__memory__api.html#ga96e3b2d8e69308aecbb11d1d24f61662" title="Round address up to the next page." alt="" coords="257,741,374,768"/>
+<area shape="rect" id="node27" href="$group__l4__memory__api.html#gae876a4c6e0f21b2ecbf17863dc7d11e4" title="Round value up to the next alignment with bits size." alt="" coords="260,792,371,819"/>
+<area shape="rect" id="node28" href="$group__l4util__bitops.html#ga530be11fa91000db4c4539558e115bd2" title="Bit scan reverse." alt="" coords="274,843,357,869"/>
+<area shape="rect" id="node29" href="$classL4virtio_1_1Driver_1_1Device.html#a07dd8cdbc1ce12dca8af6a540463ae23" title="Maximum queue size allowed by the device." alt="" coords="229,894,401,935"/>
+<area shape="rect" id="node30" href="$classL4virtio_1_1Driver_1_1Device.html#a7a5c440b8353e0bd030a552334e7e5a3" title="Share a dataspace with the device." alt="" coords="229,545,401,586"/>
+<area shape="rect" id="node32" href="$classL4virtio_1_1Virtqueue.html#a6f8cdc52ebe6322c3023e05e0e055293" title="Calculate the total size for a virtqueue of the given dimensions." alt="" coords="244,959,387,1001"/>
+<area shape="rect" id="node33" href="$classL4virtio_1_1Virtqueue.html#a80c6d7100b025658ad3c05a844e4391b" title="Get the offset of the used ring from the descriptor table." alt="" coords="244,1025,387,1066"/>
+<area shape="rect" id="node4" href="$namespaceL4Re.html#ae27ac6f274f4ad1267d0d1c0c033c00b" title="Generate C++ exception." alt="" coords="731,64,869,91"/>
+<area shape="rect" id="node7" href="$classL4virtio_1_1Device.html#a47218ed005d79308d0e297d1a731a517" title="Trigger queue configuration of the given queue." alt="" coords="475,610,646,651"/>
+<area shape="rect" id="node9" href="$group__l4virtio__transport.html#gae37bcd45875b27b302320e6b9580191d" title="Check if the given bit in a feature map is set." alt="" coords="485,56,636,83"/>
+<area shape="rect" id="node10" href="$classL4virtio_1_1Device.html#ab2e1044b9a29628c3ed7945b9dfe4cad" title="Write the VIRTIO status register." alt="" coords="485,107,637,149"/>
+<area shape="rect" id="node12" href="$classL4_1_1Icu.html#ada7541da586ea09b925b4d90d7dc357e" title="Bind an interrupt line of an interrupt controller to an interrupt object." alt="" coords="511,224,611,251"/>
+<area shape="rect" id="node16" href="$classL4virtio_1_1Device.html#a47e53efa92534451e46ecd4fef7060da" title="Get the dataspace with the L4virtio configuration page." alt="" coords="473,275,648,317"/>
+<area shape="rect" id="node17" href="$classL4virtio_1_1Device.html#a2c81a536513972d43f95394d88c39147" title="Get the notification interrupt corresponding to the given index." alt="" coords="473,341,648,382"/>
+<area shape="rect" id="node19" href="$group__l4__ipc__err__api.html#ga05c11e3e10b6c2aa941396ac2018899f" title="Return error code of a system call return message tag or the tag label." alt="" coords="525,407,597,433"/>
+<area shape="rect" id="node13" href="$classL4_1_1Cap__base.html#a90ff089ca2442b128c2b2b0e1c22c6d7" title="Return capability selector." alt="" coords="731,173,869,200"/>
+<area shape="rect" id="node14" href="$classL4_1_1Kobject.html#a4f2117ae76762f4084e6a1adb915863c" title="Return capability selector." alt="" coords="738,224,862,251"/>
+<area shape="rect" id="node15" href="$group__l4__icu__api.html#ga29217a67f405c5d860002dd902bf71e4" title="Bind an interrupt line of an interrupt controller to an interrupt object." alt="" coords="745,275,855,301"/>
+<area shape="rect" id="node22" href="$classL4virtio_1_1Driver_1_1Virtqueue.html#a2b806bcf98022b49453a80bdd2944b04" title="Return a reference to a descriptor in the descriptor table." alt="" coords="465,675,656,717"/>
+<area shape="rect" id="node23" href="$classL4virtio_1_1Driver_1_1Virtqueue.html#ac31099e5abf48745f518aed17b1dee54" title="Initialize the descriptor table and the index structures of this queue." alt="" coords="465,793,656,834"/>
+<area shape="rect" id="node24" href="$classL4virtio_1_1Virtqueue.html#af61e3e4e436b93f37f22243a1c0ffe0e" title=" " alt="" coords="711,800,889,827"/>
+<area shape="rect" id="node25" href="$classL4virtio_1_1Virtqueue.html#a109ea5677dd074df1d2c6a06056c7d82" title="Enable this queue." alt="" coords="489,858,632,899"/>
+<area shape="rect" id="node31" href="$classL4virtio_1_1Device.html#a033005cb79e876d02b8ca405ffadca2b" title="Register a shared data space with VIRTIO host." alt="" coords="459,559,663,585"/>
+</map>

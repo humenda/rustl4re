@@ -8,7 +8,7 @@
  *
  * 1. Copyright Notice
  *
- * Some or all of this work - Copyright (c) 1999 - 2017, Intel Corp.
+ * Some or all of this work - Copyright (c) 1999 - 2019, Intel Corp.
  * All rights reserved.
  *
  * 2. License
@@ -111,6 +111,42 @@
  * other governmental approval, or letter of assurance, without first obtaining
  * such license, approval or letter.
  *
+ *****************************************************************************
+ *
+ * Alternatively, you may choose to be licensed under the terms of the
+ * following license:
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions, and the following disclaimer,
+ *    without modification.
+ * 2. Redistributions in binary form must reproduce at minimum a disclaimer
+ *    substantially similar to the "NO WARRANTY" disclaimer below
+ *    ("Disclaimer") and any redistribution must be conditioned upon
+ *    including a substantially similar Disclaimer requirement for further
+ *    binary redistribution.
+ * 3. Neither the names of the above-listed copyright holders nor the names
+ *    of any contributors may be used to endorse or promote products derived
+ *    from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+ * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * Alternatively, you may choose to be licensed under the terms of the
+ * GNU General Public License ("GPL") version 2 as published by the Free
+ * Software Foundation.
+ *
  *****************************************************************************/
 
 #include "acpi.h"
@@ -176,29 +212,30 @@ AcpiNsInitializeObjects (
     ACPI_DEBUG_PRINT ((ACPI_DB_DISPATCH,
         "**** Starting initialization of namespace objects ****\n"));
     ACPI_DEBUG_PRINT_RAW ((ACPI_DB_INIT,
-        "Completing Region/Field/Buffer/Package initialization:\n"));
+        "Final data object initialization: "));
 
-    /* Set all init info to zero */
+    /* Clear the info block */
 
     memset (&Info, 0, sizeof (ACPI_INIT_WALK_INFO));
 
     /* Walk entire namespace from the supplied root */
 
+    /*
+     * TBD: will become ACPI_TYPE_PACKAGE as this type object
+     * is now the only one that supports deferred initialization
+     * (forward references).
+     */
     Status = AcpiWalkNamespace (ACPI_TYPE_ANY, ACPI_ROOT_OBJECT,
-        ACPI_UINT32_MAX, AcpiNsInitOneObject, NULL,
-        &Info, NULL);
+        ACPI_UINT32_MAX, AcpiNsInitOneObject, NULL, &Info, NULL);
     if (ACPI_FAILURE (Status))
     {
         ACPI_EXCEPTION ((AE_INFO, Status, "During WalkNamespace"));
     }
 
     ACPI_DEBUG_PRINT_RAW ((ACPI_DB_INIT,
-        "    Initialized %u/%u Regions %u/%u Fields %u/%u "
-        "Buffers %u/%u Packages (%u nodes)\n",
-        Info.OpRegionInit,  Info.OpRegionCount,
-        Info.FieldInit,     Info.FieldCount,
-        Info.BufferInit,    Info.BufferCount,
-        Info.PackageInit,   Info.PackageCount, Info.ObjectCount));
+        "Namespace contains %u (0x%X) objects\n",
+        Info.ObjectCount,
+        Info.ObjectCount));
 
     ACPI_DEBUG_PRINT ((ACPI_DB_DISPATCH,
         "%u Control Methods found\n%u Op Regions found\n",
@@ -372,6 +409,65 @@ ErrorExit:
 
 /*******************************************************************************
  *
+ * FUNCTION:    AcpiNsInitOnePackage
+ *
+ * PARAMETERS:  ObjHandle       - Node
+ *              Level           - Current nesting level
+ *              Context         - Not used
+ *              ReturnValue     - Not used
+ *
+ * RETURN:      Status
+ *
+ * DESCRIPTION: Callback from AcpiWalkNamespace. Invoked for every package
+ *              within the namespace. Used during dynamic load of an SSDT.
+ *
+ ******************************************************************************/
+
+ACPI_STATUS
+AcpiNsInitOnePackage (
+    ACPI_HANDLE             ObjHandle,
+    UINT32                  Level,
+    void                    *Context,
+    void                    **ReturnValue)
+{
+    ACPI_STATUS             Status;
+    ACPI_OPERAND_OBJECT     *ObjDesc;
+    ACPI_NAMESPACE_NODE     *Node = (ACPI_NAMESPACE_NODE *) ObjHandle;
+
+
+    ObjDesc = AcpiNsGetAttachedObject (Node);
+    if (!ObjDesc)
+    {
+        return (AE_OK);
+    }
+
+    /* Exit if package is already initialized */
+
+    if (ObjDesc->Package.Flags & AOPOBJ_DATA_VALID)
+    {
+        return (AE_OK);
+    }
+
+    Status = AcpiDsGetPackageArguments (ObjDesc);
+    if (ACPI_FAILURE (Status))
+    {
+        return (AE_OK);
+    }
+
+    Status = AcpiUtWalkPackageTree (ObjDesc, NULL, AcpiDsInitPackageElement,
+        NULL);
+    if (ACPI_FAILURE (Status))
+    {
+        return (AE_OK);
+    }
+
+    ObjDesc->Package.Flags |= AOPOBJ_DATA_VALID;
+    return (AE_OK);
+}
+
+
+/*******************************************************************************
+ *
  * FUNCTION:    AcpiNsInitOneObject
  *
  * PARAMETERS:  ObjHandle       - Node
@@ -382,7 +478,7 @@ ErrorExit:
  * RETURN:      Status
  *
  * DESCRIPTION: Callback from AcpiWalkNamespace. Invoked for every object
- *              within the  namespace.
+ *              within the namespace.
  *
  *              Currently, the only objects that require initialization are:
  *              1) Methods
@@ -466,45 +562,35 @@ AcpiNsInitOneObject (
     AcpiExEnterInterpreter ();
 
     /*
-     * Each of these types can contain executable AML code within the
-     * declaration.
+     * Only initialization of Package objects can be deferred, in order
+     * to support forward references.
      */
     switch (Type)
     {
-    case ACPI_TYPE_REGION:
-
-        Info->OpRegionInit++;
-        Status = AcpiDsGetRegionArguments (ObjDesc);
-        break;
-
-    case ACPI_TYPE_BUFFER_FIELD:
-
-        Info->FieldInit++;
-        Status = AcpiDsGetBufferFieldArguments (ObjDesc);
-        break;
-
     case ACPI_TYPE_LOCAL_BANK_FIELD:
+
+        /* TBD: BankFields do not require deferred init, remove this code */
 
         Info->FieldInit++;
         Status = AcpiDsGetBankFieldArguments (ObjDesc);
         break;
 
-    case ACPI_TYPE_BUFFER:
-
-        Info->BufferInit++;
-        Status = AcpiDsGetBufferArguments (ObjDesc);
-        break;
-
     case ACPI_TYPE_PACKAGE:
 
+        /* Complete the initialization/resolution of the package object */
+
         Info->PackageInit++;
-        Status = AcpiDsGetPackageArguments (ObjDesc);
+        Status = AcpiNsInitOnePackage (ObjHandle, Level, NULL, NULL);
         break;
 
     default:
 
-        /* No other types can get here */
+        /* No other types should get here */
 
+        Status = AE_TYPE;
+        ACPI_EXCEPTION ((AE_INFO, Status,
+            "Opcode is not deferred [%4.4s] (%s)",
+            AcpiUtGetNodeName (Node), AcpiUtGetTypeName (Type)));
         break;
     }
 
@@ -565,7 +651,7 @@ AcpiNsFindIniMethods (
 
     /* We are only looking for methods named _INI */
 
-    if (!ACPI_COMPARE_NAME (Node->Name.Ascii, METHOD_NAME__INI))
+    if (!ACPI_COMPARE_NAMESEG (Node->Name.Ascii, METHOD_NAME__INI))
     {
         return (AE_OK);
     }
@@ -742,7 +828,7 @@ AcpiNsInitOneDevice (
      * Note: We know there is an _INI within this subtree, but it may not be
      * under this particular device, it may be lower in the branch.
      */
-    if (!ACPI_COMPARE_NAME (DeviceNode->Name.Ascii, "_SB_") ||
+    if (!ACPI_COMPARE_NAMESEG (DeviceNode->Name.Ascii, "_SB_") ||
         DeviceNode->Parent != AcpiGbl_RootNode)
     {
         ACPI_DEBUG_EXEC (AcpiUtDisplayInitPathname (

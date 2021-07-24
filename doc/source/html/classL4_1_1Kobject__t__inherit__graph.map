@@ -1,68 +1,66 @@
 <map id="L4::Kobject_t&lt; Derived, Base, PROTO, S_DEMAND &gt;" name="L4::Kobject_t&lt; Derived, Base, PROTO, S_DEMAND &gt;">
-<area shape="rect" id="node2" href="$classL4_1_1Kobject__t.html" title="{L4::Kobject_t\&lt; Arm\l_smccc, L4::Kobject,\l PROTO, Type_info::Demand_t\&lt;\&gt; \&gt;\n||# c()\l# __check_protocols__()\l}" alt="" coords="5,211,251,333"/>
-<area shape="rect" id="node3" href="$classL4_1_1Kobject__t.html" title="{L4::Kobject_t\&lt; Namespace,\l L4::Kobject, L4RE_PROTO\l_NAMESPACE, L4::Type_info\l::Demand_t\&lt; 1 \&gt; \&gt;\n||# c()\l# __check_protocols__()\l}" alt="" coords="279,204,487,340"/>
-<area shape="rect" id="node5" href="$classL4_1_1Kobject__t.html" title="{L4::Kobject_t\&lt; Event,\l L4::Icu, L4RE_PROTO\l_EVENT \&gt;\n||# c()\l# __check_protocols__()\l}" alt="" coords="1115,939,1293,1061"/>
-<area shape="rect" id="node9" href="$classL4_1_1Kobject__t.html" title="{L4::Kobject_t\&lt; Thread,\l Kobject, L4_PROTO_THREAD,\l Type_info::Demand_t\&lt; 1 \&gt; \&gt;\n||# c()\l# __check_protocols__()\l}" alt="" coords="1495,211,1716,333"/>
-<area shape="rect" id="node11" href="$classL4_1_1Kobject__t.html" title="{L4::Kobject_t\&lt; Debug\l_obj, L4::Kobject, L4RE\l_PROTO_DEBUG \&gt;\n||# c()\l# __check_protocols__()\l}" alt="" coords="1740,211,1919,333"/>
-<area shape="rect" id="node13" href="$classL4_1_1Kobject__t.html" title="{L4::Kobject_t\&lt; Rcv\l_endpoint, Kobject,\l L4_PROTO_KOBJECT, Type\l_info::Demand_t\&lt; 1 \&gt; \&gt;\n||# c()\l# __check_protocols__()\l}" alt="" coords="1943,204,2153,340"/>
-<area shape="rect" id="node17" href="$classL4_1_1Kobject__t.html" title="{L4::Kobject_t\&lt; Ipc\l_gate, Rcv_endpoint,\l L4_PROTO_KOBJECT, Type\l_info::Demand_t\&lt; 1 \&gt; \&gt;\n||# c()\l# __check_protocols__()\l}" alt="" coords="1805,932,2016,1068"/>
-<area shape="rect" id="node19" href="$classL4_1_1Kobject__t.html" title="{L4::Kobject_t\&lt; Mem\l_alloc, L4::Factory,\l L4::PROTO_EMPTY \&gt;\n||# c()\l# __check_protocols__()\l}" alt="" coords="2733,939,2912,1061"/>
-<area shape="rect" id="node21" href="$classL4_1_1Kobject__t.html" title="{L4::Kobject_t\&lt; Dma\l_space, L4::Kobject,\l PROTO, L4::Type_info\l::Demand_t\&lt; 1 \&gt; \&gt;\n||# c()\l# __check_protocols__()\l}" alt="" coords="2865,204,3044,340"/>
-<area shape="rect" id="node22" href="$classL4_1_1Kobject__t.html" title="{L4::Kobject_t\&lt; Log,\l L4::Vcon, L4::PROTO\l_EMPTY \&gt;\n||# c()\l# __check_protocols__()\l}" alt="" coords="1440,1694,1619,1815"/>
-<area shape="rect" id="node24" href="$classL4_1_1Kobject__t.html" title="{L4::Kobject_t\&lt; Rm,\l L4::Pager, L4RE_PROTO\l_RM, L4::Type_info::Demand\l_t\&lt; 1 \&gt; \&gt;\n||# c()\l# __check_protocols__()\l}" alt="" coords="3025,932,3228,1068"/>
-<area shape="rect" id="node26" href="$classL4_1_1Kobject__t.html" title="{L4::Kobject_t\&lt; Factory,\l Kobject, L4_PROTO_FACTORY \&gt;\n||# c()\l# __check_protocols__()\l}" alt="" coords="2602,219,2841,325"/>
-<area shape="rect" id="node28" href="$classL4_1_1Kobject__t.html" title="{L4::Kobject_t\&lt; Irq\l_mux, Triggerable, L4\l_PROTO_IRQ_MUX \&gt;\n||# c()\l# __check_protocols__()\l}" alt="" coords="2275,939,2453,1061"/>
-<area shape="rect" id="node30" href="$classL4_1_1Kobject__t.html" title="{L4::Kobject_t\&lt; Goos,\l L4::Kobject, L4RE_PROTO\l_GOOS \&gt;\n||# c()\l# __check_protocols__()\l}" alt="" coords="3353,211,3548,333"/>
-<area shape="rect" id="node32" href="$classL4_1_1Kobject__t.html" title="{L4::Kobject_t\&lt; Semaphore,\l Triggerable, L4_PROTO\l_SEMAPHORE \&gt;\n||# c()\l# __check_protocols__()\l}" alt="" coords="2478,939,2669,1061"/>
-<area shape="rect" id="node34" href="$classL4_1_1Kobject__t.html" title="{L4::Kobject_t\&lt; Inhibitor,\l L4::Kobject, L4RE_PROTO\l_INHIBITOR \&gt;\n||# c()\l# __check_protocols__()\l}" alt="" coords="749,371,944,493"/>
-<area shape="rect" id="node36" href="$classL4_1_1Kobject__t.html" title="{L4::Kobject_t\&lt; Dataspace,\l L4::Kobject, L4RE_PROTO\l_DATASPACE, L4::Type_info\l::Demand_t\&lt; 1 \&gt; \&gt;\n||# c()\l# __check_protocols__()\l}" alt="" coords="523,364,728,500"/>
-<area shape="rect" id="node38" href="$classL4_1_1Kobject__t.html" title="{L4::Kobject_t\&lt; Scheduler,\l Icu, L4_PROTO_SCHEDULER,\l Type_info::Demand_t\&lt; 1 \&gt; \&gt;\n||# c()\l# __check_protocols__()\l}" alt="" coords="869,939,1091,1061"/>
-<area shape="rect" id="node40" href="$classL4_1_1Kobject__t.html" title="{L4::Kobject_t\&lt; Device,\l L4::Kobject, L4VIRTIO\l_PROTOCOL, L4::Type_info\l::Demand_t\&lt; 1 \&gt; \&gt;\n||# c()\l# __check_protocols__()\l}" alt="" coords="3573,204,3774,340"/>
-<area shape="rect" id="node41" href="$classL4_1_1Kobject__t.html" title="{L4::Kobject_t\&lt; Pager,\l Io_pager, L4_PROTO_PAGE\l_FAULT \&gt;\n||# c()\l# __check_protocols__()\l}" alt="" coords="3119,211,3329,333"/>
-<area shape="rect" id="node43" href="$classL4_1_1Kobject__t.html" title="{L4::Kobject_t\&lt; Platform\l_control, Kobject, L4\l_PROTO_PLATFORM_CTL \&gt;\n||# c()\l# __check_protocols__()\l}" alt="" coords="3799,211,4009,333"/>
-<area shape="rect" id="node45" href="$classL4_1_1Kobject__t.html" title="{L4::Kobject_t\&lt; Io_pager,\l L4::Kobject, PROTO, Type\l_info::Demand_t\&lt;\&gt; \&gt;\n||# c()\l# __check_protocols__()\l}" alt="" coords="4034,211,4225,333"/>
-<area shape="rect" id="node46" href="$classL4_1_1Kobject__t.html" title="{L4::Kobject_t\&lt; Vcon,\l Icu, L4_PROTO_LOG \&gt;\n||# c()\l# __check_protocols__()\l}" alt="" coords="1317,947,1496,1053"/>
-<area shape="rect" id="node48" href="$classL4_1_1Kobject__t.html" title="{L4::Kobject_t\&lt; Irq\l_eoi, L4::Kobject, PROTO,\l Type_info::Demand_t\&lt;\&gt; \&gt;\n||# c()\l# __check_protocols__()\l}" alt="" coords="4249,211,4437,333"/>
-<area shape="rect" id="node49" href="$classL4_1_1Kobject__t.html" title="{L4::Kobject_t\&lt; Meta,\l Kobject, L4_PROTO_META \&gt;\n||# c()\l# __check_protocols__()\l}" alt="" coords="4461,219,4673,325"/>
-<area shape="rect" id="node51" href="$classL4_1_1Kobject__t.html" title="{L4::Kobject_t\&lt; Icu,\l Irq_eoi, L4_PROTO_IRQ,\l Type_info::Demand_t\&lt; 1 \&gt; \&gt;\n||# c()\l# __check_protocols__()\l}" alt="" coords="1026,211,1230,333"/>
-<area shape="rect" id="node53" href="$classL4_1_1Kobject__t.html" title="{L4::Kobject_t\&lt; Vm,\l Task, L4_PROTO_VM \&gt;\n||# c()\l# __check_protocols__()\l}" alt="" coords="4636,947,4815,1053"/>
-<area shape="rect" id="node55" href="$classL4_1_1Kobject__t.html" title="{L4::Kobject_t\&lt; Triggerable,\l Irq_eoi, L4_PROTO_IRQ \&gt;\n||# c()\l# __check_protocols__()\l}" alt="" coords="2229,219,2425,325"/>
-<area shape="rect" id="node57" href="$classL4_1_1Kobject__t.html" title="{L4::Kobject_t\&lt; Debugger,\l Kobject, L4_PROTO_DEBUGGER \&gt;\n||# c()\l# __check_protocols__()\l}" alt="" coords="4975,219,5227,325"/>
-<area shape="rect" id="node59" href="$classL4_1_1Kobject__t.html" title="{L4::Kobject_t\&lt; Exception,\l L4::Kobject, PROTO, Type\l_info::Demand_t\&lt;\&gt; \&gt;\n||# c()\l# __check_protocols__()\l}" alt="" coords="5251,211,5442,333"/>
-<area shape="rect" id="node60" href="$classL4_1_1Kobject__t.html" title="{L4::Kobject_t\&lt; Derived,\l L4::Kobject, PROTO, S\l_DEMAND \&gt;\n||# c()\l# __check_protocols__()\l}" alt="" coords="5467,211,5645,333"/>
-<area shape="rect" id="node61" href="$classL4_1_1Kobject__t.html" title="{L4::Kobject_t\&lt; Task,\l Kobject, L4_PROTO_TASK,\l Type_info::Demand_t\&lt; 2 \&gt; \&gt;\n||# c()\l# __check_protocols__()\l}" alt="" coords="4747,211,4951,333"/>
-<area shape="rect" id="node63" href="$classL4_1_1Kobject__t.html" title="{L4::Kobject_t\&lt; Parent,\l L4::Kobject, L4RE_PROTO\l_PARENT \&gt;\n||# c()\l# __check_protocols__()\l}" alt="" coords="5669,211,5864,333"/>
-<area shape="rect" id="node65" href="$classL4_1_1Kobject__t.html" title="{L4::Kobject_t\&lt; Cmd\l_control, L4::Kobject,\l L4::PROTO_ANY, Type_info\l::Demand_t\&lt;\&gt; \&gt;\n||# c()\l# __check_protocols__()\l}" alt="" coords="5889,204,6093,340"/>
-<area shape="rect" id="node66" href="$classL4_1_1Kobject__t.html" title="{L4::Kobject_t\&lt; Mmio\l_space, L4::Kobject,\l L4RE_PROTO_MMIO_SPACE \&gt;\n||# c()\l# __check_protocols__()\l}" alt="" coords="6117,211,6349,333"/>
-<area shape="rect" id="node4" href="$classL4Re_1_1Namespace.html" title="Name&#45;space interface. " alt="" coords="314,583,451,704"/>
-<area shape="rect" id="node6" href="$classL4Re_1_1Event.html" title="Event class. " alt="" coords="1073,1413,1271,1564"/>
-<area shape="rect" id="node7" href="$structL4_1_1Kobject__3t.html" title="{L4::Kobject_3t\&lt; Vbus,\l L4Re::Dataspace, L4Re\l::Inhibitor, L4Re::Event \&gt;\n||+ operator Kobject const &amp;()\l+ dec_refcnt()\l# cap()\l# c()\l# __check_protocols__()\l}" alt="" coords="731,1672,933,1837"/>
-<area shape="rect" id="node8" href="$classL4vbus_1_1Vbus.html" title="The virtual bus (Vbus) interface. " alt="" coords="745,1887,919,2023"/>
-<area shape="rect" id="node10" href="$classL4_1_1Thread.html" title="C++ L4 kernel thread interface. " alt="" coords="1598,531,1778,755"/>
-<area shape="rect" id="node12" href="$classL4Re_1_1Debug__obj.html" title="Debug interface. " alt="" coords="1803,605,1931,682"/>
-<area shape="rect" id="node14" href="$classL4_1_1Rcv__endpoint.html" title="Interface for kernel objects that allow to receive IPC from them. " alt="" coords="1955,605,2085,682"/>
-<area shape="rect" id="node15" href="$classL4_1_1Kobject__2t.html" title="{L4::Kobject_2t\&lt; Irq,\l Triggerable, Rcv_endpoint,\l L4_PROTO_IRQ_SENDER \&gt;\n||+ operator Kobject const &amp;()\l+ dec_refcnt()\l# cap()\l# c()\l# __check_protocols__()\l}" alt="" coords="2040,917,2251,1083"/>
-<area shape="rect" id="node16" href="$classL4_1_1Irq.html" title="C++ Irq interface. " alt="" coords="2099,1421,2192,1557"/>
-<area shape="rect" id="node18" href="$classL4_1_1Ipc__gate.html" title="The C++ IPC gate interface. " alt="" coords="1859,1450,1962,1527"/>
-<area shape="rect" id="node20" href="$classL4Re_1_1Mem__alloc.html" title="Memory allocation interface. " alt="" coords="2757,1443,2888,1535"/>
-<area shape="rect" id="node23" href="$classL4Re_1_1Log.html" title="Log interface class. " alt="" coords="1486,1909,1573,2001"/>
-<area shape="rect" id="node25" href="$classL4Re_1_1Rm.html" title="Region map. " alt="" coords="3061,1355,3192,1623"/>
-<area shape="rect" id="node27" href="$classL4_1_1Factory.html" title="C++ Factory interface to create kernel objects. " alt="" coords="2865,553,3001,733"/>
-<area shape="rect" id="node29" href="$structL4_1_1Irq__mux.html" title="IRQ multiplexer for shared IRQs. " alt="" coords="2317,1450,2411,1527"/>
-<area shape="rect" id="node31" href="$classL4Re_1_1Video_1_1Goos.html" title="A goos. " alt="" coords="3376,524,3525,763"/>
-<area shape="rect" id="node33" href="$structL4_1_1Semaphore.html" title="Kernel&#45;provided semaphore object. " alt="" coords="2515,1443,2632,1535"/>
-<area shape="rect" id="node35" href="$classL4Re_1_1Inhibitor.html" title="Set of inhibitor locks, which inhibit specific actions when held. " alt="" coords="767,787,903,893"/>
-<area shape="rect" id="node37" href="$classL4Re_1_1Dataspace.html" title="Interface for memory&#45;like objects. " alt="" coords="621,1107,752,1331"/>
-<area shape="rect" id="node39" href="$classL4_1_1Scheduler.html" title="C++ interface of the Scheduler kernel object. " alt="" coords="923,1428,1037,1549"/>
-<area shape="rect" id="node42" href="$classL4_1_1Pager.html" title="Pager interface including the Io_pager interface. " alt="" coords="3174,605,3285,682"/>
-<area shape="rect" id="node44" href="$classL4_1_1Platform__control.html" title="L4 C++ interface for controlling platform&#45;wide properties. " alt="" coords="3825,583,3983,704"/>
-<area shape="rect" id="node47" href="$classL4_1_1Vcon.html" title="C++ L4 Vcon interface. " alt="" coords="1366,1413,1511,1564"/>
-<area shape="rect" id="node50" href="$classL4_1_1Meta.html" title="Meta interface that shall be implemented by each L4Re object and gives access to the dynamic type inf..." alt="" coords="4496,590,4637,697"/>
-<area shape="rect" id="node52" href="$classL4_1_1Icu.html" title="C++ Icu interface. " alt="" coords="1091,561,1197,726"/>
-<area shape="rect" id="node54" href="$classL4_1_1Vm.html" title="Virtual machine. " alt="" coords="4693,1450,4757,1527"/>
-<area shape="rect" id="node56" href="$structL4_1_1Triggerable.html" title="Interface that allows an object to be triggered by some source. " alt="" coords="2222,605,2338,682"/>
-<area shape="rect" id="node58" href="$classL4_1_1Debugger.html" title="C++ debugger interface. " alt="" coords="5025,561,5178,726"/>
-<area shape="rect" id="node62" href="$classL4_1_1Task.html" title="C++ interface of the Task kernel object. " alt="" coords="4803,546,4939,741"/>
-<area shape="rect" id="node64" href="$classL4Re_1_1Parent.html" title="Parent interface. " alt="" coords="5715,605,5819,682"/>
-<area shape="rect" id="node67" href="$structL4Re_1_1Mmio__space.html" title="Interface for memory&#45;like address space accessible via IPC. " alt="" coords="6162,597,6305,689"/>
+<area shape="rect" id="node1" title="Helper class to create an L4Re interface class that is derived from a single base class." alt="" coords="2300,5,2508,112"/>
+<area shape="rect" id="node2" href="$classL4_1_1Kobject__t.html" title=" " alt="" coords="175,869,355,976"/>
+<area shape="rect" id="node4" href="$classL4_1_1Kobject__t.html" title=" " alt="" coords="1325,204,1528,340"/>
+<area shape="rect" id="node6" href="$classL4_1_1Kobject__t.html" title=" " alt="" coords="883,862,1063,983"/>
+<area shape="rect" id="node10" href="$classL4_1_1Kobject__t.html" title=" " alt="" coords="1553,211,1733,333"/>
+<area shape="rect" id="node12" href="$classL4_1_1Kobject__t.html" title=" " alt="" coords="1757,211,1973,333"/>
+<area shape="rect" id="node14" href="$classL4_1_1Kobject__t.html" title=" " alt="" coords="2269,204,2464,340"/>
+<area shape="rect" id="node18" href="$classL4_1_1Kobject__t.html" title=" " alt="" coords="2527,855,2721,991"/>
+<area shape="rect" id="node20" href="$classL4_1_1Kobject__t.html" title=" " alt="" coords="2753,862,2933,983"/>
+<area shape="rect" id="node22" href="$classL4_1_1Kobject__t.html" title=" " alt="" coords="1238,1558,1418,1679"/>
+<area shape="rect" id="node24" href="$classL4_1_1Kobject__t.html" title=" " alt="" coords="2994,855,3201,991"/>
+<area shape="rect" id="node26" href="$classL4_1_1Kobject__t.html" title=" " alt="" coords="379,862,618,983"/>
+<area shape="rect" id="node28" href="$classL4_1_1Kobject__t.html" title=" " alt="" coords="3165,211,3355,333"/>
+<area shape="rect" id="node30" href="$classL4_1_1Kobject__t.html" title=" " alt="" coords="3379,211,3618,333"/>
+<area shape="rect" id="node31" href="$classL4_1_1Kobject__t.html" title=" " alt="" coords="1869,862,2049,983"/>
+<area shape="rect" id="node33" href="$classL4_1_1Kobject__t.html" title=" " alt="" coords="2589,219,2819,325"/>
+<area shape="rect" id="node35" href="$classL4_1_1Kobject__t.html" title=" " alt="" coords="1011,211,1200,333"/>
+<area shape="rect" id="node37" href="$classL4_1_1Kobject__t.html" title=" " alt="" coords="5,204,203,340"/>
+<area shape="rect" id="node39" href="$classL4_1_1Kobject__t.html" title=" " alt="" coords="2303,862,2502,983"/>
+<area shape="rect" id="node41" href="$classL4_1_1Kobject__t.html" title=" " alt="" coords="643,862,859,983"/>
+<area shape="rect" id="node43" href="$classL4_1_1Kobject__t.html" title=" " alt="" coords="3642,211,3841,333"/>
+<area shape="rect" id="node45" href="$classL4_1_1Kobject__t.html" title=" " alt="" coords="2893,211,3091,333"/>
+<area shape="rect" id="node47" href="$classL4_1_1Kobject__t.html" title=" " alt="" coords="4019,869,4199,976"/>
+<area shape="rect" id="node49" href="$classL4_1_1Kobject__t.html" title=" " alt="" coords="1139,869,1319,976"/>
+<area shape="rect" id="node51" href="$classL4_1_1Kobject__t.html" title=" " alt="" coords="4157,219,4363,325"/>
+<area shape="rect" id="node53" href="$classL4_1_1Kobject__t.html" title=" " alt="" coords="720,211,936,333"/>
+<area shape="rect" id="node55" href="$classL4_1_1Kobject__t.html" title=" " alt="" coords="2049,219,2245,325"/>
+<area shape="rect" id="node57" href="$classL4_1_1Kobject__t.html" title=" " alt="" coords="4388,219,4633,325"/>
+<area shape="rect" id="node59" href="$classL4_1_1Kobject__t.html" title=" " alt="" coords="4657,211,4847,333"/>
+<area shape="rect" id="node61" href="$classL4_1_1Kobject__t.html" title=" " alt="" coords="3865,211,4081,333"/>
+<area shape="rect" id="node63" href="$classL4_1_1Kobject__t.html" title=" " alt="" coords="4871,211,5089,333"/>
+<area shape="rect" id="node3" href="$structL4Re_1_1Random.html" title="Low&#45;bandwidth interface for random number generators." alt="" coords="203,1321,328,1399"/>
+<area shape="rect" id="node5" href="$classL4Re_1_1Namespace.html" title="Name&#45;space interface." alt="" coords="1404,505,1543,627"/>
+<area shape="rect" id="node7" href="$classL4Re_1_1Event.html" title="Event class." alt="" coords="859,1285,1064,1435"/>
+<area shape="rect" id="node8" href="$structL4_1_1Kobject__3t.html" title=" " alt="" coords="858,1536,1065,1701"/>
+<area shape="rect" id="node9" href="$classL4vbus_1_1Vbus.html" title="The virtual bus (Vbus) interface." alt="" coords="871,1751,1052,1916"/>
+<area shape="rect" id="node11" href="$classL4Re_1_1Debug__obj.html" title="Debug interface." alt="" coords="1577,527,1708,605"/>
+<area shape="rect" id="node13" href="$classL4_1_1Thread.html" title="C++ L4 kernel thread interface." alt="" coords="1770,454,1961,678"/>
+<area shape="rect" id="node15" href="$classL4_1_1Rcv__endpoint.html" title="Interface for kernel objects that allow to receive IPC from them." alt="" coords="2239,527,2372,605"/>
+<area shape="rect" id="node16" href="$classL4_1_1Kobject__2t.html" title=" " alt="" coords="2073,840,2279,1005"/>
+<area shape="rect" id="node17" href="$classL4_1_1Irq.html" title="C++ Irq interface." alt="" coords="2127,1299,2225,1421"/>
+<area shape="rect" id="node19" href="$classL4_1_1Ipc__gate.html" title="The C++ IPC gate interface." alt="" coords="2571,1321,2677,1399"/>
+<area shape="rect" id="node21" href="$classL4Re_1_1Mem__alloc.html" title="Memory allocation interface." alt="" coords="2776,1314,2909,1406"/>
+<area shape="rect" id="node23" href="$classL4Re_1_1Log.html" title="Log interface class." alt="" coords="1285,1787,1371,1879"/>
+<area shape="rect" id="node25" href="$classL4Re_1_1Rm.html" title="Region map." alt="" coords="3031,1233,3163,1487"/>
+<area shape="rect" id="node27" href="$classL4virtio_1_1Device.html" title="IPC interface for virtio over L4 IPC." alt="" coords="419,1277,579,1443"/>
+<area shape="rect" id="node29" href="$classL4Re_1_1Video_1_1Goos.html" title="A goos." alt="" coords="3243,447,3399,685"/>
+<area shape="rect" id="node32" href="$structL4_1_1Irq__mux.html" title="IRQ multiplexer for shared IRQs." alt="" coords="1909,1321,2008,1399"/>
+<area shape="rect" id="node34" href="$classL4_1_1Factory.html" title="C++ Factory interface." alt="" coords="2677,476,2819,656"/>
+<area shape="rect" id="node36" href="$classL4Re_1_1Inhibitor.html" title="Set of inhibitor locks, which inhibit specific actions when held." alt="" coords="1030,709,1173,816"/>
+<area shape="rect" id="node38" href="$classL4Re_1_1Dataspace.html" title="Interface for memory&#45;like objects." alt="" coords="80,1029,211,1209"/>
+<area shape="rect" id="node40" href="$structL4_1_1Semaphore.html" title="Kernel&#45;provided semaphore object." alt="" coords="2343,1314,2462,1406"/>
+<area shape="rect" id="node42" href="$classL4_1_1Scheduler.html" title="C++ interface of the Scheduler kernel object." alt="" coords="692,1299,809,1421"/>
+<area shape="rect" id="node44" href="$classL4_1_1Platform__control.html" title="L4 C++ interface for controlling platform&#45;wide properties." alt="" coords="3659,505,3824,627"/>
+<area shape="rect" id="node46" href="$classL4_1_1Pager.html" title="Pager interface including the Io_pager interface." alt="" coords="2974,527,3090,605"/>
+<area shape="rect" id="node48" href="$classL4_1_1Vm.html" title="Virtual machine host address space." alt="" coords="4051,1307,4168,1413"/>
+<area shape="rect" id="node50" href="$classL4_1_1Vcon.html" title="C++ L4 Vcon interface." alt="" coords="1173,1285,1323,1435"/>
+<area shape="rect" id="node52" href="$classL4_1_1Meta.html" title="Meta interface that shall be implemented by each L4Re object and gives access to the dynamic type inf..." alt="" coords="4262,513,4410,619"/>
+<area shape="rect" id="node54" href="$classL4_1_1Icu.html" title="C++ Icu interface." alt="" coords="777,483,887,649"/>
+<area shape="rect" id="node56" href="$structL4_1_1Triggerable.html" title="Interface that allows an object to be triggered by some source." alt="" coords="2097,527,2215,605"/>
+<area shape="rect" id="node58" href="$classL4_1_1Debugger.html" title="C++ kernel debugger API." alt="" coords="4434,483,4593,649"/>
+<area shape="rect" id="node60" href="$classL4Re_1_1Parent.html" title="Parent interface." alt="" coords="4701,527,4803,605"/>
+<area shape="rect" id="node62" href="$classL4_1_1Task.html" title="C++ interface of the Task kernel object." alt="" coords="3934,476,4069,656"/>
+<area shape="rect" id="node64" href="$structL4Re_1_1Mmio__space.html" title="Interface for memory&#45;like address space accessible via IPC." alt="" coords="4908,520,5052,612"/>
 </map>

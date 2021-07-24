@@ -12,7 +12,8 @@ void __main(unsigned long, unsigned long, unsigned long p3)
   Platform_base::iterate_platforms();
 
   printf("PPC platform initialized\n");
-  startup(_mbi_cmdline);
+  init_modules_infos();
+  startup(mod_info_mbi_cmdline(mod_header));
   while(1)
     ;
 }

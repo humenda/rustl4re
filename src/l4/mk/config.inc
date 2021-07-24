@@ -47,7 +47,6 @@ kconfig_call = [ -d $@ ] || install -d $(OBJ_BASE)/include/l4; \
 	       KCONFIG_CONFIG=.kconfig \
 	       KCONFIG_AUTOCONFIG=.kconfig.auto \
 	       KCONFIG_TRISTATE=.kconfig.tristate \
-	       KERNELVERSION=SVN \
 	       l4re_srcdir=$(L4DIR_ABS)
 
 

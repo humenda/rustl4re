@@ -8,7 +8,8 @@ void __main()
   ctor_init();
   Platform_base::iterate_platforms();
 
-  startup(_mbi_cmdline);
+  init_modules_infos();
+  startup(mod_info_mbi_cmdline(mod_header));
   while(1)
     ;
 }

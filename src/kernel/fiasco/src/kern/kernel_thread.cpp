@@ -45,6 +45,12 @@ IMPLEMENTATION:
 #include "watchdog.h"
 
 
+/**
+ * unit test interface
+ */
+void
+init_unittest() __attribute__((weak));
+
 PUBLIC explicit
 Kernel_thread::Kernel_thread(Ram_quota *q)
 : Thread_object(q, Thread::Kernel)
@@ -89,10 +95,13 @@ Kernel_thread::bootstrap()
   Per_cpu_data::run_late_ctors(Cpu::invalid());
   bootstrap_arch();
 
+  // Needs to be done before the timer is enabled. Otherwise after returning
+  // from printf() there could be a burst of timer interrupts distorting the
+  // timer loop calibration. The measurement intervals would be far too short.
+  printf("Calibrating timer loop... ");
   Timer_tick::enable(current_cpu());
   Proc::sti();
   Watchdog::enable();
-  printf("Calibrating timer loop... ");
   // Init delay loop, needs working timer interrupt
   Delay::init();
   printf("done.\n");
@@ -117,7 +126,10 @@ Kernel_thread::run()
   Rcu::leave_idle(home_cpu());
   // init_workload cannot be an initcall, because it fires up the userland
   // applications which then have access to initcall frames as per kinfo page.
-  init_workload();
+  if (init_unittest)
+    init_unittest();
+  else
+    init_workload();
 
   for (;;)
     idle_op();
@@ -159,14 +171,14 @@ PUBLIC
 void
 Kernel_thread::idle_op()
 {
-  // this version must run with disabled IRQs and a wakup must continue directly
-  // after the wait for event.
+  // this version must run with disabled IRQs and a wakeup must continue
+  // directly after the wait for event.
   auto guard = lock_guard(cpu_lock);
   Cpu_number cpu = home_cpu();
   ++_idle_counter.cpu(cpu);
   // 1. check for latency requirements that prevent low power modes
-  // 2. check for timouts on this CPU ignore the idle thread's timeslice
-  // 3. check for RCU work on this cpu
+  // 2. check for timeouts on this CPU ignore the idle thread's timeslice
+  // 3. check for RCU work on this CPU
   if (Rcu::idle(cpu)
       && !Timeout_q::timeout_queue.cpu(cpu).have_timeouts(timeslice_timeout.cpu(cpu)))
     {

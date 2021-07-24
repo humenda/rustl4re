@@ -1,5 +1,4 @@
 <map id="l4_sched_cpu_set_t::offset" name="l4_sched_cpu_set_t::offset">
-<area shape="rect" id="node2" href="$group__l4__scheduler__api.html#ga25d36547d6902c482c747b0face8781c" title="l4_sched_cpu_set" alt="" coords="201,5,337,32"/>
-<area shape="rect" id="node4" href="$structl4__sched__cpu__set__t.html#a6368caa2f62739bf7a4ca310dcd0dd8c" title="Set offset and granularity. " alt="" coords="385,56,559,83"/>
-<area shape="rect" id="node3" href="$group__l4__scheduler__api.html#gac103c1b3ebcc60ee673fdf2f89b62cfc" title="Construct scheduler parameter. " alt="" coords="409,5,535,32"/>
+<area shape="rect" id="node1" title=" " alt="" coords="229,5,377,47"/>
+<area shape="rect" id="node2" href="$structl4__sched__cpu__set__t.html#a6368caa2f62739bf7a4ca310dcd0dd8c" title="Set offset and granularity." alt="" coords="5,13,181,39"/>
 </map>

@@ -1,6 +1,30 @@
+/*
+ @licstart  The following is the entire license notice for the JavaScript code in this file.
+
+ The MIT License (MIT)
+
+ Copyright (C) 1997-2020 by Dimitri van Heesch
+
+ Permission is hereby granted, free of charge, to any person obtaining a copy of this software
+ and associated documentation files (the "Software"), to deal in the Software without restriction,
+ including without limitation the rights to use, copy, modify, merge, publish, distribute,
+ sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is
+ furnished to do so, subject to the following conditions:
+
+ The above copyright notice and this permission notice shall be included in all copies or
+ substantial portions of the Software.
+
+ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING
+ BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+ NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+ DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+ @licend  The above is the entire license notice for the JavaScript code in this file
+*/
 var NAVTREE =
 [
-  [ "L4Re - L4 Runtime Environment", "index.html", [
+  [ "L4Re – L4 Runtime Environment", "index.html", [
     [ "Overview", "index.html", null ],
     [ "Introduction", "l4re_intro.html", [
       [ "Fiasco.OC", "l4re_intro.html#fiasco_intro", [
@@ -15,10 +39,11 @@ var NAVTREE =
     ] ],
     [ "Programming for L4Re", "l4re_concepts.html", "l4re_concepts" ],
     [ "L4Re Servers", "l4re_servers.html", "l4re_servers" ],
+    [ "Bootstrap, the L4 kernel bootstrapper", "bootstrap.html", null ],
     [ "Deprecated List", "deprecated.html", null ],
     [ "Modules", "modules.html", "modules" ],
-    [ "Namespaces", null, [
-      [ "Namespace List", "namespaces.html", "namespaces" ],
+    [ "Namespaces", "namespaces.html", [
+      [ "Namespace List", "namespaces.html", "namespaces_dup" ],
       [ "Namespace Members", "namespacemembers.html", [
         [ "All", "namespacemembers.html", null ],
         [ "Functions", "namespacemembers_func.html", null ],
@@ -42,8 +67,8 @@ var NAVTREE =
         [ "Related Functions", "functions_rela.html", null ]
       ] ]
     ] ],
-    [ "Files", null, [
-      [ "File List", "files.html", "files" ],
+    [ "Files", "files.html", [
+      [ "File List", "files.html", "files_dup" ],
       [ "Globals", "globals.html", [
         [ "All", "globals.html", "globals_dup" ],
         [ "Functions", "globals_func.html", "globals_func" ],
@@ -59,30 +84,29 @@ var NAVTREE =
 
 var NAVTREEINDEX =
 [
-".html",
-"classL4Re_1_1Env.html#aa37263704207df3fa9574f46e46d742b",
-"classL4Re_1_1Vfs_1_1Regular__file.html#a68917e7790e4aa014056e3d2749a654f",
-"classL4_1_1Ipc_1_1Varg__list__ref.html#ab6e6e4cdd7c4d840f27eeac78ea66194",
-"classL4vbus_1_1Vbus.html",
-"classcxx_1_1Bitmap__base.html#a90b85625fab909f4bfa3cad35ccfba77",
-"dir_7060edddde9e6bee0ac26ad5048a9d58.html",
-"group__api__calls__fiasco.html#ga11d469f93c5befca8389362282c5cb74",
-"group__api__l4re__c__rm.html#ggac41c4491ed650d4265eb00facdbd96f2a03a01f484bd22899acf5e9adcda3cbc2",
-"group__api__libvcpu__ext.html#ga1421d3effdb0e3fd7f11eee39025cfc8",
-"group__l4__fpage__api.html#gga547729eef68ea9c0e085c34a66e133faa63cb59df38cd7648ee0163b777cdf84f",
-"group__l4__kip__api.html#ga833b0dd3ac6cf62453707f89d695a96f",
-"group__l4__protocol__ops.html#gga23a759356490c4b1feffc9f36440a82da1dc147565402a8c98f9a19a087f0062a",
-"group__l4__utcb__api__x86.html#ggac03d87ea12ff53e0a7037eb3f9408af8a877deb56f92520cdadc489140ac14913",
-"group__l4sigma0__api.html#ga52361667d09a8863a4964cfc81f74b44",
-"group__l4util__elf.html#ga26653cf72a83f9836d823ebedd9732aa",
-"group__l4util__elf.html#ga916359aebd25a6db0b308937c227013f",
-"group__l4util__elf.html#gaf38c667f9a1573d87caa9348b18f3411",
-"group__l4virtio__transport.html#ggaa3812d621d81dd6a7101d739153b6c3ba3209479ecc025e24194aa8bae2b75d6c",
-"main__thread.html",
-"structElf64__Ehdr.html#ae8289d7705794be744876f6246242b9b",
-"structL4virtio_1_1Svr_1_1Dev__status.html#ab2cf42874c47b6ed690ef6bdef7326dd",
-"structl4__sched__param__t.html#aaf5383e7df96a1a84968c098b886fae5",
-"sys_2meta.html"
+"",
+"classL4Re_1_1Dma__space.html#a4e70e97881b98eff798a4bc5af23dec0",
+"classL4Re_1_1Vfs_1_1Fs.html#a5fe18dd6b6418e1b65dd73a0e3f5c74c",
+"classL4_1_1Ipc_1_1Small__buf.html#a027e71aae06b0fdc54d54d0f3bc49bda",
+"classL4vbus_1_1Device.html#a63dcb7dba875e85f09f7ab755836bf2e",
+"classL4virtio_1_1Virtqueue_1_1Used.html#a03aa556eeea118229a90943a87a77ac1",
+"colors_8h.html",
+"elf_8h.html#a77d268226db9ce3cb878a2f676a4de6e",
+"functions_f.html",
+"group__api__l4re__c__event.html#ga82d0c35915931a25b526833e7adeb9b5",
+"group__api__l4shmc__chunk.html#gaef29db1fd01174c7f1bdbdbf1b5f207a",
+"group__l4__error__api.html#ggab4c8abc71ffa221a25c1ca5840a354f9afaebb9a6af2e5bb94216533d8e4988bf",
+"group__l4__irq__api.html#gaa9151a0a16974ccc5685965fdee62b02",
+"group__l4__msgtag__api.html#gga61165805662641702f50e4f524a8df01af9d0a853f2f7a508b9452c01cf17e8ee",
+"group__l4__timeout__api.html#ga798ef6a9ba1e7bad24a4c67ad0560fe3",
+"group__l4irq__api__irq.html#ga90bf148fc97871b338cc1b53066da14f",
+"group__l4vbus__module.html#ggaaa3fba66d2a82d325d8882e52586b33ba8548a664b9e6433322527f496d92df5c",
+"l4_2util_2util_8h_source.html",
+"parse__cmd_8h.html#a774256a7fd39750e4f13fe551b210c00",
+"structL4Re_1_1Rm_1_1F.html#a9707a14d822d3f60aa6a97cb16b2a989a33ceb48a0752720faf882ac4fe685d38",
+"structL4virtio_1_1Svr_1_1Dev__status.html#a9409ab2ee86a97e88477859eeff2664a",
+"structl4__sched__cpu__set__t.html#a6368caa2f62739bf7a4ca310dcd0dd8c",
+"sys_2cxx_2ipc__server_source.html"
 ];
 
 var SYNCONMSG = 'click to disable panel synchronisation';

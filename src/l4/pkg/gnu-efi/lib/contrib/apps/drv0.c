@@ -105,7 +105,6 @@ static
 EFI_STATUS
 EFI_FUNCTION
 Drv0SayHello(
-    IN struct _GNU_EFI_APPS_DRV0_PROTOCOL *This,
     IN const CHAR16 *HelloWho
     )
 {
@@ -122,7 +121,6 @@ static
 EFI_STATUS
 EFI_FUNCTION
 Drv0GetNumberOfHello(
-    IN struct _GNU_EFI_APPS_DRV0_PROTOCOL *This,
     OUT UINTN *NumberOfHello
     )
 {
@@ -166,7 +164,7 @@ efi_main (EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SysTab)
   /* Grab handle to this image: we'll attach our proto instance to it */
   Status = uefi_call_wrapper(BS->OpenProtocol, 6,
                              ImageHandle, &LoadedImageProtocol,
-                             &LoadedImage, ImageHandle,
+                             (void**)&LoadedImage, ImageHandle,
                              NULL, EFI_OPEN_PROTOCOL_GET_PROTOCOL);
   if (EFI_ERROR(Status)) {
     Print(L"Could not open loaded image protocol: %d\n", Status);

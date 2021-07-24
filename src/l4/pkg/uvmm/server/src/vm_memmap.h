@@ -13,23 +13,33 @@
 #include <map>
 
 #include "mmio_device.h"
+#include "mem_types.h"
 
-struct Region
+namespace Vmm {
+
+class Vm_mem : public std::map<Region, cxx::Ref_ptr<Vmm::Mmio_device>>
 {
-  l4_addr_t start;
-  l4_addr_t end; // inclusive
+public:
+  void add_mmio_device(Region const &region,
+                       cxx::Ref_ptr<Vmm::Mmio_device> const &dev)
+  { add_region(region, dev); }
 
-  Region() {}
-  Region(l4_addr_t a) : start(a), end(a) {}
-  Region(l4_addr_t s, l4_addr_t e) : start(s), end(e) {}
+  void remap_mmio_device(Region const &old_region, Guest_addr const &addr)
+  {
+    assert(count(old_region) == 1);
 
-  static Region ss(l4_addr_t start, l4_size_t size)
-  { return Region(start, start + size - 1); }
+    // Save the device
+    cxx::Ref_ptr<Vmm::Mmio_device> const dev = at(old_region);
 
-  bool operator < (Region const &r) const { return end < r.start; }
+    // Replace old with new
+    del_region(old_region);
+    add_region(old_region.move(addr), dev);
+  }
 
-  bool contains(Region const &r) const
-  { return (start <= r.start) && (r.end <= end); } // [ [ ... ] ]
+private:
+  void add_region(Region const &region,
+                  cxx::Ref_ptr<Vmm::Mmio_device> const &dev);
+  void del_region(Region const &region);
 };
 
-typedef std::map<Region, cxx::Ref_ptr<Vmm::Mmio_device>> Vm_mem;
+} // namespace

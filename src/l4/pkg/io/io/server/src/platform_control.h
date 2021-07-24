@@ -22,7 +22,7 @@ public:
   explicit Platform_control(Hw::Root_bus *hw_root)
   : _state(0), _hw_root(hw_root) {}
 
-  void all_inhibitors_free(l4_umword_t id);
+  void all_inhibitors_free(l4_umword_t id) override;
   void cancel_op() { _state &= ~Op_in_progress_mask; }
 
   int op_system_shutdown(L4::Platform_control::Rights, l4_umword_t extra)

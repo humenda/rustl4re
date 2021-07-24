@@ -18,7 +18,7 @@ Revision History
 #include "lib.h"
 
 #ifndef __GNUC__
-#pragma RUNTIME_CODE(RtAcquireLock)
+#pragma RUNTIME_CODE(RtStrCmp)
 #endif
 INTN
 RUNTIMEFUNCTION
@@ -58,6 +58,61 @@ RtStrCpy (
 }
 
 #ifndef __GNUC__
+#pragma RUNTIME_CODE(RtStrnCpy)
+#endif
+VOID
+RUNTIMEFUNCTION
+RtStrnCpy (
+    IN CHAR16   *Dest,
+    IN CONST CHAR16   *Src,
+    IN UINTN     Len
+    )
+// copy strings
+{
+    UINTN Size = RtStrnLen(Src, Len);
+    if (Size != Len)
+        RtSetMem(Dest + Size, (Len - Size) * sizeof(CHAR16), '\0');
+    RtCopyMem(Dest, Src, Size * sizeof(CHAR16));
+}
+
+#ifndef __GNUC__
+#pragma RUNTIME_CODE(RtStpCpy)
+#endif
+CHAR16 *
+RUNTIMEFUNCTION
+RtStpCpy (
+    IN CHAR16   *Dest,
+    IN CONST CHAR16   *Src
+    )
+// copy strings
+{
+    while (*Src) {
+        *(Dest++) = *(Src++);
+    }
+    *Dest = 0;
+    return Dest;
+}
+
+#ifndef __GNUC__
+#pragma RUNTIME_CODE(RtStpnCpy)
+#endif
+CHAR16 *
+RUNTIMEFUNCTION
+RtStpnCpy (
+    IN CHAR16   *Dest,
+    IN CONST CHAR16   *Src,
+    IN UINTN     Len
+    )
+// copy strings
+{
+    UINTN Size = RtStrnLen(Src, Len);
+    if (Size != Len)
+        RtSetMem(Dest + Size, (Len - Size) * sizeof(CHAR16), '\0');
+    RtCopyMem(Dest, Src, Size * sizeof(CHAR16));
+    return Dest + Size;
+}
+
+#ifndef __GNUC__
 #pragma RUNTIME_CODE(RtStrCat)
 #endif
 VOID
@@ -66,8 +121,27 @@ RtStrCat (
     IN CHAR16   *Dest,
     IN CONST CHAR16   *Src
     )
-{   
-    RtStrCpy(Dest+StrLen(Dest), Src);
+{
+    RtStrCpy(Dest+RtStrLen(Dest), Src);
+}
+
+#ifndef __GNUC__
+#pragma RUNTIME_CODE(RtStrnCat)
+#endif
+VOID
+RUNTIMEFUNCTION
+RtStrnCat (
+    IN CHAR16   *Dest,
+    IN CONST CHAR16   *Src,
+    IN UINTN    Len
+    )
+{
+    UINTN DestSize, Size;
+
+    DestSize = RtStrLen(Dest);
+    Size = RtStrnLen(Src, Len);
+    RtCopyMem(Dest + DestSize, Src, Size * sizeof(CHAR16));
+    Dest[DestSize + Size] = '\0';
 }
 
 #ifndef __GNUC__
@@ -81,9 +155,26 @@ RtStrLen (
 // string length
 {
     UINTN        len;
-    
+
     for (len=0; *s1; s1+=1, len+=1) ;
     return len;
+}
+
+#ifndef __GNUC__
+#pragma RUNTIME_CODE(RtStrnLen)
+#endif
+UINTN
+RUNTIMEFUNCTION
+RtStrnLen (
+    IN CONST CHAR16   *s1,
+    IN UINTN           Len
+    )
+// string length
+{
+    UINTN i;
+    for (i = 0; *s1 && i < Len; i++)
+        s1++;
+    return i;
 }
 
 #ifndef __GNUC__
@@ -97,7 +188,7 @@ RtStrSize (
 // string size
 {
     UINTN        len;
-    
+
     for (len=0; *s1; s1+=1, len+=1) ;
     return (len + 1) * sizeof(CHAR16);
 }

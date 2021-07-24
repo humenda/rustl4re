@@ -1,0 +1,7 @@
+<map id="L4virtio::Driver::Virtqueue::init_queue" name="L4virtio::Driver::Virtqueue::init_queue">
+<area shape="rect" id="node1" title="Initialize this virtqueue." alt="" coords="5,100,196,141"/>
+<area shape="rect" id="node2" href="$classL4virtio_1_1Driver_1_1Virtqueue.html#a2b806bcf98022b49453a80bdd2944b04" title="Return a reference to a descriptor in the descriptor table." alt="" coords="244,5,435,47"/>
+<area shape="rect" id="node3" href="$classL4virtio_1_1Driver_1_1Virtqueue.html#ac31099e5abf48745f518aed17b1dee54" title="Initialize the descriptor table and the index structures of this queue." alt="" coords="244,71,435,112"/>
+<area shape="rect" id="node4" href="$classL4virtio_1_1Virtqueue.html#af61e3e4e436b93f37f22243a1c0ffe0e" title=" " alt="" coords="483,137,661,163"/>
+<area shape="rect" id="node5" href="$classL4virtio_1_1Virtqueue.html#a109ea5677dd074df1d2c6a06056c7d82" title="Enable this queue." alt="" coords="268,188,411,229"/>
+</map>

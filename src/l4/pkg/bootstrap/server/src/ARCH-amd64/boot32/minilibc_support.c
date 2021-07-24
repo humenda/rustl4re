@@ -12,15 +12,9 @@
 #include <string.h>
 
 #include <l4/util/port_io.h>
-#include <l4/util/reboot.h>
 
-//#include "version.h"
-
-extern int hercules;	/* provided by startup.c */
-
-static void direct_cons_putchar(unsigned char c, int to_hercules);
+static void direct_cons_putchar(unsigned char c);
 static int  direct_cons_try_getchar(void);
-       int  have_hercules(void);
        void reboot(void);
 
 int __libc_backend_outs( const char *s, size_t len);
@@ -39,7 +33,7 @@ __libc_backend_outs( const char *s, size_t len)
   size_t i;
   for (i = 0; i < len; i++)
     {
-      direct_cons_putchar(s[i], 0);
+      direct_cons_putchar(s[i]);
       if (0)
         porte9(s[i]);
     }
@@ -93,20 +87,20 @@ _exit(int fd)
 }
 
 static void
-direct_cons_putchar(unsigned char c, int to_hercules)
+direct_cons_putchar(unsigned char c)
 {
   static int ofs  = -1;
   static int esc;
   static int esc_val;
   static int attr = 0x07;
-  unsigned char *vidbase = (unsigned char*)(to_hercules ? 0xb0000 : 0xb8000);
+  unsigned char *vidbase = (unsigned char*)0xb8000;
 
 
   if (ofs < 0)
     {
       /* Called for the first time - initialize.  */
       ofs = 80*2*24;
-      direct_cons_putchar('\n', to_hercules);
+      direct_cons_putchar('\n');
     }
 
   switch (esc)
@@ -157,7 +151,7 @@ direct_cons_putchar(unsigned char c, int to_hercules)
     default:
       /* Wrap if we reach the end of a line.  */
       if (ofs >= 80)
-	direct_cons_putchar('\n', to_hercules);
+	direct_cons_putchar('\n');
 
       /* Stuff the character into the video buffer. */
 	{
@@ -171,49 +165,6 @@ direct_cons_putchar(unsigned char c, int to_hercules)
 
 done:
   return;
-}
-
-int
-have_hercules(void)
-{
-  unsigned short *p, p_save;
-  int count = 0;
-  unsigned long delay;
-  
-  /* check for video memory */
-  p = (unsigned short*)0xb0000;
-  p_save = *p;
-  *p = 0xaa55; if (*p == 0xaa55) count++;
-  *p = 0x55aa; if (*p == 0x55aa) count++;
-  *p = p_save;
-  if (count != 2)
-    return 0;
-
-  /* check for I/O ports (HW cursor) */
-  l4util_out8(0x0f, 0x3b4);
-  l4util_iodelay();
-  l4util_out8(0x66, 0x3b5);
-  for (delay=0; delay<0x100000UL; delay++)
-    asm volatile ("nop" : :);
-  if (l4util_in8(0x3b5) != 0x66)
-    return 0;
-  
-  l4util_iodelay();
-  l4util_out8(0x0f, 0x3b4);
-  l4util_iodelay();
-  l4util_out8(0x99, 0x3b5);
-
-  for (delay=0; delay<0x10000; delay++)
-    l4util_iodelay();
-  if (l4util_in8(0x3b5) != 0x99)
-    return 0;
-
-  /* reset position */
-  l4util_out8(0xf, 0x3b4);
-  l4util_iodelay();
-  l4util_out8(0x0, 0x3b5);
-  l4util_iodelay();
-  return 1;
 }
 
 #define SHIFT -1

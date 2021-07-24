@@ -155,6 +155,14 @@ static int test_st_mode(const struct stat64 *, int);
 static int bash_group_member(gid_t);
 #endif
 
+#ifdef HAVE_FACCESSAT
+# ifdef HAVE_TRADITIONAL_FACCESSAT
+static inline int faccessat_confused_about_superuser(void) { return 1; }
+# else
+static inline int faccessat_confused_about_superuser(void) { return 0; }
+# endif
+#endif
+
 static inline intmax_t getn(const char *s)
 {
 	return atomax10(s);
@@ -177,7 +185,7 @@ testcmd(int argc, char **argv)
 {
 	const struct t_op *op;
 	enum token n;
-	int res;
+	int res = 1;
 
 	if (*argv[0] == '[') {
 		if (*argv[--argc] != ']')
@@ -185,11 +193,14 @@ testcmd(int argc, char **argv)
 		argv[argc] = NULL;
 	}
 
+	t_wp_op = NULL;
+
+recheck:
 	argv++;
 	argc--;
 
 	if (argc < 1)
-		return 1;
+		return res;
 
 	/*
 	 * POSIX prescriptions: he who wrote this deserves the Nobel
@@ -209,6 +220,9 @@ testcmd(int argc, char **argv)
 			argv[--argc] = NULL;
 			argv++;
 			argc--;
+		} else if (!strcmp(argv[0], "!")) {
+			res = 0;
+			goto recheck;
 		}
 	}
 
@@ -216,7 +230,7 @@ testcmd(int argc, char **argv)
 
 eval:
 	t_wp = argv;
-	res = !oexpr(n);
+	res ^= oexpr(n);
 	argv = t_wp;
 
 	if (argv[0] != NULL && argv[1] != NULL)
@@ -462,9 +476,17 @@ newerf (const char *f1, const char *f2)
 {
 	struct stat b1, b2;
 
+#ifdef HAVE_ST_MTIM
+	return (stat (f1, &b1) == 0 &&
+		stat (f2, &b2) == 0 &&
+		( b1.st_mtim.tv_sec > b2.st_mtim.tv_sec ||
+		 (b1.st_mtim.tv_sec == b2.st_mtim.tv_sec && (b1.st_mtim.tv_nsec > b2.st_mtim.tv_nsec )))
+	);
+#else
 	return (stat (f1, &b1) == 0 &&
 		stat (f2, &b2) == 0 &&
 		b1.st_mtime > b2.st_mtime);
+#endif
 }
 
 static int
@@ -472,9 +494,17 @@ olderf (const char *f1, const char *f2)
 {
 	struct stat b1, b2;
 
+#ifdef HAVE_ST_MTIM
+	return (stat (f1, &b1) == 0 &&
+		stat (f2, &b2) == 0 &&
+		(b1.st_mtim.tv_sec < b2.st_mtim.tv_sec ||
+		 (b1.st_mtim.tv_sec == b2.st_mtim.tv_sec && (b1.st_mtim.tv_nsec < b2.st_mtim.tv_nsec )))
+	);
+#else
 	return (stat (f1, &b1) == 0 &&
 		stat (f2, &b2) == 0 &&
 		b1.st_mtime < b2.st_mtime);
+#endif
 }
 
 static int
@@ -489,8 +519,20 @@ equalf (const char *f1, const char *f2)
 }
 
 #ifdef HAVE_FACCESSAT
+static int has_exec_bit_set(const char *path)
+{
+	struct stat64 st;
+
+	if (stat64(path, &st))
+		return 0;
+	return st.st_mode & (S_IXUSR | S_IXGRP | S_IXOTH);
+}
+
 static int test_file_access(const char *path, int mode)
 {
+	if (faccessat_confused_about_superuser() &&
+	    mode == X_OK && geteuid() == 0 && !has_exec_bit_set(path))
+		return 0;
 	return !faccessat(AT_FDCWD, path, mode, AT_EACCESS);
 }
 #else	/* HAVE_FACCESSAT */

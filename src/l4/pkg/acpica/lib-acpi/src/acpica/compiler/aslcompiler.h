@@ -8,7 +8,7 @@
  *
  * 1. Copyright Notice
  *
- * Some or all of this work - Copyright (c) 1999 - 2017, Intel Corp.
+ * Some or all of this work - Copyright (c) 1999 - 2019, Intel Corp.
  * All rights reserved.
  *
  * 2. License
@@ -111,6 +111,42 @@
  * other governmental approval, or letter of assurance, without first obtaining
  * such license, approval or letter.
  *
+ *****************************************************************************
+ *
+ * Alternatively, you may choose to be licensed under the terms of the
+ * following license:
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions, and the following disclaimer,
+ *    without modification.
+ * 2. Redistributions in binary form must reproduce at minimum a disclaimer
+ *    substantially similar to the "NO WARRANTY" disclaimer below
+ *    ("Disclaimer") and any redistribution must be conditioned upon
+ *    including a substantially similar Disclaimer requirement for further
+ *    binary redistribution.
+ * 3. Neither the names of the above-listed copyright holders nor the names
+ *    of any contributors may be used to endorse or promote products derived
+ *    from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+ * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * Alternatively, you may choose to be licensed under the terms of the
+ * GNU General Public License ("GPL") version 2 as published by the Free
+ * Software Foundation.
+ *
  *****************************************************************************/
 
 #ifndef __ASLCOMPILER_H
@@ -145,6 +181,7 @@
 #include "aslmessages.h"
 #include "aslglobal.h"
 #include "preprocess.h"
+#include "dtcompiler.h"
 
 
 /*******************************************************************************
@@ -217,20 +254,70 @@ void
 AslCompilerFileHeader (
     UINT32                  FileId);
 
-int
+ACPI_STATUS
 CmDoCompile (
+    void);
+
+int
+CmDoAslMiddleAndBackEnd (
     void);
 
 void
 CmDoOutputFiles (
     void);
 
-void
+int
 CmCleanupAndExit (
     void);
 
+ACPI_STATUS
+AslDoDisassembly (
+    void);
+
+
+/*
+ * aslallocate - memory allocation
+ */
+void *
+UtLocalCalloc (
+    UINT32                  Size);
+
 void
-CmDeleteCaches (
+UtExpandLineBuffers (
+    void);
+
+void
+UtReallocLineBuffers (
+    char                    **Buffer,
+    UINT32                  OldSize,
+    UINT32                  NewSize);
+
+void
+UtFreeLineBuffers (
+    void);
+
+
+/*
+ * aslcache - local cache support
+ */
+char *
+UtLocalCacheCalloc (
+    UINT32                  Length);
+
+ACPI_PARSE_OBJECT *
+UtParseOpCacheCalloc (
+    void);
+
+DT_SUBTABLE *
+UtSubtableCacheCalloc (
+    void);
+
+DT_FIELD *
+UtFieldCacheCalloc (
+    void);
+
+void
+UtDeleteLocalCaches (
     void);
 
 
@@ -371,18 +458,40 @@ AslAbort (
     void);
 
 void
+AslDualParseOpError (
+    UINT8                   Level,
+    UINT16                  MainMessageId,
+    ACPI_PARSE_OBJECT       *MainOp,
+    char                    *MainMessage,
+    UINT16                  SecondMessageId,
+    ACPI_PARSE_OBJECT       *SecondOp,
+    char                    *SecondaryMessage);
+
+void
 AslError (
     UINT8                   Level,
     UINT16                  MessageId,
     ACPI_PARSE_OBJECT       *Op,
     char                    *ExtraMessage);
 
+void
+AslCheckExpectedExceptions (
+    void);
+
+ACPI_STATUS
+AslExpectException (
+    char                    *MessageIdString);
+
+ACPI_STATUS
+AslElevateException (
+    char                    *MessageIdString);
+
 ACPI_STATUS
 AslDisableException (
     char                    *MessageIdString);
 
 BOOLEAN
-AslIsExceptionDisabled (
+AslIsExceptionIgnored (
     UINT8                   Level,
     UINT16                  MessageId);
 
@@ -601,7 +710,7 @@ OpnDoPackage (
 
 
 /*
- * aslopt - optmization
+ * aslopt - optimization
  */
 void
 OptOptimizeNamePath (
@@ -647,6 +756,12 @@ AslPruneParseTree (
 void
 CgGenerateAmlOutput (
     void);
+
+void
+CgLocalWriteAmlData (
+    ACPI_PARSE_OBJECT       *Op,
+    void                    *Buffer,
+    UINT32                  Length);
 
 
 /*
@@ -748,17 +863,6 @@ TrAmlTransformWalkEnd (
 
 
 /*
- * asltree - parse tree support
- */
-ACPI_STATUS
-TrWalkParseTree (
-    ACPI_PARSE_OBJECT       *Op,
-    UINT32                  Visitation,
-    ASL_WALK_CALLBACK       DescendingCallback,
-    ASL_WALK_CALLBACK       AscendingCallback,
-    void                    *Context);
-
-/*
  * aslexternal - External opcode support
  */
 ACPI_STATUS
@@ -779,108 +883,122 @@ ExDoExternal (
 
 /* Values for "Visitation" parameter above */
 
-#define ASL_WALK_VISIT_DOWNWARD     0x01
-#define ASL_WALK_VISIT_UPWARD       0x02
-#define ASL_WALK_VISIT_TWICE        (ASL_WALK_VISIT_DOWNWARD | ASL_WALK_VISIT_UPWARD)
+#define ASL_WALK_VISIT_DOWNWARD         0x01
+#define ASL_WALK_VISIT_UPWARD           0x02
+#define ASL_WALK_VISIT_DB_SEPARATELY    0x04
+#define ASL_WALK_VISIT_TWICE            (ASL_WALK_VISIT_DOWNWARD | ASL_WALK_VISIT_UPWARD)
 
 
-void
-TrSetParent (
-    ACPI_PARSE_OBJECT       *Op,
-    ACPI_PARSE_OBJECT       *ParentOp);
-
+/*
+ * aslparseop.c - Parse op create/allocate/cache
+ */
 ACPI_PARSE_OBJECT *
-TrAllocateNode (
-    UINT32                  ParseOpcode);
-
-void
-TrPrintNodeCompileFlags (
-    UINT32                  Flags);
-
-void
-TrReleaseNode (
-    ACPI_PARSE_OBJECT       *Op);
-
-ACPI_PARSE_OBJECT *
-TrUpdateNode (
-    UINT32                  ParseOpcode,
-    ACPI_PARSE_OBJECT       *Op);
-
-ACPI_PARSE_OBJECT *
-TrCreateNode (
+TrCreateOp (
     UINT32                  ParseOpcode,
     UINT32                  NumChildren,
     ...);
 
 ACPI_PARSE_OBJECT *
-TrCreateLeafNode (
+TrCreateLeafOp (
     UINT32                  ParseOpcode);
 
 ACPI_PARSE_OBJECT *
-TrCreateNullTarget (
+TrCreateNullTargetOp (
     void);
 
 ACPI_PARSE_OBJECT *
-TrCreateAssignmentNode (
+TrCreateAssignmentOp (
     ACPI_PARSE_OBJECT       *Target,
     ACPI_PARSE_OBJECT       *Source);
 
 ACPI_PARSE_OBJECT *
-TrCreateTargetOperand (
+TrCreateTargetOp (
     ACPI_PARSE_OBJECT       *OriginalOp,
     ACPI_PARSE_OBJECT       *ParentOp);
 
 ACPI_PARSE_OBJECT *
-TrCreateValuedLeafNode (
+TrCreateValuedLeafOp (
     UINT32                  ParseOpcode,
     UINT64                  Value);
 
 ACPI_PARSE_OBJECT *
-TrCreateConstantLeafNode (
+TrCreateConstantLeafOp (
     UINT32                  ParseOpcode);
 
 ACPI_PARSE_OBJECT *
-TrLinkChildren (
+TrAllocateOp (
+    UINT32                  ParseOpcode);
+
+void
+TrPrintOpFlags (
+    UINT32                  Flags,
+    UINT32                  OutputLevel);
+
+
+/*
+ * asltree.c - Parse tree management
+ */
+void
+TrSetOpParent (
+    ACPI_PARSE_OBJECT       *Op,
+    ACPI_PARSE_OBJECT       *ParentOp);
+
+ACPI_PARSE_OBJECT *
+TrSetOpIntegerValue (
+    UINT32                  ParseOpcode,
+    ACPI_PARSE_OBJECT       *Op);
+
+void
+TrSetOpEndLineNumber (
+    ACPI_PARSE_OBJECT       *Op);
+
+void
+TrSetOpCurrentFilename (
+    ACPI_PARSE_OBJECT       *Op);
+
+void
+TrSetOpIntegerWidth (
+    ACPI_PARSE_OBJECT       *TableSignature,
+    ACPI_PARSE_OBJECT       *Revision);
+
+ACPI_PARSE_OBJECT *
+TrLinkOpChildren (
     ACPI_PARSE_OBJECT       *Op,
     UINT32                  NumChildren,
     ...);
 
-void
-TrSetEndLineNumber (
-    ACPI_PARSE_OBJECT       *Op);
-
-void
-TrSetCurrentFilename (
-    ACPI_PARSE_OBJECT       *Op);
-
-void
-TrWalkTree (
-    void);
-
 ACPI_PARSE_OBJECT *
-TrLinkPeerNode (
+TrLinkPeerOp (
     ACPI_PARSE_OBJECT       *Op1,
     ACPI_PARSE_OBJECT       *Op2);
 
 ACPI_PARSE_OBJECT *
-TrLinkChildNode (
+TrLinkChildOp (
     ACPI_PARSE_OBJECT       *Op1,
     ACPI_PARSE_OBJECT       *Op2);
 
 ACPI_PARSE_OBJECT *
-TrSetNodeFlags (
+TrSetOpFlags (
     ACPI_PARSE_OBJECT       *Op,
     UINT32                  Flags);
 
 ACPI_PARSE_OBJECT *
-TrSetNodeAmlLength (
+TrSetOpAmlLength (
     ACPI_PARSE_OBJECT       *Op,
     UINT32                  Length);
 
 ACPI_PARSE_OBJECT *
-TrLinkPeerNodes (
+TrLinkPeerOps (
     UINT32                  NumPeers,
     ...);
+
+ACPI_STATUS
+TrWalkParseTree (
+    ACPI_PARSE_OBJECT       *Op,
+    UINT32                  Visitation,
+    ASL_WALK_CALLBACK       DescendingCallback,
+    ASL_WALK_CALLBACK       AscendingCallback,
+    void                    *Context);
 
 
 /*
@@ -926,9 +1044,15 @@ FlSeekFile (
     long                    Offset);
 
 void
+FlSeekFileSet (
+    UINT32                  FileId,
+    long                    Offset);
+
+void
 FlCloseFile (
     UINT32                  FileId);
 
+ACPI_PRINTF_LIKE (2)
 void
 FlPrintFile (
     UINT32                  FileId,
@@ -959,6 +1083,30 @@ ACPI_STATUS
 FlOpenMiscOutputFiles (
     char                    *InputFilename);
 
+ACPI_STATUS
+FlInitOneFile (
+    char                    *InputFilename);
+
+ASL_FILE_SWITCH_STATUS
+FlSwitchFileSet (
+    char                    *InputFilename);
+
+FILE *
+FlGetFileHandle (
+    UINT32                  OutFileId,
+    UINT32                  InFileId,
+    char                    *Filename);
+
+ASL_GLOBAL_FILE_NODE *
+FlGetFileNode (
+    UINT32                  FileId,
+    char                    *Filename);
+
+ASL_GLOBAL_FILE_NODE *
+FlGetCurrentFileNode (
+    void);
+
+
 /*
  * aslhwmap - hardware map summary
  */
@@ -974,13 +1122,13 @@ ACPI_STATUS
 LdLoadNamespace (
     ACPI_PARSE_OBJECT       *RootOp);
 
-
 /*
  * asllookup - namespace lookup functions
  */
 void
 LkFindUnreferencedObjects (
     void);
+
 
 /*
  * aslhelp - help screens
@@ -1009,6 +1157,7 @@ void
 NsSetupNamespaceListing (
     void                    *Handle);
 
+
 /*
  * asloptions - command line processing
  */
@@ -1016,6 +1165,7 @@ int
 AslCommandLine (
     int                     argc,
     char                    **argv);
+
 
 /*
  * aslxref - namespace cross reference
@@ -1044,8 +1194,9 @@ OtXrefWalkPart1 (
 
 
 /*
- * aslutils - common compiler utilites
+ * aslutils - common compiler utilities
  */
+ACPI_PRINTF_LIKE(2)
 void
 DbgPrint (
     UINT32                  Type,
@@ -1082,6 +1233,15 @@ UtDumpBasicOp (
     ACPI_PARSE_OBJECT       *Op,
     UINT32                  Level);
 
+void *
+UtGetParentMethod (
+    ACPI_NAMESPACE_NODE     *Node);
+
+BOOLEAN
+UtNodeIsDescendantOf (
+    ACPI_NAMESPACE_NODE     *Node1,
+    ACPI_NAMESPACE_NODE     *Node2);
+
 void
 UtDisplaySupportedTables (
     void);
@@ -1098,13 +1258,14 @@ void
 UtEndEvent (
     UINT8                   Event);
 
-void *
-UtLocalCalloc (
-    UINT32                  Size);
-
 void
 UtDisplaySummary (
     UINT32                  FileId);
+
+void
+UtDisplayOneSummary (
+    UINT32                  FileId,
+    BOOLEAN                 DisplayErrorSummary);
 
 void
 UtConvertByteToHex (
@@ -1124,22 +1285,14 @@ void
 UtSetParseOpName (
     ACPI_PARSE_OBJECT       *Op);
 
-char *
-UtStringCacheCalloc (
-    UINT32                  Length);
-
-void
-UtExpandLineBuffers (
-    void);
-
-void
-UtFreeLineBuffers (
-    void);
-
 ACPI_STATUS
 UtInternalizeName (
     char                    *ExternalName,
     char                    **ConvertedName);
+
+BOOLEAN
+UtNameContainsAllPrefix (
+    ACPI_PARSE_OBJECT       *Op);
 
 void
 UtAttachNamepathToOwner (
@@ -1156,6 +1309,15 @@ UINT64
 UtDoConstant (
     char                    *String);
 
+char *
+AcpiUtStrdup (
+    char                    *String);
+
+char *
+AcpiUtStrcat (
+    char                    *String1,
+    char                    *String2);
+
 
 /*
  * asluuid - UUID support
@@ -1168,6 +1330,7 @@ ACPI_STATUS
 AuConvertUuidToString (
     char                    *UuIdBuffer,
     char                    *OutString);
+
 
 /*
  * aslresource - Resource template generation utilities
@@ -1356,6 +1519,27 @@ ASL_RESOURCE_NODE *
 RsDoUartSerialBusDescriptor (
     ASL_RESOURCE_INFO       *Info);
 
+ASL_RESOURCE_NODE *
+RsDoPinFunctionDescriptor (
+    ASL_RESOURCE_INFO       *Info);
+
+ASL_RESOURCE_NODE *
+RsDoPinConfigDescriptor (
+    ASL_RESOURCE_INFO       *Info);
+
+ASL_RESOURCE_NODE *
+RsDoPinGroupDescriptor (
+    ASL_RESOURCE_INFO       *Info);
+
+ASL_RESOURCE_NODE *
+RsDoPinGroupFunctionDescriptor (
+    ASL_RESOURCE_INFO       *Info);
+
+ASL_RESOURCE_NODE *
+RsDoPinGroupConfigDescriptor (
+    ASL_RESOURCE_INFO       *Info);
+
+
 /*
  * aslrestype2d - DWord address descriptors
  */
@@ -1430,5 +1614,16 @@ DtDoCompile(
 ACPI_STATUS
 DtCreateTemplates (
     char                    **argv);
+
+
+/*
+ * ASL/ASL+ converter debug
+ */
+ACPI_PRINTF_LIKE (1)
+void
+CvDbgPrint (
+    char                    *Fmt,
+    ...);
+
 
 #endif /*  __ASLCOMPILER_H */

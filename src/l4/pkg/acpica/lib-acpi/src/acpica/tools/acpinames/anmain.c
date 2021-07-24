@@ -8,7 +8,7 @@
  *
  * 1. Copyright Notice
  *
- * Some or all of this work - Copyright (c) 1999 - 2017, Intel Corp.
+ * Some or all of this work - Copyright (c) 1999 - 2019, Intel Corp.
  * All rights reserved.
  *
  * 2. License
@@ -111,6 +111,42 @@
  * other governmental approval, or letter of assurance, without first obtaining
  * such license, approval or letter.
  *
+ *****************************************************************************
+ *
+ * Alternatively, you may choose to be licensed under the terms of the
+ * following license:
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions, and the following disclaimer,
+ *    without modification.
+ * 2. Redistributions in binary form must reproduce at minimum a disclaimer
+ *    substantially similar to the "NO WARRANTY" disclaimer below
+ *    ("Disclaimer") and any redistribution must be conditioned upon
+ *    including a substantially similar Disclaimer requirement for further
+ *    binary redistribution.
+ * 3. Neither the names of the above-listed copyright holders nor the names
+ *    of any contributors may be used to endorse or promote products derived
+ *    from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+ * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * Alternatively, you may choose to be licensed under the terms of the
+ * GNU General Public License ("GPL") version 2 as published by the Free
+ * Software Foundation.
+ *
  *****************************************************************************/
 
 #include "acpinames.h"
@@ -143,7 +179,7 @@ BOOLEAN                     AcpiGbl_NsLoadOnly = FALSE;
 
 
 #define AN_UTILITY_NAME             "ACPI Namespace Dump Utility"
-#define AN_SUPPORTED_OPTIONS        "?hlvx:"
+#define AN_SUPPORTED_OPTIONS        "?hlv^x:"
 
 
 /******************************************************************************
@@ -167,6 +203,7 @@ usage (
     ACPI_OPTION ("-?",                  "Display this message");
     ACPI_OPTION ("-l",                  "Load namespace only, no display");
     ACPI_OPTION ("-v",                  "Display version information");
+    ACPI_OPTION ("-vd",                 "Display build date and time");
     ACPI_OPTION ("-x <DebugLevel>",     "Debug output level");
 }
 
@@ -200,6 +237,8 @@ main (
     AcpiDbgLevel = ACPI_NORMAL_DEFAULT | ACPI_LV_TABLES;
     AcpiDbgLayer = 0xFFFFFFFF;
 
+    /* Set flags so that the interpreter is not used */
+
     Status = AcpiInitializeSubsystem ();
     ACPI_CHECK_OK (AcpiInitializeSubsystem, Status);
     if (ACPI_FAILURE (Status))
@@ -223,9 +262,25 @@ main (
         AcpiGbl_NsLoadOnly = TRUE;
         break;
 
-    case 'v': /* -v: (Version): signon already emitted, just exit */
+    case 'v':
 
-        return (0);
+        switch (AcpiGbl_Optarg[0])
+        {
+        case '^':  /* -v: (Version): signon already emitted, just exit */
+
+            exit (0);
+
+        case 'd':
+
+            printf (ACPI_COMMON_BUILD_TIME);
+            return (0);
+
+        default:
+
+            printf ("Unknown option: -v%s\n", AcpiGbl_Optarg);
+            return (-1);
+        }
+        break;
 
     case 'x':
 
@@ -308,9 +363,9 @@ AnDumpEntireNamespace (
         return (-1);
     }
 
-    /* Load the ACPI namespace */
+    /* Build the namespace from the tables */
 
-    Status = AcpiTbLoadNamespace ();
+    Status = AcpiLoadTables ();
     if (Status == AE_CTRL_TERMINATE)
     {
         /* At least one table load failed -- terminate with error */
@@ -332,32 +387,15 @@ AnDumpEntireNamespace (
     }
 
     /*
-     * Enable ACPICA. These calls don't do much for this
-     * utility, since we only dump the namespace. There is no
-     * hardware or event manager code underneath.
+     * NOTE:
+     * We don't need to do any further ACPICA initialization, since we don't
+     * have any hardware, nor is the interpreter configured.
+     *
+     * Namely, we don't need these calls:
+     *  AcpiEnableSubsystem
+     *  AcpiInitializeObjects
      */
-    Status = AcpiEnableSubsystem (
-        ACPI_NO_ACPI_ENABLE |
-        ACPI_NO_ADDRESS_SPACE_INIT |
-        ACPI_NO_EVENT_INIT |
-        ACPI_NO_HANDLER_INIT);
-    if (ACPI_FAILURE (Status))
-    {
-        printf ("**** Could not EnableSubsystem, %s\n",
-            AcpiFormatException (Status));
-        return (-1);
-    }
 
-    Status = AcpiInitializeObjects (
-        ACPI_NO_ADDRESS_SPACE_INIT |
-        ACPI_NO_DEVICE_INIT |
-        ACPI_NO_EVENT_INIT);
-    if (ACPI_FAILURE (Status))
-    {
-        printf ("**** Could not InitializeObjects, %s\n",
-            AcpiFormatException (Status));
-        return (-1);
-    }
 
     /*
      * Perform a namespace walk to dump the contents
@@ -373,5 +411,6 @@ AnDumpEntireNamespace (
     Status = AcpiGetHandle (NULL, "\\_GPE", &Handle);
     ACPI_CHECK_OK (AcpiGetHandle, Status);
 
+    AcDeleteTableList (ListHead);
     return (0);
 }

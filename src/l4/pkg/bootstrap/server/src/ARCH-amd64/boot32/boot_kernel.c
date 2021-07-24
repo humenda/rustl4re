@@ -9,15 +9,19 @@
  * Please see the COPYING-GPL-2 file for details.
  */
 #include <stdio.h>
+
 #include <l4/util/mb_info.h>
 #include "boot_cpu.h"
 #include "boot_paging.h"
 #include "load_elf.h"
+#include "support.h"
 
 extern void _exit(int rc);
 
 extern unsigned KERNEL_CS_64;
 extern char _binary_bootstrap64_bin_start;
+extern char _image_start;
+extern char _image_end;
 
 l4_uint32_t rsdp_start = 0;
 l4_uint32_t rsdp_end = 0;
@@ -34,28 +38,27 @@ static l4_uint64_t find_upper_mem(l4util_mb_info_t *mbi)
   return max;
 }
 
-static void check_mbi_modules_in_limit(l4util_mb_info_t *mbi,
-                                       unsigned long long limit)
+static void
+reserve_mbi(l4util_mb_info_t *mbi)
 {
-  l4util_mb_mod_t *mb_mod = (l4util_mb_mod_t *)(unsigned long)mbi->mods_addr;
-  unsigned i;
-  for (i = 0; i < mbi->mods_count; ++i)
-    if (mb_mod[i].mod_end >= limit)
-      {
-        printf("Multiboot module outside of supported initial memory size.\n");
-        printf("mod%d: end=%x >= limit=%llx\n", i, mb_mod[i].mod_end, limit);
-        printf("Please adapt your boot process\n"
-               "  or supply more memory to bootstrap's allocator.\n");
-        while (1);
-        _exit(-1);
-      }
+  reservation_add((unsigned long)mbi, sizeof(l4util_mb_info_t));
+  reservation_add(mbi->cmdline, __builtin_strlen((char*)mbi->cmdline) + 1);
+
+  l4util_mb_mod_t *mods = (l4util_mb_mod_t*)mbi->mods_addr;
+  reservation_add((unsigned long)mods,
+                  mbi->mods_count * sizeof(l4util_mb_mod_t));
+
+  for (l4util_mb_mod_t *mod = mods; mod < mods + mbi->mods_count; ++mod)
+    {
+      reservation_add(mod->cmdline, __builtin_strlen((char *)mod->cmdline) + 1);
+      reservation_add(mod->mod_start, mod->mod_end - mod->mod_start);
+    }
 }
 
 void bootstrap (l4util_mb_info_t *mbi, unsigned int flag, char *rm_pointer);
 void
 bootstrap (l4util_mb_info_t *mbi, unsigned int flag, char *rm_pointer)
 {
-  l4_uint32_t vma_start, vma_end;
   struct
   {
     l4_uint32_t start;
@@ -72,14 +75,19 @@ bootstrap (l4util_mb_info_t *mbi, unsigned int flag, char *rm_pointer)
 
   printf("Highest physical memory address found: %llx (%llxMiB)\n",
          mem_upper, mem_upper >> 20);
-
   // our memory available for our initial identity mapped page table is
   // enough to cover 4GB of physical memory that must contain anything that
   // is required to boot, i.e. bootstrap, all modules, any required devices
   // and the final location of sigma0 and moe
   const unsigned long long Max_initial_mem = 4ull << 30;
 
-  check_mbi_modules_in_limit(mbi, Max_initial_mem);
+  // Make sure future allocations do not overwrite our image
+  reservation_add((unsigned long)&_image_start,
+                  (unsigned long)(&_image_end - &_image_start));
+  reservation_add(0, 0x1000);      // null page
+  reservation_add(0x1000, 0x1000); // fiasco trampoline page
+
+  reserve_mbi(mbi);
 
   if (mem_upper > Max_initial_mem)
     mem_upper = Max_initial_mem;
@@ -93,8 +101,7 @@ bootstrap (l4util_mb_info_t *mbi, unsigned int flag, char *rm_pointer)
   printf("Loading 64bit part...\n");
   // switch from 32 Bit compatibility mode to 64 Bit mode
   far_ptr.cs    = KERNEL_CS_64;
-  far_ptr.start = load_elf(&_binary_bootstrap64_bin_start,
-                           &vma_start, &vma_end);
+  far_ptr.start = load_elf(&_binary_bootstrap64_bin_start);
 
   asm volatile("ljmp *(%4)"
                 :: "D"(mbi), "S"(flag), "d"(rm_pointer),

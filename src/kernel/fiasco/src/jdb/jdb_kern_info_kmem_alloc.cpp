@@ -19,14 +19,12 @@ Jdb_kern_info_memory::Jdb_kern_info_memory()
 
 PUBLIC
 void
-Jdb_kern_info_memory::show()
+Jdb_kern_info_memory::show() override
 {
   ((Kmem_alloc*)Kmem_alloc::allocator())->debug_dump();
-  typedef Kmem_slab::Reap_list::Const_iterator Iter;
 
   // Slab allocators
-  for (Iter alloc = Kmem_slab::reap_list.begin();
-       alloc != Kmem_slab::reap_list.end(); ++alloc)
+  for (auto const &&alloc: Kmem_slab::reap_list)
     alloc->debug_dump();
 }
 

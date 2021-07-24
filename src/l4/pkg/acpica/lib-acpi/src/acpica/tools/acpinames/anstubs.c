@@ -8,7 +8,7 @@
  *
  * 1. Copyright Notice
  *
- * Some or all of this work - Copyright (c) 1999 - 2017, Intel Corp.
+ * Some or all of this work - Copyright (c) 1999 - 2019, Intel Corp.
  * All rights reserved.
  *
  * 2. License
@@ -111,6 +111,42 @@
  * other governmental approval, or letter of assurance, without first obtaining
  * such license, approval or letter.
  *
+ *****************************************************************************
+ *
+ * Alternatively, you may choose to be licensed under the terms of the
+ * following license:
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions, and the following disclaimer,
+ *    without modification.
+ * 2. Redistributions in binary form must reproduce at minimum a disclaimer
+ *    substantially similar to the "NO WARRANTY" disclaimer below
+ *    ("Disclaimer") and any redistribution must be conditioned upon
+ *    including a substantially similar Disclaimer requirement for further
+ *    binary redistribution.
+ * 3. Neither the names of the above-listed copyright holders nor the names
+ *    of any contributors may be used to endorse or promote products derived
+ *    from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+ * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * Alternatively, you may choose to be licensed under the terms of the
+ * GNU General Public License ("GPL") version 2 as published by the Free
+ * Software Foundation.
+ *
  *****************************************************************************/
 
 #include "acpinames.h"
@@ -137,6 +173,9 @@ AcpiUtCopyIobjectToEobject (
     ACPI_OPERAND_OBJECT     *Obj,
     ACPI_BUFFER             *RetBuffer)
 {
+    ACPI_EXCEPTION ((AE_INFO, AE_NOT_IMPLEMENTED,
+        "Stubbed function"));
+
     return (AE_NOT_IMPLEMENTED);
 }
 
@@ -145,6 +184,9 @@ AcpiUtCopyEobjectToIobject (
     ACPI_OBJECT             *Obj,
     ACPI_OPERAND_OBJECT     **InternalObj)
 {
+    ACPI_EXCEPTION ((AE_INFO, AE_NOT_IMPLEMENTED,
+        "Stubbed function"));
+
     return (AE_NOT_IMPLEMENTED);
 }
 
@@ -154,6 +196,9 @@ AcpiUtCopyIobjectToIobject (
     ACPI_OPERAND_OBJECT     **DestDesc,
     ACPI_WALK_STATE         *WalkState)
 {
+    ACPI_EXCEPTION ((AE_INFO, AE_NOT_IMPLEMENTED,
+        "Stubbed function"));
+
     return (AE_NOT_IMPLEMENTED);
 }
 
@@ -212,6 +257,9 @@ AcpiExReadDataFromField (
     ACPI_OPERAND_OBJECT     *ObjDesc,
     ACPI_OPERAND_OBJECT     **RetBufferDesc)
 {
+    ACPI_EXCEPTION ((AE_INFO, AE_NOT_IMPLEMENTED,
+        "Stubbed function"));
+
     return (AE_NOT_IMPLEMENTED);
 }
 
@@ -221,6 +269,9 @@ AcpiExWriteDataToField (
     ACPI_OPERAND_OBJECT     *ObjDesc,
     ACPI_OPERAND_OBJECT     **ResultDesc)
 {
+    ACPI_EXCEPTION ((AE_INFO, AE_NOT_IMPLEMENTED,
+        "Stubbed function"));
+
     return (AE_NOT_IMPLEMENTED);
 }
 
@@ -231,6 +282,9 @@ AcpiExStoreObjectToNode (
     ACPI_WALK_STATE         *WalkState,
     UINT8                   ImplicitConversion)
 {
+    ACPI_EXCEPTION ((AE_INFO, AE_NOT_IMPLEMENTED,
+        "Stubbed function"));
+
     return (AE_NOT_IMPLEMENTED);
 }
 
@@ -241,13 +295,10 @@ ACPI_STATUS
 AcpiNsEvaluate (
     ACPI_EVALUATE_INFO      *Info)
 {
-    return (AE_NOT_IMPLEMENTED);
-}
+    ACPI_EXCEPTION ((AE_INFO, AE_NOT_IMPLEMENTED,
+        "Stubbed function"));
 
-void
-AcpiNsExecModuleCodeList (
-    void)
-{
+    return (AE_NOT_IMPLEMENTED);
 }
 
 void
@@ -328,6 +379,9 @@ AcpiDsCallControlMethod (
     ACPI_WALK_STATE         *WalkState,
     ACPI_PARSE_OBJECT       *Op)
 {
+    ACPI_EXCEPTION ((AE_INFO, AE_NOT_IMPLEMENTED,
+        "Stubbed function"));
+
     return (AE_NOT_IMPLEMENTED);
 }
 
@@ -336,6 +390,9 @@ AcpiDsRestartControlMethod (
     ACPI_WALK_STATE         *WalkState,
     ACPI_OPERAND_OBJECT     *ReturnDesc)
 {
+    ACPI_EXCEPTION ((AE_INFO, AE_NOT_IMPLEMENTED,
+        "Stubbed function"));
+
     return (AE_NOT_IMPLEMENTED);
 }
 
@@ -351,6 +408,9 @@ AcpiDsMethodError (
     ACPI_STATUS             Status,
     ACPI_WALK_STATE         *WalkState)
 {
+    ACPI_EXCEPTION ((AE_INFO, AE_NOT_IMPLEMENTED,
+        "Stubbed function"));
+
     return (AE_NOT_IMPLEMENTED);
 }
 
@@ -360,6 +420,9 @@ AcpiDsBeginMethodExecution (
     ACPI_OPERAND_OBJECT     *ObjDesc,
     ACPI_WALK_STATE         *WalkState)
 {
+    ACPI_EXCEPTION ((AE_INFO, AE_NOT_IMPLEMENTED,
+        "Stubbed function"));
+
     return (AE_NOT_IMPLEMENTED);
 }
 
@@ -368,6 +431,9 @@ AcpiDsGetPredicateValue (
     ACPI_WALK_STATE         *WalkState,
     ACPI_OPERAND_OBJECT     *ResultObj)
 {
+    ACPI_EXCEPTION ((AE_INFO, AE_NOT_IMPLEMENTED,
+        "Stubbed function"));
+
     return (AE_NOT_IMPLEMENTED);
 }
 
@@ -411,6 +477,9 @@ AcpiDsExecBeginOp (
     ACPI_WALK_STATE         *WalkState,
     ACPI_PARSE_OBJECT       **OutOp)
 {
+    ACPI_EXCEPTION ((AE_INFO, AE_NOT_IMPLEMENTED,
+        "Stubbed function"));
+
     return (AE_NOT_IMPLEMENTED);
 }
 
@@ -418,5 +487,8 @@ ACPI_STATUS
 AcpiDsExecEndOp (
     ACPI_WALK_STATE         *State)
 {
+    ACPI_EXCEPTION ((AE_INFO, AE_NOT_IMPLEMENTED,
+        "Stubbed function"));
+
     return (AE_NOT_IMPLEMENTED);
 }

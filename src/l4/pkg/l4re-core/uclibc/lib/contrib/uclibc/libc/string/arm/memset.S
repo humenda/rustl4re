@@ -17,7 +17,6 @@
    <http://www.gnu.org/licenses/>.  */
 
 #include <features.h>
-#include <sys/syscall.h>
 #include <bits/arm_asm.h>
 #include <bits/arm_bx.h>
 
@@ -68,7 +67,7 @@ memset:
 memset:
 	mov	a4, a1
 	cmp	a3, $8		@ at least 8 bytes to do?
-	blt	2f
+	blo	2f
 	orr	a2, a2, a2, lsl $8
 	orr	a2, a2, a2, lsl $16
 1:
@@ -85,35 +84,31 @@ memset:
 	mov	ip, a2
 1:
 	cmp	a3, $8		@ 8 bytes still to do?
-	blt	2f
+	blo	2f
 	stmia	a4!, {a2, ip}
 	sub	a3, a3, $8
 	cmp	a3, $8		@ 8 bytes still to do?
-	blt	2f
+	blo	2f
 	stmia	a4!, {a2, ip}
 	sub	a3, a3, $8
 	cmp	a3, $8		@ 8 bytes still to do?
-	blt	2f
+	blo	2f
 	stmia	a4!, {a2, ip}
 	sub	a3, a3, $8
 	cmp	a3, $8		@ 8 bytes still to do?
 #if defined(__thumb2__)
-	itt	ge
-	stmiage	a4!, {a2, ip}
-	subge	a3, a3, $8
+	itt	hs
+	stmiahs	a4!, {a2, ip}
+	subhs	a3, a3, $8
 #else
-	stmgeia	a4!, {a2, ip}
-	subge	a3, a3, $8
+	stmhsia	a4!, {a2, ip}
+	subhs	a3, a3, $8
 #endif
-	bge	1b
+	bhs	1b
 2:
 	movs	a3, a3		@ anything left?
 	IT(t, eq)
-#if defined(__USE_BX__)
-        bxeq    lr
-#else
-        moveq	pc, lr		@ nope
-#endif
+	BXC(eq, lr)			@ nope
 #if defined (__thumb2__)
 1:
 	strb	a2, [a4], #1
@@ -131,11 +126,7 @@ memset:
 	strb	a2, [a4], $1
 	strb	a2, [a4], $1
 	strb	a2, [a4], $1
-#if defined(__USE_BX__)
-        bx      lr
-#else
- 	mov	pc, lr
-#endif
+	BX(lr)
 #endif
 #endif
 

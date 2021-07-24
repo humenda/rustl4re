@@ -8,7 +8,7 @@
  *
  * 1. Copyright Notice
  *
- * Some or all of this work - Copyright (c) 1999 - 2017, Intel Corp.
+ * Some or all of this work - Copyright (c) 1999 - 2019, Intel Corp.
  * All rights reserved.
  *
  * 2. License
@@ -110,6 +110,42 @@
  * United States government or any agency thereof requires an export license,
  * other governmental approval, or letter of assurance, without first obtaining
  * such license, approval or letter.
+ *
+ *****************************************************************************
+ *
+ * Alternatively, you may choose to be licensed under the terms of the
+ * following license:
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions, and the following disclaimer,
+ *    without modification.
+ * 2. Redistributions in binary form must reproduce at minimum a disclaimer
+ *    substantially similar to the "NO WARRANTY" disclaimer below
+ *    ("Disclaimer") and any redistribution must be conditioned upon
+ *    including a substantially similar Disclaimer requirement for further
+ *    binary redistribution.
+ * 3. Neither the names of the above-listed copyright holders nor the names
+ *    of any contributors may be used to endorse or promote products derived
+ *    from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+ * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * Alternatively, you may choose to be licensed under the terms of the
+ * GNU General Public License ("GPL") version 2 as published by the Free
+ * Software Foundation.
  *
  *****************************************************************************/
 
@@ -585,7 +621,7 @@ WaitKey:
                 break;
             }
         }
-        Length = Pos;
+        Length = (int) Pos;
     }
     else
     {
@@ -605,7 +641,7 @@ WaitKey:
             Length = -EIO;
             goto ErrorExit;
         }
-        Length = ReadSize;
+        Length = (int) ReadSize;
     }
 
 ErrorExit:
@@ -684,7 +720,7 @@ fwrite (
     const char              *Ascii;
     CHAR16                  *End;
     CHAR16                  *Pos;
-    int                     i, j;
+    ACPI_SIZE               i, j;
     ACPI_EFI_FILE_HANDLE    EfiFile;
     UINTN                   WriteSize;
     ACPI_EFI_STATUS         EfiStatus;
@@ -737,7 +773,7 @@ fwrite (
             errno = EIO;
             goto ErrorExit;
         }
-        Length = WriteSize;
+        Length = (int) WriteSize;
     }
 
 ErrorExit:
@@ -890,7 +926,7 @@ fseek (
         {
             return (Error);
         }
-        Size = Info->FileSize;
+        Size = (ACPI_SIZE) (Info->FileSize);
         AcpiOsFree (Info);
 
         if (From == SEEK_CUR)
@@ -931,7 +967,7 @@ fseek (
  * FUNCTION:    AcpiEfiArgify
  *
  * PARAMETERS:  String              - Pointer to command line argument strings
- *                                    which are seperated with spaces
+ *                                    which are separated with spaces
  *              ArgcPtr             - Return number of the arguments
  *              ArgvPtr             - Return vector of the arguments
  *
@@ -1193,6 +1229,7 @@ efi_main (
 
     ST = SystemTab;
     BS = SystemTab->BootServices;
+    RT = SystemTab->RuntimeServices;
     stdin = ACPI_CAST_PTR (ACPI_EFI_FILE, SystemTab->ConIn);
     stdout = ACPI_CAST_PTR (ACPI_EFI_FILE, SystemTab->ConOut);
     stderr = ACPI_CAST_PTR (ACPI_EFI_FILE, SystemTab->ConOut);
@@ -1253,10 +1290,6 @@ ErrorAlloc:
 }
 
 #ifdef _EDK2_EFI
-struct _ACPI_EFI_SYSTEM_TABLE        *ST;
-struct _ACPI_EFI_BOOT_SERVICES       *BS;
-struct _ACPI_EFI_RUNTIME_SERVICES    *RT;
-
 EFI_STATUS
 EFIAPI
 UefiMain (

@@ -1,6 +1,6 @@
 /*
- * (c) 2010 Adam Lackorzynski <adam@os.inf.tu-dresden.de>,
- *          Alexander Warg <warg@os.inf.tu-dresden.de>
+ * (c) 2010-2020 Adam Lackorzynski <adam@os.inf.tu-dresden.de>,
+ *               Alexander Warg <warg@os.inf.tu-dresden.de>
  *     economic rights: Technische Universität Dresden (Germany)
  *
  * This file is part of TUD:OS and distributed under the terms of the
@@ -23,7 +23,6 @@
 #include "hw_device.h"
 #include "server.h"
 #include "res.h"
-#include "pci.h"
 #include "platform_control.h"
 #include "__acpi.h"
 #include "virt/vbus.h"
@@ -45,8 +44,6 @@
 #include <lua.h>
 #include <lauxlib.h>
 #include <lualib.h>
-
-#include "lua_glue.swg.h"
 
 namespace {
 
@@ -93,18 +90,18 @@ public:
   Io_config_x()
   : _do_transparent_msi(false), _verbose_lvl(1) {}
 
-  bool transparent_msi(Hw::Device *) const
+  bool transparent_msi(Hw::Device *) const override
   { return _do_transparent_msi; }
 
-  bool legacy_ide_resources(Hw::Device *) const
+  bool legacy_ide_resources(Hw::Device *) const override
   { return true; }
 
-  bool expansion_rom(Hw::Device *) const
+  bool expansion_rom(Hw::Device *) const override
   { return false; }
 
   void set_transparent_msi(bool v) { _do_transparent_msi = v; }
 
-  int verbose() const { return _verbose_lvl; }
+  int verbose() const override { return _verbose_lvl; }
   void inc_verbosity() { ++_verbose_lvl; }
 
 private:
@@ -187,7 +184,8 @@ int add_vbus(Vi::Device *dev)
 
   b->request_child_resources();
   b->allocate_pending_child_resources();
-  b->setup_resources();
+  b->finalize();
+
   if (!registry->register_obj(b, b->name()).is_valid())
     {
       d_printf(DBG_WARN, "WARNING: Service registration failed: '%s'\n", b->name());
@@ -197,29 +195,6 @@ int add_vbus(Vi::Device *dev)
     dump(b);
   return 0;
 }
-
-
-struct Add_system_bus
-{
-  void operator () (Vi::Device *dev)
-  {
-    Vi::System_bus *b = dynamic_cast<Vi::System_bus*>(dev);
-    if (!b)
-      {
-        d_printf(DBG_ERR, "ERROR: found non system-bus device as root device, ignored\n");
-	return;
-      }
-
-    b->request_child_resources();
-    b->allocate_pending_child_resources();
-    b->setup_resources();
-    if (!registry->register_obj(b, b->name()).is_valid())
-      {
-	d_printf(DBG_WARN, "WARNING: Service registration failed: '%s'\n", b->name());
-	return;
-      }
-  }
-};
 
 
 static int
@@ -255,7 +230,7 @@ read_config(char const *cfg_file, lua_State *lua)
       d_printf(DBG_ERR, "%s: cannot open/read file: %s\n", cfg_file, lua_err);
       exit(1);
     default:
-      d_printf(DBG_ERR, "%s: unknown error: %s\n", cfg_file, lua_err);
+      d_printf(DBG_ERR, "%s: unknown error\n", cfg_file);
       exit(1);
     }
 

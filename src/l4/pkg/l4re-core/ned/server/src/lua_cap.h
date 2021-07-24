@@ -31,6 +31,7 @@ void set_cap_metatable(lua_State *l);
 #define L4_LUA_DECLARE_KOBJECT(_cap_type)                          \
   private:                                                         \
     void operator = (_cap_type const &);                           \
+    _cap_type(_cap_type const &) = default;                        \
   public:                                                          \
     virtual _cap_type *clone(lua_State *l) const                   \
     {                                                              \
@@ -90,7 +91,6 @@ public:
   virtual ~Cap();
 
   int index(lua_State *l) const;
-  int newindex(lua_State *l) const;
   int get_method_table(lua_State *l, char const *typ) const;
 
   void *operator new (size_t, void *p) throw() { return p; }

@@ -3,6 +3,7 @@ var classL4Re_1_1Vfs_1_1Be__file =
     [ "data_space", "classL4Re_1_1Vfs_1_1Be__file.html#ad59d2fac4751f39463ae1c5fa0878904", null ],
     [ "faccessat", "classL4Re_1_1Vfs_1_1Be__file.html#a1d4709a3df0844e21984628fb5728416", null ],
     [ "fchmod", "classL4Re_1_1Vfs_1_1Be__file.html#acfd6ef7ddba46e3948c315dbaba245a9", null ],
+    [ "fchmodat", "classL4Re_1_1Vfs_1_1Be__file.html#aa727ced52b58ce2133f1828c9fa8b54f", null ],
     [ "fdatasync", "classL4Re_1_1Vfs_1_1Be__file.html#a559452877c8942de063256dcea435aee", null ],
     [ "fstat64", "classL4Re_1_1Vfs_1_1Be__file.html#a095df53fba4c41c8ae05b9a2356c94c5", null ],
     [ "fsync", "classL4Re_1_1Vfs_1_1Be__file.html#ad3dd3ee6cba0faafe8fc5591f9eed6ed", null ],
@@ -25,6 +26,7 @@ var classL4Re_1_1Vfs_1_1Be__file =
     [ "unlink", "classL4Re_1_1Vfs_1_1Be__file.html#afa39a5db644ea0cb62b543ef61ddb7d7", null ],
     [ "unlock_all_locks", "classL4Re_1_1Vfs_1_1Be__file.html#a0185046ed41c2c26c0e940dc7e3736c0", null ],
     [ "utime", "classL4Re_1_1Vfs_1_1Be__file.html#abf77afa179777d5aca13c61244afecba", null ],
-    [ "utimes", "classL4Re_1_1Vfs_1_1Be__file.html#a05e58b1c5283bbf029fc6c33f6a700e4", null ],
+    [ "utimensat", "classL4Re_1_1Vfs_1_1Be__file.html#a793b96ff35c3947e56291701d9cad897", null ],
+    [ "utimes", "classL4Re_1_1Vfs_1_1Be__file.html#a36ef05c6c08ef1b00b911c18b90bbba1", null ],
     [ "writev", "classL4Re_1_1Vfs_1_1Be__file.html#a5dd586a8686b4f485815a62b94545f09", null ]
 ];

@@ -1,3 +1,4 @@
 <map id="L4virtio::Svr::Request_processor::has_more" name="L4virtio::Svr::Request_processor::has_more">
-<area shape="rect" id="node2" href="$structL4virtio_1_1Virtqueue_1_1Desc_1_1Flags.html#a4c91d7f9a29c6b9f80d7db69ea066863" title="Get the next bits ( 0 to 0 ) of raw . " alt="" coords="216,5,349,47"/>
+<area shape="rect" id="node1" title="Are there more chained descriptors?" alt="" coords="5,5,169,47"/>
+<area shape="rect" id="node2" href="$structL4virtio_1_1Virtqueue_1_1Desc_1_1Flags.html#a4c91d7f9a29c6b9f80d7db69ea066863" title="Get the next bits ( 0 to 0 ) of raw." alt="" coords="217,5,360,47"/>
 </map>

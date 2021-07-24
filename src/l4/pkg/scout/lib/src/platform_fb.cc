@@ -98,10 +98,7 @@ public:
   /**
    * Constructor
    */
-  Eventqueue(): _head(0), _tail(0)
-  {
-    memset(_queue, 0, sizeof(_queue));
-  }
+  Eventqueue(): _head(0), _tail(0) {}
 
   void add(Scout_gfx::Event const &ev)
   {
@@ -260,7 +257,7 @@ public:
     chksys(L4Re::Env::env()->factory()->create(_ev_irq.get()));
     chksys(e->get_buffer(_ev_ds.get()));
     chksys(L4Re::Env::env()->rm()->attach(&_ev_ds_addr, _ev_ds->size(),
-           L4Re::Rm::Search_addr, _ev_ds.get(), 0, L4_PAGESHIFT));
+           L4Re::Rm::F::Search_addr | L4Re::Rm::F::RW, _ev_ds.get(), 0, L4_PAGESHIFT));
 
     _evb = L4Re::Event_buffer(_ev_ds_addr.get(), _ev_ds->size());
 
@@ -549,7 +546,8 @@ Re_pf::Re_pf(Rect const &sz)
 
 
 
-  chksys(e->rm()->attach(&_fb_addr, _fb_ds->size(), L4Re::Rm::Search_addr,
+  chksys(e->rm()->attach(&_fb_addr, _fb_ds->size(),
+                         L4Re::Rm::F::Search_addr | L4Re::Rm::F::RW,
                          _fb_ds.get(), 0, L4_SUPERPAGESHIFT));
 
   L4Re::Util::Dbg dbg;

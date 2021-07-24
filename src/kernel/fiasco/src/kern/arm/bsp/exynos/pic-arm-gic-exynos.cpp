@@ -133,7 +133,7 @@ private:
 public:
   explicit Gpio_wakeup_chip(Address physbase)
   : Irq_chip_gen(32),
-    Mmio_register_block(Kmem::mmio_remap(physbase)),
+    Mmio_register_block(Kmem::mmio_remap(physbase, 0x1000)),
     _wakeup(0)
   {}
 
@@ -285,7 +285,8 @@ public:
 
   Combiner_chip()
   : Irq_chip_gen(num_combiner_chips() * 8),
-    Mmio_register_block(Kmem::mmio_remap(Mem_layout::Irq_combiner_phys_base))
+    Mmio_register_block(Kmem::mmio_remap(Mem_layout::Irq_combiner_phys_base,
+                                         0x1000))
   {
     // 0..39, 51, 53
     if (Platform::gic_int())
@@ -427,6 +428,8 @@ Combiner_cascade_irq::handle(Upstream_irq const *u)
 // ------------------------------------------------------------------------
 IMPLEMENTATION [pf_exynos4 && !exynos_extgic]:
 
+#include "gic_v2.h"
+
 class Mgr_int : public Mgr_exynos
 {
 public:
@@ -457,13 +460,20 @@ private:
 PUBLIC
 Mgr_int::Mgr_int()
 {
-  _gic = Pic::gic.construct(Kmem::mmio_remap(Mem_layout::Gic_cpu_int_phys_base),
-                            Kmem::mmio_remap(Mem_layout::Gic_dist_int_phys_base));
+  auto g = new Boot_object<Gic_v2>(Kmem::mmio_remap(Mem_layout::Gic_cpu_int_phys_base,
+                                                    Gic_cpu_v2::Size),
+                                   Kmem::mmio_remap(Mem_layout::Gic_dist_int_phys_base,
+                                                    Gic_dist::Size));
+
+  _gic = g;
+  Pic::gic = g;
 
   _cc     = new Boot_object<Combiner_chip>();
   _wu_gc  = new Boot_object<Gpio_wakeup_chip>(Kmem::Gpio2_phys_base);
-  _ei_gc1 = new Boot_object<Gpio_eint_chip>(Kmem::mmio_remap(Mem_layout::Gpio1_phys_base), 16 * 8);
-  _ei_gc2 = new Boot_object<Gpio_eint_chip>(Kmem::mmio_remap(Mem_layout::Gpio2_phys_base), (29 - 21 + 1) * 8);
+  _ei_gc1 = new Boot_object<Gpio_eint_chip>(Kmem::mmio_remap(Mem_layout::Gpio1_phys_base,
+                                                             0x1000), 16 * 8);
+  _ei_gc2 = new Boot_object<Gpio_eint_chip>(Kmem::mmio_remap(Mem_layout::Gpio2_phys_base,
+                                                             0x1000), (29 - 21 + 1) * 8);
 
   // Combiners
   for (unsigned i = 0; i < 40; ++i)
@@ -543,22 +553,22 @@ void Pic::init()
 }
 
 PUBLIC static
-void Pic::init_ap(Cpu_number, bool resume)
+void Pic::init_ap(Cpu_number cpu, bool resume)
 {
-  gic->init_ap(resume);
+  gic->init_ap(cpu, resume);
 }
 
 // ------------------------------------------------------------------------
 INTERFACE [pf_exynos4 && exynos_extgic]:
 
-#include "gic.h"
+#include "gic_v2.h"
 #include "per_cpu_data.h"
 #include "platform.h"
 
 EXTENSION class Pic
 {
 public:
-  static Per_cpu_ptr<Static_object<Gic> > gic;
+  static Per_cpu_ptr<Static_object<Gic_v2> > gic;
 };
 
 // ------------------------------------------------------------------------
@@ -566,7 +576,7 @@ IMPLEMENTATION [pf_exynos4 && exynos_extgic]:
 
 #include "cpu.h"
 
-Per_cpu_ptr<Static_object<Gic> > Pic::gic;
+Per_cpu_ptr<Static_object<Gic_v2> > Pic::gic;
 
 class Mgr_ext : public Mgr_exynos
 {
@@ -597,29 +607,30 @@ public:
   Unsigned32 wakeup_irq_eint_mask() { return _wu_gc->_wakeup; }
 
 private:
-  friend void irq_handler();
   friend class Pic;
-  static Per_cpu<Static_object<Gic> > _gic;
+  static Per_cpu<Static_object<Gic_v2> > _gic;
   Combiner_chip *_cc;
   Gpio_wakeup_chip *_wu_gc;
   Gpio_eint_chip *_ei_gc1, *_ei_gc2;
   //Gpio_eint_chip *_ei_gc3, *_ei_gc4;
 };
 
-DEFINE_PER_CPU Per_cpu<Static_object<Gic> > Mgr_ext::_gic;
+DEFINE_PER_CPU Per_cpu<Static_object<Gic_v2> > Mgr_ext::_gic;
 
 PUBLIC
 Mgr_ext::Mgr_ext()
 {
   Gic *g = _gic.cpu(Cpu_number(0)).construct(
-      Kmem::mmio_remap(Mem_layout::Gic_cpu_ext_cpu0_phys_base),
-      Kmem::mmio_remap(Mem_layout::Gic_dist_ext_cpu0_phys_base));
+      Kmem::mmio_remap(Mem_layout::Gic_cpu_ext_cpu0_phys_base, Gic_cpu_v2::Size),
+      Kmem::mmio_remap(Mem_layout::Gic_dist_ext_cpu0_phys_base, Gic_dist::Size));
 
   _cc = new Boot_object<Combiner_chip>();
 
   _wu_gc = new Boot_object<Gpio_wakeup_chip>(Kmem::Gpio2_phys_base);
-  _ei_gc1 = new Boot_object<Gpio_eint_chip>(Kmem::mmio_remap(Mem_layout::Gpio1_phys_base), 18 * 8);
-  _ei_gc2 = new Boot_object<Gpio_eint_chip>(Kmem::mmio_remap(Mem_layout::Gpio2_phys_base), 14 * 8);
+  _ei_gc1 = new Boot_object<Gpio_eint_chip>(Kmem::mmio_remap(Mem_layout::Gpio1_phys_base,
+                                                             0x1000), 18 * 8);
+  _ei_gc2 = new Boot_object<Gpio_eint_chip>(Kmem::mmio_remap(Mem_layout::Gpio2_phys_base,
+                                                             0x1000), 14 * 8);
 
   // Combiners
   for (unsigned i = 0; i < 16; ++i)
@@ -715,12 +726,18 @@ Mgr_ext::set_cpu(Mword irqnum, Cpu_number cpu) const
           cxx::int_value<Cpu_number>(cpu));
 }
 
+PUBLIC static
+void
+Mgr_ext::exynos_irq_handler()
+{ nonull_static_cast<Mgr_ext *>(Irq_mgr::mgr)->_gic.current()->hit(0); }
+
 PUBLIC static FIASCO_INIT
 void Pic::init()
 {
   Mgr_ext *m = new Boot_object<Mgr_ext>();
   Irq_mgr::mgr = m;
   gic = &m->_gic;
+  Gic::set_irq_handler(&Mgr_ext::exynos_irq_handler);
 }
 
 PUBLIC static
@@ -758,8 +775,10 @@ void Pic::init_ap(Cpu_number cpu, bool resume)
 
           unsigned phys_cpu = cxx::int_value<Cpu_phys_id>(Cpu::cpus.cpu(cpu).phys_id());
           gic.cpu(cpu).construct(
-              Kmem::mmio_remap(Mem_layout::Gic_cpu_ext_cpu0_phys_base + phys_cpu * 0x4000),
-              Kmem::mmio_remap(Mem_layout::Gic_dist_ext_cpu0_phys_base + phys_cpu * 0x4000),
+              Kmem::mmio_remap(Mem_layout::Gic_cpu_ext_cpu0_phys_base + phys_cpu * 0x4000,
+                               0x1000),
+              Kmem::mmio_remap(Mem_layout::Gic_dist_ext_cpu0_phys_base + phys_cpu * 0x4000,
+                               0x1000),
               gic.cpu(Cpu_number(0)));
         }
       else
@@ -767,13 +786,15 @@ void Pic::init_ap(Cpu_number cpu, bool resume)
           assert (cpu == Cpu_number(1));
           assert (Cpu::cpus.cpu(cpu).phys_id() == Cpu_phys_id(1));
 
-          gic.cpu(cpu).construct(Kmem::mmio_remap(Mem_layout::Gic_cpu_ext_cpu1_phys_base),
-                                 Kmem::mmio_remap(Mem_layout::Gic_dist_ext_cpu1_phys_base),
+          gic.cpu(cpu).construct(Kmem::mmio_remap(Mem_layout::Gic_cpu_ext_cpu1_phys_base,
+                                                  0x1000),
+                                 Kmem::mmio_remap(Mem_layout::Gic_dist_ext_cpu1_phys_base,
+                                                  0x1000),
                                  gic.cpu(Cpu_number(0)));
         }
     }
 
-  gic.cpu(cpu)->init_ap(resume);
+  gic.cpu(cpu)->init_ap(cpu, resume);
 
 
   if (!resume)
@@ -784,11 +805,6 @@ void Pic::init_ap(Cpu_number cpu, bool resume)
       gic.cpu(cpu)->alloc(_check_irq0.cpu(cpu), 0);
     }
 }
-
-
-extern "C"
-void irq_handler()
-{ nonull_static_cast<Mgr_ext *>(Irq_mgr::mgr)->_gic.current()->hit(0); }
 
 //-------------------------------------------------------------------
 IMPLEMENTATION [arm && exynos_extgic && arm_em_tz]:
@@ -803,11 +819,8 @@ Pic::set_pending_irq(unsigned group32num, Unsigned32 val)
 // ------------------------------------------------------------------------
 IMPLEMENTATION [pf_exynos5]:
 
+#include "gic_v2.h"
 #include "platform.h"
-
-EXTENSION class Pic
-{
-};
 
 class Mgr : public Mgr_exynos
 {
@@ -838,17 +851,24 @@ private:
 PUBLIC
 Mgr::Mgr()
 {
-  Gic *g = Pic::gic.construct(Kmem::mmio_remap(Mem_layout::Gic_cpu_phys_base),
-                              Kmem::mmio_remap(Mem_layout::Gic_dist_phys_base));
+  Gic *g = new Boot_object<Gic_v2>(Kmem::mmio_remap(Mem_layout::Gic_cpu_phys_base,
+                                                    Gic_cpu_v2::Size),
+                                   Kmem::mmio_remap(Mem_layout::Gic_dist_phys_base,
+                                                    Gic_dist::Size));
+  Pic::gic = g;
 
   _cc = new Boot_object<Combiner_chip>();
 
   _wu_gc = new Boot_object<Gpio_wakeup_chip>(Kmem::Gpio1_phys_base);
 
-  _ei_gc1 = new Boot_object<Gpio_eint_chip>(Kmem::mmio_remap(Mem_layout::Gpio1_phys_base), 13 * 8);
-  _ei_gc2 = new Boot_object<Gpio_eint_chip>(Kmem::mmio_remap(Mem_layout::Gpio2_phys_base),  8 * 8);
-  _ei_gc3 = new Boot_object<Gpio_eint_chip>(Kmem::mmio_remap(Mem_layout::Gpio3_phys_base),  5 * 8);
-  _ei_gc4 = new Boot_object<Gpio_eint_chip>(Kmem::mmio_remap(Mem_layout::Gpio4_phys_base),  1 * 8);
+  _ei_gc1 = new Boot_object<Gpio_eint_chip>(Kmem::mmio_remap(Mem_layout::Gpio1_phys_base,
+                                                             0x1000), 13 * 8);
+  _ei_gc2 = new Boot_object<Gpio_eint_chip>(Kmem::mmio_remap(Mem_layout::Gpio2_phys_base,
+                                                             0x1000),  8 * 8);
+  _ei_gc3 = new Boot_object<Gpio_eint_chip>(Kmem::mmio_remap(Mem_layout::Gpio3_phys_base,
+                                                             0x1000),  5 * 8);
+  _ei_gc4 = new Boot_object<Gpio_eint_chip>(Kmem::mmio_remap(Mem_layout::Gpio4_phys_base,
+                                                             0x1000),  1 * 8);
 
   // Combiners
   for (unsigned i = 0; i < 32; ++i)
@@ -935,9 +955,9 @@ Pic::reinit(Cpu_number)
 }
 
 PUBLIC static
-void Pic::init_ap(Cpu_number, bool resume)
+void Pic::init_ap(Cpu_number cpu, bool resume)
 {
-  gic->init_ap(resume);
+  gic->init_ap(cpu, resume);
 }
 
 //---------------------------------------------------------------------------

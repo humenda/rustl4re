@@ -112,10 +112,6 @@ l4vbus_gpio_set(l4_cap_idx_t vbus, l4vbus_device_handle_t handle,
  * \param handle  Device handle for the GPIO chip
  * \param offset  Pin corresponding to the LSB in \a mask.
  *                Note: allowed may be hardware specific.
- * \param mask    Mask of GPIO pins to configure. A bit set to 1 configures
- *                this pin. A maximum of 32 pins can be configured at once.
- *                The real number depends on the hardware and the driver
- *                implementation.
  * \copydetails L4vbus::Gpio_module::setup()
  */
 int L4_CV
@@ -129,10 +125,6 @@ l4vbus_gpio_multi_setup(l4_cap_idx_t vbus, l4vbus_device_handle_t handle,
  * \param handle  Device handle for the GPIO chip
  * \param offset  Pin corresponding to the LSB in \a mask.
  *                Note: allowed may be hardware specific.
- * \param mask    Mask of GPIO pins to configure. A bit set to 1 configures
- *                this pin. A maximum of 32 pins can be configured at once.
- *                The real number depends on the hardware and the driver
- *                implementation.
  * \copydetails L4vbus::Gpio_module::config_pad()
  */
 int L4_CV

@@ -79,6 +79,9 @@
 /* Define to 1 if you have the `strtoumax' function. */
 #undef HAVE_STRTOUMAX
 
+/* Define if your `struct stat' has `st_mtim' */
+#undef HAVE_ST_MTIM
+
 /* Define to 1 if you have the `sysconf' function. */
 #undef HAVE_SYSCONF
 
@@ -87,6 +90,9 @@
 
 /* Define to 1 if you have the <sys/types.h> header file. */
 #undef HAVE_SYS_TYPES_H
+
+/* Define if your faccessat tells root all files are executable */
+#undef HAVE_TRADITIONAL_FACCESSAT
 
 /* Define to 1 if you have the <unistd.h> header file. */
 #undef HAVE_UNISTD_H

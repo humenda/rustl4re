@@ -6,3 +6,4 @@ git subtree merge -P lib-acpi/src/acpica <revision from split>
 
 git commit: f8d496aa61789ce853ef230ce554dd40982e9047 -> (source)cec0b9a561750410c93d21d49c224eb9d80be058
 git commit: 711a8c19d3c646fdc069c38912d9037c7fa5e718 -> (source)45dde767d5ee4e97fa7b20d1f6df81d90f594f86
+git commit: db29ce57ced39ec610667c4b946bc3bb38bc8efa (tag: R08_16_19) -> 60c9403a031d5e3d3d29489bae44bee40c598768 (tag: source-R08_16_19)

@@ -27,9 +27,15 @@
  */
 
 #ifdef LIBBSD_OVERLAY
+#include <sys/cdefs.h>
+#if __has_include_next(<endian.h>)
 #include_next <endian.h>
+#endif
 #else
+#include <bsd/sys/cdefs.h>
+#if __has_include(<endian.h>)
 #include <endian.h>
+#endif
 #endif
 
 #ifndef LIBBSD_SYS_ENDIAN_H

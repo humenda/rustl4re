@@ -8,7 +8,7 @@
  *
  * 1. Copyright Notice
  *
- * Some or all of this work - Copyright (c) 1999 - 2017, Intel Corp.
+ * Some or all of this work - Copyright (c) 1999 - 2019, Intel Corp.
  * All rights reserved.
  *
  * 2. License
@@ -111,6 +111,42 @@
  * other governmental approval, or letter of assurance, without first obtaining
  * such license, approval or letter.
  *
+ *****************************************************************************
+ *
+ * Alternatively, you may choose to be licensed under the terms of the
+ * following license:
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions, and the following disclaimer,
+ *    without modification.
+ * 2. Redistributions in binary form must reproduce at minimum a disclaimer
+ *    substantially similar to the "NO WARRANTY" disclaimer below
+ *    ("Disclaimer") and any redistribution must be conditioned upon
+ *    including a substantially similar Disclaimer requirement for further
+ *    binary redistribution.
+ * 3. Neither the names of the above-listed copyright holders nor the names
+ *    of any contributors may be used to endorse or promote products derived
+ *    from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+ * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * Alternatively, you may choose to be licensed under the terms of the
+ * GNU General Public License ("GPL") version 2 as published by the Free
+ * Software Foundation.
+ *
  *****************************************************************************/
 
 #include "aslcompiler.h"
@@ -119,6 +155,8 @@
 #include "actables.h"
 #include "acparser.h"
 #include "acapps.h"
+#include "acmacros.h"
+#include "acconvert.h"
 
 
 #define _COMPONENT          ACPI_TOOLS
@@ -243,7 +281,7 @@ AdCreateTableHeader (
 
         /* Revision of DSDT controls the ACPI integer width */
 
-        if (ACPI_COMPARE_NAME (Table->Signature, ACPI_SIG_DSDT))
+        if (ACPI_COMPARE_NAMESEG (Table->Signature, ACPI_SIG_DSDT))
         {
             AcpiOsPrintf (" **** 32-bit table (V1), no 64-bit math support");
         }
@@ -272,6 +310,14 @@ AdCreateTableHeader (
     AcpiOsPrintf (" *     Compiler ID      \"%.4s\"\n",     Table->AslCompilerId);
     AcpiOsPrintf (" *     Compiler Version 0x%8.8X (%u)\n", Table->AslCompilerRevision, Table->AslCompilerRevision);
     AcpiOsPrintf (" */\n");
+
+    /*
+     * Print comments that come before this definition block.
+     */
+    if (AcpiGbl_CaptureComments)
+    {
+        ASL_CV_PRINT_ONE_COMMENT(AcpiGbl_ParseOpRoot,AML_COMMENT_STANDARD, NULL, 0);
+    }
 
     /*
      * Open the ASL definition block.
@@ -397,8 +443,8 @@ AdGetLocalTables (
     /* Get the DSDT via table override */
 
     ACPI_MOVE_32_TO_32 (TableHeader.Signature, ACPI_SIG_DSDT);
-    AcpiOsTableOverride (&TableHeader, &NewTable);
-    if (!NewTable)
+    Status = AcpiOsTableOverride (&TableHeader, &NewTable);
+    if (ACPI_FAILURE (Status) || !NewTable)
     {
         fprintf (stderr, "Could not obtain DSDT\n");
         return (AE_NO_ACPI_TABLES);
@@ -460,6 +506,7 @@ AdParseTable (
 
     AmlLength = Table->Length - sizeof (ACPI_TABLE_HEADER);
     AmlStart = ((UINT8 *) Table + sizeof (ACPI_TABLE_HEADER));
+    ASL_CV_INIT_FILETREE(Table, AmlStart, AmlLength);
 
     /* Create the root object */
 
@@ -468,6 +515,17 @@ AdParseTable (
     {
         return (AE_NO_MEMORY);
     }
+
+#ifdef ACPI_ASL_COMPILER
+    if (AcpiGbl_CaptureComments)
+    {
+        AcpiGbl_ParseOpRoot->Common.CvFilename = AcpiGbl_FileTreeRoot->Filename;
+    }
+    else
+    {
+        AcpiGbl_ParseOpRoot->Common.CvFilename = NULL;
+    }
+#endif
 
     /* Create and initialize a new walk state */
 

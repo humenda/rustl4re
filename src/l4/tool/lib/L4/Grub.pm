@@ -1,6 +1,7 @@
 package L4::Grub;
 
 use Exporter;
+use warnings;
 use vars qw(@ISA @EXPORT);
 @ISA    = qw(Exporter);
 

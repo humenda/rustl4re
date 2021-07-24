@@ -2,15 +2,16 @@
 
 #include "types.h"
 #include "globalconfig.h"
+#include "jdb_types.h"
 
 class Space;
 
-typedef int (*Peek_task)(Address addr, Space *task, void *value, int width);
-typedef const char* (*Get_symbol)(Address addr, Space *task);
+typedef int (*Peek_task)(Jdb_address addr, void *value, int width);
+typedef int (*Is_adp_mem)(Jdb_address addr);
 
-extern unsigned int
-disasm_bytes(char *buffer, unsigned len, Address addr, 
-             Space *task, int show_symbols, int show_intel_syntax,
-             Peek_task peek_task, Get_symbol get_symbol);
+extern int
+disasm_bytes(char *buffer, unsigned len, Jdb_address addr,
+             int show_intel_syntax,
+             Peek_task peek_task, Is_adp_mem adp_mem);
 
-
+void disasm_init(void *ptr, unsigned size);

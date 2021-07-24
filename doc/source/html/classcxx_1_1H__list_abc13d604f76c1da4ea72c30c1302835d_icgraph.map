@@ -1,0 +1,11 @@
+<map id="cxx::H_list::remove" name="cxx::H_list::remove">
+<area shape="rect" id="node1" title="Remove the given element from its list." alt="" coords="645,111,793,137"/>
+<area shape="rect" id="node2" href="$classcxx_1_1Base__slab.html#a48ac5e888c4292fc5b1662b3a5e01997" title="Allocate a new object." alt="" coords="223,35,382,61"/>
+<area shape="rect" id="node5" href="$classcxx_1_1Base__slab.html#af7f8144a14030567ab8f83e88b9cf20b" title="Free the given object (_o)." alt="" coords="441,85,594,112"/>
+<area shape="rect" id="node7" href="$classcxx_1_1H__list.html#a4e7e01b097cbccbf8beffd2a6fbe17ac" title="Remove and return the head element of the list." alt="" coords="437,136,597,163"/>
+<area shape="rect" id="node8" href="$classL4_1_1Ipc__svr_1_1Timeout__queue.html#a172e0ca0f7fcb845b75939c4f30ceebb" title="Remove timeout from the queue." alt="" coords="441,187,594,229"/>
+<area shape="rect" id="node3" href="$classcxx_1_1Slab.html#a18f3fa63befc64e1f89b4c566069ed60" title="Allocate an object of type Type." alt="" coords="27,5,147,32"/>
+<area shape="rect" id="node4" href="$classcxx_1_1Base__slab__static.html#ac14d1b49aa4cae0545c3965f63bb9892" title="Allocate an object." alt="" coords="5,57,168,98"/>
+<area shape="rect" id="node6" href="$classcxx_1_1Base__slab__static.html#ac373452de268f7dfb05cc73f51bfd8ce" title="Free the given object (p)." alt="" coords="221,86,384,127"/>
+<area shape="rect" id="node9" href="$classL4_1_1Ipc__svr_1_1Timeout__queue__hooks.html#ab1fba549749a3efc182d719e22d23a4e" title="Remove timeout from the queue." alt="" coords="216,180,389,236"/>
+</map>

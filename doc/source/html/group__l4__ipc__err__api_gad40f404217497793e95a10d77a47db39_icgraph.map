@@ -1,4 +1,9 @@
 <map id="l4_ipc_error" name="l4_ipc_error">
-<area shape="rect" id="node2" href="$x86_2l4f_2l4_2util_2port__io_8h.html#a38a37fdbed4dd2dca75ce192d506a2d4" title="Map a range of I/O ports. " alt="" coords="171,5,300,32"/>
-<area shape="rect" id="node3" href="$classL4Re_1_1Util_1_1Event__buffer__consumer__t.html#a4ed22b41ce4c7e6b93efae878b1415ef" title="Continuously wait for events and process them. " alt="" coords="152,57,319,98"/>
+<area shape="rect" id="node1" title="Get the error code for an object invocation." alt="" coords="903,64,1001,91"/>
+<area shape="rect" id="node2" href="$x86_2l4f_2l4_2util_2port__io_8h.html#a38a37fdbed4dd2dca75ce192d506a2d4" title="Map a range of I/O ports." alt="" coords="699,5,835,32"/>
+<area shape="rect" id="node3" href="$classL4Re_1_1Util_1_1Event__buffer__consumer__t.html#a4ed22b41ce4c7e6b93efae878b1415ef" title="Continuously wait for events and process them." alt="" coords="680,57,855,98"/>
+<area shape="rect" id="node4" href="$classL4virtio_1_1Driver_1_1Device.html#a05a02d57ddf646f029311ca8a63f4081" title="Wait for a notification from the device." alt="" coords="681,122,853,163"/>
+<area shape="rect" id="node5" href="$classL4virtio_1_1Driver_1_1Device.html#a156576a5d43ef2fe11b39f4d8ffc4c9e" title="Wait for the next item to arrive in the used queue and return it." alt="" coords="460,122,632,163"/>
+<area shape="rect" id="node6" href="$classL4virtio_1_1Driver_1_1Device.html#af4aa9ac34ce928b9d437f1bb6a2ec216" title="Send a request to the device and wait for it to be processed." alt="" coords="240,122,412,163"/>
+<area shape="rect" id="node7" href="$classL4virtio_1_1Driver_1_1Block__device.html#a63f21e71556accc8c669ef80161ecd8e" title="Process request synchronously." alt="" coords="5,122,192,163"/>
 </map>

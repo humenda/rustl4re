@@ -1,2 +1,3 @@
 <map id="L4::Ipc_svr::Default_setup_wait" name="L4::Ipc_svr::Default_setup_wait">
+<area shape="rect" id="node1" title="Mix in for LOOP_HOOKS for setup_wait no op." alt="" coords="5,5,152,97"/>
 </map>

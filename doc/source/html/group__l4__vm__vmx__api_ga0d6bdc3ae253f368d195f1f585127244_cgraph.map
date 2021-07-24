@@ -1,3 +1,4 @@
 <map id="l4_vm_vmx_ptr_load" name="l4_vm_vmx_ptr_load">
-<area shape="rect" id="node2" href="$group__l4__vm__vmx__api.html#ga4d323a569fb25c1e13c43307a10c0928" title="Saves cached state from the kernel VMCS to the user VMCS. " alt="" coords="205,5,336,32"/>
+<area shape="rect" id="node1" title="Loads the user_vmcs as the current VMCS." alt="" coords="5,5,164,32"/>
+<area shape="rect" id="node2" href="$group__l4__vm__vmx__api.html#ga4d323a569fb25c1e13c43307a10c0928" title="Saves cached state from the kernel VMCS to the user VMCS." alt="" coords="212,5,349,32"/>
 </map>

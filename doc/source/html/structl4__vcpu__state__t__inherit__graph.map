@@ -1,3 +1,4 @@
 <map id="l4_vcpu_state_t" name="l4_vcpu_state_t">
-<area shape="rect" id="node2" href="$classL4vcpu_1_1Vcpu.html" title="C++ implementation of the vCPU save state area. " alt="" coords="5,307,156,575"/>
+<area shape="rect" id="node1" title="State of a vCPU." alt="" coords="21,5,145,259"/>
+<area shape="rect" id="node2" href="$classL4vcpu_1_1Vcpu.html" title="C++ implementation of the vCPU save state area." alt="" coords="5,307,161,575"/>
 </map>

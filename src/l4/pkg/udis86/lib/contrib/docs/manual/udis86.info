@@ -640,7 +640,7 @@ File: udis86.info,  Node: Index,  Prev: libudis86,  Up: Top
 Index
 *****
 
-
+ [index ]
 * Menu:
 
 * lookup_mnemonic (C function):          Disassemble.         (line  94)

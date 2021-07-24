@@ -38,8 +38,12 @@ L4::Ipc::Ostream &operator << (L4::Ipc_ostream &s,
 namespace L4Re { namespace Util {
 
 int
-Dataspace_svr::map(l4_addr_t offs, l4_addr_t hot_spot, unsigned long flags,
-                    l4_addr_t min, l4_addr_t max, L4::Ipc::Snd_fpage &memory)
+Dataspace_svr::map(Dataspace::Offset offs,
+                   Dataspace::Map_addr hot_spot,
+                   Dataspace::Flags flags,
+                   Dataspace::Map_addr min,
+                   Dataspace::Map_addr max,
+                   L4::Ipc::Snd_fpage &memory)
 {
   int err = map_hook(offs, flags, min, max);
   if (err < 0)
@@ -90,7 +94,7 @@ Dataspace_svr::map(l4_addr_t offs, l4_addr_t hot_spot, unsigned long flags,
   l4_addr_t map_base = l4_trunc_size(addr, order);
   //l4_addr_t map_offs = addr & ~(~0UL << order);
 
-  l4_fpage_t fpage = l4_fpage(map_base, order, flags && is_writable() ?  L4_FPAGE_RWX : L4_FPAGE_RX);
+  l4_fpage_t fpage = l4_fpage(map_base, order, flags.fpage_rights());
 
   memory = L4::Ipc::Snd_fpage(fpage, hot_spot, _map_flags, _cache_flags);
 
@@ -98,7 +102,7 @@ Dataspace_svr::map(l4_addr_t offs, l4_addr_t hot_spot, unsigned long flags,
 }
 
 long
-Dataspace_svr::clear(l4_addr_t offs, unsigned long ds_size) const throw()
+Dataspace_svr::clear(l4_addr_t offs, unsigned long ds_size) const noexcept
 {
   if (!check_limit(offs))
     return -L4_ERANGE;
@@ -117,12 +121,6 @@ Dataspace_svr::clear(l4_addr_t offs, unsigned long ds_size) const throw()
     }
 
   return ds_size;
-}
-
-int
-Dataspace_svr::phys(l4_addr_t /*offset*/, l4_addr_t &/*phys_addr*/, l4_size_t &/*phys_size*/) throw()
-{
-  return -L4_EINVAL;
 }
 
 }}
