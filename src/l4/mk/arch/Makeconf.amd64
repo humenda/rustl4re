@@ -23,4 +23,4 @@ SYSTEMS_PLAIN  += amd64
 QEMU_ARCH_MAP_amd64   = qemu-system-x86_64
 
 # Rust target specification
-RUST_TARGET=x86_64-unknown-l4re-uclibc
+RUST_TARGET_amd64 = x86_64-unknown-l4re-uclibc

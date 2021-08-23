@@ -70,9 +70,10 @@ BUILD_ABI        = $(patsubst "%",%,$(CONFIG_BUILD_ABI))
 BUILD_ARCH       = $(patsubst "%",%,$(CONFIG_BUILD_ARCH))
 MAKECONFS_ADD    = $(call strip_quotes,$(CONFIG_MAKECONFS_ADD))
 
-CCXX_FLAGS        = $(CCXX_FLAGS_$(BUILD_ARCH))
+CCXX_FLAGS       = $(CCXX_FLAGS_$(BUILD_ARCH))
 
 # Rust compiler flags and other required variables
+RUST_TARGET      = $(RUST_TARGET_$(BUILD_ARCH))
 RSFLAGS        ?= -C opt-level=2
 export CARGO_BUILD_TARGET_DIR=$(dir $(abspath $(strip $(TARGET))))
 ifeq ($(strip $(DEBUG)),1)
