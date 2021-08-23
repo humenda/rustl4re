@@ -10,6 +10,8 @@
 //!
 //! **Note:** The limit does not give any guarantee for the amount of available kernel memory.
 
+use libc::{l4_umword_t, l4_mword_t};
+
 use core::ptr;
 use core::mem::size_of;
 
@@ -68,13 +70,13 @@ pub unsafe fn l4_factory_create_thread_u(factory: l4_cap_idx_t,
 /// This creates a new factory with the given `target_cap`, which needs to be allocated before.
 #[inline]
 pub unsafe fn l4_factory_create_factory(factory: l4_cap_idx_t,
-        target_cap: l4_cap_idx_t, limit: u64) -> l4_msgtag_t {
+        target_cap: l4_cap_idx_t, limit: l4_umword_t) -> l4_msgtag_t {
     l4_factory_create_factory_u(factory, target_cap, limit, l4_utcb())
 }
 
 #[inline]
 pub unsafe fn l4_factory_create_factory_u(factory: l4_cap_idx_t,
-        target_cap: l4_cap_idx_t, limit: u64, u: *mut l4_utcb_t)
+        target_cap: l4_cap_idx_t, limit: l4_umword_t, u: *mut l4_utcb_t)
         -> l4_msgtag_t {
     let mut tag = l4_factory_create_start_u(
             MsgTagProto::L4_PROTO_FACTORY as i32, target_cap, u);
@@ -110,7 +112,7 @@ pub unsafe fn l4_factory_create_gate_u(factory: l4_cap_idx_t,
     let mut tag = l4_factory_create_start_u(0, target_cap, u);
     l4_factory_create_add_uint_u(label, &mut tag, u);
     let v = l4_utcb_mr_u(u);
-    if (thread_cap & l4_cap_consts_t::L4_INVALID_CAP_BIT as u64) == 0 {
+    if (thread_cap & l4_cap_consts_t::L4_INVALID_CAP_BIT as l4_umword_t) == 0 {
         items = 1;
         mr!(v[3] = cap::l4_map_obj_control(0,0));
         mr!(v[4] = cap::l4_obj_fpage(thread_cap, 0,
@@ -187,12 +189,12 @@ pub fn l4_factory_create_add_int_u(d: l4_mword_t, tag: &mut l4_msgtag_t,
     }
     unsafe {
         let v = l4_utcb_mr_u(u);
-        mr!(v[w] = L4_varg_type::L4_VARG_TYPE_MWORD as u64
-                | (size_of::<l4_mword_t>() << 16) as u64);
+        mr!(v[w] = L4_varg_type::L4_VARG_TYPE_MWORD as l4_umword_t
+                | (size_of::<l4_mword_t>() << 16) as l4_umword_t);
         mr!(v[w + 1] = d);
     }
     w += 2;
-    tag.raw = (tag.raw & !0x3fi64) | (w & 0x3f) as i64;
+    tag.raw = (tag.raw & !(0x3f as l4_mword_t)) | (w & 0x3f) as l4_mword_t;
     true
 }
 
@@ -205,12 +207,12 @@ pub fn l4_factory_create_add_uint_u(d: l4_umword_t, tag: &mut l4_msgtag_t,
     }
     unsafe {
         let v = l4_utcb_mr_u(u);
-        mr!(v[w] = L4_varg_type::L4_VARG_TYPE_UMWORD as u64
-                | (size_of::<l4_umword_t>() << 16) as u64);
+        mr!(v[w] = L4_varg_type::L4_VARG_TYPE_UMWORD as l4_umword_t
+                | (size_of::<l4_umword_t>() << 16) as l4_umword_t);
         mr!(v[w + 1] = d);
     }
     w += 2;
-    tag.raw = (tag.raw & !0x3fi64) | (w as i64 & 0x3fi64);
+    tag.raw = (tag.raw & !(0x3f as l4_mword_t)) | (w as l4_mword_t & (0x3f as l4_mword_t));
     true
 }
 
@@ -226,10 +228,10 @@ pub unsafe fn l4_factory_create_add_cstr_u(s: *const u8,
     }
     let v = l4_utcb_mr_u(u);
     mr!(v[w] = L4_varg_type::L4_VARG_TYPE_STRING as usize | (len << 16));
-    let c = &mut (*v).mr.as_mut()[w as usize + 1] as *mut u64 as *mut u8;
+    let c = &mut (*v).mr.as_mut()[w as usize + 1] as *mut l4_umword_t as *mut u8;
     ptr::copy_nonoverlapping(s, c, len + 1);
     w = w + 1 + (len + size_of::<l4_umword_t>() - 1) / size_of::<l4_umword_t>();
-    tag.raw = (tag.raw & !0x3fi64) | (w as i64 & 0x3fi64);
+    tag.raw = (tag.raw & !(0x3f as l4_mword_t)) | (w as l4_mword_t & (0x3f as l4_mword_t));
     true
 }
 
@@ -245,14 +247,14 @@ pub fn l4_factory_create_add_str_u(s: &str, tag: &mut l4_msgtag_t,
     unsafe {
         let v = l4_utcb_mr_u(u);
         mr!(v[w] = L4_varg_type::L4_VARG_TYPE_STRING as usize | (len << 16));
-        let c = &mut (*v).mr.as_mut()[w as usize + 1] as *mut u64 as *mut u8;
+        let c = &mut (*v).mr.as_mut()[w as usize + 1] as *mut l4_umword_t as *mut u8;
         ptr::copy_nonoverlapping(s.as_bytes().as_ptr(), c, len);
         let c = ((c as usize) + len) as *mut u8;
         *c = 0; // add 0-byte
     }
     w = w + 1 + ((len + size_of::<l4_umword_t>() - 1) /
                  size_of::<l4_umword_t>()) as u32;
-    tag.raw = (tag.raw & !0x3f) | (w  as i64 & 0x3f);
+    tag.raw = (tag.raw & !0x3f) | (w  as l4_mword_t & 0x3f);
     true
 }
 
@@ -318,8 +320,8 @@ unsafe fn l4_factory_create_start_u(protocol: i32, target_cap: l4_cap_idx_t,
     let b = l4_utcb_br_u(u);
     mr!(v[0] = protocol);
     (*b).bdr = 0;
-    (*b).br[0] = target_cap | l4_msg_item_consts_t::L4_RCV_ITEM_SINGLE_CAP as u64;
-    msgtag(MsgTagProto::L4_PROTO_FACTORY as i64, 1, 0, 0)
+    (*b).br[0] = target_cap | l4_msg_item_consts_t::L4_RCV_ITEM_SINGLE_CAP as l4_umword_t;
+    msgtag(MsgTagProto::L4_PROTO_FACTORY as l4_mword_t, 1, 0, 0)
 }
 
 #[inline]
@@ -336,7 +338,7 @@ pub fn l4_factory_create_add_fpage_u(d: l4_fpage_t, tag: &mut l4_msgtag_t,
         mr!(v[w + 1] = d.raw);
     }
     w += 2;
-    tag.raw = (tag.raw & !0x3fi64) | (w as i64 & 0x3f);
+    tag.raw = (tag.raw & !(0x3f as l4_mword_t)) | (w as l4_mword_t & 0x3f);
     true
 }
 
@@ -351,7 +353,7 @@ pub unsafe fn l4_factory_create_add_nil_u(tag: &mut l4_msgtag_t,
     let v = l4_utcb_mr_u(u);
     mr!(v[w] = L4_varg_type::L4_VARG_TYPE_NIL);
     w += 1;
-    tag.raw = (tag.raw & !0x3fi64) | (w  as i64 & 0x3f);
+    tag.raw = (tag.raw & !(0x3f as l4_mword_t)) | (w  as l4_mword_t & 0x3f);
     true
 }
 

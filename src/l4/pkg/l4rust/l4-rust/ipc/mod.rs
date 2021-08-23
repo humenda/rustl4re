@@ -18,6 +18,8 @@ mod serialise;
 pub mod server;
 pub mod types;
 
+use libc::l4_mword_t;
+
 pub use self::serialise::{Serialiser, Serialisable};
 pub use self::server::{Callback, Loop, LoopBuilder, server_impl_callback};
 pub use self::types::*;
@@ -95,7 +97,7 @@ impl MsgTag {
     /// registers, the numbers of typed items (flex pages, etc.) to transfer and the transfer
     /// flags.
     #[inline]
-    pub fn new(label: i64, words: u32, items: u32, flags: u32) -> MsgTag {
+    pub fn new(label: l4_mword_t, words: u32, items: u32, flags: u32) -> MsgTag {
         MsgTag {
             // the C type is a wrapper type and we reimplement its creation function in
             // l4_sys::ipc_basic anyway. We want to safe every cycle here.
@@ -111,8 +113,8 @@ impl MsgTag {
     /// used for transmitting a result when receiving a message.
     /// When setting protocols, it is advised to use the safer `protocol()` method.
     #[inline]
-    pub fn label(&self) -> i64 {
-        (self.raw >> 16) as i64
+    pub fn label(&self) -> l4_mword_t {
+        (self.raw >> 16) as l4_mword_t
     }
 
     /// Get the protocol of the message tag
@@ -188,7 +190,7 @@ impl MsgTag {
 
     #[inline]
     pub fn raw(self) -> l4_msgtag_t {
-        ::l4_sys::l4_msgtag_t { raw: self.raw as i64 }
+        ::l4_sys::l4_msgtag_t { raw: self.raw as l4_mword_t }
     }
 }
 
@@ -233,7 +235,7 @@ pub unsafe fn l4_ipc_wait(utcb: &mut Utcb, label: *mut l4_umword_t,
 }
 
 #[inline]
-pub unsafe fn l4_msgtag(label: ::libc::c_long, words: c_uint,
+pub unsafe fn l4_msgtag(label: ::libc::l4_mword_t, words: c_uint,
         items: c_uint, flags: c_uint) -> l4_msgtag_t {
     l4_msgtag_w(label, words, items, flags)
 }
@@ -268,7 +270,7 @@ pub unsafe fn l4_rcv_ep_bind_thread(gate: &Cap, thread: &Cap,
 //}
 //
 //#[inline]
-//pub unsafe fn l4_msgtag_label(t: l4_msgtag_t) -> c_long {
+//pub unsafe fn l4_msgtag_label(t: l4_msgtag_t) -> l4_mword_t {
 //    t.raw >> 16
 //}
 //

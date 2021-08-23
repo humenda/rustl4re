@@ -246,7 +246,7 @@ pub fn gen_iface(iface: &Iface) -> TokenStream {
     let gen = quote! {
         l4::iface_back! {
             trait #name {
-                const PROTOCOL_ID: i64 = #protocol;
+                const PROTOCOL_ID: l4_mword_t = #protocol;
                 const CAP_DEMAND: u8 = #caps;
                 #(#opattrs)*
                 type OpType = #optype;

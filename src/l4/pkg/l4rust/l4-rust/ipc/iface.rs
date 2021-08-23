@@ -129,7 +129,7 @@ macro_rules! iface_back {
     // ideal iface declaration with op codes
     (
         trait $traitname:ident {
-            const PROTOCOL_ID: i64 = $proto:tt;
+            const PROTOCOL_ID: l4_mword_t = $proto:tt;
             const CAP_DEMAND: u8 = $caps:literal;
             type OpType = $op_type:tt;
             $(
@@ -140,7 +140,7 @@ macro_rules! iface_back {
     ) => {
         pub trait $traitname: $crate::cap::Interface
                     + $crate::ipc::CapProviderAccess {
-            const PROTOCOL_ID: i64 = $proto;
+            const PROTOCOL_ID: l4_mword_t = $proto;
             const CAP_DEMAND: u8 = $caps;
             $crate::derive_ipc_calls!($proto; $($op_code =>
                     fn $name($($argname: $argtype),*) -> $ret;)*);

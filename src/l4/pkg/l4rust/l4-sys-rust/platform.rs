@@ -2,6 +2,8 @@
 //!
 //!  The API allows a client to suspend, reboot or shutdown the system.
 
+use libc::{l4_umword_t, l4_mword_t};
+
 use crate::c_api::*;
 use crate::ipc_basic::{l4_ipc_call, l4_utcb, l4_utcb_mr_u, timeout_never};
 use crate::ipc_ext::msgtag;
@@ -15,7 +17,7 @@ pub const L4_PLATFORM_CTL_CPU_ENABLE_OP: u64   = 3;
 /// disable an online CPU
 pub const L4_PLATFORM_CTL_CPU_DISABLE_OP: u64  = 4;
 /// Protocol messages to a platform control object.
-pub const L4_PROTO_PLATFORM_CTL: i64 = 0;
+pub const L4_PROTO_PLATFORM_CTL: l4_mword_t = 0;
 
 /// Enter suspend to RAM.
 ///

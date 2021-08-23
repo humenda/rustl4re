@@ -16,7 +16,7 @@ extern "C" {
 /// Provide a convenient mechanism to access the message registers
 macro_rules! mr {
     ($v:ident[$w:expr] = $stuff:expr) => {
-        (*$v).mr.as_mut()[$w as usize] = $stuff as u64;
+        (*$v).mr.as_mut()[$w as usize] = $stuff as l4_umword_t;
     }
 }
 

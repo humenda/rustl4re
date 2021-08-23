@@ -1,5 +1,7 @@
 //! L4(Re) Task API
 
+use libc::l4_umword_t;
+
 use l4_sys::{self, l4_cap_consts_t::L4_CAP_SHIFT,
              l4_addr_t, l4_fpage_t, l4_cap_idx_t};
 use crate::cap::{Cap, CapIdx, Interface};
@@ -11,7 +13,7 @@ use crate::utcb::Utcb;
 // ToDo
 pub static THIS_TASK: Cap<Task> = Cap {
     interface: Task {
-        cap: 1u64 << L4_CAP_SHIFT as u64,
+        cap: (1 as l4_umword_t) << L4_CAP_SHIFT as l4_umword_t,
     }
 };
 
@@ -67,7 +69,7 @@ impl Task {
     #[inline]
     pub unsafe fn unmap_u(&self, fpage: l4_fpage_t, map_mask: UMword,
                    u: &mut Utcb) -> Result<MsgTag> {
-        MsgTag::from(l4_sys::l4_task_unmap_u(self.cap, fpage, map_mask as u64,
+        MsgTag::from(l4_sys::l4_task_unmap_u(self.cap, fpage, map_mask as l4_umword_t,
                 u.raw)).result()
     }
 

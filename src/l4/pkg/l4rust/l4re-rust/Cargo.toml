@@ -8,10 +8,11 @@ edition = "2018"
 path = "lib.rs"
 
 [build-dependencies]
-bindgen = "0.43.1"
+bindgen = "0.59.1"
 
 [dependencies]
-libc = "0.2.43"
+#libc = "0.2.43"
+libc = { git = "https://github.com/Steav005/libc"}
 
 [features]
 default = []

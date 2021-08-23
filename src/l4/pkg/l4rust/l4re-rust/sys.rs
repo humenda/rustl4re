@@ -5,7 +5,7 @@
 use _core::ptr::NonNull;
 use _core::convert::TryInto;
 use l4_sys::helpers::eq_str_cstr;
-use libc::{c_int, c_long, c_ulong, c_void};
+use libc::{c_int, c_void};
 
 include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
 
@@ -40,7 +40,7 @@ unsafe fn l4re_env_get_cap_l(name: &str,
     // unwrap here because this function is internal and doesn't get a null pointer, see calling
     // functions
     let mut c = e.unwrap().as_ref().caps;
-    while !c.is_null() && (*c).flags != !0u64 {
+    while !c.is_null() && (*c).flags != !(0 as l4_umword_t) {
         if eq_str_cstr(name, &(*c).name as *const u8) {
             return NonNull::new(c);
         }
@@ -53,9 +53,9 @@ unsafe fn l4re_env_get_cap_l(name: &str,
 ///
 /// This function uses the L4::Env::env()->rm() service.
 #[inline]
-pub unsafe fn l4re_rm_attach(start: *mut *mut c_void, size: l4_addr_t, flags: u64,
+pub unsafe fn l4re_rm_attach(start: *mut *mut c_void, size: l4_addr_t, flags: l4_umword_t,
         mem: l4re_ds_t, offs: l4_addr_t, align: u8) -> i32 {
-    l4re_rm_attach_srv((*l4re_global_env).rm, start, size as u64, flags.try_into().unwrap(), mem, offs,
+    l4re_rm_attach_srv((*l4re_global_env).rm, start, size as l4_umword_t, flags.try_into().unwrap(), mem, offs.try_into().unwrap(),
             align)
 }
 
@@ -72,9 +72,9 @@ pub unsafe fn l4re_rm_detach_ds(addr: *mut c_void, ds: *mut l4re_ds_t) -> i32 {
 }
 
 #[inline]
-pub unsafe fn l4re_ma_alloc(size: usize, mem: l4re_ds_t, flags: c_ulong)
-        -> c_long {
-    l4re_ma_alloc_w(size as i64, mem, flags)
+pub unsafe fn l4re_ma_alloc(size: usize, mem: l4re_ds_t, flags: l4_umword_t)
+        -> l4_mword_t {
+    l4re_ma_alloc_w(size as l4_mword_t, mem, flags)
 }
 
 

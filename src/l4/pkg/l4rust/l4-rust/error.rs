@@ -1,6 +1,8 @@
 use core::fmt::Formatter;
 use l4_sys::{*, l4_error_code_t::*, l4_ipc_tcr_error_t::*};
 
+use libc::{l4_mword_t, l4_umword_t};
+
 use num_traits::{FromPrimitive, ToPrimitive};
 use crate::utcb::Utcb;
 
@@ -122,8 +124,8 @@ impl TcrErr {
     #[inline]
     pub fn from_tag_u(tag: l4_msgtag_t, utcb: &Utcb) -> Result<Self> {
         unsafe {
-             FromPrimitive::from_u64(l4_ipc_error(tag, utcb.raw))
-                    .ok_or(Error::Unknown(l4_ipc_error(tag, utcb.raw) as i64))
+            FromPrimitive::from_usize(l4_ipc_error(tag, utcb.raw) as usize)
+                .ok_or(Error::Unknown(l4_ipc_error(tag, utcb.raw) as l4_mword_t))
         }
     }
 }
@@ -141,10 +143,10 @@ pub enum Error {
     /// an illegal state was reached
     InvalidState(&'static str),
     /// Unknown error code
-    Unknown(i64),
+    Unknown(l4_mword_t),
     /// Protocol error, custom defined protocol error labels passed with an answer using the MSG
     /// msgtag label
-    Protocol(i64),
+    Protocol(l4_mword_t),
     /// Invalid string encoding (required UTF-8)
     InvalidEncoding(Option<core::str::Utf8Error>),
 }
@@ -174,8 +176,8 @@ impl _core::fmt::Display for Error {
 }
 
 impl Error {
-    pub const INVALID_CAP_CODE: i64 = -65540;
-    pub const INVALID_ENCODING: i64 = -65541;
+    pub const INVALID_CAP_CODE: l4_mword_t = -65540;
+    pub const INVALID_ENCODING: l4_mword_t = -65541;
 
     /// Get error from given tag (for current thread)
     #[inline]
@@ -199,14 +201,29 @@ impl Error {
     ///
     /// Error codes from L4 IPC are masked and and need to be umasked before converted to an error.
     #[inline(always)]
-    pub fn from_ipc(code: i64) -> Self {
+    #[cfg(not(target_arch = "arm"))]
+    pub fn from_ipc(code: l4_mword_t) -> Self {
         match code {
             Self::INVALID_CAP_CODE => return Error::InvalidCap,
             Self::INVALID_ENCODING => return Error::InvalidEncoding(None),
             _ => (),
         };
         // applying the mask makes the integer positive, cast to u32 then
-        match GenericErr::from_u64(code.abs() as u64) {
+        match GenericErr::from_u64(code.abs() as l4_umword_t) {
+            Some(tc) => Error::Generic(tc),
+            None => Error::Unknown(code),
+        }
+    }
+    #[inline(always)]
+    #[cfg(target_arch = "arm")]
+    pub fn from_ipc(code: l4_mword_t) -> Self {
+        match code {
+            Self::INVALID_CAP_CODE => return Error::InvalidCap,
+            Self::INVALID_ENCODING => return Error::InvalidEncoding(None),
+            _ => (),
+        };
+        // applying the mask makes the integer positive, cast to u32 then
+        match GenericErr::from_u32(code.abs() as l4_umword_t) {
             Some(tc) => Error::Generic(tc),
             None => Error::Unknown(code),
         }
@@ -216,16 +233,30 @@ impl Error {
     ///
     /// IPC errors are transmitted using the label field of the message tag and
     /// usually negative.
-    pub fn into_ipc_err(&self) -> i64 {
+    #[cfg(not(target_arch = "arm"))]
+    pub fn into_ipc_err(&self) -> l4_mword_t {
         match self {
             Error::Generic(err) => err.to_i64().unwrap() * -1,
             Error::Tcr(err) => err.to_i64().unwrap() * -1,
             Error::InvalidCap => -1 * Self::INVALID_CAP_CODE,
             Error::InvalidArg(_, _) | Error::InvalidState(_)
-                    => -1 * GenericErr::InvalidArg.to_i64().unwrap(),
+            => -1 * GenericErr::InvalidArg.to_i64().unwrap(),
             Error::InvalidEncoding(_) => -1 * Self::INVALID_ENCODING,
             Error::Unknown(n) | Error::Protocol(n)
-                => n * -1
+            => n * -1
+        }
+    }
+    #[cfg(target_arch = "arm")]
+    pub fn into_ipc_err(&self) -> l4_mword_t {
+        match self {
+            Error::Generic(err) => err.to_i32().unwrap() * -1,
+            Error::Tcr(err) => err.to_i32().unwrap() * -1,
+            Error::InvalidCap => -1 * Self::INVALID_CAP_CODE,
+            Error::InvalidArg(_, _) | Error::InvalidState(_)
+            => -1 * GenericErr::InvalidArg.to_i32().unwrap(),
+            Error::InvalidEncoding(_) => -1 * Self::INVALID_ENCODING,
+            Error::Unknown(n) | Error::Protocol(n)
+            => n * -1
         }
     }
 }

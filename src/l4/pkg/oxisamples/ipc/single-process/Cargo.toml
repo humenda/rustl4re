@@ -7,5 +7,14 @@ authors = ["streicher <shumenda@gmx.de>"]
 name = "basic_ipc"
 path = "main.rs"
 
+[profile.release]
+panic = "abort"
+#lto = true
+
 [dependencies]
-libc = { git = "https://github.com/rust-lang/libc" }
+#libc = "0.2.50"
+#libc = { git = "https://github.com/Steav005/libc" }
+# Because of some weird reason we are getting an error if we use the same libc version as the l4rust libraries.
+# Error: found two different crates with name 'libc'
+# This workaround just uses the previous commit (which in this case is just before a version bump commit)
+libc = { git = "https://github.com/Steav005/libc", rev = "f5d9656" }

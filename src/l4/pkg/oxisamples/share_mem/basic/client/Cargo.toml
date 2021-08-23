@@ -8,4 +8,5 @@ name = "shm_rust_base-client"
 path = "client.rs"
 
 [dependencies]
-libc = "0.2.43"
+#libc = "0.2.43"
+libc = { git = "https://github.com/Steav005/libc"}

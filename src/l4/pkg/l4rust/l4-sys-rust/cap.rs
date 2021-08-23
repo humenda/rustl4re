@@ -1,4 +1,4 @@
-use libc::{c_uchar, c_uint};
+use libc::{c_uchar, c_uint, l4_umword_t};
 
 use crate::c_api::*;
 
@@ -10,7 +10,7 @@ use crate::c_api::*;
 
 #[inline]
 pub fn l4_is_invalid_cap(cap: l4_cap_idx_t) -> bool {
-    (cap & l4_cap_consts_t::L4_INVALID_CAP_BIT as u64) > 0
+    (cap & l4_cap_consts_t::L4_INVALID_CAP_BIT as l4_umword_t) > 0
 }
 
 // ToDo: leicht nachzuimplementieren
@@ -32,11 +32,11 @@ pub unsafe fn l4_obj_fpage(obj: l4_cap_idx_t, order: c_uint, rights: c_uchar)
 /// * `cache`  Cacheability hints for memory flex pages. See `l4_fpage_cacheability_opt_t`
 /// * `grant`  Indicates if it is a map or a grant item.
 #[inline]
-pub fn l4_map_control(snd_base: l4_umword_t, cache: u8, grant: u64)
+pub fn l4_map_control(snd_base: l4_umword_t, cache: u8, grant: l4_umword_t)
         -> l4_umword_t {
-    (snd_base & L4_fpage_control::L4_FPAGE_CONTROL_MASK as u64)
+    (snd_base & L4_fpage_control::L4_FPAGE_CONTROL_MASK as l4_umword_t)
         | ((cache as l4_umword_t) << 4)
-        | (l4_msg_item_consts_t::L4_ITEM_MAP as u64)
+        | (l4_msg_item_consts_t::L4_ITEM_MAP as l4_umword_t)
         | grant
 }
 
@@ -47,7 +47,7 @@ pub fn l4_map_control(snd_base: l4_umword_t, cache: u8, grant: u64)
 /// *   `spot`:   Hot spot address, used to determine what is actually mapped
 ///     when send and receive flex pages have different size.
 /// *   `grant`:  Indicates if it is a map item or a grant item.
-pub fn l4_map_obj_control(snd_base: l4_umword_t, grant: u64) -> l4_umword_t {
+pub fn l4_map_obj_control(snd_base: l4_umword_t, grant: l4_umword_t) -> l4_umword_t {
     l4_map_control(snd_base, 0, grant)
 }
 

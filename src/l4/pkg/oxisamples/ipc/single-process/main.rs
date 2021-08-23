@@ -87,3 +87,20 @@ fn main() {
         }
     }
 }
+
+//For some reason the linker finds unresolved references to _Unwind_GetIP
+//Because of this we create a dummy function
+#[no_mangle]
+#[cfg(target_arch = "arm")]
+pub extern "C" fn _Unwind_GetIP(_: libc::c_int) {
+    panic!("_Unwind_GetIP was called")
+}
+/*
+Alternatively, add this function to the backtrace.c
+(src/l4/pkg/l4re-core/l4util/lib/src/ARCH-arm/backtrace.c)
+
+Function:
+void _Unwind_GetIP(context){
+    while (1);
+}
+*/

@@ -1,6 +1,8 @@
 //! IPC Interface Types
 use _core::{ptr::NonNull, mem::transmute};
 
+use libc::l4_umword_t;
+
 use super::super::{
     cap::{Cap, CapIdx, IfaceInit, Interface, invalid_cap},
     error::{Error, GenericErr, Result},
@@ -175,17 +177,17 @@ impl CapProvider for Bufferless {
 pub struct BufferManager {
     /// number of allocated capabilities
     caps: u8,
-    cap_flags: u64,
+    cap_flags: l4_umword_t,
     // ToDo: reimplement this with the (ATM unstable) const generics
-    br: [u64; l4_sys::consts::UtcbConsts::L4_UTCB_GENERIC_BUFFERS_SIZE as usize],
+    br: [l4_umword_t; l4_sys::consts::UtcbConsts::L4_UTCB_GENERIC_BUFFERS_SIZE as usize],
 }
 
 impl CapProvider for BufferManager {
     fn new() -> Self {
         BufferManager {
             caps: 0,
-            cap_flags: L4_RCV_ITEM_LOCAL_ID as u64,
-            br: [0u64; L4_UTCB_GENERIC_BUFFERS_SIZE as usize],
+            cap_flags: L4_RCV_ITEM_LOCAL_ID as l4_umword_t,
+            br: [(0 as l4_umword_t); L4_UTCB_GENERIC_BUFFERS_SIZE as usize],
         }
     }
 
@@ -199,13 +201,13 @@ impl CapProvider for BufferManager {
         // ToDo: set up is wrong, +1 caps allocated than actually required
         while cap_demand + 1 > self.caps {
             let cap = unsafe { l4_sys::l4re_util_cap_alloc() };
-            if (cap & L4_INVALID_CAP_BIT as u64) != 0 {
+            if (cap & L4_INVALID_CAP_BIT as l4_umword_t) != 0 {
                 return Err(Error::Generic(GenericErr::NoMem));
             }
 
             // safe this cap as a "receive item" in the format that the kernel
             // understands
-            self.br[self.caps as usize] = cap | L4_RCV_ITEM_SINGLE_CAP as u64
+            self.br[self.caps as usize] = cap | L4_RCV_ITEM_SINGLE_CAP as l4_umword_t
                     | self.cap_flags;
             self.caps += 1;
         }
@@ -216,20 +218,20 @@ impl CapProvider for BufferManager {
     fn rcv_cap<T>(&self, index: usize) -> Result<Cap<T>>
             where T: Interface + IfaceInit {
         if index < self.caps as usize {
-            return Ok(Cap::<T>::new(self.br[index] & L4_CAP_MASK as u64));
+            return Ok(Cap::<T>::new(self.br[index] & L4_CAP_MASK as l4_umword_t));
         }
         Err(Error::InvalidArg("Index not allocated", Some(index as isize)))
     }
 
     unsafe fn rcv_cap_unchecked<T>(&self, index: usize) -> Cap<T>
             where T: Interface + IfaceInit {
-        Cap::<T>::new(self.br[index] & L4_CAP_MASK as u64)
+        Cap::<T>::new(self.br[index] & L4_CAP_MASK as l4_umword_t)
     }
 
 
     fn set_rcv_cap_flags(&mut self, flags: UMword) -> Result<()> {
         if self.cap_flags == 0 {
-            self.cap_flags = flags as u64;
+            self.cap_flags = flags as l4_umword_t;
             return Ok(());
         }
         Err(Error::InvalidState("Unable to set buffer flags when capabilities \

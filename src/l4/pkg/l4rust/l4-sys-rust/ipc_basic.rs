@@ -1,4 +1,4 @@
-use libc::{c_int, c_uint, c_long, c_ulong};
+use libc::{c_int, c_uint, l4_mword_t, l4_umword_t};
 
 use crate::c_api::{*, l4_error_code_t::*, l4_msg_item_consts_t::*,
         L4_fpage_control::*};
@@ -53,7 +53,7 @@ pub unsafe fn l4_ipc_wait(utcb: *mut l4_utcb_t, label: *mut l4_umword_t,
 /// This function only serves compatibility. One can use the MsgTag struct from the l4 crate
 /// instead.
 #[inline]
-pub fn l4_msgtag(label: c_long, words: c_uint, items: c_uint,
+pub fn l4_msgtag(label: l4_mword_t, words: c_uint, items: c_uint,
                         flags: c_uint) -> l4_msgtag_t {
     l4_msgtag_t {
         raw: (label << 16) | (words & 0x3f) as l4_mword_t
@@ -74,8 +74,8 @@ pub unsafe fn l4_rcv_ep_bind_thread(gate: l4_cap_idx_t, thread: l4_cap_idx_t,
 // re-implemented inline functions from l4/sys/ipc.h:
 
 #[inline]
-pub unsafe fn l4_msgtag_flags(t: l4_msgtag_t) -> c_ulong {
-    (t.raw & 0xf000) as c_ulong
+pub unsafe fn l4_msgtag_flags(t: l4_msgtag_t) -> l4_umword_t {
+    (t.raw & 0xf000) as l4_umword_t
 }
 
 /// Re-implementation returning bool instead of int
@@ -92,7 +92,7 @@ pub fn l4_msgtag_items(t: l4_msgtag_t) -> usize {
 }
 
 #[inline]
-pub fn l4_msgtag_label(t: l4_msgtag_t) -> c_long {
+pub fn l4_msgtag_label(t: l4_msgtag_t) -> l4_mword_t {
     t.raw >> 16
 }
 
@@ -103,7 +103,7 @@ pub fn l4_msgtag_words(t: l4_msgtag_t) -> u32 {
 
 /// See sndfpage_add_u and sndfpage_add
 #[inline]
-pub unsafe fn l4_sndfpage_add_u(snd_fpage: l4_fpage_t, snd_base: c_ulong,
+pub unsafe fn l4_sndfpage_add_u(snd_fpage: l4_fpage_t, snd_base: l4_umword_t,
                   tag: *mut l4_msgtag_t, utcb: *mut l4_utcb_t) -> c_int {
     let i = l4_msgtag_words(*tag) as usize + 2 * l4_msgtag_items(*tag);
     if i >= (UTCB_GENERIC_DATA_SIZE - 1) {
@@ -111,7 +111,7 @@ pub unsafe fn l4_sndfpage_add_u(snd_fpage: l4_fpage_t, snd_base: c_ulong,
     }
 
     let v = l4_utcb_mr_u(utcb);
-    mr!(v[i] = snd_base | L4_ITEM_MAP as u64 | L4_ITEM_CONT as u64);
+    mr!(v[i] = snd_base | L4_ITEM_MAP as l4_umword_t | L4_ITEM_CONT as l4_umword_t);
     mr!(v[i + 1] = snd_fpage.raw);
 
     *tag = l4_msgtag(l4_msgtag_label(*tag), l4_msgtag_words(*tag),
@@ -127,7 +127,7 @@ pub unsafe fn l4_utcb_mr() -> *mut l4_msg_regs_t {
 
 /// re-implementation of the inline function from l4sys/include/ipc.h
 #[inline]
-pub unsafe fn l4_sndfpage_add(snd_fpage: l4_fpage_t, snd_base: c_ulong,
+pub unsafe fn l4_sndfpage_add(snd_fpage: l4_fpage_t, snd_base: l4_umword_t,
         tag: *mut l4_msgtag_t) -> c_int {
     l4_sndfpage_add_u(snd_fpage, snd_base, tag, l4_utcb())
 }
@@ -151,7 +151,7 @@ pub fn l4_map_control(snd_base: l4_umword_t, cache: u8,
          grant: u32) -> l4_umword_t {
     (snd_base & L4_FPAGE_CONTROL_MASK as l4_umword_t)
                    | ((cache as l4_umword_t) << 4)
-                   | L4_ITEM_MAP as u64
+                   | L4_ITEM_MAP as l4_umword_t
                    | (grant as l4_umword_t)
 }
 

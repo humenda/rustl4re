@@ -15,7 +15,7 @@ use super::super::{
     error::{Error, Result},
     utcb::UtcbMr,
 };
-use libc::c_void;
+use libc::{c_void, l4_umword_t, l4_mword_t};
 
 /// Stack-based buffer for server objects
 ///
@@ -83,9 +83,9 @@ pub trait LoopHook {
         match (*tag).clone().result() {
             Ok(_) => unreachable!(),
             Err(e) => LoopAction::ReplyAndWait(MsgTag::new(match e {
-                    Error::Generic(e) => e as i64,
-                    Error::Tcr(e) => e as i64,
-                    Error::Unknown(e) => e as i64,
+                    Error::Generic(e) => e as l4_mword_t,
+                    Error::Tcr(e) => e as l4_mword_t,
+                    Error::Unknown(e) => e as l4_mword_t,
                     _ => panic!("{:?}", e),
                 } * -1, 0, 0, 0))
                 // ^ by convention, error codes are negative
@@ -191,7 +191,7 @@ impl<'a, T: LoopHook, C: CapProvider> Loop<'a, T, C> {
     /// C++ version also supports the less performant split of a reply and a wait system call
     /// afterwards, which is omitted here.
     #[inline]
-    fn reply_and_wait(&mut self, replytag: MsgTag, label: &mut u64,
+    fn reply_and_wait(&mut self, replytag: MsgTag, label: &mut l4_umword_t,
             client_tag: &mut MsgTag) {
         self.buf_mgr.setup_wait(self.utcb);
         unsafe {
@@ -211,7 +211,7 @@ impl<'a, T: LoopHook, C: CapProvider> Loop<'a, T, C> {
     ///
     /// The function will panic if no server implementations were registered.
     pub fn start(&mut self) {
-        let mut label: u64 = 0;
+        let mut label: l4_umword_t = 0;
         // called once here for initial wait (see reply_and_wait)
         self.buf_mgr.setup_wait(self.utcb);
         // initial (open) wait before loop
@@ -235,7 +235,7 @@ impl<'a, T: LoopHook, C: CapProvider> Loop<'a, T, C> {
         }
     }
 
-    fn dispatch(&mut self, tag: MsgTag, ipc_label: u64) -> LoopAction {
+    fn dispatch(&mut self, tag: MsgTag, ipc_label: l4_umword_t) -> LoopAction {
         // create argument reader / writer instance with access to the message registers and the
         // allocated (cap) buffers
         let mut mr = unsafe { UtcbMr::from_utcb(self.utcb) };

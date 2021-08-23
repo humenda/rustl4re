@@ -8,7 +8,9 @@ use l4::{
 use l4_derive::{iface, l4_client};
 use super::sys::L4ReProtocols::L4RE_PROTO_DATASPACE;
 
-const PROTO_DATASPACE: i64 = L4RE_PROTO_DATASPACE as i64;
+use libc::l4_mword_t;
+
+const PROTO_DATASPACE: l4_mword_t = L4RE_PROTO_DATASPACE as l4_mword_t;
 
 /// Information about the dataspace
 #[repr(C)]
@@ -59,7 +61,7 @@ unsafe impl l4::ipc::Serialiser for DeprecatedPhys {
 // marker trait and needs to be fixed; only the info() operation is tested
 iface! {
     trait DataspaceProvider {
-        const PROTOCOL_ID: i64 = PROTO_DATASPACE;
+        const PROTOCOL_ID: l4_mword_t = PROTO_DATASPACE;
         // ToDo: docs
         fn map(&mut self, offset: l4_addr_t, spot: l4_addr_t, flags: u64,
                 r: FlexPage) -> Cap<Dataspace>;

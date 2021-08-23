@@ -7,6 +7,7 @@
 //! Task objects are created using the a factory to create new kernel objects.
 
 use core::ptr;
+use libc::{l4_umword_t, l4_mword_t};
 
 use crate::cap::{l4_obj_fpage, l4_map_obj_control};
 use crate::c_api::{*, L4_fpage_rights::*, L4_task_ops::*,
@@ -35,7 +36,7 @@ pub unsafe fn l4_task_map_u(dst_task: l4_cap_idx_t, src_task: l4_cap_idx_t,
     mr!(v[1] = snd_base);
     mr!(v[2] = snd_fpage.raw);
     l4_ipc_call(dst_task, u,
-            msgtag(l4_msgtag_protocol::L4_PROTO_TASK as i64, 3, 1, 0),
+            msgtag(l4_msgtag_protocol::L4_PROTO_TASK as l4_mword_t, 3, 1, 0),
             timeout_never())
 }
 
@@ -60,7 +61,7 @@ pub unsafe fn l4_task_unmap_u(task: l4_cap_idx_t, fpage: l4_fpage_t,
     mr!(v[0] = L4_TASK_UNMAP_OP);
     mr!(v[1] = map_mask);
     mr!(v[2] = fpage.raw);
-    l4_ipc_call(task, u, msgtag(l4_msgtag_protocol::L4_PROTO_TASK as i64,
+    l4_ipc_call(task, u, msgtag(l4_msgtag_protocol::L4_PROTO_TASK as l4_mword_t,
                                 3, 0, 0), timeout_never())
 }
 
@@ -87,12 +88,12 @@ pub unsafe fn l4_task_unmap_batch_u(task: l4_cap_idx_t,
         fpages: *mut l4_fpage_t, num_fpages: u32, map_mask: u64,
         u: *mut l4_utcb_t) -> l4_msgtag_t {
     let v = l4_utcb_mr_u(u);
-    mr!(v[0] = L4_TASK_UNMAP_OP as u64);
-    mr!(v[1] = map_mask as u64);
-    ptr::copy_nonoverlapping(fpages as *mut u64, &mut (*v).mr.as_mut()[2],
+    mr!(v[0] = L4_TASK_UNMAP_OP as l4_umword_t);
+    mr!(v[1] = map_mask as l4_umword_t);
+    ptr::copy_nonoverlapping(fpages as *mut l4_umword_t, &mut (*v).mr.as_mut()[2],
                              num_fpages as usize);
-    l4_ipc_call(task, u, msgtag(l4_msgtag_protocol::L4_PROTO_TASK as i64, 2 + num_fpages, 0, 0),
-            timeout_never())
+    l4_ipc_call(task, u, msgtag(l4_msgtag_protocol::L4_PROTO_TASK as l4_mword_t, 2 + num_fpages, 0, 0),
+                timeout_never())
 }
 
 
@@ -114,7 +115,7 @@ pub unsafe fn l4_task_delete_obj_u(task: l4_cap_idx_t, obj: l4_cap_idx_t,
         u: *mut l4_utcb_t) -> l4_msgtag_t {
     l4_task_unmap_u(task,
             l4_obj_fpage(obj, 0, L4_CAP_FPAGE_RWSD as u8),
-            L4_FP_DELETE_OBJ as u64, u)
+            L4_FP_DELETE_OBJ as l4_umword_t, u)
 }
 
 /// Release capability.
@@ -130,7 +131,7 @@ pub unsafe fn l4_task_release_cap(task: l4_cap_idx_t, cap: l4_cap_idx_t)
 pub unsafe fn l4_task_release_cap_u(task: l4_cap_idx_t, cap: l4_cap_idx_t,
         u: *mut l4_utcb_t) -> l4_msgtag_t {
     l4_task_unmap_u(task, l4_obj_fpage(cap, 0, L4_CAP_FPAGE_RWSD as u8),
-            L4_FP_ALL_SPACES as u64, u)
+            L4_FP_ALL_SPACES as l4_umword_t, u)
 }
 
 /// Check whether a capability is present in a task (refers to an object).
@@ -148,8 +149,8 @@ pub unsafe fn l4_task_cap_valid_u(task: l4_cap_idx_t, cap: l4_cap_idx_t,
         u: *mut l4_utcb_t) -> l4_msgtag_t {
     let v = l4_utcb_mr_u(u);
     mr!(v[0] = L4_TASK_CAP_INFO_OP);
-    mr!(v[1] = cap & !1u64);
-    l4_ipc_call(task, u, msgtag(l4_msgtag_protocol::L4_PROTO_TASK as i64,
+    mr!(v[1] = cap & !(1 as l4_umword_t));
+    l4_ipc_call(task, u, msgtag(l4_msgtag_protocol::L4_PROTO_TASK as l4_mword_t,
                                 2, 0, 0), timeout_never())
 }
 
@@ -169,7 +170,7 @@ pub unsafe fn l4_task_cap_equal_u(task: l4_cap_idx_t, cap_a: l4_cap_idx_t,
     mr!(v[0] = L4_TASK_CAP_INFO_OP);
     mr!(v[1] = cap_a);
     mr!(v[2] = cap_b);
-    l4_ipc_call(task, u, msgtag(l4_msgtag_protocol::L4_PROTO_TASK as i64,
+    l4_ipc_call(task, u, msgtag(l4_msgtag_protocol::L4_PROTO_TASK as l4_mword_t,
                                 3, 0, 0),
             timeout_never())
 }
@@ -189,7 +190,7 @@ pub unsafe fn l4_task_add_ku_mem_u(task: l4_cap_idx_t, ku_mem: l4_fpage_t,
     let v = l4_utcb_mr_u(u);
     mr!(v[0] = L4_TASK_ADD_KU_MEM_OP);
     mr!(v[1] = ku_mem.raw);
-    l4_ipc_call(task, u, msgtag(l4_msgtag_protocol::L4_PROTO_TASK as i64, 2, 0, 0),
+    l4_ipc_call(task, u, msgtag(l4_msgtag_protocol::L4_PROTO_TASK as l4_mword_t, 2, 0, 0),
             timeout_never())
 }
 

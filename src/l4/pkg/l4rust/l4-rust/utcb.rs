@@ -11,6 +11,8 @@ use l4_sys::{
     l4_utcb, l4_utcb_br, l4_utcb_mr_u, l4_utcb_t, l4_msg_regs_t,
     consts::{UTCB_GENERIC_DATA_SIZE, UtcbConsts}};
 
+use libc::l4_umword_t;
+
 use crate::cap::{Cap, Interface};
 use crate::ipc::Serialisable;
 use crate::error::{Error, GenericErr, Result};
@@ -163,7 +165,7 @@ pub struct SndFlexPage {
     /// information about base address to send, map mode, etc.
     description: u64,
     // the data to transfer, e.g. a capability
-    fpage: u64
+    fpage: l4_umword_t
 }
 
 impl SndFlexPage {
@@ -171,7 +173,7 @@ impl SndFlexPage {
     ///
     /// This constructs a new flex page from the raw value of a raw flex page
     /// (`l4_fpage_t.raw`) and additional information.
-    pub fn new(fpage: u64, snd_base: u64, mt: Option<MapType>) -> Self {
+    pub fn new(fpage: l4_umword_t, snd_base: u64, mt: Option<MapType>) -> Self {
         // this is taken mostly unmodified from the Gen_Fpage class in `ipc_types`, though cache
         // opts and `continue` (enums from this class) are not supported
         Self {
@@ -242,7 +244,7 @@ impl<U: UtcbRegSize> Registers<U> {
     /// Initialise struct from given pointer
     ///
     /// The pointer must be valid.
-    pub unsafe fn from_raw(buf: *mut u64) -> Self {
+    pub unsafe fn from_raw(buf: *mut l4_umword_t) -> Self {
         let base = buf as *mut _ as *mut u8;
         Registers {
             base,

@@ -13,4 +13,5 @@ path = "server.rs"
 l4_derive = { path = "../../../l4rust/l4_derive-rust/" }
 
 [dependencies]
-libc = "0.2.43"
+#libc = "0.2.43"
+libc = { git = "https://github.com/Steav005/libc"}
