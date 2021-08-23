@@ -27,3 +27,6 @@ SYSTEMS_PLAIN  += arm
 
 # GCC 4.8.0-4.8.2 showed to be buggy on ARM at least
 CC_BLACKLIST-arm-gcc := 4.8.0 4.8.1 4.8.2
+
+# Rust target specification
+RUST_TARGET_arm = armv7-unknown-l4re-uclibceabihf
