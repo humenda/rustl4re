@@ -832,19 +832,19 @@ EOF
     fi
 
     if [ "$CONF_DO_ARM_RPIZ" ]; then
-      echo "MODULE_SEARCH_PATH+=$(pwd)/obj/fiasco/arm-virt-pl2:$(pwd)/obj/l4linux/arm-mp:$common_paths" >> $Mboot
+      echo "MODULE_SEARCH_PATH+=$(pwd)/obj/fiasco/arm-rpiz:$(pwd)/obj/l4linux/arm-mp:$common_paths" >> $Mboot
       echo "ENTRY=hello        BOOTSTRAP_IMAGE_SUFFIX=rpiz PT=rpi PATH_FIASCO=$(pwd)/obj/fiasco/arm-rpiz" >> $odir/.imagebuilds
       echo "ENTRY=hello-shared BOOTSTRAP_IMAGE_SUFFIX=rpiz PT=rpi PATH_FIASCO=$(pwd)/obj/fiasco/arm-rpiz" >> $odir/.imagebuilds
     fi
 
     if [ "$CONF_DO_ARM_RPI3" ]; then
-      echo "MODULE_SEARCH_PATH+=$(pwd)/obj/fiasco/arm-virt-pl2:$(pwd)/obj/l4linux/arm-mp:$common_paths" >> $Mboot
+      echo "MODULE_SEARCH_PATH+=$(pwd)/obj/fiasco/arm-rpi3:$(pwd)/obj/l4linux/arm-mp:$common_paths" >> $Mboot
       echo "ENTRY=hello        BOOTSTRAP_IMAGE_SUFFIX=rpi3 PT=rpi PATH_FIASCO=$(pwd)/obj/fiasco/arm-rpi3" >> $odir/.imagebuilds
       echo "ENTRY=hello-shared BOOTSTRAP_IMAGE_SUFFIX=rpi3 PT=rpi PATH_FIASCO=$(pwd)/obj/fiasco/arm-rpi3" >> $odir/.imagebuilds
     fi
 
     if [ "$CONF_DO_ARM_RPI4" ]; then
-      echo "MODULE_SEARCH_PATH+=$(pwd)/obj/fiasco/arm-virt-pl2:$(pwd)/obj/l4linux/arm-mp:$common_paths" >> $Mboot
+      echo "MODULE_SEARCH_PATH+=$(pwd)/obj/fiasco/arm-rpi4:$(pwd)/obj/l4linux/arm-mp:$common_paths" >> $Mboot
       echo "ENTRY=hello        BOOTSTRAP_IMAGE_SUFFIX=rpi4 PT=rpi PATH_FIASCO=$(pwd)/obj/fiasco/arm-rpi4" >> $odir/.imagebuilds
       echo "ENTRY=hello-shared BOOTSTRAP_IMAGE_SUFFIX=rpi4 PT=rpi PATH_FIASCO=$(pwd)/obj/fiasco/arm-rpi4" >> $odir/.imagebuilds
       echo "ENTRY=vm-basic     BOOTSTRAP_IMAGE_SUFFIX=rpi4 PT=rpi PATH_FIASCO=$(pwd)/obj/fiasco/arm-rpi4" >> $odir/.imagebuilds
@@ -852,13 +852,13 @@ EOF
     fi
 
     if [ "$CONF_DO_ARM_IMX6UL_PL1" ]; then
-      echo "MODULE_SEARCH_PATH+=$(pwd)/obj/fiasco/arm-virt-pl2:$(pwd)/obj/l4linux/arm-mp:$common_paths" >> $Mboot
+      echo "MODULE_SEARCH_PATH+=$(pwd)/obj/fiasco/arm-imx6ul-pl1:$(pwd)/obj/l4linux/arm-mp:$common_paths" >> $Mboot
       echo "ENTRY=hello        BOOTSTRAP_IMAGE_SUFFIX=imx6ul-pl1 PT=imx6ul PATH_FIASCO=$(pwd)/obj/fiasco/arm-imx6ul-pl1" >> $odir/.imagebuilds
       echo "ENTRY=hello-shared BOOTSTRAP_IMAGE_SUFFIX=imx6ul-pl1 PT=imx6ul PATH_FIASCO=$(pwd)/obj/fiasco/arm-imx6ul-pl1" >> $odir/.imagebuilds
     fi
 
     if [ "$CONF_DO_ARM_IMX6UL_PL2" ]; then
-      echo "MODULE_SEARCH_PATH+=$(pwd)/obj/fiasco/arm-virt-pl2:$(pwd)/obj/l4linux/arm-mp:$common_paths" >> $Mboot
+      echo "MODULE_SEARCH_PATH+=$(pwd)/obj/fiasco/arm-imx6ul-pl2:$(pwd)/obj/l4linux/arm-mp:$common_paths" >> $Mboot
       echo "ENTRY=hello        BOOTSTRAP_IMAGE_SUFFIX=imx6ul-pl2 PT=imx6ul PATH_FIASCO=$(pwd)/obj/fiasco/arm-imx6ul-pl2" >> $odir/.imagebuilds
       echo "ENTRY=hello-shared BOOTSTRAP_IMAGE_SUFFIX=imx6ul-pl2 PT=imx6ul PATH_FIASCO=$(pwd)/obj/fiasco/arm-imx6ul-pl2" >> $odir/.imagebuilds
       echo "ENTRY=vm-basic     BOOTSTRAP_IMAGE_SUFFIX=imx6ul-pl2 PT=imx6ul PATH_FIASCO=$(pwd)/obj/fiasco/arm-imx6ul-pl2" >> $odir/.imagebuilds
