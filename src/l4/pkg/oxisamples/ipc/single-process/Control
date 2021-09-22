@@ -1,3 +1,2 @@
 provides: trust
-requires: l4re libc libpthread libc_be_sig l4re_c-util libc_support_misc
-maintainer: shumenda@gmx.de
+requires: l4re libc libpthread libc_be_sig l4re_c-util libc_support_misc libdl libl4re-wrapper l4-sys-rust
