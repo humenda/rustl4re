@@ -11,4 +11,5 @@ path = "lib.rs"
 bindgen = "0.43.1"
 
 [dependencies]
+core-ffi-helpers = { path = "../core-ffi-helpers" }
 libc = "0.2.50"
