@@ -1,0 +1,12 @@
+[package]
+name = "core-ffi-helpers"
+version = "0.1.0"
+edition = "2018"
+authors = ["Sebastian Humenda <shumenda @ gmx . de>"]
+
+
+[lib]
+path = "lib.rs"
+
+[dependencies]
+libc = "0.2.103"
