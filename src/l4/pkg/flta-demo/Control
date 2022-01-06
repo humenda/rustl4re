@@ -1,0 +1,3 @@
+provides: flta_demo
+requires: l4re libc libpthread libc_be_sig l4re_c-util libc_support_misc libdl l4re-rust
+maintainer: sven.friedrich@tu-clausthal.de

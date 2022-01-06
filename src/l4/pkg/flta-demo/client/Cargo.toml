@@ -1,0 +1,20 @@
+[package]
+name = "flta_demo-client"
+version = "0.1.0"
+edition = "2018"
+
+[[bin]]
+name = "flta_demo-client"
+path = "client.rs"
+
+[dependencies]
+uom = "0.31"
+geo = "0.18"
+terrain_database = { git = "https://github.com/aeronautical-informatics/openTAWS.git", package = "terrain_database", rev = "fb9f75a" }
+taws_primitives = { git = "https://github.com/aeronautical-informatics/openTAWS.git", package = "taws_primitives", rev = "fb9f75a" }
+#libc = "0.2.43"
+#libc = { git = "https://github.com/Steav005/libc" }
+# Because of some weird reason we are getting an error if we use the same libc version as the l4rust libraries.
+# Error: found two different crates with name 'libc'
+# This workaround just uses the previous commit (which in this case is just before a version bump commit)
+libc = { git = "https://github.com/Steav005/libc", rev = "f5d9656" }

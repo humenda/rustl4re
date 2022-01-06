@@ -67,6 +67,14 @@ module two_task_ipc.cfg
 module two_task_ipc-client
 module two_task_ipc-server
 
+entry flta_demo
+roottask moe rom/flta_demo.cfg
+module l4re
+module ned
+module flta_demo.cfg
+module flta_demo-client
+module flta_demo-flta
+
 entry shm_rust
 roottask moe rom/shm_rust.cfg
 module l4re
