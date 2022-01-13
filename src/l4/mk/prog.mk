@@ -177,18 +177,8 @@ endif
 # Additional Rustc flags can be passed using the CARGO_BUILD_RUSTFLAGS variable,
 # read by cargo.
 
-# Strip first word (l4-bender path) and last word (-- delimiter)
-L4_BENDER_ARGS_HEADLESS=$(strip $(LINK_PROGRAM:$(firstword $(LINK_PROGRAM))%=%))
-
-# This is a temporary workaround to pass l4-bender arguments with spaces to the
-# Rust compiler. Rustc arguments are usually passed using CARGO_BUILD_RUSTFLAGS;
-# however, this is a environment variable where the arguments are taken
-# literally and spaces delimit arguments. Therefore, arguments contain a space
-# are NOT supported. The variable below is read the the l4-bender linker variant
-# in Rustc and interpreted accordingly. This is a temporary solution until Cargo
-# provides a proper way to pass linker arguments with spaces. Note that this
-# variable currently needs a patch to be applied to Rustc.
-export L4_BENDER_ARGS=$(strip $(L4_BENDER_ARGS_HEADLESS:%$(lastword $(LINK_PROGRAM))=%))
+# Strip first word (l4-bender path)
+L4_BENDER_ARGS=$(strip $(LINK_PROGRAM:$(firstword $(LINK_PROGRAM))%=%))
 
 # Replace all -D defines through --cfg flags for rust
 CARGO_BUILD_RUSTFLAGS=$(strip $(patsubst -D%,--cfg=%,$(filter -D%,$(CPPFLAGS)))
@@ -205,7 +195,12 @@ CARGO_BUILD_RUSTFLAGS += $(strip \
 
 CARGO_BUILD_RUSTFLAGS += $(strip $(PROC_MACRO_LIBDIRS) \
                          $(addprefix -C link-arg=,$(strip $(filter-out -PC%rust,$(BID_LDFLAGS_FOR_LINKING)))))
-export CARGO_BUILD_RUSTFLAGS
+# separate with the UTF-8 Unit Separator for use with CARGO_BUILD_RUSTFLAGS
+CARGO_ENCODED_BUILD_RUSTFLAGS= $(shell echo $(CARGO_BUILD_RUSTFLAGS) | sed -e 's/ /\x1f/g')
+
+# add the L4 Bender args as link flags, again separated by the UTF-8 Unit Separator
+CARGO_ENCODED_RUSTFLAGS= $(shell printf -- '$(CARGO_ENCODED_BUILD_RUSTFLAGS)'; args=($(L4_BENDER_ARGS)) ; printf -- '\x1f-Zpre-link-arg=%s' "$${args[@]}")
+export CARGO_ENCODED_RUSTFLAGS
 
 # A variable which can be used by a Cargo build script to learn about the used C
 # include directories of the application's C dependencies.
