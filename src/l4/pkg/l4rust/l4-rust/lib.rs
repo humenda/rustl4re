@@ -5,6 +5,9 @@
 #[cfg(feature = "std")]
 extern crate std;
 
+#[cfg(feature = "std")]
+pub mod threads;
+
 #[cfg(not(without_std))]
 pub extern crate core as _core;
 
@@ -25,6 +28,7 @@ pub mod utcb;
 pub mod cap;
 pub mod ipc;
 pub mod task;
+
 
 pub use crate::error::{Error, Result};
 pub use crate::utcb::*;

@@ -1,4 +1,4 @@
-use libc::{c_int, c_uint, l4_mword_t, l4_umword_t};
+use libc::{c_int, c_uint, l4_mword_t, l4_umword_t, c_long};
 
 use crate::c_api::{*, l4_error_code_t::*, l4_msg_item_consts_t::*,
         L4_fpage_control::*};
@@ -20,6 +20,14 @@ pub unsafe fn l4_ipc_call(dest: l4_cap_idx_t, utcb: *mut l4_utcb_t,
 pub unsafe fn l4_ipc_send(dest: l4_cap_idx_t, utcb: *mut l4_utcb_t,
             tag: l4_msgtag_t, timeout: l4_timeout_t) -> l4_msgtag_t {
     l4_ipc_send_w(dest, utcb, tag, timeout)
+}
+
+#[inline]
+pub fn l4_error(tag: l4_msgtag_t) -> c_long {
+    // Safe because it is declared as L4_NOTHROW
+    unsafe{
+        l4_error_w(tag)
+    }
 }
 
 #[inline]

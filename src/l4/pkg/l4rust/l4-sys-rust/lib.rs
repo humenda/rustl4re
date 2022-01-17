@@ -12,6 +12,7 @@ mod ipc_basic;
 mod ipc_ext;
 mod platform;
 mod task;
+mod scheduler;
 
 /// expose public C API
 pub use crate::cap::*;
@@ -21,6 +22,7 @@ pub use crate::ipc_ext::*;
 pub use crate::ipc_basic::*;
 pub use crate::platform::*;
 pub use crate::task::*;
+pub use crate::scheduler::*;
 
 const L4_PAGEMASKU: l4_addr_t = L4_PAGEMASK as l4_addr_t;
 
