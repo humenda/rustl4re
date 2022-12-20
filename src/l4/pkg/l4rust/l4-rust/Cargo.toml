@@ -2,26 +2,35 @@
 name = "l4"
 version = "0.1.0"
 authors = ["Sebastian Humenda <shumenda @ gmx . de>"]
-edition = "2018"
+edition = "2021"
 
 [lib]
 path = "lib.rs"
 
 [dependencies]
-num = "0.2"
-libc = "0.2.50"
+libc = "0.2.138"
 
 [dependencies.bitflags]
 version = "1.0"
 default-features = false
 
+[dependencies.l4_sys]
+path = "../l4-sys-rust"
+
+[dependencies.num]
+version = "0.2"
+default-features = false
+features = []
+
 [dependencies.num-traits]
 version = "0.2"
 default-features = false
+features = []
 
 [dependencies.num-derive]
 version = "0.2.3"
 default-features = false
+features = []
 
 [features]
 default = ["std"]

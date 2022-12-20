@@ -1,9 +1,9 @@
-use super::types::{BufferAccess};
 use super::super::{
     cap::{Cap, IfaceInit, Interface},
     error::Result,
-    utcb::{SndFlexPage, FpageRights, UtcbMr},
+    utcb::{FpageRights, SndFlexPage, UtcbMr},
 };
+use super::types::BufferAccess;
 
 /// Unsafe marker trait for serialisable types
 ///
@@ -11,7 +11,7 @@ use super::super::{
 /// one in C++ and if it can be copied  across task boundaries safely. Primitive
 /// types such as bool or u32 are `Serialisable`, complex types need to the
 /// [Serialiser](trait.Serialiser.html) trait.
-pub unsafe trait Serialisable: Clone { }
+pub unsafe trait Serialisable: Clone {}
 
 /// (De)serialisation for complex data types
 ///
@@ -30,7 +30,10 @@ pub unsafe trait Serialisable: Clone { }
 /// kernel buffer store (if capabilities are being transfered), etc. This
 /// description applies both for reading and writing. For examples of
 /// implementors, see the Flex Page and Cap(ability) types.
-pub unsafe trait Serialiser where Self: Sized {
+pub unsafe trait Serialiser
+where
+    Self: Sized,
+{
     /// Read a value of `Self`
     ///
     /// Read a value of `Self` from given
@@ -66,17 +69,22 @@ macro_rules! impl_serialisable {
     }
 }
 
-impl_serialisable!(i8, i16, i32, i64, i128, u8, u16, u32, u64, u128, f32, f64,
-                   usize, isize, bool, char);
+impl_serialisable!(
+    i8, i16, i32, i64, i128, u8, u16, u32, u64, u128, f32, f64, usize, isize, bool, char
+);
 
 unsafe impl Serialiser for () {
     #[inline]
-    unsafe fn read(_: &mut UtcbMr, _: &mut BufferAccess) -> Result<()> { Ok(()) }
+    unsafe fn read(_: &mut UtcbMr, _: &mut BufferAccess) -> Result<()> {
+        Ok(())
+    }
     #[inline]
-    unsafe fn write(self, _: &mut UtcbMr) -> Result<()> { Ok(()) }
+    unsafe fn write(self, _: &mut UtcbMr) -> Result<()> {
+        Ok(())
+    }
 }
 
-unsafe impl Serialisable for SndFlexPage { }
+unsafe impl Serialisable for SndFlexPage {}
 unsafe impl Serialiser for SndFlexPage {
     #[inline]
     unsafe fn write(self, mr: &mut UtcbMr) -> Result<()> {
@@ -102,7 +110,7 @@ unsafe impl<T: Serialisable> Serialiser for Option<T> {
             None => {
                 mr.skip::<T>()?;
                 mr.write::<bool>(false)
-            },
+            }
             Some(val) => {
                 mr.write::<T>(val)?;
                 mr.write::<bool>(true)
@@ -128,7 +136,7 @@ unsafe impl<T: Interface + IfaceInit> Serialiser for Cap<T> {
     }
 }
 
-#[cfg(feature="std")]
+#[cfg(feature = "std")]
 unsafe impl<'a> Serialiser for &'a str {
     #[inline]
     unsafe fn read(mr: &mut UtcbMr, _: &mut BufferAccess) -> Result<Self> {
@@ -141,8 +149,8 @@ unsafe impl<'a> Serialiser for &'a str {
     }
 }
 
-#[cfg(feature="std")]
-#[cfg(feature="std")]
+#[cfg(feature = "std")]
+#[cfg(feature = "std")]
 unsafe impl Serialiser for std::string::String {
     #[inline]
     unsafe fn read(mr: &mut UtcbMr, _x: &mut BufferAccess) -> Result<Self> {
@@ -156,7 +164,7 @@ unsafe impl Serialiser for std::string::String {
     }
 }
 
-#[cfg(feature="std")]
+#[cfg(feature = "std")]
 unsafe impl<T: Serialisable> Serialiser for std::vec::Vec<T> {
     #[inline]
     unsafe fn read(mr: &mut UtcbMr, x: &mut BufferAccess) -> Result<Self> {

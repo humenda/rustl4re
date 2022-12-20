@@ -2,10 +2,10 @@
 //!
 //! We expect to have libc available and rely for it on printing.
 
-use _core::{fmt, panic::PanicInfo};
+use core::{ffi::c_char, fmt, panic::PanicInfo};
 
 extern "C" {
-    fn puts(s: *const libc::c_char) -> i32;
+    fn puts(s: *const c_char) -> i32;
 }
 
 /// A buffer for println! to invoke printf.
@@ -29,7 +29,7 @@ impl fmt::Write for PrintfBuffer {
         self.0[0..s.len()].copy_from_slice(s.as_bytes());
         self.0[s.len()] = 0;
         unsafe {
-            puts((&self.0 as *const u8) as *const libc::c_char);
+            puts((&self.0 as *const u8) as *const c_char);
         }
         Ok(())
     }

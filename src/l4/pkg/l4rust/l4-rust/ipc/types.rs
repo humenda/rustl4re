@@ -1,23 +1,23 @@
 //! IPC Interface Types
-use _core::{ptr::NonNull, mem::transmute};
+use core::{mem::transmute, ptr::NonNull};
 
 use super::super::{
-    cap::{Cap, CapIdx, IfaceInit, Interface, invalid_cap},
+    cap::{invalid_cap, Cap, CapIdx, IfaceInit, Interface},
     error::{Error, GenericErr, Result},
-    ipc::MsgTag,
     ipc::serialise::{Serialisable, Serialiser},
+    ipc::MsgTag,
     types::UMword,
-    utcb::UtcbMr
+    utcb::UtcbMr,
 };
-use l4_sys::{consts::UtcbConsts::L4_UTCB_GENERIC_BUFFERS_SIZE,
+use l4_sys::{
+    consts::UtcbConsts::L4_UTCB_GENERIC_BUFFERS_SIZE,
     l4_buf_regs_t,
-    l4_cap_consts_t::{L4_INVALID_CAP_BIT, L4_CAP_MASK},
-    l4_msg_item_consts_t::{L4_RCV_ITEM_SINGLE_CAP, L4_RCV_ITEM_LOCAL_ID},
+    l4_cap_consts_t::{L4_CAP_MASK, L4_INVALID_CAP_BIT},
+    l4_msg_item_consts_t::{L4_RCV_ITEM_LOCAL_ID, L4_RCV_ITEM_SINGLE_CAP},
     l4_utcb_br_u, l4_utcb_t,
 };
 #[cfg(feature = "std")]
 use std::vec::Vec;
-
 
 /// IPC Dispatch Delegation Functionality
 ///
@@ -30,8 +30,7 @@ use std::vec::Vec;
 /// definition, passing the actual arguments back to the user implementation,
 /// once read from the UTCB.
 pub trait Dispatch {
-    fn dispatch(&mut self, tag: MsgTag, _: &mut UtcbMr,
-                _: &mut BufferAccess) -> Result<MsgTag>;
+    fn dispatch(&mut self, tag: MsgTag, _: &mut UtcbMr, _: &mut BufferAccess) -> Result<MsgTag>;
 }
 
 /// Empty marker trait for server-side message dispatch
@@ -44,7 +43,7 @@ pub trait Dispatch {
 /// `fn(&mut self, MsgTag, *mut l4_utcb_t) -> Result<MsgTag>`.
 /// To avoid moves of the object, a struct should also be pinned, e.g. by containing a
 /// core::marker::PhantomPinned.
-pub unsafe trait Callable: Dispatch { }
+pub unsafe trait Callable: Dispatch {}
 
 pub trait Demand {
     const CAP_DEMAND: u8;
@@ -58,7 +57,7 @@ pub trait CapProviderAccess {
 }
 
 pub struct BufferAccess {
-    pub(crate) ptr: Option<NonNull<CapIdx>>
+    pub(crate) ptr: Option<NonNull<CapIdx>>,
 }
 
 impl BufferAccess {
@@ -75,18 +74,20 @@ impl BufferAccess {
 /// A buffer manager controls the capability slot allocation and the buffer register setup to
 /// receive and dispatch kernel **items** such as capability flexpages. How and whether
 /// capabilities (etc.) are allocated depends on the policy of each implementor.
-pub trait CapProvider  {
+pub trait CapProvider {
     fn new() -> Self;
 
     /// Retrieve capability at allocated buffer slot/index
     ///
     /// The argument must be within `0 <= index <= self.caps_used()`.
     fn rcv_cap<T>(&self, index: usize) -> Result<Cap<T>>
-                where T: Interface + IfaceInit;
+    where
+        T: Interface + IfaceInit;
 
     /// As `rcv_cap`, without bounds checks.
     unsafe fn rcv_cap_unchecked<T>(&self, index: usize) -> Cap<T>
-                where T: Interface + IfaceInit;
+    where
+        T: Interface + IfaceInit;
     /// Return the amount of allocated buffer slots.
     fn caps_used(&self) -> u8;
 
@@ -135,7 +136,7 @@ pub struct Bufferless;
 
 impl CapProvider for Bufferless {
     fn new() -> Self {
-        Bufferless { }
+        Bufferless {}
     }
 
     fn alloc_capslots(&mut self, cap_demand: u8) -> Result<()> {
@@ -147,23 +148,33 @@ impl CapProvider for Bufferless {
     }
 
     fn rcv_cap<T>(&self, _: usize) -> Result<Cap<T>>
-                where T: Interface + IfaceInit {
+    where
+        T: Interface + IfaceInit,
+    {
         Err(Error::InvalidArg("No buffers allocated", None))
     }
 
     /// Returns the invalid cap
     unsafe fn rcv_cap_unchecked<T>(&self, _: usize) -> Cap<T>
-                where T: Interface + IfaceInit {
+    where
+        T: Interface + IfaceInit,
+    {
         invalid_cap().cast::<T>()
     }
 
-    fn set_rcv_cap_flags(&mut self, _: UMword) -> Result<()> { Ok(()) }
+    fn set_rcv_cap_flags(&mut self, _: UMword) -> Result<()> {
+        Ok(())
+    }
 
     #[inline]
-    fn max_slots(&self) -> u32 { 0 }
+    fn max_slots(&self) -> u32 {
+        0
+    }
     #[inline]
-    fn caps_used(&self) -> u8 { 0 }
-    fn setup_wait(&mut self, _: *mut l4_utcb_t) { }
+    fn caps_used(&self) -> u8 {
+        0
+    }
+    fn setup_wait(&mut self, _: *mut l4_utcb_t) {}
 
     /// a non-usable buffer access, containing no pointer
     #[inline]
@@ -193,8 +204,10 @@ impl CapProvider for BufferManager {
         // take two extra buffers for a possible timeout and a zero terminator (taken from the c++
         // version)
         if cap_demand + 3 >= self.br.len() as u8 {
-            return Err(Error::InvalidArg("Capability slot demand too large",
-                    Some(cap_demand as isize)));
+            return Err(Error::InvalidArg(
+                "Capability slot demand too large",
+                Some(cap_demand as isize),
+            ));
         }
         // ToDo: set up is wrong, +1 caps allocated than actually required
         while cap_demand + 1 > self.caps {
@@ -205,8 +218,7 @@ impl CapProvider for BufferManager {
 
             // safe this cap as a "receive item" in the format that the kernel
             // understands
-            self.br[self.caps as usize] = cap | L4_RCV_ITEM_SINGLE_CAP as u64
-                    | self.cap_flags;
+            self.br[self.caps as usize] = cap | L4_RCV_ITEM_SINGLE_CAP as u64 | self.cap_flags;
             self.caps += 1;
         }
         self.br[self.caps as usize] = 0; // terminate receive list
@@ -214,26 +226,34 @@ impl CapProvider for BufferManager {
     }
 
     fn rcv_cap<T>(&self, index: usize) -> Result<Cap<T>>
-            where T: Interface + IfaceInit {
+    where
+        T: Interface + IfaceInit,
+    {
         if index < self.caps as usize {
             return Ok(Cap::<T>::new(self.br[index] & L4_CAP_MASK as u64));
         }
-        Err(Error::InvalidArg("Index not allocated", Some(index as isize)))
+        Err(Error::InvalidArg(
+            "Index not allocated",
+            Some(index as isize),
+        ))
     }
 
     unsafe fn rcv_cap_unchecked<T>(&self, index: usize) -> Cap<T>
-            where T: Interface + IfaceInit {
+    where
+        T: Interface + IfaceInit,
+    {
         Cap::<T>::new(self.br[index] & L4_CAP_MASK as u64)
     }
-
 
     fn set_rcv_cap_flags(&mut self, flags: UMword) -> Result<()> {
         if self.cap_flags == 0 {
             self.cap_flags = flags as u64;
             return Ok(());
         }
-        Err(Error::InvalidState("Unable to set buffer flags when capabilities \
-                                were already allocated"))
+        Err(Error::InvalidState(
+            "Unable to set buffer flags when capabilities \
+                                were already allocated",
+        ))
     }
 
     #[inline]
@@ -263,7 +283,7 @@ impl CapProvider for BufferManager {
     #[inline]
     unsafe fn access_buffers(&mut self) -> BufferAccess {
         BufferAccess {
-            ptr: Some(NonNull::new_unchecked(self.br.as_mut_ptr()))
+            ptr: Some(NonNull::new_unchecked(self.br.as_mut_ptr())),
         }
     }
 }
@@ -284,8 +304,11 @@ pub struct Array<'a, Len, T> {
     _len_type: ::core::marker::PhantomData<Len>,
 }
 
-unsafe impl<'a, Len, T> Serialiser for Array<'a, Len, T> 
-        where Len: num::NumCast + Serialisable, T: Serialisable{
+unsafe impl<'a, Len, T> Serialiser for Array<'a, Len, T>
+where
+    Len: num::NumCast + Serialisable,
+    T: Serialisable,
+{
     #[inline]
     unsafe fn read(mr: &mut UtcbMr, _: &mut BufferAccess) -> Result<Self> {
         Ok(Array {
@@ -299,8 +322,11 @@ unsafe impl<'a, Len, T> Serialiser for Array<'a, Len, T>
     }
 }
 
-impl<'a, Len, T> From<&'a [T]> for Array<'a, Len, T> 
-        where Len: Serialisable + num::NumCast, T: Serialisable {
+impl<'a, Len, T> From<&'a [T]> for Array<'a, Len, T>
+where
+    Len: Serialisable + num::NumCast,
+    T: Serialisable,
+{
     fn from(sl: &'a [T]) -> Self {
         Array {
             inner: sl,
@@ -310,13 +336,16 @@ impl<'a, Len, T> From<&'a [T]> for Array<'a, Len, T>
 }
 
 impl<'a, Len, T> Into<&'a [T]> for Array<'a, Len, T>
-        where Len: Serialisable + num::NumCast, T: Serialisable {
+where
+    Len: Serialisable + num::NumCast,
+    T: Serialisable,
+{
     fn into(self) -> &'a [T] {
         self.inner
     }
 }
 
-#[cfg(feature="std")]
+#[cfg(feature = "std")]
 impl<'a, T: Serialisable> core::convert::Into<Vec<T>> for BufArray<'a, T> {
     fn into(self) -> Vec<T> {
         let slice: &[T] = self.into();
@@ -360,7 +389,10 @@ impl<'a> BufStr<'a> {
     pub fn new(target: &'a mut [u8], input: &str) -> Result<BufStr<'a>> {
         l4_err_if!(input.len() > target.len() => Generic, MsgTooLong);
         unsafe {
-            input.as_bytes().as_ptr().copy_to(target.as_mut_ptr(), input.len());
+            input
+                .as_bytes()
+                .as_ptr()
+                .copy_to(target.as_mut_ptr(), input.len());
         }
         Ok(BufStr(target, input.len()))
     }
@@ -380,9 +412,9 @@ impl<'a> BufStr<'a> {
 
 impl<'a> core::convert::AsRef<str> for BufStr<'a> {
     fn as_ref(&self) -> &str {
-        unsafe { // this struct can only be initialised from a rust str
-            core::str::from_utf8_unchecked(
-                core::slice::from_raw_parts(self.0.as_ptr(), self.1))
+        unsafe {
+            // this struct can only be initialised from a rust str
+            core::str::from_utf8_unchecked(core::slice::from_raw_parts(self.0.as_ptr(), self.1))
         }
     }
 }

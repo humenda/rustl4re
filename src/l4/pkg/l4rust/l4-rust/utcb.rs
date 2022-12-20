@@ -1,24 +1,27 @@
-use _core::{marker::PhantomData,
+use core::{
+    convert::From,
+    marker::PhantomData,
     mem::{align_of, size_of},
-    ops::{Deref, DerefMut}
+    ops::{Deref, DerefMut},
 };
 
 use l4_sys::{
+    consts::{UtcbConsts, UTCB_GENERIC_DATA_SIZE},
     l4_buf_regs_t,
     l4_msg_item_consts_t::*,
+    l4_msg_regs_t, l4_utcb, l4_utcb_br, l4_utcb_mr_u, l4_utcb_t,
     L4_fpage_rights::*,
     L4_fpage_type::*,
-    l4_utcb, l4_utcb_br, l4_utcb_mr_u, l4_utcb_t, l4_msg_regs_t,
-    consts::{UTCB_GENERIC_DATA_SIZE, UtcbConsts}};
+};
 
 use crate::cap::{Cap, Interface};
-use crate::ipc::Serialisable;
 use crate::error::{Error, GenericErr, Result};
+use crate::ipc::Serialisable;
 use crate::types::{Mword, UMword};
-use num::{NumCast, cast::ToPrimitive};
+use num::{cast::ToPrimitive, NumCast};
 
 /// UTCB constants (architecture-specific)
-pub use crate::l4_sys::consts::UtcbConsts as Consts;
+pub use crate::sys::consts::UtcbConsts as Consts;
 
 /// Number of words used by an item when written to the message registers
 pub const WORDS_PER_ITEM: usize = 2;
@@ -30,10 +33,8 @@ macro_rules! utcb_mr {
     )
 }
 
-
 // see union l4_msg_regs_t
-const MSG_REG_COUNT: usize = UTCB_GENERIC_DATA_SIZE / 
-        (size_of::<UMword>() / size_of::<UMword>());
+const MSG_REG_COUNT: usize = UTCB_GENERIC_DATA_SIZE / (size_of::<UMword>() / size_of::<UMword>());
 
 // NOTE: this may never be `Send`!
 /// User space Thread Control Block
@@ -56,12 +57,15 @@ pub struct Utcb {
 }
 
 impl Utcb {
-    pub fn from_utcb(utcb: *mut l4_utcb_t) -> Utcb {
-        Utcb { raw: utcb }
-    }
-
-    pub fn current() -> Utcb {
-        unsafe { // this can't fail: no UTCB, no thread -> no execution
+    /// Get a reference to the current UTCB.
+    ///
+    /// # Safety
+    ///
+    /// The caller must make sure that the UTCB exists exactly once, otherwise concurrent
+    /// modifications and invalidation of references to the UTCB can occur.
+    pub unsafe fn current() -> Utcb {
+        unsafe {
+            // this can't fail: no UTCB, no thread -> no execution
             Utcb { raw: l4_utcb() }
         }
     }
@@ -90,9 +94,7 @@ impl Utcb {
     /// alignment. See [UtcbMr](struct.UtcbMr.html) for more details.
     #[inline]
     pub fn mr(&mut self) -> UtcbMr {
-        unsafe {
-            UtcbMr::from_utcb(self.raw)
-        }
+        unsafe { UtcbMr::from_utcb(self.raw) }
     }
 
     /// Create buffer register builder
@@ -103,33 +105,41 @@ impl Utcb {
     /// alignment. See [UtcbBr](struct.UtcbBr.html) for more details.
     #[inline]
     pub fn br(&mut self) -> UtcbBr {
-        unsafe {
-            UtcbBr::from_utcb(self.raw)
-        }
+        unsafe { UtcbBr::from_utcb(self.raw) }
     }
 
     #[inline(always)]
     pub fn bdr(&self) -> usize {
-        unsafe {
-            (*l4_utcb_br()).bdr as usize
-        }
+        unsafe { (*l4_utcb_br()).bdr as usize }
+    }
+
+    pub fn raw(&mut self) -> *mut l4_utcb_t {
+        self.raw
     }
 }
+
+impl From<*mut l4_utcb_t> for Utcb {
+    fn from(utcb: *mut l4_utcb_t) -> Utcb {
+        Utcb { raw: utcb }
+    }
+}
+
+
 /// Flex page types
 #[repr(u8)]
 #[derive(FromPrimitive, ToPrimitive)]
 pub enum FpageType {
     Special = (L4_FPAGE_SPECIAL as u8) << 4,
-    Memory  = (L4_FPAGE_MEMORY as u8) << 4,
-    Io      = (L4_FPAGE_IO as u8) << 4,
-    Obj     = (L4_FPAGE_OBJ as u8) << 4
+    Memory = (L4_FPAGE_MEMORY as u8) << 4,
+    Io = (L4_FPAGE_IO as u8) << 4,
+    Obj = (L4_FPAGE_OBJ as u8) << 4,
 }
 
 /// capability mapping type (flex page type)
 #[repr(u8)]
 #[derive(FromPrimitive, ToPrimitive)]
 pub enum MapType {
-    Map   = L4_MAP_ITEM_MAP as u8,
+    Map = L4_MAP_ITEM_MAP as u8,
     Grant = L4_MAP_ITEM_GRANT as u8,
 }
 
@@ -163,7 +173,7 @@ pub struct SndFlexPage {
     /// information about base address to send, map mode, etc.
     description: u64,
     // the data to transfer, e.g. a capability
-    fpage: u64
+    fpage: u64,
 }
 
 impl SndFlexPage {
@@ -177,17 +187,22 @@ impl SndFlexPage {
         Self {
             // AKA _base in the C++ version
             description: L4_ITEM_MAP as u64
-                    | (snd_base & (!0u64 << 10))
-                    | mt.map(|v| v as u64).unwrap_or_default(),
+                | (snd_base & (!0u64 << 10))
+                | mt.map(|v| v as u64).unwrap_or_default(),
             fpage,
         }
     }
 
-    pub fn from_cap<T: Interface>(c: &Cap<T>, rights: FpageRights,
-                mt: Option<MapType>) -> SndFlexPage {
-        SndFlexPage::new(unsafe {
-                ::l4_sys::l4_obj_fpage(c.raw(), 0, rights.bits() as u8).raw
-            }, 0, mt)
+    pub fn from_cap<T: Interface>(
+        c: &Cap<T>,
+        rights: FpageRights,
+        mt: Option<MapType>,
+    ) -> SndFlexPage {
+        SndFlexPage::new(
+            unsafe { ::l4_sys::l4_obj_fpage(c.raw(), 0, rights.bits() as u8).raw },
+            0,
+            mt,
+        )
     }
 }
 
@@ -216,15 +231,12 @@ pub trait UtcbRegSize {
 }
 
 impl UtcbRegSize for l4_msg_regs_t {
-    const BUF_SIZE: usize = UtcbConsts::L4_UTCB_GENERIC_DATA_SIZE as usize
-            * size_of::<UMword>();
+    const BUF_SIZE: usize = UtcbConsts::L4_UTCB_GENERIC_DATA_SIZE as usize * size_of::<UMword>();
 }
 
 impl UtcbRegSize for l4_buf_regs_t {
-    const BUF_SIZE: usize = UtcbConsts::L4_UTCB_GENERIC_BUFFERS_SIZE as usize
-            * size_of::<UMword>();
+    const BUF_SIZE: usize = UtcbConsts::L4_UTCB_GENERIC_BUFFERS_SIZE as usize * size_of::<UMword>();
 }
-
 
 /// Convenience interface for message serialisation to the message registers
 ///
@@ -255,8 +267,7 @@ impl<U: UtcbRegSize> Registers<U> {
     ///
     /// The value is aligned and written into the message registers.
     #[inline]
-    pub unsafe fn write<T: Serialisable>(&mut self, val: T) 
-            -> Result<()> {
+    pub unsafe fn write<T: Serialisable>(&mut self, val: T) -> Result<()> {
         let ptr = align::<T>(self.buf);
         let next = ptr.add(size_of::<T>());
         l4_err_if!((next as usize - self.base as usize) > U::BUF_SIZE
@@ -271,12 +282,8 @@ impl<U: UtcbRegSize> Registers<U> {
     /// This function reads from the given pointer + the internal offset a value
     /// from the specified type. If a read beyond the message registers is
     /// attempted, an error is returned.
-    /// This is unsafe due to a missing guarantee that
-    /// the pointer to the UTCB, with which the object was constructed is valid
-    /// and that the memory region behind  has the length of
-    /// `UTCB_DATA_SIZE_IN_BYTES`.
     #[inline]
-    pub unsafe fn read<T: Serialisable>(&mut self)  -> Result<T> {
+    pub fn read<T: Serialisable>(&mut self) -> Result<T> {
         let ptr = align::<T>(self.buf);
         let next = ptr.add(size_of::<T>());
         l4_err_if!((next as usize - self.base as usize) > U::BUF_SIZE
@@ -287,22 +294,24 @@ impl<U: UtcbRegSize> Registers<U> {
     }
 
     /// Write a slice
-    pub unsafe fn write_slice<Len, T>(&mut self, val: &[T]) -> Result<()>
-            where Len: Serialisable + NumCast, T: Serialisable {
-        self.write::<Len>(NumCast::from(val.len())
-                .ok_or(Error::Generic(GenericErr::InvalidArg))?)?;
+    pub fn write_slice<Len, T>(&mut self, val: &[T]) -> Result<()>
+    where
+        Len: Serialisable + NumCast,
+        T: Serialisable,
+    {
+        self.write::<Len>(NumCast::from(val.len()).ok_or(Error::Generic(GenericErr::InvalidArg))?)?;
         let ptr = align::<T>(self.buf);
         let end = ptr.add(size_of::<T>() * val.len());
         l4_err_if!(end as usize - self.base as usize > U::BUF_SIZE
                    => Generic, MsgTooLong);
-        val.as_ptr().copy_to_nonoverlapping(ptr as *mut T,
-                                       val.len());
+        val.as_ptr()
+            .copy_to_nonoverlapping(ptr as *mut T, val.len());
         self.buf = end; // move pointer
         Ok(())
     }
 
-    // Serialise a &str as a C-compatible, 0-terminated UTF-8 string.
-    pub unsafe fn write_str(&mut self, val: &str) -> Result<()> {
+    /// Serialise a &str as a C-compatible, 0-terminated UTF-8 string.
+    pub fn write_str(&mut self, val: &str) -> Result<()> {
         self.write::<usize>(val.len() + 1)?;
 
         let ptr = align::<u8>(self.buf);
@@ -314,10 +323,24 @@ impl<U: UtcbRegSize> Registers<U> {
         self.write::<u8>(0u8)
     }
 
+    /// Read a slice from the registers
+    ///
+    /// This function reads a slice from the registers, compatible to the C++ Array types.
+    ///
+    /// # Safety
+    ///
+    /// The slice is a direct view into the registers and hence highly unsafe. A system call may
+    /// directly overwrite the data that this slice points to.
+    ///
+    /// The caller must make sure that the data is not overwritten by a syscall, or by other parts
+    /// of the code in the current application.
     pub unsafe fn read_slice<Len, T>(&mut self) -> Result<&[T]>
-            where Len: Serialisable + ToPrimitive, T: Serialisable {
+    where
+        Len: Serialisable + ToPrimitive,
+        T: Serialisable,
+    {
         let len = ToPrimitive::to_usize(&self.read::<Len>()?)
-                .ok_or(Error::Generic(GenericErr::InvalidArg))?;
+            .ok_or(Error::Generic(GenericErr::InvalidArg))?;
         let ptr = align::<T>(self.buf);
         let end = ptr.add(size_of::<T>() * len);
         l4_err_if!(end as usize - self.base as usize > U::BUF_SIZE => Generic, OutOfBounds);
@@ -329,18 +352,23 @@ impl<U: UtcbRegSize> Registers<U> {
     ///
     /// This is not a copy, but operates on the bytes of the message registers.
     /// Copy this string ASAP and at least before the next IPC takes place.
-    /// 0-bytes from C strings will be discarded
+    /// 0-bytes from C strings will be discarded.
+    ///
+    /// # Safety
+    ///
+    /// See [Self::read_slice].
     pub unsafe fn read_str<'a>(&mut self) -> Result<&'a str> {
         let len = self.read::<usize>()?;
         let end = self.buf.add(len);
         l4_err_if!(end as usize - self.base as usize > U::BUF_SIZE => Generic, OutOfBounds);
-        let str = core::str::from_utf8(
-                core::slice::from_raw_parts(self.buf,  // ↓ match 0-byte (C str?)
-                        match *end.offset(-1) {
-                            0 => len - 1,
-                            _ => len
-                        }))
-            .map_err(|e| crate::error::Error::InvalidEncoding(Some(e)))?;
+        let str = core::str::from_utf8(core::slice::from_raw_parts(
+            self.buf, // ↓ match 0-byte (C str?)
+            match *end.offset(-1) {
+                0 => len - 1,
+                _ => len,
+            },
+        ))
+        .map_err(|e| crate::error::Error::InvalidEncoding(Some(e)))?;
         self.buf = end; // advance offset behind last element
         Ok(str)
     }
@@ -349,9 +377,10 @@ impl<U: UtcbRegSize> Registers<U> {
     #[inline]
     pub fn words(&self) -> u32 {
         let offset = self.buf as usize - self.base as usize;
-        (offset / size_of::<Mword>() + match offset % size_of::<usize>() {
+        (offset / size_of::<Mword>()
+            + match offset % size_of::<usize>() {
                 0 => 0,
-                _ => 1
+                _ => 1,
             }) as u32
     }
 
@@ -363,9 +392,7 @@ impl<U: UtcbRegSize> Registers<U> {
 
     /// Skip the amount of memory that the given type would occupy
     pub fn skip<T: Serialisable>(&mut self) -> Result<()> {
-        let next = unsafe {
-            align::<T>(self.buf).add(size_of::<T>())
-        };
+        let next = unsafe { align::<T>(self.buf).add(size_of::<T>()) };
         l4_err_if!(next as usize - self.base as usize > U::BUF_SIZE
                    => Generic, MsgTooLong);
         self.buf = next;
@@ -411,8 +438,7 @@ impl UtcbMr {
     /// Write given item to the next free, type-aligned slot
     ///
     /// The item (e.g. a flex page) is aligned and written into the message registers.
-    pub unsafe fn write_item<T: Serialisable>(&mut self, val: T) 
-            -> Result<()> {
+    pub fn write_item<T: Serialisable>(&mut self, val: T) -> Result<()> {
         self.regs.write(val)?;
         self.items += 1;
         Ok(())
@@ -443,7 +469,7 @@ impl UtcbMr {
     /// `mr.words() + mr.items()`.
     pub fn words(&self) -> u32 {
         self.regs.words() - (self.items * 2) // subtract number of typed items
-        //                   ^ items: 2 Mwords, kernel action and object
+                                             //                   ^ items: 2 Mwords, kernel action and object
     }
 
     /// Reset state to start operations from beginning of registers
@@ -455,11 +481,15 @@ impl UtcbMr {
 
 impl Deref for UtcbMr {
     type Target = Registers<l4_msg_regs_t>;
-    fn deref(&self) -> &Registers<l4_msg_regs_t> { &self.regs }
+    fn deref(&self) -> &Registers<l4_msg_regs_t> {
+        &self.regs
+    }
 }
 
 impl DerefMut for UtcbMr {
-    fn deref_mut(&mut self) -> &mut Registers<l4_msg_regs_t> { &mut self.regs }
+    fn deref_mut(&mut self) -> &mut Registers<l4_msg_regs_t> {
+        &mut self.regs
+    }
 }
 
 /// (almost) safe and convenient access to the buffer registers of the UTCB
@@ -507,9 +537,13 @@ impl UtcbBr {
 
 impl Deref for UtcbBr {
     type Target = Registers<l4_buf_regs_t>;
-    fn deref(&self) -> &Self::Target { &self.0 }
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
 }
 
 impl DerefMut for UtcbBr {
-    fn deref_mut(&mut self) -> &mut Self::Target { &mut self.0 }
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
 }

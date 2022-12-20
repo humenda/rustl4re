@@ -1,9 +1,9 @@
 /// L4 IPC framework
 ///
-/// L4 IPC becomes due to its minimality a comlex affair, which is why this framework assists the
-/// application programmer to implement services easily without the need to understand all
-/// low-level details. As a plus, clients can be auto-derived from the IPC interface definition
-/// shared between client and server.
+/// The interplay in a component-based microkernel system and the number of interfaces create
+/// inherent complexity. This framework assists the application programmer to implement services
+/// easily without the need to understand all low-level details. As a plus, clients can be
+/// auto-derived from the IPC interface definition shared between client and server.
 ///
 /// # Interface Compatibility
 ///
@@ -16,22 +16,20 @@
 mod iface;
 mod serialise;
 pub mod server;
+pub mod syscall;
 pub mod types;
 
-pub use self::serialise::{Serialiser, Serialisable};
-pub use self::server::{Callback, Loop, LoopBuilder, server_impl_callback};
+pub use self::serialise::{Serialisable, Serialiser};
+pub use self::server::{server_impl_callback, Callback, Loop, LoopBuilder};
 pub use self::types::*;
+pub use syscall::*;
 
-use _core::{convert::From,
-    mem::transmute,
-};
-use l4_sys::{l4_msgtag_flags::*, l4_msgtag_t, l4_timeout_t, msgtag};
-use num_traits::{FromPrimitive};
+use core::{convert::From, mem::transmute};
+use l4_sys::{l4_msgtag_flags::*, l4_msgtag_t, msgtag};
+use num_traits::FromPrimitive;
 
-use crate::cap::{Cap, Interface};
 use crate::error::{Error, Result};
 use crate::types::{Mword, Protocol, UMword};
-use crate::utcb::Utcb;
 
 use l4_sys;
 
@@ -85,6 +83,7 @@ const L4_MSGTAG_ERROR_I: isize = L4_MSGTAG_ERROR as isize;
 /// let _ = msgtag(0, 1, 1, 0);
 /// ```
 #[derive(Clone)]
+#[repr(transparent)]
 pub struct MsgTag {
     raw: Mword,
 }
@@ -99,9 +98,7 @@ impl MsgTag {
         MsgTag {
             // the C type is a wrapper type and we reimplement its creation function in
             // l4_sys::ipc_basic anyway. We want to safe every cycle here.
-            raw: unsafe {
-                transmute::<l4_msgtag_t, Mword>(msgtag(label, words, items, flags))
-            }
+            raw: msgtag(label, words, items, flags).raw as _,
         }
     }
 
@@ -120,8 +117,8 @@ impl MsgTag {
     /// This is internally the same as the `label()` function, wrapping the value in a safe
     /// Protocol enum. This only works for L4-predefined (kernel) protocols.
     pub fn protocol(&self) -> Result<Protocol> {
-        Protocol::from_isize(self.raw >> 16).ok_or(
-                Error::InvalidArg("Unknown protocol", Some(self.raw >> 16)))
+        Protocol::from_isize(self.raw >> 16)
+            .ok_or(Error::InvalidArg("Unknown protocol", Some(self.raw >> 16)))
     }
 
     /// Set the label value.
@@ -154,7 +151,7 @@ impl MsgTag {
     }
 
     /// Get the flags value.
-    /// 
+    ///
     /// The flags are a combination of the flags defined by `l4_msgtag_flags`.
     #[inline]
     pub fn flags(&self) -> u32 {
@@ -177,8 +174,10 @@ impl MsgTag {
     pub fn result(self) -> Result<MsgTag> {
         if self.has_error() {
             return unsafe {
-                Err(Error::from_tag_raw(transmute::<Mword, l4_msgtag_t>(self.raw)))
-            }
+                Err(Error::from_tag_raw(transmute::<Mword, l4_msgtag_t>(
+                    self.raw,
+                )))
+            };
         }
         if self.label() < 0 {
             return Err(Error::from_ipc(self.label()));
@@ -188,62 +187,20 @@ impl MsgTag {
 
     #[inline]
     pub fn raw(self) -> l4_msgtag_t {
-        ::l4_sys::l4_msgtag_t { raw: self.raw as i64 }
+        ::l4_sys::l4_msgtag_t {
+            raw: self.raw as i64,
+        }
     }
 }
-
 
 impl From<l4_msgtag_t> for MsgTag {
     #[inline(always)]
     fn from(input: l4_msgtag_t) -> MsgTag {
-        MsgTag { raw: input.raw as Mword }
+        MsgTag {
+            raw: input.raw as Mword,
+        }
     }
 }
-
-/// Simple IPC Call
-///
-/// Call to given destination and block for answer.
-#[inline(always)]
-pub fn call<T: Interface>(dest: &Cap<T>, utcb: &mut Utcb,
-        tag: MsgTag, timeout: l4_timeout_t) -> MsgTag {
-    unsafe {
-        MsgTag::from(l4_sys::l4_ipc_call(dest.raw(), utcb.raw, tag.raw(),
-                timeout))
-    }
-}
-
-#[inline]
-pub unsafe fn receive<T: Interface>(object: Cap<T>, utcb: &mut Utcb,
-        timeout: l4_timeout_t) -> l4_msgtag_t {
-    l4_sys::l4_ipc_receive(object.raw(), utcb.raw, timeout)
-}
-
-/*
-#[inline]
-pub unsafe fn reply_and_wait(utcb: &mut Utcb, tag: l4_msgtag_t,
-        src: *mut UMword, timeout: l4_timeout_t) -> l4_msgtag_t {
-    l4_ipc_reply_and_wait_w(utcb.raw, tag, src, timeout)
-}
-
-
-#[inline]
-pub unsafe fn l4_ipc_wait(utcb: &mut Utcb, label: *mut l4_umword_t,
-        timeout: l4_timeout_t) -> l4_msgtag_t {
-    l4_ipc_wait_w(utcb, label, timeout)
-}
-
-#[inline]
-pub unsafe fn l4_msgtag(label: ::libc::c_long, words: c_uint,
-        items: c_uint, flags: c_uint) -> l4_msgtag_t {
-    l4_msgtag_w(label, words, items, flags)
-}
-
-#[inline]
-pub unsafe fn l4_rcv_ep_bind_thread(gate: &Cap, thread: &Cap,
-        label: l4_umword_t) -> l4_msgtag_t {
-    l4_rcv_ep_bind_thread_w(gate.cap, thread.cap, label)
-}
-*/
 
 ////////////////////////////////////////////////////////////////////////////////
 // re-implemented inline functions from l4/sys/ipc.h:
@@ -296,7 +253,6 @@ pub unsafe fn l4_rcv_ep_bind_thread(gate: &Cap, thread: &Cap,
 //        tag: *mut l4_msgtag_t) -> c_int {
 //    l4_sndfpage_add_u(snd_fpage, snd_base, tag, l4_utcb())
 //}
-
 
 //// ToDo: write test
 //#[inline]

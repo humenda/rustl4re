@@ -52,10 +52,11 @@ macro_rules! rpc_func_impl {
             #[inline]
             pub fn new() -> $name {
                 $name($crate::ipc::types::Sender(
-                        $crate::_core::marker::PhantomData))
+                    $crate::_core::marker::PhantomData,
+                ))
             }
         }
-    }
+    };
 }
 
 #[macro_export]
@@ -75,20 +76,14 @@ macro_rules! derive_functors {
     }
 }
 
-/// Extract the opcode from a list of function names
-///
-/// The basic assumption is that all functions share the same opcode type in an IPC interface.
-/// Within a macro, it is impossible to separate the first element from a type list, hence this
-/// helper macro gets the head and yields the opcode type.
 #[macro_export]
-
 macro_rules! derive_ipc_calls {
     ($proto:expr; $($opcode:expr =>
        fn $name:ident($($argname:ident: $type:ty),*) -> $return:ty;)*
     ) => {
         $(
             fn $name(&mut self $(, $argname: $type)*)
-                        -> $crate::error::Result<$return> 
+                        -> $crate::error::Result<$return>
                             where Self: $crate::cap::Interface {
                 use $crate::ipc::Serialiser;
                 use $crate::ipc::CapProvider;

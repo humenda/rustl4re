@@ -1,8 +1,8 @@
 use core::fmt::Formatter;
-use l4_sys::{*, l4_error_code_t::*, l4_ipc_tcr_error_t::*};
+use l4_sys::{l4_error_code_t::*, l4_ipc_tcr_error_t::*, *};
 
-use num_traits::{FromPrimitive, ToPrimitive};
 use crate::utcb::Utcb;
+use num_traits::{FromPrimitive, ToPrimitive};
 
 // for the Type
 enumgenerator! {
@@ -122,8 +122,8 @@ impl TcrErr {
     #[inline]
     pub fn from_tag_u(tag: l4_msgtag_t, utcb: &Utcb) -> Result<Self> {
         unsafe {
-             FromPrimitive::from_u64(l4_ipc_error(tag, utcb.raw))
-                    .ok_or(Error::Unknown(l4_ipc_error(tag, utcb.raw) as i64))
+            FromPrimitive::from_u64(l4_ipc_error(tag, utcb.raw))
+                .ok_or(Error::Unknown(l4_ipc_error(tag, utcb.raw) as i64))
         }
     }
 }
@@ -149,24 +149,21 @@ pub enum Error {
     InvalidEncoding(Option<core::str::Utf8Error>),
 }
 
-impl _core::fmt::Display for Error {
-    fn fmt(&self, f: &mut Formatter) -> _core::fmt::Result {
+impl core::fmt::Display for Error {
+    fn fmt(&self, f: &mut Formatter) -> core::fmt::Result {
         match self {
-            Error::Generic(e) => write!(f, "Generic L4 error code: {}",
-                        e.to_i64().unwrap()),
+            Error::Generic(e) => write!(f, "Generic L4 error code: {}", e.to_i64().unwrap()),
             Error::Tcr(i) => write!(f, "IPC error: {}", i.to_i64().unwrap()),
             Error::InvalidCap => write!(f, "Invalid capability"),
             Error::InvalidArg(r, _arg) => write!(f, "Invalid argument '{}'", r),
             Error::InvalidState(r) => write!(f, "Invalid state: {}", r),
             Error::Unknown(u) => write!(f, "Unknown error code {}", u),
             Error::Protocol(p) => write!(f, "Unknown protocol requested: {}", p),
-            Error::InvalidEncoding(e) => {
-                match e {
-                    None => write!(f, "Invalid encoding"),
-                    Some(e) => {
-                        write!(f, "Invalid encoding: ")?;
-                        e.fmt(f)
-                    }
+            Error::InvalidEncoding(e) => match e {
+                None => write!(f, "Invalid encoding"),
+                Some(e) => {
+                    write!(f, "Invalid encoding: ")?;
+                    e.fmt(f)
                 }
             },
         }
@@ -180,19 +177,19 @@ impl Error {
     /// Get error from given tag (for current thread)
     #[inline]
     pub fn from_tag_raw(tag: l4_msgtag_t) -> Self {
-         match TcrErr::from_tag(tag) {
-             Ok(tc) => Error::Tcr(tc),
-             Err(e) => e,
-         }
+        match TcrErr::from_tag(tag) {
+            Ok(tc) => Error::Tcr(tc),
+            Err(e) => e,
+        }
     }
 
     /// Get error from given tag and corresponding UTCB.
     #[inline]
     pub fn from_tag_u(tag: l4_msgtag_t, utcb: &Utcb) -> Self {
-         match TcrErr::from_tag_u(tag, utcb) {
-             Ok(e) => Error::Tcr(e),
-             Err(e) => e,
-         }
+        match TcrErr::from_tag_u(tag, utcb) {
+            Ok(e) => Error::Tcr(e),
+            Err(e) => e,
+        }
     }
 
     /// Extract IPC error code from error code
@@ -221,23 +218,23 @@ impl Error {
             Error::Generic(err) => err.to_i64().unwrap() * -1,
             Error::Tcr(err) => err.to_i64().unwrap() * -1,
             Error::InvalidCap => -1 * Self::INVALID_CAP_CODE,
-            Error::InvalidArg(_, _) | Error::InvalidState(_)
-                    => -1 * GenericErr::InvalidArg.to_i64().unwrap(),
+            Error::InvalidArg(_, _) | Error::InvalidState(_) => {
+                -1 * GenericErr::InvalidArg.to_i64().unwrap()
+            }
             Error::InvalidEncoding(_) => -1 * Self::INVALID_ENCODING,
-            Error::Unknown(n) | Error::Protocol(n)
-                => n * -1
+            Error::Unknown(n) | Error::Protocol(n) => n * -1,
         }
     }
 }
 
-#[cfg(feature="std")]
+#[cfg(feature = "std")]
 impl core::convert::From<std::string::FromUtf8Error> for Error {
     fn from(u: std::string::FromUtf8Error) -> Self {
         Error::InvalidEncoding(Some(u.utf8_error()))
     }
 }
 
-pub type Result<T> = ::_core::result::Result<T, Error>;
+pub type Result<T> = core::result::Result<T, Error>;
 
 /// Short-hand macro for several `l4::error::Error`  cases
 ///
@@ -249,12 +246,14 @@ pub type Result<T> = ::_core::result::Result<T, Error>;
 #[macro_export]
 macro_rules! l4_err {
     (Generic, $err:ident) => {
-        return Err($crate::error::Error::Generic($crate::error::GenericErr::$err))
+        return Err($crate::error::Error::Generic(
+            $crate::error::GenericErr::$err,
+        ))
     };
 
     (InvalidEncoding($err:expr)) => {
         return Err($crate::error::Error::InvalidEncoding($err));
-    }
+    };
 }
 
 /// Short-hand macro to allow conditional error returns

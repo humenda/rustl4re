@@ -1,6 +1,5 @@
 use l4_sys::l4_msgtag_protocol::{self, *};
 
-
 /// signed machine word
 pub type Mword = isize; // l4_mword_t -> long -> at least 32 bit
 /// unsigned machine word
@@ -31,7 +30,7 @@ macro_rules! enumgenerator {
 macro_rules! derive_enum_impl {
     ($enum_name:ident: $type:ty; $($orig:path => $new:ident),*) => {
         impl ::core::ops::BitAnd<$type> for $enum_name {
-            type Output=$type;
+            type Output = $type;
             fn bitand(self, rhs: $type) -> $type {
                 self as $type & rhs
             }
@@ -42,7 +41,7 @@ macro_rules! derive_enum_impl {
                 self as $type | rhs
             }
         }
-    }
+    };
 }
 
 enumgenerator! {

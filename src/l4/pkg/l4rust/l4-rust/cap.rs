@@ -1,11 +1,12 @@
-use _core::ops::{Deref, DerefMut};
-use l4_sys::{self,
-        l4_cap_consts_t::{L4_CAP_SHIFT, L4_INVALID_CAP_BIT},
-        L4_cap_fpage_rights::L4_CAP_FPAGE_RWSD,
-        l4_cap_idx_t,
-        l4_default_caps_t::L4_BASE_TASK_CAP,
-        l4_msg_item_consts_t::L4_MAP_ITEM_GRANT,
-        l4_task_map,
+use core::ops::{Deref, DerefMut};
+use l4_sys::{
+    self,
+    l4_cap_consts_t::{L4_CAP_SHIFT, L4_INVALID_CAP_BIT},
+    l4_cap_idx_t,
+    l4_default_caps_t::L4_BASE_TASK_CAP,
+    l4_msg_item_consts_t::L4_MAP_ITEM_GRANT,
+    l4_task_map,
+    L4_cap_fpage_rights::L4_CAP_FPAGE_RWSD,
 };
 
 use crate::error::{Error, Result};
@@ -17,9 +18,8 @@ pub type CapIdx = l4_cap_idx_t;
 ///
 /// This marker trait identifies an object to provide a service through a capability.
 pub trait Interface {
-    unsafe fn raw(&self) -> CapIdx;
+    fn raw(&self) -> CapIdx;
 }
-
 
 /// Ability for a type to initialise a capability interface.
 pub trait IfaceInit: Interface {
@@ -32,9 +32,8 @@ pub trait IfaceInit: Interface {
 pub struct Untyped(CapIdx);
 
 impl Interface for Untyped {
-
     #[inline]
-    unsafe fn raw(&self) -> CapIdx {
+    fn raw(&self) -> CapIdx {
         self.0
     }
 }
@@ -69,59 +68,47 @@ impl<T: Interface> DerefMut for Cap<T> {
 
 impl<T: Interface> PartialEq<Cap<T>> for Cap<T> {
     fn eq(&self, other: &Cap<T>) -> bool {
-        unsafe {
-            (self.interface.raw() >> L4_CAP_SHIFT as u64) == (other.raw() >> L4_CAP_SHIFT as u64)
-        }
+        (self.interface.raw() >> L4_CAP_SHIFT as u64) == (other.raw() >> L4_CAP_SHIFT as u64)
     }
 
     fn ne(&self, other: &Cap<T>) -> bool {
-        unsafe {
-            (self.interface.raw() >> L4_CAP_SHIFT as u64)
-                != (other.raw() >> L4_CAP_SHIFT as u64)
-        }
+        (self.interface.raw() >> L4_CAP_SHIFT as u64) != (other.raw() >> L4_CAP_SHIFT as u64)
     }
 }
 
 impl<T: Interface> PartialEq<CapIdx> for Cap<T> {
     fn eq(&self, other: &CapIdx) -> bool {
-        unsafe {
-            (self.interface.raw() >> L4_CAP_SHIFT as usize) == (other >> L4_CAP_SHIFT as usize)
-        }
+        (self.interface.raw() >> L4_CAP_SHIFT as usize) == (other >> L4_CAP_SHIFT as usize)
     }
 
     fn ne(&self, other: &CapIdx) -> bool {
-        unsafe {
-            (self.interface.raw() >> L4_CAP_SHIFT as usize)
-                != (other >> L4_CAP_SHIFT as usize)
-        }
+        (self.interface.raw() >> L4_CAP_SHIFT as usize) != (other >> L4_CAP_SHIFT as usize)
     }
 }
 
 impl<T: Interface + IfaceInit> Cap<T> {
     pub fn new(c: CapIdx) -> Cap<T> {
-        Cap { interface: T::new(c) }
+        Cap {
+            interface: T::new(c),
+        }
     }
 }
 
 impl<T: Interface> Cap<T> {
     pub fn cast<U: Interface + IfaceInit>(self) -> Cap<U> {
-        unsafe {
-            Cap { interface: U::new(self.raw()) }
+        Cap {
+            interface: U::new(self.raw()),
         }
     }
 
     #[inline]
     pub fn is_valid(&self) -> bool {
-        unsafe {
-            (self.interface.raw() & L4_INVALID_CAP_BIT as u64) == 0
-        }
+        (self.interface.raw() & L4_INVALID_CAP_BIT as u64) == 0
     }
 
     #[inline]
     pub fn is_invalid(&self) -> bool {
-        unsafe {
-            (self.interface.raw() & L4_INVALID_CAP_BIT as u64) != 0
-        }
+        (self.interface.raw() & L4_INVALID_CAP_BIT as u64) != 0
     }
 
     /// Get a raw (OS) capability handle
@@ -131,7 +118,7 @@ impl<T: Interface> Cap<T> {
     /// because this handle allows bypassing the safety guarantees provided by
     /// the `Cap<T>` type.
     #[inline]
-    pub unsafe fn raw(&self) -> CapIdx {
+    pub fn raw(&self) -> CapIdx {
         self.interface.raw()
     }
 
@@ -150,10 +137,12 @@ impl<T: Interface> Cap<T> {
         if !self.is_valid() || !source.is_valid() {
             return Err(Error::InvalidCap);
         }
-        l4_task_map(L4_BASE_TASK_CAP as u64, L4_BASE_TASK_CAP as u64,
-                    l4_sys::l4_obj_fpage(source.raw(), 0, L4_CAP_FPAGE_RWSD as u8),
-                    self.send_base(L4_MAP_ITEM_GRANT as u64, None)
-                            as super::sys::l4_addr_t | 0xe0);
+        l4_task_map(
+            L4_BASE_TASK_CAP as u64,
+            L4_BASE_TASK_CAP as u64,
+            l4_sys::l4_obj_fpage(source.raw(), 0, L4_CAP_FPAGE_RWSD as u8),
+            self.send_base(L4_MAP_ITEM_GRANT as u64, None) as super::sys::l4_addr_t | 0xe0,
+        );
         Ok(())
     }
 
@@ -164,18 +153,22 @@ impl<T: Interface> Cap<T> {
     /// In other words, it is possible to specify the object space location of this capability for
     /// map operations.
     fn send_base(&self, grant: u64, base_cap: Option<l4_cap_idx_t>) -> u64 {
-        unsafe {
-            let base_cap = base_cap.unwrap_or_else(|| self.raw());
-            l4_sys::l4_map_obj_control(base_cap, grant)
-        }
+        let base_cap = base_cap.unwrap_or_else(|| self.raw());
+        l4_sys::l4_map_obj_control(base_cap, grant)
     }
 }
+
+/// Short-hand to construct a Cap from an index.
 pub fn from(c: CapIdx) -> Cap<Untyped> {
-    Cap { interface: Untyped { 0: c } }
+    Cap {
+        interface: Untyped { 0: c },
+    }
 }
 
 /// Construct an invalid cap
 #[inline]
-pub fn invalid_cap() -> Cap<Untyped> {
-    Cap { interface: Untyped { 0: L4_INVALID_CAP_BIT as u64 } }
+pub const fn invalid_cap() -> Cap<Untyped> {
+    Cap {
+        interface: Untyped(l4_sys::l4_cap_consts_t::L4_INVALID_CAP as u64),
+    }
 }

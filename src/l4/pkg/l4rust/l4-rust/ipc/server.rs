@@ -1,21 +1,16 @@
-use _core::marker::PhantomData;
-use l4_sys::{self,
-    l4_cap_idx_t as CapIdx,
-    l4_timeout_t,
-    l4_utcb_t
-};
+use core::marker::PhantomData;
+use l4_sys::{self, l4_cap_idx_t as CapIdx, l4_timeout_t, l4_utcb_t};
 
-use super::{
-    MsgTag,
-    types::{Bufferless, BufferAccess, BufferManager, Callable,
-        CapProvider, Demand, Dispatch},
-};
 use super::super::{
     cap::Interface,
     error::{Error, Result},
     utcb::UtcbMr,
 };
-use libc::c_void;
+use super::{
+    types::{BufferAccess, BufferManager, Bufferless, Callable, CapProvider, Demand, Dispatch},
+    MsgTag,
+};
+use core::ffi::c_void;
 
 /// Stack-based buffer for server objects
 ///
@@ -44,7 +39,9 @@ pub trait StackBuf {
 /// compile-time size such as `&str` or `&[T]`. See the `buffer` parameter of
 /// the [`l4_server` macro](../../../l4_derive/macro.l4_server.html).
 pub trait TypedBuffer<T>
-        where T: ?Sized + core::borrow::Borrow<T> + core::borrow::BorrowMut<T> {
+where
+    T: ?Sized + core::borrow::Borrow<T> + core::borrow::BorrowMut<T>,
+{
     /// Fill the cache with a copy of the given input an return a mutable
     /// reference to it
     fn copy_in(&mut self, i: &T) -> Result<&mut T>;
@@ -77,25 +74,33 @@ pub trait LoopHook {
     /// access to the complete thread and server loop state.
     /// The returned action directly influences the execution of the loop, see the documentation of
     /// [LoopAction](enum.LoopAction.html).
-    fn ipc_error<C>(&mut self, _: &mut Loop<Self, C>, tag: &MsgTag)
-                -> LoopAction
-            where Self: ::_core::marker::Sized, C: CapProvider {
+    fn ipc_error<C>(&mut self, _: &mut Loop<Self, C>, tag: &MsgTag) -> LoopAction
+    where
+        Self: core::marker::Sized,
+        C: CapProvider,
+    {
         match (*tag).clone().result() {
             Ok(_) => unreachable!(),
-            Err(e) => LoopAction::ReplyAndWait(MsgTag::new(match e {
+            Err(e) => LoopAction::ReplyAndWait(MsgTag::new(
+                match e {
                     Error::Generic(e) => e as i64,
                     Error::Tcr(e) => e as i64,
                     Error::Unknown(e) => e as i64,
                     _ => panic!("{:?}", e),
-                } * -1, 0, 0, 0))
-                // ^ by convention, error codes are negative
+                } * -1,
+                0,
+                0,
+                0,
+            )), // ^ by convention, error codes are negative
         }
     }
 
     // ToDo: docs + rethink Dispatch trait and LoopHook interface to take **any** error interace
-    fn application_error<C>(&mut self, _: &mut Loop<Self, C>, e: Error)
-                -> LoopAction
-            where Self: ::_core::marker::Sized, C: CapProvider {
+    fn application_error<C>(&mut self, _: &mut Loop<Self, C>, e: Error) -> LoopAction
+    where
+        Self: core::marker::Sized,
+        C: CapProvider,
+    {
         // ^ by convention, error types are returned as negative integer
         LoopAction::ReplyAndWait(MsgTag::new(e.into_ipc_err(), 0, 0, 0))
     }
@@ -121,12 +126,16 @@ pub trait LoopHook {
 /// For users of this function, it is usually enough to assign
 /// `server_impl_callback::<Self>` to the first struct member.
 /// generic function is
-/// usually used as the function pointed to 
-pub fn server_impl_callback<T>(ptr: *mut c_void, tag: MsgTag,
-                                  mr: &mut UtcbMr,
-                                  bufs: &mut BufferAccess)
-        -> Result<MsgTag>
-        where T: Callable + Dispatch {
+/// usually used as the function pointed to
+pub fn server_impl_callback<T>(
+    ptr: *mut c_void,
+    tag: MsgTag,
+    mr: &mut UtcbMr,
+    bufs: &mut BufferAccess,
+) -> Result<MsgTag>
+where
+    T: Callable + Dispatch,
+{
     unsafe {
         let ptr = ptr as *mut T;
         (*ptr).dispatch(tag, mr, bufs)
@@ -134,8 +143,8 @@ pub fn server_impl_callback<T>(ptr: *mut c_void, tag: MsgTag,
 }
 
 // first c_void is the server struct, the second c_void is the ArgAccess instance
-pub type Callback = fn(*mut libc::c_void, MsgTag, &mut UtcbMr,
-                       &mut BufferAccess) -> Result<MsgTag>;
+pub type Callback =
+    fn(*mut core::ffi::c_void, MsgTag, &mut UtcbMr, &mut BufferAccess) -> Result<MsgTag>;
 
 pub struct Loop<'a, Hooks: LoopHook, BrMgr> {
     /// thread that this server runs in
@@ -147,7 +156,7 @@ pub struct Loop<'a, Hooks: LoopHook, BrMgr> {
     // buffer manager (receive windows for kernel items)
     buf_mgr: BrMgr,
     /// lifetime for registered servers from outside
-    outlive_me: PhantomData<&'a Self>
+    outlive_me: PhantomData<&'a Self>,
 }
 
 // allow unwrapping the option from the struct above, using the value and
@@ -175,12 +184,18 @@ impl<'a, T: LoopHook, C: CapProvider> Loop<'a, T, C> {
 
     /// Register anything, callee must make sure that passed thing is NOT moved
     pub fn register<Imp>(&mut self, inst: &'a mut Imp) -> Result<()>
-            where Imp: Callable + Dispatch + Demand + Interface {
+    where
+        Imp: Callable + Dispatch + Demand + Interface,
+    {
         self.buf_mgr.alloc_capslots(<Imp as Demand>::CAP_DEMAND)?;
-        unsafe { // bind IPC gate with label
-            let _ = MsgTag::from(l4_sys::l4_rcv_ep_bind_thread(inst.raw(),
-                   self.thread, inst as *mut _ as *mut c_void as _))
-                .result()?;
+        unsafe {
+            // bind IPC gate with label
+            let _ = MsgTag::from(l4_sys::l4_rcv_ep_bind_thread(
+                inst.raw(),
+                self.thread,
+                inst as *mut _ as *mut c_void as _,
+            ))
+            .result()?;
         }
         Ok(())
     }
@@ -191,16 +206,22 @@ impl<'a, T: LoopHook, C: CapProvider> Loop<'a, T, C> {
     /// C++ version also supports the less performant split of a reply and a wait system call
     /// afterwards, which is omitted here.
     #[inline]
-    fn reply_and_wait(&mut self, replytag: MsgTag, label: &mut u64,
-            client_tag: &mut MsgTag) {
+    fn reply_and_wait(&mut self, replytag: MsgTag, label: &mut u64, client_tag: &mut MsgTag) {
         self.buf_mgr.setup_wait(self.utcb);
         unsafe {
-            *client_tag = MsgTag::from(l4_sys::l4_ipc_reply_and_wait(self.utcb,
-                     replytag.raw(), label as _, l4_sys::timeout_never()));
+            *client_tag = MsgTag::from(l4_sys::l4_ipc_reply_and_wait(
+                self.utcb,
+                replytag.raw(),
+                label as _,
+                l4_sys::timeout_never(),
+            ));
             // avoid broken IPC to kill the loop
             if *label == 0 && client_tag.has_error() {
-                *client_tag = MsgTag::from(l4_sys::l4_ipc_wait(self.utcb,
-                        label, l4_sys::timeout_never()));
+                *client_tag = MsgTag::from(l4_sys::l4_ipc_wait(
+                    self.utcb,
+                    label,
+                    l4_sys::timeout_never(),
+                ));
             }
         }
     }
@@ -215,8 +236,12 @@ impl<'a, T: LoopHook, C: CapProvider> Loop<'a, T, C> {
         // called once here for initial wait (see reply_and_wait)
         self.buf_mgr.setup_wait(self.utcb);
         // initial (open) wait before loop
-        let mut tag = unsafe { MsgTag::from(l4_sys::l4_ipc_wait(self.utcb,
-                &mut label, l4_sys::timeout_never()))
+        let mut tag = unsafe {
+            MsgTag::from(l4_sys::l4_ipc_wait(
+                self.utcb,
+                &mut label,
+                l4_sys::timeout_never(),
+            ))
         };
         loop {
             let replytag = if tag.has_error() {
@@ -225,7 +250,8 @@ impl<'a, T: LoopHook, C: CapProvider> Loop<'a, T, C> {
                     LoopAction::Break => break,
                     LoopAction::ReplyAndWait(t) => t,
                 }
-            } else { // use label to dispatch to registered server implementation
+            } else {
+                // use label to dispatch to registered server implementation
                 match self.dispatch(tag.clone(), label) {
                     LoopAction::Break => break,
                     LoopAction::ReplyAndWait(tag) => tag,
@@ -258,13 +284,13 @@ impl<'a, T: LoopHook, C: CapProvider> Loop<'a, T, C> {
 
 pub struct DefaultHooks;
 
-impl LoopHook for DefaultHooks { }
+impl LoopHook for DefaultHooks {}
 
 pub struct LoopBuilder<H, C> {
     thread: CapIdx,
     utcb: *mut l4_utcb_t,
     buf_mgr: C,
-    hooks: H
+    hooks: H,
 }
 
 impl LoopBuilder<DefaultHooks, BufferManager> {
@@ -273,7 +299,7 @@ impl LoopBuilder<DefaultHooks, BufferManager> {
             thread: thcap,
             utcb: u,
             buf_mgr: BufferManager::new(),
-            hooks: DefaultHooks { },
+            hooks: DefaultHooks {},
         }
     }
 }
@@ -293,9 +319,9 @@ impl<H: LoopHook, C: CapProvider> LoopBuilder<H, C> {
     /// performance constraints.
     pub fn no_buffers(self) -> LoopBuilder<H, Bufferless> {
         LoopBuilder {
-            thread: self.thread, 
+            thread: self.thread,
             utcb: self.utcb,
-            buf_mgr: Bufferless { },
+            buf_mgr: Bufferless {},
             hooks: self.hooks,
         }
     }
@@ -308,13 +334,15 @@ impl<H: LoopHook, C: CapProvider> LoopBuilder<H, C> {
     /// # Safety
     ///
     /// As long as the UTCB pointer is valid, this function is safe.
-    pub unsafe fn new_at_bufferless(thread: CapIdx, utcb: *mut l4_utcb_t)
-            -> LoopBuilder<DefaultHooks, Bufferless> {
+    pub unsafe fn new_at_bufferless(
+        thread: CapIdx,
+        utcb: *mut l4_utcb_t,
+    ) -> LoopBuilder<DefaultHooks, Bufferless> {
         LoopBuilder {
             thread,
             utcb,
-            buf_mgr: Bufferless { },
-            hooks: DefaultHooks { },
+            buf_mgr: Bufferless {},
+            hooks: DefaultHooks {},
         }
     }
 
