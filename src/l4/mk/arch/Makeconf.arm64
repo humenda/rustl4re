@@ -16,3 +16,5 @@ SYSTEMS_ABI    += arm64-l4f
 SYSTEMS_PLAIN  += arm64
 
 QEMU_ARCH_MAP_arm64       = qemu-system-aarch64
+
+RUST_TARGET=aarch64-unknown-none

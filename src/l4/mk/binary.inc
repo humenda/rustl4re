@@ -235,8 +235,9 @@ endif
 # file types. More specific description is possible by using variables with
 # added specifications. These specifications include a referred element and
 # the architecture, both optional but in this order, separated by
-# underscores. The referred element for CPPFLAGS, CFLAGS, CXXFLAGS, ASFLAGS and
-# RSFLAGS is the source file. For the other variables, it is one of the
+# underscores. The referred element for CPPFLAGS, CFLAGS, CXXFLAGS, ASFLAGS,
+# RSFLAGS is the source file. For
+# the other variables, it is one of the
 # target files. The TARGET variable can only be postfixed by an
 # architecture.
 # The specific variables will be used for the target and the referred element
@@ -838,8 +839,10 @@ $(if $(BID_ALLOW_CPP_AS_CPLUSPLUS_FILE),$(eval $(call BID_GENERATE_CXX_MAKE_RULE
 $(eval $(call BID_GENERATE_C_MAKE_RULES,c))
 # generate rules to compile %.f90 files to %.o, %.s.o etc
 $(foreach e,$(FORTRAN_FILE_EXTENSIONS),$(eval $(call BID_GENERATE_F_MAKE_RULES,$(subst .,,$e))))
+
 # generate rules to compile .rs (Rust) files to .o
 $(foreach e,$(RUST_FILE_EXTENSIONS),$(eval $(call BID_GENERATE_RS_MAKE_RULES,$(subst .,,$e))))
+
 # generate rules to compile %.S files to %.o, %.s.o etc
 $(foreach e,$(BID_ASM_FILE_EXTENSIONS),$(eval $(call BID_GENERATE_ASM_MAKE_RULES,$(subst .,,$e))))
 

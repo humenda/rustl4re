@@ -164,31 +164,13 @@ $(TARGET): $(OBJS) $(LIBDEPS)
 	@$(BUILT_MESSAGE)
 else # rust target rule
 
-# deefines a few functions and variables used below
+# defines a few functions and variables used below
 include $(L4DIR)/mk/cargo.mk
 
-ifneq ($(firstword $(notdir $(LINK_PROGRAM))),l4-bender)
-$(error Rust compilation is only supported for l4-bender, got $(firstword $(notdir $(LINK_PROGRAM))))
-endif
 # Rust's build tool is Cargo, which calls the compiler rustc. Rustc compiles the
-# code and calls the linker. A linker variant "l4-bender" has been added to
-# Rustc. To pass BID arguments to l4-bender, L4_BENDER_ARGS and L4_LD_OPTIONS
-# are read by the compiler and incoorperated into the l4-bender command line.
-# Additional Rustc flags can be passed using the CARGO_BUILD_RUSTFLAGS variable,
-# read by cargo.
-
-# Strip first word (l4-bender path) and last word (-- delimiter)
-L4_BENDER_ARGS_HEADLESS=$(strip $(LINK_PROGRAM:$(firstword $(LINK_PROGRAM))%=%))
-
-# This is a temporary workaround to pass l4-bender arguments with spaces to the
-# Rust compiler. Rustc arguments are usually passed using CARGO_BUILD_RUSTFLAGS;
-# however, this is a environment variable where the arguments are taken
-# literally and spaces delimit arguments. Therefore, arguments contain a space
-# are NOT supported. The variable below is read the the l4-bender linker variant
-# in Rustc and interpreted accordingly. This is a temporary solution until Cargo
-# provides a proper way to pass linker arguments with spaces. Note that this
-# variable currently needs a patch to be applied to Rustc.
-export L4_BENDER_ARGS=$(strip $(L4_BENDER_ARGS_HEADLESS:%$(lastword $(LINK_PROGRAM))=%))
+# code and calls the linker. We want to skip the linker step because of the trouble of passing the
+# arguments from BID to it. Therefore, application crates are expected to be built as static
+# library.
 
 # Replace all -D defines through --cfg flags for rust
 CARGO_BUILD_RUSTFLAGS=$(strip $(patsubst -D%,--cfg=%,$(filter -D%,$(CPPFLAGS)))
@@ -211,20 +193,20 @@ export CARGO_BUILD_RUSTFLAGS
 # include directories of the application's C dependencies.
 export L4_INCLUDE_DIRS=$(filter -I%,$(CPPFLAGS))
 
-# Manifest path: location of the Cargo.toml, which should reside in the PKGDIR
-# $PATH has to be extended to include l4-bender.
+CARGO_FS_TARGET_LIBNAME = lib$(subst -,_,$(strip $(TARGET))).a
+
 $(strip $(TARGET)): $(SRC_FILES) $(LIBDEPS)
 	@$(LINK_MESSAGE)
 	$(if $(VERBOSE),,@echo CARGO_BUILD_RUSTFLAGS=$(CARGO_BUILD_RUSTFLAGS))
-	$(if $(VERBOSE),,@echo L4_BENDER_ARGS=$(L4_BENDER_ARGS))
 	$(VERBOSE)$(call MAKEDEP,$(INT_LD_NAME),,,ld) \
 		cargo build $(if $(VERBOSE),,-v) \
 			$(if $(strip $(DEBUG)),--debug,--release) \
 			--target=$(RUST_TARGET) \
+			--target-dir `pwd` \
 			--manifest-path=$(PKGDIR_ABS)/Cargo.toml
+	$(VERBOSE)$(call MAKEDEP,$(INT_LD_NAME),,,ld) $(LINK_PROGRAM) -o $@ $(BID_LDFLAGS_FOR_LINKING) $(RUST_TARGET)/$(if $(strip $(DEBUG)),debug,release)/$(CARGO_FS_TARGET_LIBNAME) $(LIBS) $(EXTRA_LIBS)
 	@$(BUILT_MESSAGE)
-	$(VERBOSE)cp $(RUST_RESULT_DIR)/$(strip $(TARGET)) $(CARGO_BUILD_TARGET_DIR)
-endif
+endif # Rust-specifics
 
 endif	# architecture is defined, really build
 

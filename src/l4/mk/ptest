@@ -7,7 +7,7 @@
 #  Ronald Aigner <ra3@os.inf.tu-dresden.de>
 #
 # This script is derived from the autocheck script which can be found in
-# fiasco/tools. It has been slightly modified to suit the demands of
+# kernel/fiasco/tools. It has been slightly modified to suit the demands of
 # the package tests.
 #
 
@@ -103,7 +103,7 @@ EOU
 # Check if L4DIR looks like an L4 directory
 sub check_for_l4dir() {
   unless (-d "$L4DIR/pkg/l4sys/include" ||
-          -d "$L4DIR/../fiasco/src/kern/ux") {
+          -d "$L4DIR/../kernel/fiasco/src/kern/ux") {
     die "$L4DIR doesn't look like an L4 directory!";
   }
 }

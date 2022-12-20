@@ -73,7 +73,7 @@ MAKECONFS_ADD    = $(call strip_quotes,$(CONFIG_MAKECONFS_ADD))
 CCXX_FLAGS        = $(CCXX_FLAGS_$(BUILD_ARCH))
 
 # Rust compiler flags and other required variables
-RSFLAGS        ?= -C opt-level=2
+RSFLAGS        ?= -C opt-level=3
 export CARGO_BUILD_TARGET_DIR=$(dir $(abspath $(strip $(TARGET))))
 ifeq ($(strip $(DEBUG)),1)
 RUST_RESULT_DIR=$(CARGO_BUILD_TARGET_DIR)/$(RUST_TARGET)/debug
@@ -93,7 +93,6 @@ CCACHE          ?= ccache
 $(call dv,CC)    = $(if $(USE_CCACHE),$(CCACHE) )$(CC_$(BUILD_ARCH))
 $(call dv,CXX)   = $(if $(USE_CCACHE),$(CCACHE) )$(CXX_$(BUILD_ARCH))
 $(call dv,FC)    = $(if $(USE_CCACHE),$(CCACHE) )$(FC_$(BUILD_ARCH))
-$(call dv,RUSTC) = rustc
 CP		?= cp
 DICE_SRCDIR	?= $(L4DIR)/../dice
 DICE_OBJDIR	?= $(DICE_SRCDIR)
@@ -143,7 +142,7 @@ TR		= tr
 GEN_DOPECODE	= $(L4DIR)/tool/gen_dopecode/gen_dopecode
 ABS2REL		= $(L4DIR)/tool/bin/abs2rel.sh
 # it is optional to be able to set it as environment variable
-FIASCOUX	?= $(L4DIR)/../fiasco/build-ux/fiasco
+FIASCOUX	?= $(L4DIR)/../kernel/fiasco/build-ux/fiasco
 PAGER		?= less
 DISASM_CMD      ?= $(OBJDUMP) -lCSd $(1) | $(PAGER)
 IMAGES_DIR      ?= $(OBJ_BASE)/images
@@ -389,9 +388,6 @@ endif
 # We recognize the following Fortran file extensions.
 FORTRAN_FILE_EXTENSIONS = .f .F .f90 .F90 .f95 .F95
 
-# Rust's source file extension
-RUST_FILE_EXTENSIONS = .rs
-
 # We recognize the following file extensions for assembly.
 BID_ASM_FILE_EXTENSIONS ?= .S
 BID_ASM_CPP_FILE_EXTENSIONS ?= .S
@@ -409,7 +405,6 @@ checkcxx_nowarn = $(if $(shell $(CXX) $(CCXX_FLAGS) -W$(1) -S -o /dev/null \
 callcc    = LC_ALL=C $(CC)  $(CCXX_FLAGS)
 callcxx   = LC_ALL=C $(CXX) $(CCXX_FLAGS)
 callfc    = LC_ALL=C $(FC)  $(CCXX_FLAGS)
-callrustc = LC_ALL=C $(RUSTC) $(RSFLAGS)
 
 define get_gccversion
   v=$$($(callcc) -dumpversion); \

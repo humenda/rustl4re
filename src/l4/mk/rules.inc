@@ -15,10 +15,10 @@ BID_F_COMPILER_INT_NAME = FC
 # for AS compile (AS) use $(CC), $(INT_CPP_NAME), and $(ASFLAGS)
 BID_AS_COMPILER = CC
 BID_AS_COMPILER_INT_NAME = INT_CPP_NAME
+# ToDo: potentially dead code
 # use $(RUSTC) for .rs files and $(RSFLAGS)
 BID_RS_COMPILER = RUSTC
 BID_RS_COMPILER_INT_NAME = RUSTC
-
 
 define BID_MAKE_RULE_CREATE_SUBDIR
   $$(if $$(wildcard $$(dir $$@)),,$$(VERBOSE)$(MKDIR) $$(dir $$@))

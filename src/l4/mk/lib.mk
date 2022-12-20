@@ -106,11 +106,10 @@ ifeq ($(SRC_RS),)
 PC_LIBS     ?= $(sort $(patsubst lib%.so,-l%,$(TARGET_SHARED) \
                       $(patsubst lib%.a,-l%,$(TARGET_STANDARD))))
 else
-# add whole path to .rlib and handle others like usual
-PC_LIBS = $(sort $(addprefix $(OBJ_BASE)/lib/rustlib/$(PKGNAME)/$(RUST_TARGET)/, \
-		$(patsubst %-rust.rlib,%.rlib,$(filter %.rlib,$(TARGET_STANDARD)))) \
-	$(patsubst lib%.so,-l%,$(TARGET_SHARED) \
-				  $(patsubst lib%.a,-l%, $(filter-out %.rlib,$(TARGET_STANDARD)))))
+# We leave the linking solely to Cargo for our benchmarking to simplify things. This is why we
+# filter rlibs.
+PC_LIBS     ?= $(filter %.rlib,$(sort $(patsubst lib%.so,-l%,$(TARGET_SHARED) \
+                      $(patsubst lib%.a,-l%,$(TARGET_STANDARD)))))
 endif
 
 PC_FILENAME  ?= $(PKGNAME)
@@ -219,29 +218,14 @@ export L4_INCLUDE_DIRS=$(filter -I%,$(CPPFLAGS))
 mklink_rustlib=$(VERBOSE)rm -f $(OBJ_BASE)/lib/rustlib/$(PKGNAME)/$(2) \
 			   && ln -s $(1) $(OBJ_BASE)/lib/rustlib/$(PKGNAME)/$(2)
 
+$(info PKGDIR=${PKGDIR}, PKGNAME=${PKGNAME})
 # Add extra information to each PC file of a procmacro crate.
-ifneq ($(call is_pkg_procmacro),)
-PC_EXTRA += Rust-Cratetype: proc-macro
-endif
+#ifneq ($(call is_pkg_procmacro),)
+#PC_EXTRA += Rust-Cratetype: proc-macro
+#endif
 
-$(strip $(TARGET)): $(SRC_FILES)
-	@echo 'Building rlib...'
-	$(if $(VERBOSE),,@echo CARGO_BUILD_RUSTFLAGS=$(CARGO_BUILD_RUSTFLAGS))
-	$(VERBOSE)CARGO_BUILD_RUSTFLAGS='$(CARGO_BUILD_RUSTFLAGS)' \
-		cargo build $(if $(VERBOSE),,-v) --release \
-			--target=$(RUST_TARGET) \
-			--manifest-path=$(PKGDIR)/Cargo.toml
-	@$(BUILT_MESSAGE)
-	$(VERBOSE)[ -d $(OBJ_BASE)/lib/rustlib/$(PKGNAME) ] || \
-		mkdir -p $(RLIB_BASE)/$(PKGNAME)
-	$(VERBOSE)if [ -z $(call is_pkg_procmacro) ]; then \
-		if [ -e $(RUST_RESULT_DIR)/$@ ]; then \
-			rm $(RUST_RESULT_DIR)/$@; \
-		fi; \
-		mv $(RUST_RESULT_DIR)/$(patsubst %-rust.rlib,%.rlib,$@) \
-				$(RUST_RESULT_DIR)/$@; fi
-	$(call mklink_rustlib,$(CARGO_BUILD_TARGET_DIR)/release/deps,host-deps)
-	$(call mklink_rustlib,$(CARGO_BUILD_TARGET_DIR)/$(RUST_TARGET)/release,$(RUST_TARGET))
+$(FS_TARGET_NAME): $(SRC_FILES)
+	@echo [$(PKGNAME)] Generating dependency information...
 endif # SRC_RS is defined
 
 endif	# architecture is defined, really build
