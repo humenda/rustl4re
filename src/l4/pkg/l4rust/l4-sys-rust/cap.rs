@@ -1,4 +1,4 @@
-use libc::{c_uchar, c_uint};
+use core::ffi::{c_uchar, c_uint};
 
 use crate::c_api::*;
 

@@ -1,3 +1,5 @@
+use core::ffi::c_uchar;
+
 #[cfg(no_libc)]
 pub unsafe fn strlen(c_str: *const u8) -> usize {
     let mut length = 0usize;
@@ -8,19 +10,7 @@ pub unsafe fn strlen(c_str: *const u8) -> usize {
     length
 }
 
-#[cfg(not(no_libc))]
-extern "C" {
-    pub(crate) fn strlen(c_str: *const u8) -> usize;
-}
-
-/// Provide a convenient mechanism to access the message registers
-macro_rules! mr {
-    ($v:ident[$w:expr] = $stuff:expr) => {
-        (*$v).mr.as_mut()[$w as usize] = $stuff as u64;
-    }
-}
-
-pub unsafe fn eq_str_cstr(name: &str, other: *const u8) -> bool {
+pub unsafe fn eq_str_cstr(name: &str, other: *const c_uchar) -> bool {
     let mut in_name = other;
     for byte in name.as_bytes() {
         match *in_name {
@@ -30,5 +20,5 @@ pub unsafe fn eq_str_cstr(name: &str, other: *const u8) -> bool {
         }
         in_name = in_name.offset(1);
     }
-    return *in_name == 0 // if 0 reached, strings matched
+    return *in_name == 0; // if 0 reached, strings matched
 }

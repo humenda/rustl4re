@@ -1,4 +1,4 @@
-use libc::{c_int, c_long, c_uint, c_ulong};
+use core::ffi::{c_int, c_long, c_uint, c_ulong};
 
 use crate::c_api::{l4_error_code_t::*, l4_msg_item_consts_t::*, L4_fpage_control::*, *};
 use crate::consts::*;

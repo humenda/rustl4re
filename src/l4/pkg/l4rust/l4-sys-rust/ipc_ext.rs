@@ -8,7 +8,7 @@ macro_rules! mr {
     };
 }
 
-#[inline]
+#[inline(always)]
 pub fn msgtag(label: i64, words: u32, items: u32, flags: u32) -> l4_msgtag_t {
     ipc_basic::l4_msgtag(label, words, items, flags)
 }

@@ -10,7 +10,7 @@ fn main() {
         .derive_default(true)
         .rustified_enum(".*")
         .blacklist_type("l4_addr_t")
-        .ctypes_prefix("libc");
+        .ctypes_prefix("core::ffi");
     if let Ok(include_dirs) = ::std::env::var("L4_INCLUDE_DIRS") {
         println!("hi: {}", include_dirs);
         for item in include_dirs.split(" ") {

@@ -6,6 +6,7 @@ mod c_api;
 mod cap;
 pub mod consts;
 mod factory;
+pub mod helpers;
 mod ipc_basic;
 mod platform;
 mod scheduler;
