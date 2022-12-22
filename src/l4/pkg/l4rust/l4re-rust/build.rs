@@ -1,12 +1,10 @@
-extern crate bindgen;
-
 use std::env;
 use std::path::PathBuf;
 
 fn main() {
     let mut bindings = bindgen::Builder::default()
         .use_core()
-        .ctypes_prefix("::libc")
+        .ctypes_prefix("core::ffi")
         .rustified_enum(".*")
         .header("bindgen.h");
     if let Ok(include_dirs) = ::std::env::var("L4_INCLUDE_DIRS") {
@@ -20,4 +18,3 @@ fn main() {
         .write_to_file(out_path.join("bindings.rs"))
         .expect("Couldn't write bindings!");
 }
-

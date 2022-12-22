@@ -2,7 +2,7 @@
 name = "l4re"
 version = "0.1.0"
 authors = ["Sebastian Humenda <shumenda @ gmx . de>"]
-edition = "2018"
+edition = "2021"
 
 [lib]
 path = "lib.rs"
@@ -10,8 +10,10 @@ path = "lib.rs"
 [build-dependencies]
 bindgen = "0.43.1"
 
-[dependencies]
-libc = "0.2.43"
+[dependencies.l4]
+path = "../l4-rust"
+# ToDo: make this conditional
+default-features = false
 
-[features]
-default = []
+[dependencies.l4_derive]
+path = "../l4_derive-rust"

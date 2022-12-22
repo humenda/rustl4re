@@ -5,12 +5,14 @@ use l4::{
     error::{Error, Result},
 };
 
+use crate::sys;
+
 pub struct OwnedCap<T: IfaceInit>(Cap<T>);
 
 impl<T: IfaceInit> OwnedCap<T> {
     /// Allocate new capability slot
     pub fn alloc() -> OwnedCap<T> {
-        OwnedCap(Cap::<T>::new(unsafe { l4_sys::l4re_util_cap_alloc() }))
+        OwnedCap(Cap::<T>::new(unsafe { sys::l4re_util_cap_alloc() }))
     }
 
     pub fn from(src: Cap<T>) -> Result<Self> {
@@ -26,9 +28,7 @@ impl<T: IfaceInit> OwnedCap<T> {
 
     /// Return a copy of the internal `Cap<T>`
     pub fn cap(&self) -> Cap<T> {
-        unsafe {
-            Cap::<T>::new(self.0.raw())
-        }
+        Cap::<T>::new(self.0.raw())
     }
 }
 
@@ -47,7 +47,8 @@ impl<T: IfaceInit> DerefMut for OwnedCap<T> {
 
 impl<T: IfaceInit> Drop for OwnedCap<T> {
     fn drop(&mut self) {
-        unsafe { // free allocated capability index
+        unsafe {
+            // free allocated capability index
             l4::sys::l4re_util_cap_free(self.0.raw());
         }
     }
