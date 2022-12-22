@@ -1,11 +1,20 @@
 [package]
 name = "two_task_ipc-server"
 version = "0.1.0"
-authors = ["streicher <shumenda@gmx.de>"]
+authors = ["Sebastian Humenda <shumenda@gmx.de>"]
+edition = "2021"
 
-[[bin]]
-name = "two_task_ipc-server"
+[lib]
+#name = "two_task_ipc-server"
 path = "server.rs"
+crate-type = ["staticlib"]
 
-[dependencies]
-libc = { git = "https://github.com/rust-lang/libc" }
+[dependencies.l4]
+path = "../../../../l4rust/l4-rust"
+default-features = false
+features = []
+
+[dependencies.l4re]
+path = "../../../../l4rust/l4re-rust"
+default-features = false
+features = []
