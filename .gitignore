@@ -10,3 +10,4 @@ src/fiasco/build/
 *.swo
 *.swp
 target
+.*.d
