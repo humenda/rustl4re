@@ -1,7 +1,7 @@
-#![recursion_limit="128"]
+#![recursion_limit = "128"]
+extern crate lazy_static;
 extern crate proc_macro;
 extern crate proc_macro2;
-extern crate lazy_static;
 
 #[macro_use]
 mod macros;
@@ -10,22 +10,24 @@ mod export;
 mod iface;
 
 use proc_macro::TokenStream;
-use syn::{self, Data, Fields};
-use syn::parse_macro_input;
 use std::fs::File;
 use std::io::Write;
+use syn::parse_macro_input;
+use syn::{self, Data, Fields};
 
 macro_rules! proc_err {
     // an error string spanning the whole macro invocation
     ($lit:literal) => {
         return syn::Error::new(proc_macro2::Span::call_site(), $lit)
-                .to_compile_error().into();
+            .to_compile_error()
+            .into()
     };
 
     // use given span to emit error message with location info
     ($span:expr, $lit:literal) => {
         return syn::Error::new($span.span(), $lit)
-                .to_compile_error().into();
+            .to_compile_error()
+            .into();
     };
 
     // same as err!: use given syn::Error to emit the error message
@@ -37,16 +39,15 @@ macro_rules! proc_err {
     };
 }
 
-
 /// Transform a struct into an L4 server
 ///
-/// IPC servers are required to fulfill certain memory constraints and implement 
+/// IPC servers are required to fulfill certain memory constraints and implement
 /// a few unsafe traits. This macro makes sure that these are met. More
 /// information can be found at the
 /// [l4::ipc::types::Callable trait](../l4/ipc/types/trait.Callable.html),
 /// [l4::ipc::types::Dispatch](../l4/ipc/types/trait.Dispatch.html), and
 /// [l4::ipc::types::Demand](../l4/ipc/types/trait.Demand.html) traits.
-/// 
+///
 /// The macro takes two arguments in parenthesis: the trait to base the IPC
 /// server on and an optional buffer size to allocate an internal buffer on the
 /// stack. This is explained at
@@ -69,7 +70,8 @@ pub fn l4_server(macro_attrs: TokenStream, item: TokenStream) -> TokenStream {
         proc_err!("IPC trait missing, use l4_server(TRAITNAME)");
     }
     let opts = proc_err!(clntsrv::parse_server_meta(parse_macro_input!(
-            macro_attrs as syn::AttributeArgs)));
+        macro_attrs as syn::AttributeArgs
+    )));
 
     let ast: syn::DeriveInput = syn::parse(item).expect("Unable to parse struct definition.");
     let structdef = match ast.data {
@@ -81,14 +83,21 @@ pub fn l4_server(macro_attrs: TokenStream, item: TokenStream) -> TokenStream {
     // If we'd insert into a tuple struct, this would move the index of all
     // existing members, invalidating any user's code.
     match structdef.fields {
-        Fields::Named(_) => clntsrv::gen_server_struct(name, ast.attrs, ast.vis,
-                                             ast.generics, structdef.fields,
-                                             &opts),
-        Fields::Unnamed(_) => proc_err!("Only named structs or unnamed structs \
-                can be turned into an IPC server."),
-        Fields::Unit => clntsrv::gen_server_struct(name, ast.attrs, ast.vis,
-                                             ast.generics, Fields::Unit,
-                                             &opts),
+        Fields::Named(_) => clntsrv::gen_server_struct(
+            name,
+            ast.attrs,
+            ast.vis,
+            ast.generics,
+            structdef.fields,
+            &opts,
+        ),
+        Fields::Unnamed(_) => proc_err!(
+            "Only named structs or unnamed structs \
+                can be turned into an IPC server."
+        ),
+        Fields::Unit => {
+            clntsrv::gen_server_struct(name, ast.attrs, ast.vis, ast.generics, Fields::Unit, &opts)
+        }
     }
 }
 
@@ -127,10 +136,13 @@ pub fn l4_client(macro_attrs: TokenStream, item: TokenStream) -> TokenStream {
     // only unit structs are accepted, because cap types generally don't have members (in fact, the
     // only valid member is inserted)
     match structdef.fields {
-        Fields::Unnamed(_) | Fields::Named(_) => proc_err!("Only unit structs (no data \
-                fields) can be turned into an IPC client."),
-        Fields::Unit => clntsrv::gen_client_struct(name, ast.attrs, ast.vis,
-                                             ast.generics, trait_name, demand)
+        Fields::Unnamed(_) | Fields::Named(_) => proc_err!(
+            "Only unit structs (no data \
+                fields) can be turned into an IPC client."
+        ),
+        Fields::Unit => {
+            clntsrv::gen_client_struct(name, ast.attrs, ast.vis, ast.generics, trait_name, demand)
+        }
     }
 }
 
@@ -190,9 +202,10 @@ pub fn iface_export(input: TokenStream) -> TokenStream {
     // read Iface struct
     let iface = proc_err!(export::parse_external_iface(&opts.input_file));
     let cpp = proc_err!(export::gen_cpp_interface(&iface, &opts));
-    let mut fs = proc_err!(File::create(opts.output_file).map_err(|e|
-            syn::Error::new(proc_macro2::Span::call_site(), e.to_string())));
-    proc_err!(fs.write_all(cpp.as_bytes()).map_err(|e|
-            syn::Error::new(proc_macro2::Span::call_site(), e.to_string())));
+    let mut fs = proc_err!(File::create(opts.output_file)
+        .map_err(|e| syn::Error::new(proc_macro2::Span::call_site(), e.to_string())));
+    proc_err!(fs
+        .write_all(cpp.as_bytes())
+        .map_err(|e| syn::Error::new(proc_macro2::Span::call_site(), e.to_string())));
     TokenStream::new()
 }

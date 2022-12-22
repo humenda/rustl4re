@@ -1,20 +1,23 @@
-//! attributes to generate client and server implementations
+//! Attributes to generate client and server implementations.
 use proc_macro::TokenStream;
 use quote::quote;
-use syn::{Attribute, Fields, Generics, Ident, Lit, Meta, NestedMeta,
-        Result, Visibility};
-use syn::spanned::Spanned;
 use std::str::FromStr;
+use syn::spanned::Spanned;
+use syn::{Attribute, Fields, Generics, Ident, Lit, Meta, NestedMeta, Result, Visibility};
 
 pub struct ServerAttrs {
     pub trait_name: syn::Ident,
     pub buffer: usize, // in bytes
 }
 
-pub fn gen_server_struct(name: proc_macro2::Ident, attrs: Vec<Attribute>,
-                    vis: Visibility, generics: Generics, fields: Fields,
-                    opts: &ServerAttrs)
-                    -> proc_macro::TokenStream {
+pub fn gen_server_struct(
+    name: proc_macro2::Ident,
+    attrs: Vec<Attribute>,
+    vis: Visibility,
+    generics: Generics,
+    fields: Fields,
+    opts: &ServerAttrs,
+) -> proc_macro::TokenStream {
     // duplicate names and types of fields, because quote! moves them
     let initialiser_names: Vec<_> = fields.iter().map(|f| f.ident.clone()).collect();
     let arg_names: Vec<_> = fields.iter().map(|f| f.ident.clone()).collect();
@@ -24,57 +27,57 @@ pub fn gen_server_struct(name: proc_macro2::Ident, attrs: Vec<Attribute>,
     // Implement caching, if requested, needs a struct member, code in the new
     // function and impl blocks
     let (cmember, cnew, cimpl) = match buffer {
-        0 => (quote! { }, quote! { }, quote! { }),
-        n => {
-            (quote! { __buffer: [u8; #n], },
-             quote! { __buffer: [0u8; #n], },
-             quote! {
-                 impl l4::ipc::server::StackBuf for #name {
-                     #[inline]
-                     fn get_buffer(&mut self) -> &mut [u8] {
-                         &mut self.__buffer
-                     }
-                     #[inline]
-                     fn get_buffer_size(&self) -> usize { #n }
-                 }
-                 impl l4::ipc::server::TypedBuffer<str> for #name {
-                     #[inline]
-                     fn copy_in(&mut self, i: &str) -> l4::error::Result<&mut str> {
-                         if i.len() > self.__buffer.len() {
-                             return Err(l4::error::Error::Generic(
-                                 l4::error::GenericErr::MsgTooLong));
-                         }
-                         Ok(unsafe {
-                             core::ptr::copy_nonoverlapping(
-                                 i.as_ptr(), self.__buffer.as_mut_ptr(), i.len());
-                             core::str::from_utf8_unchecked_mut(&mut self.__buffer[0..i.len()])
-                         })
-                     }
-                 }
-                 impl l4::ipc::server::TypedBuffer<[u8]> for #name {
-                     #[inline]
-                     fn copy_in(&mut self, i: &[u8]) -> l4::error::Result<&mut [u8]> {
-                         if i.len() > self.__buffer.len() {
-                             return Err(l4::error::Error::Generic(
-                                 l4::error::GenericErr::MsgTooLong));
-                         }
-                         Ok(unsafe {
-                             core::ptr::copy_nonoverlapping(
-                                 i.as_ptr(), self.__buffer.as_mut_ptr(), i.len());
-                             &mut self.__buffer[0..i.len()]
-                         })
-                     }
-                 }
-             })
-        }
+        0 => (quote! {}, quote! {}, quote! {}),
+        n => (
+            quote! { __buffer: [u8; #n], },
+            quote! { __buffer: [0u8; #n], },
+            quote! {
+                impl l4::ipc::server::StackBuf for #name {
+                    #[inline]
+                    fn get_buffer(&mut self) -> &mut [u8] {
+                        &mut self.__buffer
+                    }
+                    #[inline]
+                    fn get_buffer_size(&self) -> usize { #n }
+                }
+                impl l4::ipc::server::TypedBuffer<str> for #name {
+                    #[inline]
+                    fn copy_in(&mut self, i: &str) -> l4::error::Result<&mut str> {
+                        if i.len() > self.__buffer.len() {
+                            return Err(l4::error::Error::Generic(
+                                l4::error::GenericErr::MsgTooLong));
+                        }
+                        Ok(unsafe {
+                            core::ptr::copy_nonoverlapping(
+                                i.as_ptr(), self.__buffer.as_mut_ptr(), i.len());
+                            core::str::from_utf8_unchecked_mut(&mut self.__buffer[0..i.len()])
+                        })
+                    }
+                }
+                impl l4::ipc::server::TypedBuffer<[u8]> for #name {
+                    #[inline]
+                    fn copy_in(&mut self, i: &[u8]) -> l4::error::Result<&mut [u8]> {
+                        if i.len() > self.__buffer.len() {
+                            return Err(l4::error::Error::Generic(
+                                l4::error::GenericErr::MsgTooLong));
+                        }
+                        Ok(unsafe {
+                            core::ptr::copy_nonoverlapping(
+                                i.as_ptr(), self.__buffer.as_mut_ptr(), i.len());
+                            &mut self.__buffer[0..i.len()]
+                        })
+                    }
+                }
+            },
+        ),
     };
 
     let gen = quote! {
         #[repr(C)]
         #(#attrs)*
         #vis struct #name #generics {
-            __dispatch_ptr: ::l4::ipc::Callback,
-            __cap: crate::l4::cap::CapIdx,
+            __dispatch_ptr: l4::ipc::Callback,
+            __cap: l4::cap::CapIdx,
             #(#field_iter,)*
             #cmember
             __pin: core::marker::PhantomPinned
@@ -87,7 +90,7 @@ pub fn gen_server_struct(name: proc_macro2::Ident, attrs: Vec<Attribute>,
             /// For example: `#name::new(my_cap, #(#arg_names),*)`.
             fn new(cap: l4::cap::CapIdx, #(#arg_names: #arg_types),*) -> #name {
                 #name {
-                    __dispatch_ptr: crate::l4::ipc::server_impl_callback::<#name>,
+                    __dispatch_ptr: l4::ipc::server_impl_callback::<#name>,
                     __cap: cap,
                     #(#initialiser_names,)*
                     #cnew
@@ -95,13 +98,13 @@ pub fn gen_server_struct(name: proc_macro2::Ident, attrs: Vec<Attribute>,
                 }
             }
         }
-        unsafe impl crate::l4::ipc::types::Callable for #name { }
-        impl crate::l4::ipc::types::Dispatch for #name {
+        unsafe impl l4::ipc::types::Callable for #name { }
+        impl l4::ipc::types::Dispatch for #name {
             #[inline]
-            fn dispatch(&mut self, tag: crate::l4::ipc::MsgTag,
+            fn dispatch(&mut self, tag: l4::ipc::MsgTag,
                         mr: &mut l4::utcb::UtcbMr,
                         bufs: &mut l4::ipc::BufferAccess)
-                    -> crate::l4::error::Result<crate::l4::ipc::MsgTag> {
+                    -> l4::error::Result<l4::ipc::MsgTag> {
                 // op_dispatch is auto-generated by the iface! macro
                 self.op_dispatch(tag, mr, bufs)
             }
@@ -111,7 +114,7 @@ pub fn gen_server_struct(name: proc_macro2::Ident, attrs: Vec<Attribute>,
         }
         impl l4::cap::Interface for #name {
             #[inline]
-            unsafe fn raw(&self) -> l4::cap::CapIdx {
+            fn raw(&self) -> l4::cap::CapIdx {
                 self.__cap
             }
         }
@@ -143,7 +146,7 @@ pub fn parse_client_meta(meta: syn::AttributeArgs) -> Result<(Ident, u32)> {
                     Lit::Int(i) => i.value() as u32,
                     _ => err!(nv.ident, "Demand can only be a positive integer number"),
                 };
-            },
+            }
             Meta::List(ml) => err!(ml, "Invalid nesting of attributes"),
         };
     }
@@ -153,30 +156,34 @@ pub fn parse_client_meta(meta: syn::AttributeArgs) -> Result<(Ident, u32)> {
     Ok((traitname.unwrap(), demand))
 }
 
-pub fn gen_client_struct(name: proc_macro2::Ident, attrs: Vec<Attribute>,
-                    vis: Visibility, generics: Generics, trait_name: Ident,
-                    demand: u32)
-                -> proc_macro::TokenStream {
+pub fn gen_client_struct(
+    name: proc_macro2::Ident,
+    attrs: Vec<Attribute>,
+    vis: Visibility,
+    generics: Generics,
+    trait_name: Ident,
+    demand: u32,
+) -> proc_macro::TokenStream {
     let slot_type: syn::Type = match demand {
         0 => syn::parse(TokenStream::from_str("l4::ipc::Bufferless").unwrap()).unwrap(),
-        _ => syn::parse(TokenStream::from_str("l4::ipc::BufferManager").unwrap()).unwrap()
+        _ => syn::parse(TokenStream::from_str("l4::ipc::BufferManager").unwrap()).unwrap(),
     };
     let gen = quote! {
         #(#attrs)*
         #vis struct #name #generics {
-            __cap: crate::l4::cap::CapIdx,
+            __cap: l4::cap::CapIdx,
             __slots: #slot_type,
             __pin: core::marker::PhantomPinned,
         }
 
-        impl crate::l4::cap::Interface for #name {
+        impl l4::cap::Interface for #name {
             #[inline]
-            unsafe fn raw(&self) -> crate::l4::cap::CapIdx {
+            fn raw(&self) -> l4::cap::CapIdx {
                 self.__cap
             }
         }
-        impl crate::l4::cap::IfaceInit for #name {
-            fn new(c: crate::l4::cap::CapIdx) -> Self {
+        impl l4::cap::IfaceInit for #name {
+            fn new(c: l4::cap::CapIdx) -> Self {
                 #name {
                     __cap: c,
                     __slots: <#slot_type as l4::ipc::CapProvider>::new(),
@@ -211,12 +218,13 @@ pub fn parse_server_meta(meta: syn::AttributeArgs) -> Result<ServerAttrs> {
                     err!(nv.ident, "Only `demand = NUM` allowed");
                 }
                 buffer = match nv.lit {
-                    Lit::Int(ref i) if i.value() > 500 => err!(nv.ident,
-                            "Cache size may not exceed 500 bytes"),
+                    Lit::Int(ref i) if i.value() > 500 => {
+                        err!(nv.ident, "Cache size may not exceed 500 bytes")
+                    }
                     Lit::Int(i) => i.value() as usize,
                     _ => err!(nv.ident, "Buffer size must be a positive integer"),
                 };
-            },
+            }
             Meta::List(ml) => err!(ml, "Invalid nesting of attributes"),
         };
     }

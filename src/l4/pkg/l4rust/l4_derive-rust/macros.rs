@@ -4,7 +4,8 @@ macro_rules! err {
         return Err(syn::Error::new($obj_with_span.span(), $msg));
     }};
 
-    ($obj_with_span:expr, $msg:expr) => {{ // same again
+    ($obj_with_span:expr, $msg:expr) => {{
+        // same again
         return Err(syn::Error::new($obj_with_span.span(), $msg));
     }};
 
@@ -13,14 +14,14 @@ macro_rules! err {
     };
 
     ($msg:expr) => {
-        return Err(syn::Error::new(proc_macro2::Span::call_site(), $msg));
+        return Err(syn::Error::new(proc_macro2::Span::call_site(), $msg))
     };
 }
 
 macro_rules! raw_type {
     ($($raw:tt)*) => {
         syn::Type::Verbatim(syn::TypeVerbatim {
-                tts: TokenStream::from_str($($raw)*).unwrap() 
+                tts: TokenStream::from_str($($raw)*).unwrap()
         })
     }
 }
@@ -31,5 +32,5 @@ macro_rules! ifletelse {
             $path(ref l) => l,
             _ => err!($match, $msg),
         }
-    }
+    };
 }
