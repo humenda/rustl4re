@@ -8,6 +8,8 @@
 #include <l4/re/c/util/cap_alloc.h>
 #include <l4/re/env.h>
 #include <pthread-l4.h>
+#include <l4/vbus/vbus.h>
+#include <l4/vbus/vbus_pci.h>
 
 // custom wrapper to make inlined C functions visible
 #include <l4/l4rust/ipc.h>
