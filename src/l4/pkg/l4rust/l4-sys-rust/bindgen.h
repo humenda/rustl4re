@@ -10,6 +10,8 @@
 #include <pthread-l4.h>
 #include <l4/vbus/vbus.h>
 #include <l4/vbus/vbus_pci.h>
+#include <l4/io/io.h>
+#include <l4/io/types.h>
 
 // custom wrapper to make inlined C functions visible
 #include <l4/l4rust/ipc.h>
