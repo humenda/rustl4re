@@ -2,9 +2,11 @@ use l4::cap::{IfaceInit, CapIdx, Interface};
 use l4::ipc::MsgTag;
 use l4::{Error, Result};
 use l4_sys::l4_error_code_t::L4_EOK;
-use l4_sys::{l4_icu_bind_w, l4_icu_info_t, l4_icu_info_w, l4_icu_msi_info_t, l4_icu_msi_info_w, l4_icu_unmask_w, l4_timeout_t, l4_uint32_t,l4vbus_get_next_device ,l4vbus_get_resource ,l4vbus_pcidev_cfg_read ,l4vbus_pcidev_cfg_write ,l4vbus_resource_t ,l4vbus_vicu_get_cap ,L4VBUS_NULL ,L4VBUS_ROOT_BUS ,l4_cap_idx_t, l4vbus_device_handle_t};
+use l4_sys::{l4_icu_bind_w, l4_icu_info_t, l4_icu_info_w, l4_icu_msi_info_t, l4_icu_msi_info_w, l4_icu_unmask_w, l4_timeout_t, l4_uint32_t,l4vbus_get_next_device ,l4vbus_get_resource ,l4vbus_pcidev_cfg_read ,l4vbus_pcidev_cfg_write ,l4vbus_resource_t ,l4vbus_vicu_get_cap ,L4VBUS_NULL ,L4VBUS_ROOT_BUS , l4vbus_device_handle_t, l4vbus_assign_dma_domain};
 
+use l4::sys::L4vbus_dma_domain_assign_flags::{L4VBUS_DMAD_KERNEL_DMA_SPACE, L4VBUS_DMAD_BIND};
 use l4_sys::l4vbus_consts_t::L4VBUS_MAX_DEPTH;
+use l4_sys::l4vbus_resource_type_t::*;
 use l4_sys::l4vbus_icu_src_types::L4VBUS_ICU_SRC_DEV_HANDLE;
 use l4_sys::L4_icu_flags::L4_ICU_FLAG_MSI;
 use bitflags::bitflags;
@@ -13,11 +15,13 @@ use crate::factory::IrqSender;
 use crate::sys::l4io_iomem_flags_t::*;
 use crate::sys::{l4io_release_iomem, l4io_request_iomem};
 use crate::OwnedCap;
+use crate::factory::DmaSpace;
+use crate::mem::VolatileMemoryInterface;
 
 use core::iter::Iterator;
 
 pub struct Vbus {
-    cap: l4_cap_idx_t,
+    cap: CapIdx
 }
 
 impl Interface for Vbus {
@@ -40,6 +44,18 @@ pub struct Device {
 
 pub struct Resource {
     res: l4vbus_resource_t,
+}
+
+#[derive(PartialEq, Eq, Debug, Copy, Clone)]
+pub enum ResourceType {
+  Invalid,
+  Irq,
+  Mem,
+  Port,
+  Bus,
+  Gpio,
+  DmaDomain,
+  Max
 }
 
 pub struct DeviceIter<'a> {
@@ -102,7 +118,7 @@ impl Iterator for ResourceIter<'_> {
 
 // TODO: Figure the Cap stuff out
 impl Vbus {
-    pub fn new(cap: l4_cap_idx_t) -> Vbus {
+    pub fn new(cap: CapIdx) -> Vbus {
         Vbus { cap }
     }
 
@@ -137,8 +153,8 @@ impl Vbus {
         &self,
         dev: &Device,
         reg: l4_uint32_t,
-        bits: l4_uint32_t,
         val: l4_uint32_t,
+        bits: l4_uint32_t,
     ) -> Result<()> {
         let err = unsafe { l4vbus_pcidev_cfg_write(self.raw(), dev.handle, reg, val, bits) };
         if err != L4_EOK as i32 {
@@ -168,8 +184,24 @@ impl Vbus {
         self.pcidev_cfg_write(dev, reg, val as u32, 16)
     }
 
-    pub fn pcidev_cfg_write32(&self, dev: &Device, reg: l4_uint32_t, val: u16) -> Result<()> {
+    pub fn pcidev_cfg_write32(&self, dev: &Device, reg: l4_uint32_t, val: u32) -> Result<()> {
         self.pcidev_cfg_write(dev, reg, val as u32, 32)
+    }
+
+    pub fn assign_dma_domain(&self, dma_domain: Resource, dma_space: &DmaSpace) -> Result<()> {
+        assert!(dma_domain.typ() == ResourceType::DmaDomain);
+        let err = unsafe { l4vbus_assign_dma_domain(
+                self.cap,
+                dma_domain.start() as u32,
+                L4VBUS_DMAD_BIND as u32 | L4VBUS_DMAD_KERNEL_DMA_SPACE as u32,
+                dma_space.raw()
+            )};
+
+        if err != L4_EOK as i32 {
+            Err(Error::from_ipc(err.into()))
+        } else {
+            Ok(())
+        }
     }
 }
 
@@ -183,7 +215,38 @@ impl Device {
     }
 }
 
-impl Resource {}
+impl Resource {
+    pub fn start(&self) -> usize {
+        self.res.start
+    }
+
+    pub fn end(&self) -> usize {
+        self.res.end
+    }
+
+    pub fn typ(&self) -> ResourceType {
+        // match with as is not supported :(
+        if self.res.type_ == L4VBUS_RESOURCE_INVALID as u16 {
+            ResourceType::Invalid
+        } else if self.res.type_ == L4VBUS_RESOURCE_IRQ as u16 {
+            ResourceType::Irq
+        } else if self.res.type_ == L4VBUS_RESOURCE_MEM as u16 {
+            ResourceType::Mem
+        } else if self.res.type_ == L4VBUS_RESOURCE_PORT as u16 {
+            ResourceType::Port
+        } else if self.res.type_ == L4VBUS_RESOURCE_BUS as u16 {
+            ResourceType::Bus
+        } else if self.res.type_ == L4VBUS_RESOURCE_GPIO as u16 {
+            ResourceType::Gpio
+        } else if self.res.type_ == L4VBUS_RESOURCE_DMA_DOMAIN as u16 {
+            ResourceType::DmaDomain
+        } else if self.res.type_ == L4VBUS_RESOURCE_MAX as u16 {
+            ResourceType::Max
+        } else {
+            unreachable!()
+        }
+    }
+}
 
 pub struct IoMem {
     addr: *mut u8,
@@ -222,55 +285,16 @@ impl IoMem {
             Ok(())
         }
     }
+}
 
-    fn bounds_check(&self, offset: usize, len: usize) {
-        if len + offset > self.size as usize {
-            panic!(
-                "Iomem out of bounds access, base pointer {:p}, offset: {}, amount: {}",
-                self.addr, offset, len
-            );
-        }
-    }
+impl VolatileMemoryInterface for IoMem {
+  fn ptr(&self) -> *mut u8 {
+    self.addr
+  }
 
-    pub fn write8(&mut self, offset: usize, val: u8) {
-        self.bounds_check(offset, 1);
-        unsafe { core::ptr::write_volatile(self.addr.add(offset), val) }
-    }
-
-    pub fn write16(&mut self, offset: usize, val: u16) {
-        self.bounds_check(offset, 2);
-        unsafe { core::ptr::write_volatile(self.addr.add(offset) as *mut u16, val) }
-    }
-
-    pub fn write32(&mut self, offset: usize, val: u32) {
-        self.bounds_check(offset, 4);
-        unsafe { core::ptr::write_volatile(self.addr.add(offset) as *mut u32, val) }
-    }
-
-    pub fn write64(&mut self, offset: usize, val: u64) {
-        self.bounds_check(offset, 8);
-        unsafe { core::ptr::write_volatile(self.addr.add(offset) as *mut u64, val) }
-    }
-
-    pub fn read8(&self, offset: usize) -> u8 {
-        self.bounds_check(offset, 1);
-        unsafe { core::ptr::read_volatile(self.addr.add(offset)) }
-    }
-
-    pub fn read16(&self, offset: usize) -> u16 {
-        self.bounds_check(offset, 2);
-        unsafe { core::ptr::read_volatile(self.addr.add(offset) as *mut u16) }
-    }
-
-    pub fn read32(&self, offset: usize) -> u32 {
-        self.bounds_check(offset, 4);
-        unsafe { core::ptr::read_volatile(self.addr.add(offset) as *mut u32) }
-    }
-
-    pub fn read64(&self, offset: usize) -> u64 {
-        self.bounds_check(offset, 8);
-        unsafe { core::ptr::read_volatile(self.addr.add(offset) as *mut u64) }
-    }
+  fn size(&self) -> usize {
+    self.size as usize
+  }
 }
 
 impl Drop for IoMem {
@@ -280,7 +304,7 @@ impl Drop for IoMem {
 }
 
 pub struct Icu {
-    cap: l4_cap_idx_t,
+    cap: CapIdx,
 }
 
 #[derive(Copy, Clone, Debug)]

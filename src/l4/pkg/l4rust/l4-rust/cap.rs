@@ -95,6 +95,12 @@ impl<T: Interface + IfaceInit> Cap<T> {
 }
 
 impl<T: Interface> Cap<T> {
+    pub fn from_raw(val : T) -> Cap<T> {
+        Cap {
+            interface: val
+        }
+    }
+
     pub fn cast<U: Interface + IfaceInit>(self) -> Cap<U> {
         Cap {
             interface: U::new(self.raw()),
