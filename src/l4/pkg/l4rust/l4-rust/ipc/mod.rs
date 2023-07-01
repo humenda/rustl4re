@@ -25,7 +25,7 @@ pub use self::types::*;
 pub use syscall::*;
 
 use core::{convert::From, mem::transmute};
-use l4_sys::{l4_msgtag_flags::*, l4_msgtag_t, msgtag};
+use l4_sys::{l4_msgtag_flags::*, l4_msgtag_t, l4_timeout_t, l4_ipc_error, msgtag};
 use num_traits::FromPrimitive;
 
 use crate::error::{Error, Result};
@@ -186,10 +186,16 @@ impl MsgTag {
     }
 
     #[inline]
-    pub fn raw(self) -> l4_msgtag_t {
+    pub fn raw(&self) -> l4_msgtag_t {
         ::l4_sys::l4_msgtag_t {
             raw: self.raw as i64,
         }
+    }
+
+    #[inline]
+    pub fn has_ipc_error(&self) -> bool {
+        let err = unsafe { l4_ipc_error(self.raw(), Utcb::current().raw) };
+        err != 0
     }
 }
 

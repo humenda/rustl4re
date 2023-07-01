@@ -3,7 +3,8 @@ use crate::OwnedCap;
 
 use l4::cap::{Cap, CapIdx, IfaceInit, Interface};
 use l4::ipc::MsgTag;
-use l4::Result;
+use l4::{Error, Result};
+use l4::error::TcrErr;
 use l4_sys::{l4_factory_create, l4_irq_unmask_w};
 use l4_sys::l4_msgtag_protocol::{L4_PROTO_IRQ_SENDER, L4_PROTO_DMA_SPACE};
 
@@ -108,7 +109,10 @@ impl FactoryCreate<OwnedCap<DmaSpace>> for Factory<DefaultFactory> {
 impl IrqSender {
     pub fn unmask(&self) -> Result<()> {
         let tag: MsgTag = unsafe { l4_irq_unmask_w(self.cap) }.into();
-        tag.result()?;
-        Ok(())
+        if tag.has_ipc_error() {
+            Err(Error::Tcr(TcrErr::from_tag(tag.raw()).unwrap()))
+        } else {
+            Ok(())
+        }
     }
 }

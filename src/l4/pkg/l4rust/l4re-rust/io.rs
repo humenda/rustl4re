@@ -1,6 +1,7 @@
 use l4::cap::{IfaceInit, CapIdx, Interface};
 use l4::ipc::MsgTag;
 use l4::{Error, Result};
+use l4::error::TcrErr;
 use l4_sys::l4_error_code_t::L4_EOK;
 use l4_sys::{l4_icu_bind_w, l4_icu_info_t, l4_icu_info_w, l4_icu_msi_info_t, l4_icu_msi_info_w, l4_icu_unmask_w, l4_timeout_t, l4_uint32_t,l4vbus_get_next_device ,l4vbus_get_resource ,l4vbus_pcidev_cfg_read ,l4vbus_pcidev_cfg_write ,l4vbus_resource_t ,l4vbus_vicu_get_cap ,L4VBUS_NULL ,L4VBUS_ROOT_BUS , l4vbus_device_handle_t, l4vbus_assign_dma_domain};
 
@@ -402,7 +403,10 @@ impl Icu {
             )
         }
         .into();
-        tag.result()?;
-        Ok(())
+        if tag.has_ipc_error() {
+            Err(Error::Tcr(TcrErr::from_tag(tag.raw()).unwrap()))
+        } else {
+            Ok(())
+        }
     }
 }
