@@ -1,0 +1,142 @@
+extern crate l4re;
+
+pub trait DmaSpace {
+    fn new() -> Self;
+}
+
+// TODO: I think I want the sensible trait bounds on all associated types here;
+pub trait Bus {
+    type Error;
+    type Device : Device;
+    type Resource : Resource;
+    type DmaSpace : DmaSpace;
+    type DeviceIter : Iterator<Item=Self::Device>;
+
+    fn get() -> Option<Self> where Self: Sized;
+    fn device_iter(&self) -> Self::DeviceIter;
+
+    fn assign_dma_domain(&self, dma_domain: &mut Self::Resource, dma_space: &mut Self::DmaSpace) -> Result<(), Self::Error>;
+}
+
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub enum BusInterface {
+    Icu,
+    Gpio,
+    Pci,
+    Pcidev,
+    PowerManagement,
+    Vbus,
+    Generic
+}
+
+pub trait Device {
+    type Resource : Resource;
+
+    type ResourceIter<'a> : Iterator<Item=Self::Resource> where Self : 'a;
+
+    fn resource_iter<'a>(&'a self) -> Self::ResourceIter<'a>;
+    fn supports_interface(&self, iface: BusInterface) -> bool;
+}
+
+
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub enum ResourceType {
+    Invalid,
+    Irq,
+    Mem,
+    Port,
+    Bus,
+    Gpio,
+    DmaDomain
+}
+
+pub trait Resource {
+    fn start(&mut self) -> usize;
+    fn end(&mut self) -> usize;
+    fn typ(&self) -> ResourceType;
+}
+
+// With never type this might be compatible with FailibleMemoryInterface in a cool way
+pub trait MemoryInterface32 {
+    type Addr;
+
+    fn write8(&mut self, offset: Self::Addr, val: u8);
+    fn write16(&mut self, offset: Self::Addr, val: u16);
+    fn write32(&mut self, offset: Self::Addr, val: u32);
+    fn read8(&self, offset: Self::Addr) -> u8;
+    fn read16(&self, offset: Self::Addr) -> u16;
+    fn read32(&self, offset: Self::Addr) -> u32;
+}
+
+pub trait FailibleMemoryInterface32 {
+    type Error;
+    type Addr;
+
+    fn write8(&mut self, offset: Self::Addr, val: u8) -> Result<(), Self::Error>;
+    fn write16(&mut self, offset: Self::Addr, val: u16) -> Result<(), Self::Error>;
+    fn write32(&mut self, offset: Self::Addr, val: u32) -> Result<(), Self::Error>;
+    fn read8(&self, offset: Self::Addr) -> Result<u8, Self::Error>;
+    fn read16(&self, offset: Self::Addr) -> Result<u16, Self::Error>;
+    fn read32(&self, offset: Self::Addr) -> Result<u32, Self::Error>;
+}
+
+pub trait MemoryInterface64 : MemoryInterface32 {
+    fn write64(&mut self, offset: Self::Addr, val: u64);
+    fn read64(&self, offset: Self::Addr) -> u64;
+}
+
+pub trait PciDevice : Device + FailibleMemoryInterface32<Addr=u32> {
+    type Device : Device;
+    fn try_of_device(dev: Self::Device) -> Option<Self> where Self: Sized;
+}
+
+pub trait IoMem : MemoryInterface64<Addr=usize> {
+    type Error;
+
+    // TODO: this is very l4 specific but it should be fine for our purposes
+    fn request(phys: u64, size: u64, flags: l4re::io::IoMemFlags) -> Result<Self, Self::Error> where Self: Sized;
+}
+
+// Need an interrupt handler trait that plays with Icu,  it should support waiting
+// for an IRQ, as I see it I have two options to actually receive the IRQ here:
+// 1. Write a method that blockingly waits for the IRQ. This is nice for user space drivers like we
+//    are writing right now
+// 2. write a method that takes a function pointer and registers it + some general wait method.
+//    This is an unnecessary abstraction for us but! it mimics the way that IRQ stuff works
+//    in actual operating  systems more where you put an interrupt vector somewhere.
+pub trait IrqHandler {
+    type Error;
+
+    fn msi_addr(&self) -> u64;
+    fn msi_data(&self) -> u32;
+    fn bind_curr_thread(&mut self, label: u64) -> Result<(), Self::Error>;
+    fn receive(&mut self) -> Result<(), Self::Error>;
+
+}
+
+
+pub trait Icu {
+    type Error;
+    type Device : Device;
+    type Bus : Bus;
+    type IrqHandler : IrqHandler;
+
+    fn from_device(bus: &Self::Bus, dev: Self::Device) -> Result<Self, Self::Error> where Self: Sized;
+    // I think I want an object that actually manages Interrupts instead of just irq_num and such,
+    // that way i can avoid the bool pair here as well.
+    // TODO
+    fn bind_msi(&self, irq_num: u32, target: &mut Self::Device) -> Result<Self::IrqHandler, Self::Error>;
+    fn unmask(&self, handler: &mut Self::IrqHandler) -> Result<(), Self::Error>;
+    fn nr_msis(&self) -> Result<u32, Self::Error>;
+}
+
+pub trait MappableMemory : MemoryInterface64<Addr=usize> {
+    type Error;
+    // Very unclear if this should be associated types, makes it basically impossible to use
+    // generically
+    type DmaSpace : DmaSpace;
+
+    // TODO: this is very l4 specific but it should be fine for our purposes
+    fn alloc(size: usize, alloc_flags: l4re::mem::MaFlags, map_flags: l4re::mem::DsMapFlags, attach_flags: l4re::mem::DsAttachFlags) -> Result<Self, Self::Error> where Self: Sized;
+    fn map_dma(&mut self, target: &Self::DmaSpace) -> Result<usize, Self::Error>;
+}
