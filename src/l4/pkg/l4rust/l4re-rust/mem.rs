@@ -51,12 +51,6 @@ pub struct AttachedDataspace {
 
 }
 
-pub enum DmaDirection {
-    Mem2Device,
-    Device2Mem,
-    Bi
-}
-
 pub trait VolatileMemoryInterface {
     fn ptr(&self) -> *mut u8;
     fn size(&self) -> usize;
