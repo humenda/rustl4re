@@ -9,3 +9,4 @@
 #include <l4/io/types.h>
 #include <l4/l4rust/env.h>
 #include <l4/l4rust/mem.h>
+#include <l4/l4rust/vbus.h>
