@@ -8,7 +8,6 @@ use l4re::mem::VolatileMemoryInterface;
 use l4re::io::ResourceType;
 use l4re::sys::l4vbus_iface_type_t;
 use l4re::factory::{Factory, FactoryCreate, IrqSender};
-use l4re::mem::{MaFlags, DsMapFlags, DsAttachFlags};
 use l4::cap::Cap;
 
 use pc_hal::traits::Device as _;
@@ -223,8 +222,25 @@ impl pc_hal::traits::MemoryInterface64 for IoMem {
 impl pc_hal::traits::IoMem for IoMem {
     type Error = l4::Error;
 
-    fn request(phys: u64, size: u64, flags: l4re::io::IoMemFlags) -> Result<Self, Self::Error> {
-        Ok(IoMem(l4re::io::IoMem::request(phys, size, flags)?))
+    fn request(phys: u64, size: u64, flags: pc_hal::traits::IoMemFlags) -> Result<Self, Self::Error> {
+        let pairs = [
+            (pc_hal::traits::IoMemFlags::NONCACHED, l4re::io::IoMemFlags::NONCACHED),
+            (pc_hal::traits::IoMemFlags::CACHED,    l4re::io::IoMemFlags::CACHED),
+            (pc_hal::traits::IoMemFlags::USE_MTRR,  l4re::io::IoMemFlags::USE_MTRR),
+            (pc_hal::traits::IoMemFlags::EAGER_MAP, l4re::io::IoMemFlags::EAGER_MAP),
+        ];
+        let translated = pairs.iter().fold(
+            l4re::io::IoMemFlags::empty(),
+            |acc, (pc_flag, l4_flag)| {
+                if (flags.bits() & pc_flag.bits()) != 0{
+                    acc | *l4_flag
+                } else {
+                    acc
+                }
+            }
+        );
+
+        Ok(IoMem(l4re::io::IoMem::request(phys, size, translated)?))
     }
 }
 
@@ -326,9 +342,70 @@ impl pc_hal::traits::MappableMemory for MappableMemory {
     type Error = l4::Error;
     type DmaSpace = DmaSpace;
 
-    fn alloc(size: usize, alloc_flags: MaFlags, map_flags: DsMapFlags, attach_flags: DsAttachFlags) -> Result<Self, Self::Error> {
-        let mem = l4re::mem::Dataspace::alloc(size, alloc_flags)?;
-        Ok(MappableMemory(l4re::mem::Dataspace::attach(mem, map_flags, attach_flags)?))
+    fn alloc(size: usize, alloc_flags: pc_hal::traits::MaFlags, map_flags: pc_hal::traits::DsMapFlags, attach_flags: pc_hal::traits::DsAttachFlags) -> Result<Self, Self::Error> {
+        // TODO: dedup
+        let pairs_alloc = [
+            (pc_hal::traits::MaFlags::CONTINUOUS, l4re::mem::MaFlags::CONTINUOUS),
+            (pc_hal::traits::MaFlags::PINNED, l4re::mem::MaFlags::PINNED),
+            (pc_hal::traits::MaFlags::SUPER_PAGES, l4re::mem::MaFlags::SUPER_PAGES),
+        ];
+
+        let pairs_map = [
+            (pc_hal::traits::DsMapFlags::R, l4re::mem::DsMapFlags::R),
+            (pc_hal::traits::DsMapFlags::W, l4re::mem::DsMapFlags::W),
+            (pc_hal::traits::DsMapFlags::X, l4re::mem::DsMapFlags::X),
+            (pc_hal::traits::DsMapFlags::RW, l4re::mem::DsMapFlags::RW),
+            (pc_hal::traits::DsMapFlags::RX, l4re::mem::DsMapFlags::RX),
+            (pc_hal::traits::DsMapFlags::RWX, l4re::mem::DsMapFlags::RWX),
+            (pc_hal::traits::DsMapFlags::RIGHTS_MASK, l4re::mem::DsMapFlags::RIGHTS_MASK),
+            (pc_hal::traits::DsMapFlags::NORMAL, l4re::mem::DsMapFlags::NORMAL),
+            (pc_hal::traits::DsMapFlags::BUFFERABLE, l4re::mem::DsMapFlags::BUFFERABLE),
+            (pc_hal::traits::DsMapFlags::UNCACHEABLE, l4re::mem::DsMapFlags::UNCACHEABLE),
+            (pc_hal::traits::DsMapFlags::CACHING_MASK, l4re::mem::DsMapFlags::CACHING_MASK),
+        ];
+
+        let pairs_attach = [
+            (pc_hal::traits::DsAttachFlags::SEARCH_ADDR, l4re::mem::DsAttachFlags::SEARCH_ADDR),
+            (pc_hal::traits::DsAttachFlags::IN_AREA, l4re::mem::DsAttachFlags::IN_AREA),
+            (pc_hal::traits::DsAttachFlags::EAGER_MAP, l4re::mem::DsAttachFlags::EAGER_MAP),
+        ];
+
+
+        let translated_alloc = pairs_alloc.iter().fold(
+            l4re::mem::MaFlags::empty(),
+            |acc, (pc_flag, l4_flag)| {
+                if (alloc_flags.bits() & pc_flag.bits()) != 0{
+                    acc | *l4_flag
+                } else {
+                    acc
+                }
+            }
+        );
+
+        let translated_map = pairs_map.iter().fold(
+            l4re::mem::DsMapFlags::empty(),
+            |acc, (pc_flag, l4_flag)| {
+                if (map_flags.bits() & pc_flag.bits()) != 0{
+                    acc | *l4_flag
+                } else {
+                    acc
+                }
+            }
+        );
+
+        let translated_attach = pairs_attach.iter().fold(
+            l4re::mem::DsAttachFlags::empty(),
+            |acc, (pc_flag, l4_flag)| {
+                if (attach_flags.bits() & pc_flag.bits()) != 0{
+                    acc | *l4_flag
+                } else {
+                    acc
+                }
+            }
+        );
+
+        let mem = l4re::mem::Dataspace::alloc(size, translated_alloc)?;
+        Ok(MappableMemory(l4re::mem::Dataspace::attach(mem, translated_map, translated_attach)?))
     }
     fn map_dma(&mut self, target: &Self::DmaSpace) -> Result<usize, Self::Error> {
         self.0.map_dma(&target.0)

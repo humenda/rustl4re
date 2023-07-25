@@ -3,6 +3,7 @@ resolver = "2"
 
 members = [
     "verix",
+    "verix-lib",
     "pc-hal",
     "pc-hal-l4",
     "pc-hal-util",

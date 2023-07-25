@@ -6,5 +6,6 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+verix-lib = { path = "../verix-lib" }
 pc-hal-l4 = { path = "../pc-hal-l4" }
 pc-hal = { path = "../pc-hal" }

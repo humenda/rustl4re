@@ -1,4 +1,4 @@
-extern crate l4re;
+use bitflags::bitflags;
 
 pub trait DmaSpace {
     fn new() -> Self;
@@ -90,11 +90,20 @@ pub trait PciDevice : Device + FailibleMemoryInterface32<Addr=u32> {
     fn try_of_device(dev: Self::Device) -> Option<Self> where Self: Sized;
 }
 
+bitflags! {
+    pub struct IoMemFlags : u8 {
+        const NONCACHED = 1 << 1;
+        const CACHED = 1 << 2;
+        const USE_MTRR = 1 << 3;
+        const EAGER_MAP = 1 << 4;
+    }
+}
+
 pub trait IoMem : MemoryInterface64<Addr=usize> {
     type Error;
 
     // TODO: this is very l4 specific but it should be fine for our purposes
-    fn request(phys: u64, size: u64, flags: l4re::io::IoMemFlags) -> Result<Self, Self::Error> where Self: Sized;
+    fn request(phys: u64, size: u64, flags: IoMemFlags) -> Result<Self, Self::Error> where Self: Sized;
 }
 
 // Need an interrupt handler trait that plays with Icu,  it should support waiting
@@ -130,6 +139,38 @@ pub trait Icu {
     fn nr_msis(&self) -> Result<u32, Self::Error>;
 }
 
+bitflags! {
+    pub struct MaFlags : u8 {
+        const CONTINUOUS = 1 << 1;
+        const PINNED = 1 << 2;
+        const SUPER_PAGES = 1 << 3;
+    }
+}
+
+bitflags! {
+    pub struct DsMapFlags : u16 {
+        const R = 1 << 1;
+        const W = 1 << 2;
+        const X = 1 << 3;
+        const RW = 1 << 4;
+        const RX = 1 << 5;
+        const RWX = 1 << 6;
+        const RIGHTS_MASK = 1 << 7;
+        const NORMAL = 1 << 8;
+        const BUFFERABLE = 1 << 9;
+        const UNCACHEABLE = 1 << 10;
+        const CACHING_MASK = 1 << 11;
+    }
+}
+
+bitflags! {
+    pub struct DsAttachFlags : u8 {
+        const SEARCH_ADDR =  1 << 1;
+        const IN_AREA = 1 << 2;
+        const EAGER_MAP = 1 << 3;
+    }
+}
+
 pub trait MappableMemory : MemoryInterface64<Addr=usize> {
     type Error;
     // Very unclear if this should be associated types, makes it basically impossible to use
@@ -137,6 +178,6 @@ pub trait MappableMemory : MemoryInterface64<Addr=usize> {
     type DmaSpace : DmaSpace;
 
     // TODO: this is very l4 specific but it should be fine for our purposes
-    fn alloc(size: usize, alloc_flags: l4re::mem::MaFlags, map_flags: l4re::mem::DsMapFlags, attach_flags: l4re::mem::DsAttachFlags) -> Result<Self, Self::Error> where Self: Sized;
+    fn alloc(size: usize, alloc_flags: MaFlags, map_flags: DsMapFlags, attach_flags: DsAttachFlags) -> Result<Self, Self::Error> where Self: Sized;
     fn map_dma(&mut self, target: &Self::DmaSpace) -> Result<usize, Self::Error>;
 }
