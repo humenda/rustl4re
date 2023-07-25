@@ -3,7 +3,7 @@ use l4::ipc::MsgTag;
 use l4::{Error, Result};
 use l4::error::TcrErr;
 use l4_sys::l4_error_code_t::L4_EOK;
-use l4_sys::{l4_icu_bind_w, l4_icu_info_t, l4_icu_info_w, l4_icu_msi_info_t, l4_icu_msi_info_w, l4_icu_unmask_w, l4_timeout_t, l4_uint32_t,l4vbus_get_next_device ,l4vbus_get_resource ,l4vbus_pcidev_cfg_read ,l4vbus_pcidev_cfg_write ,l4vbus_resource_t ,l4vbus_vicu_get_cap ,L4VBUS_NULL ,L4VBUS_ROOT_BUS , l4vbus_device_handle_t, l4vbus_assign_dma_domain};
+use l4_sys::{l4_icu_bind_w, l4_icu_info_t, l4_icu_info_w, l4_icu_msi_info_t, l4_icu_msi_info_w, l4_icu_unmask_w, l4_timeout_t, l4_uint32_t,l4vbus_get_next_device ,l4vbus_get_resource ,l4vbus_pcidev_cfg_read ,l4vbus_pcidev_cfg_write ,l4vbus_resource_t ,l4vbus_vicu_get_cap ,L4VBUS_NULL ,L4VBUS_ROOT_BUS , l4vbus_device_handle_t, l4vbus_assign_dma_domain, l4vbus_device_t, l4_irq_unmask_w, l4_rcv_ep_bind_thread_w, l4_irq_receive_w, timeout_never, l4_irq_detach_w};
 
 use l4::sys::L4vbus_dma_domain_assign_flags::{L4VBUS_DMAD_KERNEL_DMA_SPACE, L4VBUS_DMAD_BIND};
 use l4_sys::l4vbus_consts_t::L4VBUS_MAX_DEPTH;
@@ -14,13 +14,15 @@ use bitflags::bitflags;
 
 use crate::factory::IrqSender;
 use crate::sys::l4io_iomem_flags_t::*;
-use crate::sys::{l4io_release_iomem, l4io_request_iomem};
+use crate::sys::{l4io_release_iomem, l4io_request_iomem, l4vbus_iface_type_t, l4vbus_subinterface_supported_w, l4re_env};
 use crate::OwnedCap;
 use crate::factory::DmaSpace;
 use crate::mem::VolatileMemoryInterface;
 
 use core::iter::Iterator;
 
+// TODO: unclear whether it is okay to clone vbus, it does make the API nicer
+#[derive(Clone)]
 pub struct Vbus {
     cap: CapIdx
 }
@@ -41,6 +43,8 @@ impl IfaceInit for Vbus {
 
 pub struct Device {
     handle: l4vbus_device_handle_t,
+    info: l4vbus_device_t,
+    vbus: Vbus,
 }
 
 pub struct Resource {
@@ -59,29 +63,28 @@ pub enum ResourceType {
   Max
 }
 
-pub struct DeviceIter<'a> {
+pub struct DeviceIter {
     curr: Device,
-    vbus: &'a Vbus,
 }
 
 pub struct ResourceIter<'a> {
     dev: &'a Device,
-    vbus: &'a Vbus,
     idx: i32, // TODO: correct width
 }
 
-impl Iterator for DeviceIter<'_> {
+impl Iterator for DeviceIter {
     type Item = Device;
 
     fn next(&mut self) -> Option<Self::Item> {
         let mut next_dev = self.curr.handle;
+        let mut next_info = self.curr.info;
         let err = unsafe {
             l4vbus_get_next_device(
-                self.vbus.raw(),
+                self.curr.vbus.raw(),
                 L4VBUS_ROOT_BUS as l4vbus_device_handle_t,
                 &mut next_dev as *mut l4vbus_device_handle_t,
                 L4VBUS_MAX_DEPTH as i32,
-                core::ptr::null_mut(),
+                &mut next_info as *mut l4vbus_device_t,
             )
         };
         if err != L4_EOK as i32 {
@@ -90,7 +93,11 @@ impl Iterator for DeviceIter<'_> {
 
         self.curr.handle = next_dev;
 
-        Some(Device { handle: next_dev })
+        Some(Device {
+            handle: next_dev,
+            info: next_info,
+            vbus: self.curr.vbus.clone()
+        })
     }
 }
 
@@ -102,7 +109,7 @@ impl Iterator for ResourceIter<'_> {
         let mut res: l4vbus_resource_t = unsafe { core::mem::zeroed() };
         let err = unsafe {
             l4vbus_get_resource(
-                self.vbus.raw(),
+                self.dev.vbus.raw(),
                 self.dev.handle,
                 self.idx,
                 &mut res as *mut l4vbus_resource_t,
@@ -117,18 +124,24 @@ impl Iterator for ResourceIter<'_> {
     }
 }
 
-// TODO: Figure the Cap stuff out
 impl Vbus {
     pub fn new(cap: CapIdx) -> Vbus {
         Vbus { cap }
     }
 
-    pub fn device_iter(&self) -> DeviceIter<'_> {
+    pub fn device_iter(&self) -> DeviceIter{
         DeviceIter {
             curr: Device {
                 handle: L4VBUS_NULL as i64,
+                vbus: self.clone(),
+                info: l4vbus_device_t {
+                    flags: 0,
+                    // TODO: check if this is fine
+                    name: [0; 64],
+                    num_resources: 0,
+                    type_: 0
+                }
             },
-            vbus: self,
         }
     }
 
@@ -189,7 +202,7 @@ impl Vbus {
         self.pcidev_cfg_write(dev, reg, val as u32, 32)
     }
 
-    pub fn assign_dma_domain(&self, dma_domain: Resource, dma_space: &DmaSpace) -> Result<()> {
+    pub fn assign_dma_domain(&self, dma_domain: &mut Resource, dma_space: &mut DmaSpace) -> Result<()> {
         assert!(dma_domain.typ() == ResourceType::DmaDomain);
         let err = unsafe { l4vbus_assign_dma_domain(
                 self.cap,
@@ -207,11 +220,22 @@ impl Vbus {
 }
 
 impl Device {
-    pub fn resource_iter<'a>(&'a self, vbus: &'a Vbus) -> ResourceIter<'a> {
+    pub fn vbus(&self) -> &Vbus {
+        &self.vbus
+    }
+
+    pub fn resource_iter<'a>(&'a self) -> ResourceIter<'a> {
         ResourceIter {
             dev: self,
-            vbus,
             idx: -1,
+        }
+    }
+
+    pub fn supports_interface(&self, iface: l4vbus_iface_type_t) -> bool {
+        if unsafe { l4vbus_subinterface_supported_w(self.info.type_, iface) } == 0 {
+            false
+        } else {
+            true
         }
     }
 }
@@ -408,5 +432,51 @@ impl Icu {
         } else {
             Ok(())
         }
+    }
+}
+
+impl IrqSender {
+    pub fn receive(&mut self) -> Result<()> {
+        let tag: MsgTag = unsafe { l4_irq_receive_w(self.raw(), timeout_never()) }.into();
+        if tag.has_ipc_error() {
+            Err(Error::Tcr(TcrErr::from_tag(tag.raw()).unwrap()))
+        } else {
+            Ok(())
+        }
+    }
+
+    pub fn bind_curr_thread(&mut self, label: u64) -> Result<()> {
+        let env = unsafe { l4re_env().as_ref() }.unwrap();
+        // TODO! This makes us effectively single threaded for now
+        let tag: MsgTag = unsafe { l4_rcv_ep_bind_thread_w(self.raw(), env.main_thread, label) }.into();
+        if tag.has_ipc_error() {
+            Err(Error::Tcr(TcrErr::from_tag(tag.raw()).unwrap()))
+        } else {
+            Ok(())
+        }
+    }
+
+    pub fn unmask(&mut self) -> Result<()> {
+        let tag: MsgTag = unsafe { l4_irq_unmask_w(self.raw()) }.into();
+        if tag.has_ipc_error() {
+            Err(Error::Tcr(TcrErr::from_tag(tag.raw()).unwrap()))
+        } else {
+            Ok(())
+        }
+    }
+
+    pub fn detach(&self) -> Result<()> {
+        let tag: MsgTag = unsafe { l4_irq_detach_w(self.raw()) }.into();
+        if tag.has_ipc_error() {
+            Err(Error::Tcr(TcrErr::from_tag(tag.raw()).unwrap()))
+        } else {
+            Ok(())
+        }
+    }
+}
+
+impl Drop for IrqSender {
+    fn drop(&mut self) {
+        self.detach().unwrap();
     }
 }
