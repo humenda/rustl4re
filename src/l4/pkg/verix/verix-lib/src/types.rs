@@ -6,7 +6,9 @@ pub enum Error<E> {
     /// The driver noticed the given device was incompatible
     IncompatibleDevice,
     /// The driver was told to create an invalid amount of queues
-    InvalidQueueCount
+    InvalidQueueCount,
+    /// The driver did not manage to bring the link up
+    LinkDown
 }
 
 impl<E> From<E> for Error<E> {

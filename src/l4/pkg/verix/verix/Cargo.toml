@@ -9,3 +9,7 @@ edition = "2021"
 verix-lib = { path = "../verix-lib" }
 pc-hal-l4 = { path = "../pc-hal-l4" }
 pc-hal = { path = "../pc-hal" }
+
+[dependencies.simple_logger]
+version = "4.2"
+default-features = false
