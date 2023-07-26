@@ -2,10 +2,15 @@
 extern crate pc_hal_util;
 
 use pc_hal::prelude::*;
-use pc_hal::traits::{IoMemFlags, MaFlags, DsMapFlags, DsAttachFlags};
 
 mod dev;
+pub mod init;
+pub mod types;
 
+use crate::types::Result;
+
+
+/*
 fn do_dma<E, MappableMemory, Dma, Res, B, Dev>(vbus: &B, nic: &Dev) -> Result<MappableMemory, E> where
     Dma: pc_hal::traits::DmaSpace,
     Res: pc_hal::traits::Resource,
@@ -245,4 +250,24 @@ where
     println!("==================== Done with everything ====================");
     Ok(())
 }
+*/
 
+pub fn run<E, D, PD, B, Res, MM, Dma, ICU, IM>(mut vbus : B) -> Result<(), E>
+where
+    D: pc_hal::traits::Device,
+    B: pc_hal::traits::Bus<Error=E, Device=D, Resource=Res, DmaSpace=Dma>,
+    PD: pc_hal::traits::PciDevice<Error=E, Device=D, Resource=Res> + AsMut<D>,
+    Res: pc_hal::traits::Resource,
+    MM: pc_hal::traits::MappableMemory<Error=E, DmaSpace=Dma>,
+    Dma: pc_hal::traits::DmaSpace,
+    ICU: pc_hal::traits::Icu<Bus=B, Device=D, Error=E>,
+    IM: pc_hal::traits::IoMem<Error=E>
+{
+    let dev : types::Device<E, IM, PD, D, Res> = types::Device::init::<B, MM, Dma, ICU>(
+        &mut vbus,
+        1,
+        1,
+        10 // TODO: choose a good value
+    )?;
+    Ok(())
+}

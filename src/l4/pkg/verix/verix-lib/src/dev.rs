@@ -1,3 +1,8 @@
+pub const VENDOR_ID : u16 = 0x8086;
+pub const DEVICE_ID : u16 = 0x10D8;
+pub const MAX_QUEUES : u16 = 64;
+
+
 dev2types! {
     Intel82559ES {
         Bar0 {
@@ -38,6 +43,33 @@ dev2types! {
                 reserved3 @ 29:28 = 0b0,
                 led3_ivrt @ 30:30 = 0b0,
                 led3_blink @ 31:31 = 0b0
+            }
+            eicr @ 0x00800 RW {
+                rtxq @ 15:0 = 0b0,
+                flow_director @ 16:16 = 0b0,
+                rx_miss @ 17:17 = 0b0,
+                pci_exception @ 18:18 = 0b0,
+                mail_box @ 19:19 = 0b0,
+                lsc @ 20:20 = 0b0,
+                link_sec @ 21:21 = 0b0,
+                mng @ 22:22 = 0b0,
+                reserved0 @ 23:23 = 0b0,
+                gpi_spd0 @ 24:24 = 0b0,
+                gpi_spd1 @ 25:25 = 0b0,
+                gpi_spd2 @ 26:26 = 0b0,
+                gpi_spd3 @ 27:27 = 0b0,
+                ecc @ 28:28 = 0b0,
+                reserved1 @ 29:29 = 0b0,
+                tcp_timer @ 30:30 = 0b0,
+                other_cause_interrupt @ 31:31 = 0b0
+            }
+            eims @ 0x00880 RW {
+                interrupt_enable @ 30:0 = 0b0,
+                reserved0 @ 31:31 = 0b0
+            }
+            eimc @ 0x00888 WO {
+                interrupt_mask @ 30:0,
+                reserved0 @ 31:31
             }
         }
     }
