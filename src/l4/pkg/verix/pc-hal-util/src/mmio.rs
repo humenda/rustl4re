@@ -9,8 +9,7 @@ macro_rules! dev2types {
         ($end, $start)
     };
 
-    // TODO: This w1 w2 w3 approach is a bit hacky for my taste
-    (@reg_spec $bar:ident, $reg:ident, $reg_addr:literal, RO, $($field:ident @ $w1:literal $(: $w2:literal)? = $default:literal),+) => {
+    (@reg_spec_accessor RO, $($field:ident @ $w1:literal $(: $w2:literal)? = $default:literal),+) => {
         pub struct R {
             val: u32
         }
@@ -35,18 +34,9 @@ macro_rules! dev2types {
                 }
             )+
         }
-
-
-        impl<'a, IM: pc_hal::traits::IoMem> Register<'a, IM> {
-            pub fn read(&mut self) -> R {
-                R {
-                    val: self.bar.mem.read32($reg_addr)
-                }
-            }
-        }
     };
 
-    (@reg_spec $bar:ident, $reg:ident, $reg_addr:literal, WO, $($field:ident @ $w1:literal $(: $w2:literal)?),+) => {
+    (@reg_spec_accessor WO, $($field:ident @ $w1:literal $(: $w2:literal)?),+) => {
         pub struct W {
             val: u32
         }
@@ -74,7 +64,69 @@ macro_rules! dev2types {
                 }
             )+
         }
+    };
 
+    // TODO: This w1 w2 approach is a bit hacky for my taste
+    (@reg_spec $bar:ident, $reg:ident, [$n:literal, $translate:expr], RO, $($field:ident @ $w1:literal $(: $w2:literal)? = $default:literal),+) => {
+        dev2types!(@reg_spec_accessor RO, $($field @ $w1 $(: $w2)? = $default),+);
+
+        impl<'a, IM: pc_hal::traits::IoMem> Register<'a, IM> {
+            pub fn read(&mut self) -> R {
+                R {
+                    val: self.bar.mem.read32($translate(self.nth))
+                }
+            }
+        }
+    };
+
+    (@reg_spec $bar:ident, $reg:ident, [$n:literal, $translate:expr], WO, $($field:ident @ $w1:literal $(: $w2:literal)?),+) => {
+        dev2types!(@reg_spec_accessor WO, $($field @ $w1 $(: $w2)?),+);
+
+        impl<'a, IM: pc_hal::traits::IoMem> Register<'a, IM> {
+            pub fn write<F>(&mut self, f: F)
+            where
+                F: FnOnce(W) -> W
+            {
+                let w = W { val : 0 };
+                let w_final = f(w);
+                self.bar.mem.write32($translate(self.nth), w_final.val);
+            }
+        }
+    };
+
+    (@reg_spec $bar:ident, $reg:ident, [$n:literal, $translate:expr], RW, $($field:ident @ $w1:literal $(: $w2:literal)? = $default:literal),+) => {
+        dev2types!(@reg_spec $bar, $reg, [$n, $translate], RO, $($field @ $w1 $(: $w2)? = $default),+);
+        dev2types!(@reg_spec $bar, $reg, [$n, $translate], WO, $($field @ $w1 $(: $w2)?),+);
+
+        impl<'a, IM: pc_hal::traits::IoMem> Register<'a, IM> {
+            pub fn modify<F>(&mut self, f: F)
+            where
+                F: FnOnce(&R, W) -> W
+            {
+                // TODO maybe assert nth < n
+                let r = self.read();
+                let w = W { val : r.bits() };
+                let w_final = f(&r, w);
+                self.bar.mem.write32($translate(self.nth), w_final.val);
+            }
+        }
+    };
+
+    // TODO: This w1 w2 approach is a bit hacky for my taste
+    (@reg_spec $bar:ident, $reg:ident, $reg_addr:literal, RO, $($field:ident @ $w1:literal $(: $w2:literal)? = $default:literal),+) => {
+        dev2types!(@reg_spec_accessor RO, $($field @ $w1 $(: $w2)? = $default),+);
+
+        impl<'a, IM: pc_hal::traits::IoMem> Register<'a, IM> {
+            pub fn read(&mut self) -> R {
+                R {
+                    val: self.bar.mem.read32($reg_addr)
+                }
+            }
+        }
+    };
+
+    (@reg_spec $bar:ident, $reg:ident, $reg_addr:literal, WO, $($field:ident @ $w1:literal $(: $w2:literal)?),+) => {
+        dev2types!(@reg_spec_accessor WO, $($field @ $w1 $(: $w2)?),+);
 
         impl<'a, IM: pc_hal::traits::IoMem> Register<'a, IM> {
             pub fn write<F>(&mut self, f: F)
@@ -104,21 +156,56 @@ macro_rules! dev2types {
             }
         }
     };
-    (@reg_specs $bar:ident, $reg:ident @ $reg_addr:literal $perms:ident { $($descrs:tt)+ } $($tail:tt)+) => {
-        pub mod $reg {
-            pub struct Register<'a, IM: pc_hal::traits::IoMem> {
-                bar: &'a mut super::$bar<IM>
-            }
 
+    (@reg_decl $bar:ident, $reg:ident, $n:literal) => {
+        pub struct Register<'a, IM: pc_hal::traits::IoMem> {
+            bar: &'a mut super::$bar<IM>,
+            nth : usize
+        }
 
-            impl<IM: pc_hal::traits::IoMem> super::$bar<IM> {
-                pub fn $reg<'a>(&'a mut self) -> Register<'a, IM> {
-                    Register {
-                        bar: self
-                    }
+        impl<IM: pc_hal::traits::IoMem> super::$bar<IM> {
+            pub fn $reg<'a>(&'a mut self, nth: usize) -> Register<'a, IM> {
+                // TODO: maybe assert nth < n ?
+                Register {
+                    bar: self,
+                    nth: nth
                 }
             }
+        }
+    };
 
+    (@reg_decl $bar:ident, $reg:ident) => {
+        pub struct Register<'a, IM: pc_hal::traits::IoMem> {
+            bar: &'a mut super::$bar<IM>
+        }
+
+        impl<IM: pc_hal::traits::IoMem> super::$bar<IM> {
+            pub fn $reg<'a>(&'a mut self) -> Register<'a, IM> {
+                Register {
+                    bar: self
+                }
+            }
+        }
+    };
+
+    (@reg_specs $bar:ident, $reg:ident @ [$n:literal, $translate:expr] $perms:ident { $($descrs:tt)+ } $($tail:tt)+) => {
+        pub mod $reg {
+            dev2types!(@reg_decl $bar, $reg, $n);
+            dev2types!(@reg_spec $bar, $reg, [$n, $translate], $perms, $($descrs)+); 
+        }
+        dev2types!(@reg_specs $bar, $($tail)*);
+    };
+
+    (@reg_specs $bar:ident, $reg:ident @ [$n:literal, $translate:expr] $perms:ident { $($descrs:tt)+ }) => {
+        pub mod $reg {
+            dev2types!(@reg_decl $bar, $reg, $n);
+            dev2types!(@reg_spec $bar, $reg, [$n, $translate], $perms, $($descrs)+); 
+        }
+    };
+
+    (@reg_specs $bar:ident, $reg:ident @ $reg_addr:literal $perms:ident { $($descrs:tt)+ } $($tail:tt)+) => {
+        pub mod $reg {
+            dev2types!(@reg_decl $bar, $reg);
             dev2types!(@reg_spec $bar, $reg, $reg_addr, $perms, $($descrs)+); 
         }
         dev2types!(@reg_specs $bar, $($tail)*);
@@ -126,18 +213,7 @@ macro_rules! dev2types {
 
     (@reg_specs $bar:ident, $reg:ident @ $reg_addr:literal $perms:ident { $($descrs:tt)+ }) => {
         pub mod $reg {
-            pub struct Register<'a, IM: pc_hal::traits::IoMem> {
-                bar: &'a mut super::$bar<IM>
-            }
-
-            impl<IM: pc_hal::traits::IoMem> super::$bar<IM> {
-                pub fn $reg<'a>(&'a mut self) -> Register<'a, IM> {
-                    Register {
-                        bar: self
-                    }
-                }
-            }
-
+            dev2types!(@reg_decl $bar, $reg);
             dev2types!(@reg_spec $bar, $reg, $reg_addr, $perms, $($descrs)+); 
         }
     };

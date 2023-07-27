@@ -1,9 +1,9 @@
 #[macro_use]
 extern crate pc_hal_util;
 
-use pc_hal::prelude::*;
-
 mod dev;
+mod constants;
+mod dma;
 pub mod init;
 pub mod types;
 
@@ -263,7 +263,7 @@ where
     ICU: pc_hal::traits::Icu<Bus=B, Device=D, Error=E>,
     IM: pc_hal::traits::IoMem<Error=E>
 {
-    let dev : types::Device<E, IM, PD, D, Res> = types::Device::init::<B, MM, Dma, ICU>(
+    let dev : types::Device<E, IM, PD, D, Res, Dma, MM> = types::Device::init::<B, ICU>(
         &mut vbus,
         1,
         1,

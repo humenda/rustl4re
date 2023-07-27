@@ -10,9 +10,9 @@ dev2types! {
                 reserved0 @ 1:0 = 0b0,
                 pcie_master_disable @ 2 = 0b0,
                 lrst @ 3 = 0b0,
-                reserved2 @ 25:4 = 0b0,
+                reserved1 @ 25:4 = 0b0,
                 rst @ 26 = 0b0,
-                reserved @ 31:27 = 0b0
+                reserved2 @ 31:27 = 0b0
             }
             status @ 0x00008 RO {
                 reserved0 @ 1:0 = 0b0,
@@ -24,6 +24,18 @@ dev2types! {
                 iov_active @ 18 = 0b0,
                 pcie_master_enable_status @ 19 = 0b1,
                 reserved3 @ 31:20 = 0b0
+            }
+            ctrl_ext @ 0x00018 RW {
+                reserved0 @ 13:0 = 0b0,
+                pfrstd @ 14 = 0b0,
+                reserved1 @ 15 = 0b0,
+                ns_dis @ 16 = 0b0,
+                ro_dis @ 17 = 0b0,
+                reserved @ 25:18 = 0b0,
+                extended_vlan @ 26 = 0b0,
+                reserved @ 27 = 0b0,
+                drv_load @ 28 = 0b0,
+                reserved2 @ 31:29 = 0b0
             }
             ledctl @ 0x00200 RW {
                 led0_mode @ 3:0 = 0b0,
@@ -71,6 +83,110 @@ dev2types! {
                 interrupt_mask @ 30:0,
                 reserved0 @ 31
             }
+            rdbal @ [
+                128,
+                |n|
+                    if n < 64 {
+                        0x01000 + n * 0x40
+                    } else {
+                        0x0D000 + ((n - 64) * 0x40)
+                    }
+            ] RW {
+                rdbal @ 31:0 = 0b0 // TODO is X and lowest 7 bit are ignored
+            }
+            rdbah @ [
+                128,
+                |n|
+                    if n < 64 {
+                        0x01004 + n * 0x40
+                    } else {
+                        0x0D004 + ((n - 64) * 0x40)
+                    }
+            ] RW {
+                rdbah @ 31:0 = 0b0 // TODO is X
+            }
+            rdlen @ [
+                128,
+                |n|
+                    if n < 64 {
+                        0x01008 + n * 0x40
+                    } else {
+                        0x0D008 + ((n - 64) * 0x40)
+                    }
+            ] RW {
+                len @ 19:0 = 0b0,
+                reserved0 @ 31:20 = 0b0
+            }
+            rdh @ [
+                128,
+                |n|
+                    if n < 64 {
+                        0x01010 + n * 0x40
+                    } else {
+                        0x0D010 + ((n - 64) * 0x40)
+                    }
+            ] RW {
+                rdh @ 15:0 = 0b0,
+                reserved0 @ 31:16 = 0b0
+            }
+            rdt @ [
+                128,
+                |n|
+                    if n < 64 {
+                        0x01018 + n * 0x40
+                    } else {
+                        0x0D018 + ((n - 64) * 0x40)
+                    }
+            ] RW {
+                rdt @ 15:0 = 0b0,
+                reserved0 @ 31:16 = 0b0
+            }
+            dca_rxctl @ [
+                128,
+                |n|
+                        if n <= 15 {
+                            0x02200 + n * 4
+                        } else if n < 64 {
+                            0x0100C + n * 0x40
+                        } else {
+                            0x0D00C + ((n - 64) * 0x40)
+                        }
+            ] RW {
+                reserved0 @ 4:0 = 0b0,
+                rx_desc_dca_en @ 5 = 0b0,
+                rx_header_dca_en @ 6 = 0b0,
+                rx_payload_dca_en @ 7 = 0b0,
+                reserved1 @ 8 = 0b0,
+                rx_desc_read_ro_en @ 9 = 0b1,
+                reserved2 @ 10 = 0b0,
+                rx_desc_wb_ro_en @ 11 = 0b0,
+                reserved3 @ 12 = 0b1,
+                rx_data_write_ro_en @ 13 = 0b1,
+                reserved4 @ 14 = 0b0,
+                rx_rep_header_ro_en @ 15 = 0b0,
+                reserved5 @ 23:16 = 0b0,
+                cpuid @ 31:24 = 0b0
+            }
+            srrctl @ [
+                128,
+                |n|
+                    if n <= 15 {
+                        0x02100 + n * 4
+                    } else if n < 64 {
+                        0x01014 + n * 0x40
+                    } else {
+                        0x0D014 + ((n - 64) * 0x40)
+                    }
+            ] RW {
+                bsizepacket @ 4:0 = 0x2,
+                reserved0 @ 7:5 = 0b0,
+                bsizeheader @ 13:8 = 0x4,
+                reserved1 @ 21:14 = 0b0,
+                rdmts @ 24:22 = 0b0,
+                desctype @ 27:25 = 0b0,
+                drop_en @ 28 = 0b0,
+                reserved2 @ 31:29 = 0b0
+            }
             rdrxctl @ 0x02F00 RW {
                 // bit 0 is just not described in the datasheet xd?
                 crcstrip @ 1 = 0b0,
@@ -82,6 +198,15 @@ dev2types! {
                 rscackc @ 25 = 0b0,
                 fcoe_wrfix @ 26 = 0b0,
                 reserved2 @ 31:27 = 0b0
+            }
+            rxctrl @ 0x03000 RW {
+                rxen @ 0 = 0b0,
+                reserved0 @ 31:1 = 0b0
+            }
+            rxpbsize @ [8, |n| 0x03C00 + n * 4] RW {
+                reserved0 @ 9:0 = 0b0,
+                size @ 19:10 = 0x200,
+                reserved1 @ 31:20 = 0b0
             }
             gprc @ 0x04074 RO {
                 gprc @ 31:0 = 0b0
@@ -102,6 +227,24 @@ dev2types! {
             gotch @ 0x04094 RO {
                 cnt_h @ 3:0 = 0b0,
                 reserved0 @ 31:4 = 0b0
+            }
+            hlreg0 @ 0x04240 RW {
+                txcren @ 0 = 0b1,
+                rxcrstrip @ 1 = 0b1,
+                jumboen @ 2 = 0b0,
+                reserved0 @ 9:3 = 0x1,
+                txpaden @ 10 = 0b1,
+                reserved1 @ 14:11 = 0b101,
+                lpbk @ 15 = 0b0,
+                mdcspd @ 16 = 0b1,
+                contmdc @ 17 = 0b0,
+                reserved2 @ 19:18 = 0b0,
+                prepend @ 23:20 = 0b0,
+                reserved3 @ 24 = 0b0,
+                reserved4 @ 26:25 = 0b0,
+                rxlngtherren @ 27 = 0b1,
+                rxpadstripen @ 28 = 0b0,
+                reserved5 @ 31:29 = 0b0
             }
             autoc @ 0x042A0 RW {
                 flu @ 0 = 0b0,
@@ -150,6 +293,15 @@ dev2types! {
                 link_speed @ 29:28 = 0b0,
                 link_up @ 30 = 0b0,
                 kx_kx4_kr_backplane_completed @ 31 = 0b0
+            }
+            fctrl @ 0x05080 RW {
+                reserved0 @ 0 = 0b0,
+                sbp @ 1 = 0b0,
+                reserved1 @ 7:2 = 0b0,
+                mpe @ 8 = 0b0,
+                upe @ 9 = 0b0,
+                bam @ 10 = 0b0,
+                reserved2 @ 31:11 = 0b0
             }
             ral0 @ 0x0A200 RW {
                 ral @ 31:0 = 0b0 // TODO it is X, i need support for this
