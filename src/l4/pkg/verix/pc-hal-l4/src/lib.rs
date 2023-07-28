@@ -181,43 +181,12 @@ impl pc_hal::traits::Resource for Resource {
     }
 }
 
-impl pc_hal::traits::MemoryInterface32 for IoMem {
-    type Addr = usize;
-
-    fn write8(&mut self, offset: usize, val: u8) {
-        self.0.write8(offset, val)
-    }
-
-    fn write16(&mut self, offset: usize, val: u16) {
-        self.0.write16(offset, val)
-    }
-
-    fn write32(&mut self, offset: usize, val: u32) {
-        self.0.write32(offset, val)
-    }
-
-    fn read8(&self, offset: usize) -> u8 {
-        self.0.read8(offset)
-    }
-
-    fn read16(&self, offset: usize) -> u16 {
-        self.0.read16(offset)
-    }
-
-    fn read32(&self, offset: usize) -> u32 {
-        self.0.read32(offset)
+impl pc_hal::traits::MemoryInterface for IoMem {
+    fn ptr(&mut self) -> *mut u8 {
+        self.0.ptr()
     }
 }
 
-impl pc_hal::traits::MemoryInterface64 for IoMem {
-    fn write64(&mut self, offset: usize, val: u64) {
-        self.0.write64(offset, val)
-    }
-
-    fn read64(&self, offset: usize) -> u64 {
-        self.0.read64(offset)
-    }
-}
 
 impl pc_hal::traits::IoMem for IoMem {
     type Error = l4::Error;
@@ -301,40 +270,9 @@ impl pc_hal::traits::Icu for Icu {
     }
 }
 
-impl pc_hal::traits::MemoryInterface32 for MappableMemory {
-    type Addr = usize;
-
-    fn write8(&mut self, offset: usize, val: u8) {
-        self.0.write8(offset, val)
-    }
-
-    fn write16(&mut self, offset: usize, val: u16) {
-        self.0.write16(offset, val)
-    }
-
-    fn write32(&mut self, offset: usize, val: u32) {
-        self.0.write32(offset, val)
-    }
-
-    fn read8(&self, offset: usize) -> u8 {
-        self.0.read8(offset)
-    }
-
-    fn read16(&self, offset: usize) -> u16 {
-        self.0.read16(offset)
-    }
-
-    fn read32(&self, offset: usize) -> u32 {
-        self.0.read32(offset)
-    }
-}
-
-impl pc_hal::traits::MemoryInterface64 for MappableMemory {
-    fn write64(&mut self, offset: usize, val: u64) {
-        self.0.write64(offset, val)
-    }
-    fn read64(&self, offset: usize) -> u64 {
-        self.0.read64(offset)
+impl pc_hal::traits::MemoryInterface for MappableMemory {
+    fn ptr(&mut self) -> *mut u8 {
+        self.0.ptr()
     }
 }
 

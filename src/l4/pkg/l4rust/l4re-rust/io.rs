@@ -316,10 +316,6 @@ impl VolatileMemoryInterface for IoMem {
   fn ptr(&self) -> *mut u8 {
     self.addr
   }
-
-  fn size(&self) -> usize {
-    self.size as usize
-  }
 }
 
 impl Drop for IoMem {

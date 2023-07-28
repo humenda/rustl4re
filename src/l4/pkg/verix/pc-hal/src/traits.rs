@@ -57,17 +57,6 @@ pub trait Resource {
 }
 
 // With never type this might be compatible with FailibleMemoryInterface in a cool way
-pub trait MemoryInterface32 {
-    type Addr;
-
-    fn write8(&mut self, offset: Self::Addr, val: u8);
-    fn write16(&mut self, offset: Self::Addr, val: u16);
-    fn write32(&mut self, offset: Self::Addr, val: u32);
-    fn read8(&self, offset: Self::Addr) -> u8;
-    fn read16(&self, offset: Self::Addr) -> u16;
-    fn read32(&self, offset: Self::Addr) -> u32;
-}
-
 pub trait FailibleMemoryInterface32 {
     type Error;
     type Addr;
@@ -80,9 +69,14 @@ pub trait FailibleMemoryInterface32 {
     fn read32(&self, offset: Self::Addr) -> Result<u32, Self::Error>;
 }
 
-pub trait MemoryInterface64 : MemoryInterface32 {
-    fn write64(&mut self, offset: Self::Addr, val: u64);
-    fn read64(&self, offset: Self::Addr) -> u64;
+pub trait MemoryInterface {
+    fn ptr(&mut self) -> *mut u8;
+}
+
+impl MemoryInterface for *mut u8 {
+    fn ptr(&mut self) -> *mut u8 {
+        self.clone()
+    }
 }
 
 pub trait PciDevice : Device + FailibleMemoryInterface32<Addr=u32> {
@@ -99,7 +93,7 @@ bitflags! {
     }
 }
 
-pub trait IoMem : MemoryInterface64<Addr=usize> {
+pub trait IoMem : MemoryInterface {
     type Error;
 
     // TODO: this is very l4 specific but it should be fine for our purposes
@@ -171,7 +165,7 @@ bitflags! {
     }
 }
 
-pub trait MappableMemory : MemoryInterface64<Addr=usize> {
+pub trait MappableMemory : MemoryInterface {
     type Error;
     // Very unclear if this should be associated types, makes it basically impossible to use
     // generically

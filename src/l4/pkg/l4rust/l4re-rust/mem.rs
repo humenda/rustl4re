@@ -33,6 +33,7 @@ use l4_sys::L4_LOG2_PAGESIZE;
 use l4_sys::l4_fpage_w;
 
 use core::ffi::c_void;
+use core::marker::PhantomData;
 
 use crate::OwnedCap;
 
@@ -51,56 +52,43 @@ pub struct AttachedDataspace {
 
 }
 
+pub struct OffsetAttachedDataspace<'a> {
+    ptr: *mut u8,
+    _space : PhantomData<&'a ()>
+}
+
 pub trait VolatileMemoryInterface {
     fn ptr(&self) -> *mut u8;
-    fn size(&self) -> usize;
-
-    fn bounds_check(&self, offset: usize, len: usize) {
-        if len + offset > self.size() as usize {
-            panic!(
-                "Out of bounds access, base pointer {:p}, offset: {}, amount: {}",
-                self.ptr(), offset, len
-            );
-        }
-    }
 
     fn write8(&mut self, offset: usize, val: u8) {
-        self.bounds_check(offset, 1);
         unsafe { core::ptr::write_volatile(self.ptr().add(offset), val) }
     }
 
     fn write16(&mut self, offset: usize, val: u16) {
-        self.bounds_check(offset, 2);
         unsafe { core::ptr::write_volatile(self.ptr().add(offset) as *mut u16, val) }
     }
 
     fn write32(&mut self, offset: usize, val: u32) {
-        self.bounds_check(offset, 4);
         unsafe { core::ptr::write_volatile(self.ptr().add(offset) as *mut u32, val) }
     }
 
     fn write64(&mut self, offset: usize, val: u64) {
-        self.bounds_check(offset, 8);
         unsafe { core::ptr::write_volatile(self.ptr().add(offset) as *mut u64, val) }
     }
 
     fn read8(&self, offset: usize) -> u8 {
-        self.bounds_check(offset, 1);
         unsafe { core::ptr::read_volatile(self.ptr().add(offset)) }
     }
 
     fn read16(&self, offset: usize) -> u16 {
-        self.bounds_check(offset, 2);
         unsafe { core::ptr::read_volatile(self.ptr().add(offset) as *mut u16) }
     }
 
     fn read32(&self, offset: usize) -> u32 {
-        self.bounds_check(offset, 4);
         unsafe { core::ptr::read_volatile(self.ptr().add(offset) as *mut u32) }
     }
 
     fn read64(&self, offset: usize) -> u64 {
-        self.bounds_check(offset, 8);
         unsafe { core::ptr::read_volatile(self.ptr().add(offset) as *mut u64) }
     }
 }
@@ -218,14 +206,23 @@ impl AttachedDataspace {
         tag.result()?;
         Ok(self.ptr as usize)
     }
+
+    pub fn at_offset<'a>(&'a mut self, offset: usize) -> OffsetAttachedDataspace<'a> {
+        OffsetAttachedDataspace {
+            ptr: unsafe { self.ptr.add(offset) },
+            _space: PhantomData
+        }
+    }
 }
 
 impl VolatileMemoryInterface for AttachedDataspace {
     fn ptr(&self) -> *mut u8 {
         self.ptr
     }
+}
 
-    fn size(&self) -> usize {
-        self.cap.size
+impl<'a> VolatileMemoryInterface for OffsetAttachedDataspace<'a> {
+    fn ptr(&self) -> *mut u8 {
+        self.ptr
     }
 }

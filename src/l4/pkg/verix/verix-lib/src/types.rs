@@ -1,6 +1,8 @@
-use std::rc::Rc;
+use std::{rc::Rc, time::Instant, collections::VecDeque};
 
 use crate::{dev, dma::{DmaMemory, Mempool}};
+
+use pc_hal_util::mmio::MsixDev;
 
 #[derive(Debug)]
 pub enum Error<E> {
@@ -10,7 +12,11 @@ pub enum Error<E> {
     /// The driver was told to create an invalid amount of queues
     InvalidQueueCount,
     /// The driver did not manage to bring the link up
-    LinkDown
+    LinkDown,
+    /// The driver noticed that MSI-X is not supported on the device
+    MsixMissing,
+    /// No more pieces left in a mempool
+    MempoolEmpty
 }
 
 impl<E> From<E> for Error<E> {
@@ -21,7 +27,7 @@ impl<E> From<E> for Error<E> {
 
 pub type Result<T, E> = std::result::Result<T, Error<E>>;
 
-pub struct Device<E, IM, PD, D, Res, Dma, MM>
+pub struct Device<E, IM, PD, D, Res, Dma, MM, ISR>
 where
     D: pc_hal::traits::Device,
     Res: pc_hal::traits::Resource,
@@ -30,13 +36,14 @@ where
     MM: pc_hal::traits::MappableMemory<Error=E, DmaSpace=Dma>,
     Dma: pc_hal::traits::DmaSpace,
 {
-    pub (crate) bar0: dev::Intel82559ES::Bar0<IM>,
+    pub (crate) bar0: dev::Intel82559ES::Bar0::Mem<IM>,
+    pub (crate) msix: MsixDev::Msix::Mem<IM>,
     pub (crate) device: PD,
     pub (crate) num_rx_queues: u16,
     pub (crate) num_tx_queues: u16,
     pub (crate) rx_queues: Vec<RxQueue<E, Dma, MM>>,
     pub (crate) tx_queues: Vec<TxQueue<E, Dma, MM>>,
-    pub (crate) interrupts: Interrupts,
+    pub (crate) interrupts: Interrupts<ISR>,
     pub (crate) dma_space: Dma
 }
 
@@ -63,84 +70,25 @@ where
     pub (crate) tx_index: usize,
     pub (crate) bufs_in_use: Vec<usize>
 }
-pub struct Interrupts {
-    pub (crate) enabled : bool
+pub struct Interrupts<ISR> {
+    pub (crate) timeout_ms : i16,
+    pub (crate) itr_rate : u32,
+    pub (crate) queues : Vec<InterruptsQueue<ISR>>,
 }
 
-/* Receive Descriptor - Advanced */
-#[repr(C)]
-#[derive(Debug, Copy, Clone)]
-pub struct ixgbe_adv_rx_desc_read {
-    pub pkt_addr: u64,
-    /* Packet buffer address */
-    pub hdr_addr: u64,
-    /* Header buffer address */
+pub struct InterruptsQueue<ISR> {
+    pub (crate) isr: ISR,
+    pub (crate) instr_counter: u64,
+    pub (crate) last_time_checked: Instant,
+    pub (crate) rx_pkts: u64,
+    pub (crate) interval: u64,
+    pub (crate) moving_avg: InterruptMovingAvg,
 }
 
-#[repr(C)]
-#[derive(Debug, Copy, Clone)]
-pub struct ixgbe_adv_rx_desc_wb_lower_lo_dword_hs_rss {
-    pub pkt_info: u16,
-    /* RSS, Pkt type */
-    pub hdr_info: u16,
-    /* Splithdr, hdrlen */
-}
-
-#[repr(C)]
-#[derive(Copy, Clone)]
-pub union ixgbe_adv_rx_desc_wb_lower_lo_dword {
-    pub data: u32,
-    pub hs_rss: ixgbe_adv_rx_desc_wb_lower_lo_dword_hs_rss,
-}
-
-#[repr(C)]
-#[derive(Debug, Copy, Clone)]
-pub struct ixgbe_adv_rx_desc_wb_lower_hi_dword_csum_ip {
-    pub ip_id: u16,
-    /* IP id */
-    pub csum: u16,
-    /* Packet Checksum */
-}
-
-#[repr(C)]
-#[derive(Copy, Clone)]
-pub union ixgbe_adv_rx_desc_wb_lower_hi_dword {
-    pub rss: u32,
-    /* RSS Hash */
-    pub csum_ip: ixgbe_adv_rx_desc_wb_lower_hi_dword_csum_ip,
-}
-
-#[repr(C)]
-#[derive(Copy, Clone)]
-pub struct ixgbe_adv_rx_desc_wb_lower {
-    pub lo_dword: ixgbe_adv_rx_desc_wb_lower_lo_dword,
-    pub hi_dword: ixgbe_adv_rx_desc_wb_lower_hi_dword,
-}
-
-#[repr(C)]
-#[derive(Debug, Copy, Clone)]
-pub struct ixgbe_adv_rx_desc_wb_upper {
-    pub status_error: u32,
-    /* ext status/error */
-    pub length: u16,
-    /* Packet length */
-    pub vlan: u16,
-    /* VLAN tag */
-}
-
-#[repr(C)]
-#[derive(Copy, Clone)]
-pub struct ixgbe_adv_rx_desc_wb {
-    pub lower: ixgbe_adv_rx_desc_wb_lower,
-    pub upper: ixgbe_adv_rx_desc_wb_upper,
-}
-
-#[repr(C)]
-#[derive(Copy, Clone)]
-pub union ixgbe_adv_rx_desc {
-    pub read: ixgbe_adv_rx_desc_read,
-    pub wb: ixgbe_adv_rx_desc_wb, /* writeback */
-    _union_align: [u64; 2],
+#[derive(Default)]
+pub struct InterruptMovingAvg {
+    pub measured_rates: VecDeque<u64>,
+    pub sum: u64
 }
 
 /* Transmit Descriptor - Advanced */

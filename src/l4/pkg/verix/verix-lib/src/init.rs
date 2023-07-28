@@ -1,17 +1,18 @@
 use std::{thread, mem};
 use std::time::{Duration, Instant};
 
-use crate::constants::{NUM_RX_QUEUE_ENTRIES, NUM_TX_QUEUE_ENTRIES, PKT_BUF_ENTRY_SIZE};
+use crate::constants::{NUM_RX_QUEUE_ENTRIES, NUM_TX_QUEUE_ENTRIES, PKT_BUF_ENTRY_SIZE, INTERRUPT_INITIAL_INTERVAL};
 use crate::dev;
 use crate::dma::{DmaMemory, Mempool};
-use crate::types::{Error, Result, Device, Interrupts, ixgbe_adv_rx_desc, RxQueue, ixgbe_adv_tx_desc, TxQueue};
+use crate::types::{Error, Result, Device, Interrupts, RxQueue, TxQueue, InterruptsQueue};
 
 use log::{info, trace};
 
 use pc_hal::prelude::*;
-use pc_hal_util::pci::map_bar;
+use pc_hal_util::pci::{map_bar, map_msix_cap};
+use pc_hal_util::mmio::MsixDev;
 
-impl<E, IM, PD, D, Res, Dma, MM> Device<E, IM, PD, D, Res, Dma, MM>
+impl<E, IM, PD, D, Res, Dma, MM, ISR> Device<E, IM, PD, D, Res, Dma, MM, ISR>
 where
     D: pc_hal::traits::Device,
     Res: pc_hal::traits::Resource,
@@ -19,6 +20,7 @@ where
     PD: pc_hal::traits::PciDevice<Error=E, Device=D, Resource=Res> + AsMut<D>,
     MM: pc_hal::traits::MappableMemory<Error=E, DmaSpace=Dma>,
     Dma: pc_hal::traits::DmaSpace,
+    ISR: pc_hal::traits::IrqHandler
 {
     
     pub fn init<B, ICU>(
@@ -26,15 +28,15 @@ where
         num_rx_queues: u16,
         num_tx_queues: u16,
         interrupt_timeout: i16,
-    ) -> Result<Device<E, IM, PD, D, Res, Dma, MM>, E>
+    ) -> Result<Device<E, IM, PD, D, Res, Dma, MM, ISR>, E>
     where
         B: pc_hal::traits::Bus<Error=E, Device=D, Resource=Res, DmaSpace=Dma>,
-        ICU: pc_hal::traits::Icu<Bus=B, Device=D, Error=E>,
+        ICU: pc_hal::traits::Icu<Bus=B, Device=D, Error=E, IrqHandler=ISR>,
     {
         // TODO: this should be reworked to support actual device discovery
         let mut devices = bus.device_iter();
         let l40009 = devices.next().unwrap();
-        let icu = ICU::from_device(&bus, l40009)?;
+        let mut icu = ICU::from_device(&bus, l40009)?;
         let _pci_bridge = devices.next().unwrap();
         let mut nic = PD::try_of_device(devices.next().unwrap()).unwrap();
         info!("Obtained handles to ICU and NIC");
@@ -54,6 +56,11 @@ where
         let bar0_mem : IM = map_bar(&mut nic, 0)?;
         let bar0 = dev::Intel82559ES::Bar0::new(bar0_mem);
 
+        // TODO: Also investigate the qemu iommu map to non memory area 0, it seems to be caused
+        // by one of our Drop implementations
+        let msix_mem : IM = map_msix_cap(&mut nic)?.ok_or(Error::MsixMissing)?;
+        let msix = MsixDev::Msix::new(msix_mem);
+
         let rx_queues = Vec::with_capacity(num_rx_queues as usize);
         let tx_queues = Vec::with_capacity(num_tx_queues as usize);
 
@@ -64,29 +71,68 @@ where
 
         let mut dev = Device {
             bar0,
+            msix,
             num_rx_queues,
             num_tx_queues,
             rx_queues,
             tx_queues,
             device: nic,
             interrupts: Interrupts {
-                enabled: false
+                timeout_ms: interrupt_timeout,
+                // TODO: figure this funny value out
+                itr_rate: 0x028,
+                queues: Vec::with_capacity(num_rx_queues as usize),
             },
             dma_space
         };
 
-        // TODO some vfio based interrupt setup happens here in ixy.
-        // it is optional in ixy because there used to be a time when it was apparently a poll mode driver
-        // we definitely want interrupts here
+        dev.setup_interrupts(&mut icu)?;
 
-        dev.reset_and_init::<B>(bus)?;
+        dev.reset_and_init()?;
 
         Ok(dev)
     }
 
-    fn reset_and_init<B>(&mut self, bus: &mut B) -> Result<(), E>
+    fn setup_interrupts<B, ICU>(&mut self, icu: &mut ICU)  -> Result<(), E>
     where
         B: pc_hal::traits::Bus<Error=E, Device=D, Resource=Res, DmaSpace=Dma>,
+        ICU: pc_hal::traits::Icu<Bus=B, Device=D, Error=E, IrqHandler=ISR>,
+        ISR: pc_hal::traits::IrqHandler
+    {
+        info!("Setting up MSI-X interrupts");
+        assert!(icu.nr_msis()? > 0);
+        let nic_dev : &mut D = self.device.as_mut();
+
+        for rx_queue in 0..self.num_rx_queues {
+            info!("Setting up MSIX interrupt for queue {}", rx_queue);
+
+            let irq_num = rx_queue;
+            let mut irq_handler = icu.bind_msi(irq_num as u32, nic_dev)?;
+            self.msix.tadd(irq_num.into()).modify(|_, w| w.tadd((irq_handler.msi_addr() & 0xffffffff) as u32));
+            self.msix.tuadd(rx_queue.into()).modify(|_, w| w.tuadd((irq_handler.msi_addr() >> 32) as u32));
+            self.msix.tmsg(rx_queue.into()).modify(|_, w| w.tmsg(irq_handler.msi_data()));
+            self.msix.tvctrl(rx_queue.into()).modify(|_, w| w.masked(1));
+
+            icu.unmask(&mut irq_handler)?;
+
+            let queue = InterruptsQueue {
+                last_time_checked: Instant::now(),
+                rx_pkts: 0,
+                moving_avg: Default::default(),
+                interval: INTERRUPT_INITIAL_INTERVAL,
+                instr_counter: 0,
+                isr: irq_handler,
+            };
+            info!("Set up MSIX interrupt for queue {}", rx_queue);
+            self.interrupts.queues.push(queue);
+        }
+        info!("Set up MSI-X interrupts");
+
+        // TODO PCI bus mastering
+        Ok(())
+    }
+
+    fn reset_and_init(&mut self) -> Result<(), E>
     {
         info!("Resetting device");
         // section 4.6.3.1 - disable all interrupts
@@ -150,6 +196,20 @@ where
         // section 4.6.8 - init tx
         self.init_tx()?;
 
+        for i in 0..self.num_rx_queues {
+            self.start_rx_queue(i)?;
+        }
+
+        for i in 0..self.num_tx_queues {
+            self.start_tx_queue(i)?;
+        }
+
+        for queue in 0..self.num_rx_queues {
+            self.enable_interrupt(queue);
+        }
+
+        self.set_promisc(true);
+
         Ok(())
     }
 
@@ -176,7 +236,7 @@ where
             info!("Initializing TX queue {}", i);
             // section 7.1.9 - setup descriptor ring
             let ring_size_bytes =
-                NUM_TX_QUEUE_ENTRIES as usize * mem::size_of::<ixgbe_adv_tx_desc>();
+                NUM_TX_QUEUE_ENTRIES as usize * mem::size_of::<[u64; 2]>();
             
             info!("Allocating {} bytes for TX queue descriptor ring {}", ring_size_bytes, i);
 
@@ -184,7 +244,7 @@ where
 
             // initialize to 0xff to prevent rogue memory accesses on premature dma activation
             for i in 0..ring_size_bytes {
-                descriptor_mem.write8(i, 0xff);
+                unsafe { core::ptr::write_volatile(descriptor_mem.ptr().add(i), 0xff) }
             }
 
             self.bar0.tdbal(i.into()).write(|w| w.tdbal((descriptor_mem.device_addr() & 0xffff_ffff) as u32));
@@ -250,14 +310,14 @@ where
 
             // section 7.1.9 - setup descriptor ring
             let ring_size_bytes =
-                NUM_RX_QUEUE_ENTRIES as usize * mem::size_of::<ixgbe_adv_rx_desc>();
+                NUM_RX_QUEUE_ENTRIES as usize * mem::size_of::<[u64; 2]>();
             
             info!("Allocating {} bytes for RX queue descriptor ring {}", ring_size_bytes, i);
 
             let mut descriptor_mem  = DmaMemory::new(ring_size_bytes, &self.dma_space)?;
             // initialize to 0xff to prevent rogue memory accesses on premature dma activation
             for i in 0..ring_size_bytes {
-                descriptor_mem.write8(i, 0xff);
+                unsafe { core::ptr::write_volatile(descriptor_mem.ptr().add(i), 0xff) }
             }
 
             self.bar0.rdbal(i.into()).write(|w| w.rdbal((descriptor_mem.device_addr() & 0xffff_ffff) as u32));
@@ -313,6 +373,82 @@ where
         info!("RX initialization done");
 
         Ok(())
+    }
+
+    fn start_rx_queue(&mut self, queue_id: u16) -> Result<(), E> {
+        info!("Starting RX queue: {}", queue_id);
+        let queue = &mut self.rx_queues[queue_id as usize];
+
+        // Power of 2
+        assert!(queue.num_descriptors & (queue.num_descriptors - 1) == 0);
+
+        for i in 0..queue.num_descriptors {
+
+            // TODO: ponder about how do implement the descriptor stuff nicely
+            let descriptor_ptr = queue.nth_descriptor_ptr(i);
+            let pool = &queue.pool;
+            let mempool_idx = pool.alloc_buf().ok_or(Error::MempoolEmpty)?;
+            let device_addr = pool.get_device_addr(mempool_idx) as u64;
+
+            let mut desc = dev::Descriptors::adv_rx_desc_read::new(descriptor_ptr);
+            desc.pkt_addr().write(|w| w.pkt_addr(device_addr));
+            desc.hdr_addr().write(|w| w.hdr_addr(0));
+
+            // we need to remember which descriptor entry belongs to which mempool entry
+            queue.bufs_in_use.push(mempool_idx);
+        }
+
+        // enable queue and wait if necessary
+        self.bar0.rxdctl(queue_id.into()).modify(|_, w| w.enable(1));
+        loop {
+            let rxdctl = self.bar0.rxdctl(queue_id.into()).read();
+            if rxdctl.enable() == 1 {
+                break;
+            }
+        }
+
+        self.bar0.rdh(queue_id.into()).modify(|_, w| w.rdh(0));
+        self.bar0.rdt(queue_id.into()).modify(|_, w| w.rdt((queue.num_descriptors - 1) as u32));
+
+        info!("Started RX queue: {}", queue_id);
+
+        Ok(())
+    }
+
+    fn start_tx_queue(&mut self, queue_id: u16) -> Result<(), E> {
+        info!("Starting TX queue: {}", queue_id);
+
+        let queue = &mut self.tx_queues[queue_id as usize];
+
+        // Power of 2
+        assert!(queue.num_descriptors & (queue.num_descriptors - 1) == 0);
+
+        // tx queue starts out empty
+        self.bar0.tdh(queue_id.into()).modify(|_, w| w.tdh(0));
+        self.bar0.tdt(queue_id.into()).modify(|_, w| w.tdt(0));
+
+        // enable queue and wait if necessary
+        self.bar0.txdctl(queue_id.into()).modify(|_, w| w.enable(1));
+        loop {
+            let txdctl = self.bar0.txdctl(queue_id.into()).read();
+            if txdctl.enable() == 1 {
+                break;
+            }
+        }
+
+        info!("Started TX queue: {}", queue_id);
+
+        Ok(())
+    }
+
+    fn set_promisc(&mut self, enabled: bool) {
+        if enabled {
+            info!("enabling promisc mode");
+            self.bar0.fctrl().modify(|_, w| w.mpe(1).upe(1));
+        } else {
+            info!("disabling promisc mode");
+            self.bar0.fctrl().modify(|_, w| w.mpe(0).upe(0));
+        }
     }
 
     fn reset_stats(&mut self) {
@@ -376,6 +512,64 @@ where
             (high & 0xff) as u8,
             (high >> 8 & 0xff) as u8,
         ]
+    }
+
+    fn set_ivar(&mut self, queue_id: u16) {
+        let ivar_idx = (queue_id as usize) / 2;
+        // We set up our interrupts such that the MSI-X index maps to the rx_queue_id, hence that is our allocation
+        if queue_id % 2 == 0 {
+            // even RX queues are at alloc_0
+            self.bar0.ivar(ivar_idx).modify(|_, w| w.int_alloc0(queue_id.into()).int_alloc_val0(1));
+        } else {
+            // uneven RX queues are at alloc_2
+            self.bar0.ivar(ivar_idx).modify(|_, w| w.int_alloc2(queue_id.into()).int_alloc_val2(1));
+        }
+    }
+
+
+    fn enable_interrupt(&mut self, rx_queue_id: u16) {
+        // We only support MSI-X interrupt setups for now
+        info!("Enabling interrupts for RX queue {}", rx_queue_id);
+
+        // Step 1: The software driver associates between interrupt causes and MSI-X vectors and the
+        //throttling timers EITR[n] by programming the IVAR[n] and IVAR_MISC registers.
+        self.bar0.gpie().modify(|_, w| w.multiple_msix(1).pba_support(1).eiame(1));
+        self.set_ivar(rx_queue_id);
+
+        // Step 2: Program SRRCTL[n].RDMTS (per receive queue) if software uses the receive
+        // descriptor minimum threshold interrupt
+        // We don't use the minimum threshold interrupt
+
+        // Step 3: The EIAC[n] registers should be set to auto clear for transmit and receive interrupt
+        // causes (for best performance). The EIAC bits that control the other and TCP timer
+        // interrupt causes should be set to 0b (no auto clear).
+        self.bar0.eiac().modify(|_, w| w.rtxq_autoclear(0xffff));
+
+        // Step 4: Set the auto mask in the EIAM register according to the preferred mode of operation.
+        // In our case we prefer to not auto-mask the interrupts
+
+        // Step 5: Set the interrupt throttling in EITR[n] and GPIE according to the preferred mode of operation.
+        // 0x000 (0us) => ... INT/s
+        // 0x008 (2us) => 488200 INT/s
+        // 0x010 (4us) => 244000 INT/s
+        // 0x028 (10us) => 97600 INT/s
+        // 0x0C8 (50us) => 20000 INT/s
+        // 0x190 (100us) => 9766 INT/s
+        // 0x320 (200us) => 4880 INT/s
+        // 0x4B0 (300us) => 3255 INT/s
+        // 0x640 (400us) => 2441 INT/s
+        // 0x7D0 (500us) => 2000 INT/s
+        // 0x960 (600us) => 1630 INT/s
+        // 0xAF0 (700us) => 1400 INT/s
+        // 0xC80 (800us) => 1220 INT/s
+        // 0xE10 (900us) => 1080 INT/s
+        // 0xFA7 (1000us) => 980 INT/s
+        // 0xFFF (1024us) => 950 INT/s
+        self.bar0.eitr(rx_queue_id.into()).modify(|_, w| w.itr_interval(self.interrupts.itr_rate));
+
+        // Step 6: Software enables the required interrupt causes by setting the EIMS register
+        self.bar0.eims().modify(|r, w| w.interrupt_enable(r.interrupt_enable() | (1 << rx_queue_id)));
+        info!("Enabled interrupts for RX queue {}", rx_queue_id);
     }
 
     fn clear_interrupts(&mut self) {

@@ -1,5 +1,5 @@
-use log::info;
-use pc_hal::traits::{IoMemFlags, MaFlags, DsMapFlags, DsAttachFlags};
+use log::{info, trace};
+use pc_hal::traits::IoMemFlags;
 
 pub fn map_bar<E, D, IM>(dev: &mut D, bar_idx: u8) -> Result<IM, E>
 where
@@ -34,3 +34,69 @@ where
         IoMemFlags::EAGER_MAP | IoMemFlags::NONCACHED,
     )
 }
+
+struct CapResult {
+    id: u8,
+    next: u8,
+    ptr: u8,
+}
+
+fn parse_cap<E, D: pc_hal::traits::PciDevice<Error=E>>(dev: &mut D, curr_cap_ptr: u8) -> Result<CapResult, E> {
+    let id = dev.read8(curr_cap_ptr.into())?;
+    let next = dev.read8((curr_cap_ptr + 1).into())?;
+
+    Ok(CapResult {
+        id,
+        next,
+        ptr: curr_cap_ptr,
+    })
+}
+
+fn find_msix_cap<E, D: pc_hal::traits::PciDevice<Error=E>>(dev: &mut D, initial_cap_ptr: u8) -> Result<Option<CapResult>, E> {
+    let mut cap_ptr = initial_cap_ptr;
+    trace!("Looking for MSI-X capability, starting at 0x{:x}", cap_ptr);
+    loop {
+        let res = parse_cap(dev, cap_ptr)?;
+        trace!("Checking next cap, ID 0x{:x}", res.id);
+        if res.id == 0x11 {
+            trace!("Found MSI-X cap at 0x{:x}", res.ptr);
+            return Ok(Some(res));
+        } else if res.next == 0 {
+            trace!("Checked all caps, couldn't find MSI-X");
+            return Ok(None);
+        }
+        cap_ptr = res.next;
+    }
+}
+
+fn enable_msix<E, D: pc_hal::traits::PciDevice<Error=E>>(dev: &mut D, msix_cap: u8) -> Result<(), E> {
+    let mut message_control = dev.read16((msix_cap + 2).into())?;
+    message_control |= 1 << 15; // set enable bit
+    message_control &= !(1 << 14); // unset masking bit
+    dev.write16((msix_cap + 2).into(), message_control)?;
+    Ok(())
+}
+
+pub fn map_msix_cap<E, D, IM>(dev: &mut D) -> Result<Option<IM>, E>
+where
+    D: pc_hal::traits::PciDevice<Error=E>,
+    IM: pc_hal::traits::IoMem<Error=E>
+{
+    let status_register = dev.read16(0x6)?;
+    let has_capabilities = (status_register & (1 << 4)) != 0;
+    if !has_capabilities {
+        trace!("Device does not support capability list");
+        return Ok(None);
+    }
+    let cap_ptr = dev.read8(0x34)?;
+    if let Some(msix_cap) = find_msix_cap(dev, cap_ptr)? {
+        enable_msix(dev, msix_cap.ptr)?;
+        let table_offset_reg = dev.read32((msix_cap.ptr + 0x4).into())?;
+        let bir = (table_offset_reg & 0b111) as u8;
+        let msix_table = map_bar(dev, bir)?;
+        Ok(Some(msix_table))
+    } else {
+        Ok(None)
+    }
+}
+

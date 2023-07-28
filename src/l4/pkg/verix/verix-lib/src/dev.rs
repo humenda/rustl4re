@@ -2,9 +2,8 @@ pub const VENDOR_ID : u16 = 0x8086;
 pub const DEVICE_ID : u16 = 0x10fb;
 pub const MAX_QUEUES : u16 = 64;
 
-
-dev2types! {
-    Intel82559ES {
+mm2types! {
+    Intel82559ES Bit32 {
         Bar0 {
             ctrl @ 0x000000 RW {
                 reserved0 @ 1:0 = 0b0,
@@ -75,6 +74,30 @@ dev2types! {
                 tcp_timer @ 30 = 0b0,
                 other_cause_interrupt @ 31 = 0b0
             }
+            eiac @ 0x00810 RW {
+                rtxq_autoclear @ 15:0 = 0b0,
+                reserved0 @ 29:16 = 0b0,
+                tcp_timer_auto_clear @ 30 = 0b0,
+                reserved1 @ 30 = 0b0
+            }
+            eitr @ [
+                128,
+                |n|
+                    if n <= 23 {
+                        0x00820 + n * 4
+                    } else {
+                        0x012300 + ((n - 24) * 4)
+                    }
+            ] RW {
+                reserved0 @ 2:0 = 0b0,
+                itr_interval @ 11:3 = 0b0,
+                reserved1 @ 14:12 = 0b0,
+                lli_moderation @ 15 = 0b0,
+                lli_credit @ 20:16 = 0b0,
+                itr_counter @ 27:21 = 0b0,
+                reserved2 @ 30:28 = 0b0,
+                cnt_wdis @ 31 = 0b0
+            }
             eims @ 0x00880 RW {
                 interrupt_enable @ 30:0 = 0b0,
                 reserved0 @ 31 = 0b0
@@ -82,6 +105,35 @@ dev2types! {
             eimc @ 0x00888 WO {
                 interrupt_mask @ 30:0,
                 reserved0 @ 31
+            }
+            gpie @ 0x00898 RW {
+                sdp0_gpien @ 0 = 0b0,
+                sdp1_gpien @ 1 = 0b0,
+                sdp2_gpien @ 2 = 0b0,
+                sdp3_gpien @ 3 = 0b0,
+                multiple_msix @ 4 = 0b0,
+                ocd @ 5 = 0b0,
+                eimem @ 6 = 0b0,
+                ll_interval @ 10:7 = 0b0,
+                rsc_delay @ 13:11 = 0b0,
+                vt_mode @ 15:14 = 0b0,
+                reserved0 @ 29:16 = 0b0,
+                eiame @ 30 = 0b0,
+                pba_support @ 31 = 0b0
+            }
+            ivar @ [64, |n| 0x00900 + n * 4 ] RW {
+                int_alloc0 @ 5:0 = 0b0,
+                reserved0 @ 6 = 0b0,
+                int_alloc_val0 @ 7 = 0b0,
+                int_alloc1 @ 13:8 = 0b0,
+                reserved1 @ 14 = 0b0,
+                int_alloc_val1 @ 15 = 0b0,
+                int_alloc2 @ 21:16 = 0b0,
+                reserved2 @ 22 = 0b0,
+                int_alloc_val2 @ 23 = 0b0,
+                int_alloc3 @ 29:24 = 0b0,
+                reserved3 @ 30 = 0b0,
+                int_alloc_val3 @ 31 = 0b0
             }
             rdbal @ [
                 128,
@@ -140,6 +192,26 @@ dev2types! {
             ] RW {
                 rdt @ 15:0 = 0b0,
                 reserved0 @ 31:16 = 0b0
+            }
+            rxdctl @ [
+                128,
+                |n|
+                    if n < 64 {
+                        0x01028 + n * 0x40
+                    } else {
+                        0x0D028 + ((n - 64) * 0x40)
+                    }
+            ] RW {
+                reserved0 @ 13:0 = 0b0,
+                reserved1 @ 14 = 0b0,
+                reserved2 @ 15 = 0b0,
+                reserved3 @ 22:16 = 0b0,
+                reserved4 @ 24:23 = 0b0,
+                enable @ 25 = 0b0,
+                reserved5 @ 26 = 0b0,
+                reserved6 @ 29:27 = 0b0,
+                vme @ 30 = 0b0,
+                reserved7 @ 31 = 0b0
             }
             dca_rxctl @ [
                 128,
@@ -345,6 +417,20 @@ dev2types! {
                 len @ 19:0 = 0b0,
                 reserved0 @ 31:20 = 0b0
             }
+            tdh @ [
+                128,
+                |n| 0x06010 + n * 0x40
+            ] RW {
+                tdh @ 15:0 = 0b0,
+                reserved0 @ 31:16 = 0b0
+            }
+            tdt @ [
+                128,
+                |n| 0x06018 + n * 0x40
+            ] RW {
+                tdt @ 15:0 = 0b0,
+                reserved0 @ 31:16 = 0b0
+            }
             txdctl @ [
                 128,
                 |n| 0x06028 + n * 0x40
@@ -403,6 +489,58 @@ dev2types! {
                 core_csr_done @ 20 = 0b0, // RO
                 mac_done @ 21 = 0b0,
                 reserved1 @ 31:22 = 0b0
+            }
+        }
+    }
+}
+
+mm2types! {
+    Descriptors Bit64 {
+        adv_rx_desc_read {
+            pkt_addr @ 0x0 WO { pkt_addr @ 63:0 }
+            hdr_addr @ 0x8 WO { hdr_addr @ 63:0 }
+        },
+        adv_rx_desc_wb {
+            lower @ 0x0 RO {
+                rss_type @ 3:0 = 0b0,
+                packet_type @ 16:4 = 0b0,
+                rsccnt @ 20:17 = 0b0,
+                hdr_len @ 30:21 = 0b0,
+                sph @ 31 = 0b0,
+                rss_hash @ 63:32 = 0b0
+            }
+            upper @ 0x8 RO {
+                extended_status @ 19:0 = 0b0,
+                extended_error @ 31:20 = 0b0,
+                pkt_len @ 47:32 = 0b0,
+                vlan_tag @ 63:48 = 0b0
+            }
+        },
+        adv_tx_desc_read {
+            lower @ 0x0 WO {
+                address @ 63:0
+            }
+            upper @ 0x8 WO {
+                dtalen @ 15:0,
+                rsv @ 17:16,
+                mac @ 19:18,
+                dtyp @ 23:20,
+                dcmd @ 31:24,
+                sta @ 35:32,
+                idx @ 38:36,
+                cc @ 39,
+                popts @ 45:40,
+                paylen @ 63:46
+            }
+        },
+        adv_tx_desc_wb {
+            upper @ 0x0 RO {
+                reserved @ 63:0 = 0b0
+            }
+            lower @ 0x8 RO {
+                reserved0 @ 31:0 = 0b0,
+                sta @ 35:32 = 0b0,
+                reserved1 @ 63:36 = 0b0
             }
         }
     }

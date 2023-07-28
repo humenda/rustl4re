@@ -1,9 +1,11 @@
 // TODO: maybe this fits into pc-hal-utils we will see
 
-use std::{cell::RefCell, rc::Rc};
+use std::{cell::RefCell, rc::Rc, mem};
 
 use log::trace;
-use pc_hal::traits::{MaFlags, DsMapFlags, DsAttachFlags, MemoryInterface32};
+use pc_hal::traits::{MaFlags, DsMapFlags, DsAttachFlags, MemoryInterface};
+
+use crate::types::RxQueue;
 
 pub struct DmaMemory<E, Dma, MM>
 where
@@ -21,7 +23,7 @@ where
 {
     num_entries: usize,
     entry_size: usize,
-    mem: DmaMemory<E, Dma, MM>,
+    mem: RefCell<DmaMemory<E, Dma, MM>>,
     free_stack: RefCell<Vec<usize>>
 }
 
@@ -33,7 +35,7 @@ where
     pub fn new(size: usize, space: &Dma) -> Result<Self, E>
     {
 
-        trace!("Allocating 0x{:x} bytes of memory for DMA", size);
+        trace!("Allocating {} bytes of memory for DMA", size);
         let mut mem = MM::alloc(
             size,
             MaFlags::PINNED | MaFlags::CONTINUOUS,
@@ -43,7 +45,6 @@ where
 
         trace!("Mapping memory to DMA");
         let device_addr = mem.map_dma(space)?;
-        trace!("Mapped to device address space at 0x{:x}", device_addr);
 
         Ok(Self{
             mem,
@@ -56,51 +57,30 @@ where
     }
 }
 
-impl<E, Dma, MM> MemoryInterface32 for DmaMemory<E, Dma, MM>
+impl<E, Dma, MM> MemoryInterface for DmaMemory<E, Dma, MM>
 where
     MM: pc_hal::traits::MappableMemory<Error=E, DmaSpace=Dma>,
     Dma: pc_hal::traits::DmaSpace
 {
-    type Addr = usize;
-
-    fn write8(&mut self, offset: Self::Addr, val: u8) {
-        self.mem.write8(offset, val);
-    }
-
-    fn write16(&mut self, offset: Self::Addr, val: u16) {
-        self.mem.write16(offset, val);
-    }
-
-    fn write32(&mut self, offset: Self::Addr, val: u32) {
-        self.mem.write32(offset, val);
-    }
-
-    fn read8(&self, offset: Self::Addr) -> u8 {
-        self.mem.read8(offset)
-    }
-
-    fn read16(&self, offset: Self::Addr) -> u16 {
-        self.mem.read16(offset)
-    }
-
-    fn read32(&self, offset: Self::Addr) -> u32 {
-        self.mem.read32(offset)
+    fn ptr(&mut self) -> *mut u8 {
+        self.mem.ptr()
     }
 }
 
 impl<E, Dma, MM> Mempool<E, Dma, MM>
 where
-    MM: pc_hal::traits::MappableMemory<Error=E, DmaSpace=Dma>,
+    MM: pc_hal::traits::MappableMemory<Error=E, DmaSpace=Dma>, 
     Dma: pc_hal::traits::DmaSpace
 {
     pub fn new(num_entries: usize, entry_size: usize, space: &Dma) -> Result<Rc<Self>, E>
     {
+        trace!("Setting up mempool with {} entries, of size {} bytes", num_entries, entry_size);
         // TODO: ixy allows the OS to be non contigious here, if i figure out how to tell L4 to translate arbitrary addresses we can do that
         let mut mem: DmaMemory<E, Dma, MM> = DmaMemory::new(num_entries * entry_size, space)?;
 
         // Clear the memory to a defined initial state
         for i in 0..(num_entries * entry_size) {
-            mem.write8(i, 0x0);
+            unsafe { core::ptr::write_volatile(mem.ptr().add(i), 0x0)}
         }
 
         // Initially all elements are free
@@ -110,11 +90,26 @@ where
         let pool = Self {
             num_entries,
             entry_size,
-            mem,
+            mem: RefCell::new(mem),
             free_stack: RefCell::new(free_stack)
         };
+        trace!("Mempool setup done");
 
         Ok(Rc::new(pool))
+    }
+
+    pub fn alloc_buf<'a>(&'a self) -> Option<usize> {
+        let idx = self.free_stack.borrow_mut().pop()?;
+        Some(idx)
+    }
+
+    pub fn get_device_addr(&self, entry: usize) -> usize
+    {
+        self.mem.borrow().device_addr + entry * self.entry_size
+    }
+
+    pub fn get_our_addr(&self, entry: usize) -> *mut u8 {
+        unsafe { self.mem.borrow_mut().ptr().add(entry * self.entry_size) }
     }
 
     pub fn size(&self) -> usize {
@@ -123,5 +118,15 @@ where
 
     pub fn entry_size(&self) -> usize {
         self.entry_size
+    }
+}
+
+impl<E, Dma, MM> RxQueue<E, Dma, MM>
+where
+    MM: pc_hal::traits::MappableMemory<Error=E, DmaSpace=Dma>,
+    Dma: pc_hal::traits::DmaSpace,
+{
+    pub fn nth_descriptor_ptr(&mut self, nth: usize) -> *mut u8 {
+        unsafe { self.descriptors.ptr().add(mem::size_of::<[u64; 2]>() * nth) }
     }
 }
