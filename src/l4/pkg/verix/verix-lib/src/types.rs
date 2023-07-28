@@ -35,7 +35,7 @@ where
     pub (crate) num_rx_queues: u16,
     pub (crate) num_tx_queues: u16,
     pub (crate) rx_queues: Vec<RxQueue<E, Dma, MM>>,
-    pub (crate) tx_queues: Vec<TxQueue>,
+    pub (crate) tx_queues: Vec<TxQueue<E, Dma, MM>>,
     pub (crate) interrupts: Interrupts,
     pub (crate) dma_space: Dma
 }
@@ -51,7 +51,18 @@ where
     pub (crate) rx_index: usize,
     pub (crate) bufs_in_use: Vec<usize>
 }
-pub struct TxQueue {}
+pub struct TxQueue<E, Dma, MM>
+where
+    MM: pc_hal::traits::MappableMemory<Error=E, DmaSpace=Dma>,
+    Dma: pc_hal::traits::DmaSpace,
+{
+    pub (crate) descriptors: DmaMemory<E, Dma, MM>,
+    pub (crate) pool: Rc<Mempool<E, Dma, MM>>,
+    pub (crate) num_descriptors: usize,
+    pub (crate) clean_index: usize,
+    pub (crate) tx_index: usize,
+    pub (crate) bufs_in_use: Vec<usize>
+}
 pub struct Interrupts {
     pub (crate) enabled : bool
 }
@@ -129,5 +140,32 @@ pub struct ixgbe_adv_rx_desc_wb {
 pub union ixgbe_adv_rx_desc {
     pub read: ixgbe_adv_rx_desc_read,
     pub wb: ixgbe_adv_rx_desc_wb, /* writeback */
+    _union_align: [u64; 2],
+}
+
+/* Transmit Descriptor - Advanced */
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub struct ixgbe_adv_tx_desc_read {
+    pub buffer_addr: u64,
+    /* Address of descriptor's data buf */
+    pub cmd_type_len: u32,
+    pub olinfo_status: u32,
+}
+
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub struct ixgbe_adv_tx_desc_wb {
+    pub rsvd: u64,
+    /* Reserved */
+    pub nxtseq_seed: u32,
+    pub status: u32,
+}
+
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub union ixgbe_adv_tx_desc {
+    pub read: ixgbe_adv_tx_desc_read,
+    pub wb: ixgbe_adv_tx_desc_wb,
     _union_align: [u64; 2],
 }

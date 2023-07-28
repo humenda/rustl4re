@@ -31,11 +31,11 @@ dev2types! {
                 reserved1 @ 15 = 0b0,
                 ns_dis @ 16 = 0b0,
                 ro_dis @ 17 = 0b0,
-                reserved @ 25:18 = 0b0,
+                reserved2 @ 25:18 = 0b0,
                 extended_vlan @ 26 = 0b0,
-                reserved @ 27 = 0b0,
+                reserved3 @ 27 = 0b0,
                 drv_load @ 28 = 0b0,
-                reserved2 @ 31:29 = 0b0
+                reserved4 @ 31:29 = 0b0
             }
             ledctl @ 0x00200 RW {
                 led0_mode @ 3:0 = 0b0,
@@ -294,6 +294,29 @@ dev2types! {
                 link_up @ 30 = 0b0,
                 kx_kx4_kr_backplane_completed @ 31 = 0b0
             }
+            rttdcs @ 0x04900 RW {
+                tdpac @ 0 = 0b0,
+                vmpac @ 1 = 0b0,
+                reserved0 @ 3:2 = 0b0,
+                tdrm @ 4 = 0b0,
+                reserved1 @ 5 = 0b0,
+                arbdis @ 6 = 0b0,
+                reserved2 @ 16:7 = 0b0,
+                lttdesc @ 19:17 = 0b0,
+                reserved3 @ 21:20 = 0b0,
+                bdpm @ 22 = 0b1,
+                bpbfsm @ 23 = 0b1,
+                reserved4 @ 30:24 = 0b0,
+                speed_chg @ 31 = 0b0
+            }
+            dmatxctl @ 0x04A80 RW {
+                te @ 0 = 0b0,
+                reserved0 @ 1 = 0b0,
+                reserved1 @ 1 = 0b1,
+                gdv @ 3 = 0b0,
+                reserved2 @ 15:4 = 0b0,
+                vt @ 31:16 = 0x8100
+            }
             fctrl @ 0x05080 RW {
                 reserved0 @ 0 = 0b0,
                 sbp @ 1 = 0b0,
@@ -303,6 +326,46 @@ dev2types! {
                 bam @ 10 = 0b0,
                 reserved2 @ 31:11 = 0b0
             }
+            tdbal @ [
+                32,
+                |n| 0x06000 + n * 0x40
+            ] RW {
+                tdbal @ 31:0 = 0b0
+            }
+            tdbah @ [
+                32,
+                |n| 0x06004 + n * 0x40
+            ] RW {
+                tdbah @ 31:0 = 0b0
+            }
+            tdlen @ [
+                32,
+                |n| 0x06008 + n * 0x40
+            ] RW {
+                len @ 19:0 = 0b0,
+                reserved0 @ 31:20 = 0b0
+            }
+            txdctl @ [
+                128,
+                |n| 0x06028 + n * 0x40
+            ] RW {
+                pthresh @ 6:0 = 0b0,
+                reserved0 @ 7 = 0b0,
+                hthresh @ 14:8 = 0b0,
+                reserved1 @ 15 = 0b0,
+                wthresh @ 22:16 = 0b0,
+                reserved @ 24:23 = 0b0,
+                enable @ 25 = 0b0,
+                swflsh @ 26 = 0b0,
+                reserved2 @ 27 = 0b0,
+                reserved3 @ 28 = 0b0,
+                reserved4 @ 29 = 0b0,
+                reserved5 @ 31:30 = 0b0
+            }
+            dtxmxszrq @ 0x08100 RW {
+                max_bytes_num_req @ 11:0 = 0x10,
+                reserved0 @ 31:12 = 0b0
+            }
             ral0 @ 0x0A200 RW {
                 ral @ 31:0 = 0b0 // TODO it is X, i need support for this
             }
@@ -311,6 +374,14 @@ dev2types! {
                 reserved0 @ 21:16 = 0b0,
                 reserved1 @ 30:22 = 0b0,
                 av @ 31 = 0b0 // TODO same as RAL
+            }
+            txpbsize @ [
+                8,
+                |n| 0x0CC00 + n * 4 
+            ] RW {
+                reserved0 @ 9:0 = 0b0,
+                size @ 19:10 = 0xa0,
+                reserved1 @ 31:20 = 0b0
             }
             eec @ 0x10010 RW {
                 ee_sk @ 0 = 0b0,

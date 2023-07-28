@@ -4,7 +4,7 @@ use std::time::{Duration, Instant};
 use crate::constants::{NUM_RX_QUEUE_ENTRIES, NUM_TX_QUEUE_ENTRIES, PKT_BUF_ENTRY_SIZE};
 use crate::dev;
 use crate::dma::{DmaMemory, Mempool};
-use crate::types::{Error, Result, Device, Interrupts, ixgbe_adv_rx_desc, RxQueue};
+use crate::types::{Error, Result, Device, Interrupts, ixgbe_adv_rx_desc, RxQueue, ixgbe_adv_tx_desc, TxQueue};
 
 use log::{info, trace};
 
@@ -145,23 +145,78 @@ where
         self.reset_stats();
 
          // section 4.6.7 - init rx
-        self.init_rx(bus)?;
+        self.init_rx()?;
 
         // section 4.6.8 - init tx
-        self.init_tx(bus)?;
+        self.init_tx()?;
 
         Ok(())
     }
 
-    fn init_tx<B>(&mut self, bus: &mut B) -> Result<(), E>
-    where
-        B: pc_hal::traits::Bus<Error=E, Device=D, Resource=Res, DmaSpace=Dma>,
+    fn init_tx(&mut self) -> Result<(), E>
     {
+        info!("Initializing TX");
+
+        // crc offload and small packet padding
+        self.bar0.hlreg0().modify(|_, w| w.txcren(1).txpaden(1));
+
+        // section 4.6.11.3.4 - set default buffer size allocations
+        self.bar0.txpbsize(0).modify(|_, w| w.size(40));
+        for i in 1..8 {
+            self.bar0.txpbsize(i).modify(|_, w| w.size(0));
+        }
+
+        // required when not using DCB/VTd
+        // set the max bytes field to max
+        self.bar0.dtxmxszrq().modify(|_, w| w.max_bytes_num_req(0b111111111111));
+        self.bar0.rttdcs().modify(|_, w| w.arbdis(0));
+
+        // configure queues
+        for i in 0..self.num_tx_queues {
+            info!("Initializing TX queue {}", i);
+            // section 7.1.9 - setup descriptor ring
+            let ring_size_bytes =
+                NUM_TX_QUEUE_ENTRIES as usize * mem::size_of::<ixgbe_adv_tx_desc>();
+            
+            info!("Allocating {} bytes for TX queue descriptor ring {}", ring_size_bytes, i);
+
+            let mut descriptor_mem = DmaMemory::new(ring_size_bytes, &self.dma_space)?;
+
+            // initialize to 0xff to prevent rogue memory accesses on premature dma activation
+            for i in 0..ring_size_bytes {
+                descriptor_mem.write8(i, 0xff);
+            }
+
+            self.bar0.tdbal(i.into()).write(|w| w.tdbal((descriptor_mem.device_addr() & 0xffff_ffff) as u32));
+            self.bar0.tdbah(i.into()).write(|w| w.tdbah((descriptor_mem.device_addr() >> 32) as u32));
+            self.bar0.tdlen(i.into()).write(|w| w.len(ring_size_bytes as u32));
+
+            info!("Set up of DMA for TX descriptor ring {} done", i);
+
+            // TODO: DPDK values for performance
+            let sorry = 0;
+            self.bar0.txdctl(i.into()).modify(|_, w| w.pthresh(sorry).hthresh(sorry).wthresh(sorry));
+
+            let tx_queue = TxQueue {
+                descriptors: descriptor_mem,
+                pool: self.rx_queues[i as usize].pool.clone(),
+                num_descriptors: NUM_TX_QUEUE_ENTRIES,
+                clean_index: 0,
+                tx_index: 0,
+                bufs_in_use: Vec::with_capacity(NUM_TX_QUEUE_ENTRIES)
+            };
+
+            self.tx_queues.push(tx_queue);
+            info!("TX queue {} initialized", i);
+        }
+
+        self.bar0.dmatxctl().modify(|_, w| w.te(1));
+
+        info!("TX initialization done");
+        Ok(())
     }
 
-    fn init_rx<B>(&mut self, bus: &mut B) -> Result<(), E>
-    where
-        B: pc_hal::traits::Bus<Error=E, Device=D, Resource=Res, DmaSpace=Dma>,
+    fn init_rx(&mut self) -> Result<(), E>
     {
         info!("Initializing RX");
 
@@ -186,7 +241,7 @@ where
         for i in 0..self.num_rx_queues {
             info!("Initializing RX queue {}", i);
 
-            // TODO: constant, this is advanced one buffer
+            // TODO: constant, this is advanced, one buffer 
             // enable advanced rx descriptors
             self.bar0.srrctl(i.into()).modify(|_, w| w.desctype(0b001));
 
@@ -199,8 +254,7 @@ where
             
             info!("Allocating {} bytes for RX queue descriptor ring {}", ring_size_bytes, i);
 
-            let mut descriptor_mem: DmaMemory<E, Dma, MM> = DmaMemory::new(ring_size_bytes, &self.dma_space)?;
-
+            let mut descriptor_mem  = DmaMemory::new(ring_size_bytes, &self.dma_space)?;
             // initialize to 0xff to prevent rogue memory accesses on premature dma activation
             for i in 0..ring_size_bytes {
                 descriptor_mem.write8(i, 0xff);
@@ -214,7 +268,7 @@ where
             self.bar0.rdh(i.into()).modify(|_, w| w.rdh(0));
             self.bar0.rdt(i.into()).modify(|_, w| w.rdt(0));
 
-            info!("Set up of RX queue DMA for ring {} at device addr: 0x{:x} done", i, descriptor_mem.device_addr());
+            info!("Set up of DMA for RX descriptor ring {} done", i);
 
             // TODO: ixy does a thing where they limit it to page size here, let's check if we have to do this
             //let mempool_size = if NUM_RX_QUEUE_ENTRIES + NUM_TX_QUEUE_ENTRIES < 4096 {
@@ -222,10 +276,15 @@ where
             //} else {
             //    NUM_RX_QUEUE_ENTRIES + NUM_TX_QUEUE_ENTRIES
             //};
-            // I am also confused as to why we have the sum here?
+
+            info!("Setting up RX/TX Mempool {}", i);
+
+            // The sum is used here because we share a mempool between rx and tx queues
             let mempool_entries = NUM_RX_QUEUE_ENTRIES + NUM_TX_QUEUE_ENTRIES;
 
             let mempool = Mempool::new(mempool_entries, PKT_BUF_ENTRY_SIZE, &self.dma_space)?;
+
+            info!("Set up of RX/TX Mempool {} done", i);
 
             let queue = RxQueue {
                 descriptors: descriptor_mem,
@@ -234,6 +293,7 @@ where
                 rx_index: 0,
                 bufs_in_use: Vec::with_capacity(NUM_RX_QUEUE_ENTRIES),
             };
+
 
             self.rx_queues.push(queue);
             info!("RX queue {} initialized", i);
@@ -244,7 +304,7 @@ where
 
         // This reserved field says it wants to be set to 0 but is initially 1
         for i in 0..self.num_rx_queues {
-            self.bar0.dca_rxctl(i).modify(|_, w| w.reserved3(0));
+            self.bar0.dca_rxctl(i.into()).modify(|_, w| w.reserved3(0));
         }
 
         // start rx
