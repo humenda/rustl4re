@@ -9,7 +9,7 @@ use crate::types::{Error, Result, Device, Interrupts, RxQueue, TxQueue, Interrup
 use log::{info, trace};
 
 use pc_hal::prelude::*;
-use pc_hal_util::pci::{map_bar, map_msix_cap};
+use pc_hal_util::pci::{map_bar, map_msix_cap, enable_bus_master};
 use pc_hal_util::mmio::MsixDev;
 
 impl<E, IM, PD, D, Res, Dma, MM, ISR> Device<E, IM, PD, D, Res, Dma, MM, ISR>
@@ -128,7 +128,6 @@ where
         }
         info!("Set up MSI-X interrupts");
 
-        // TODO PCI bus mastering
         Ok(())
     }
 
@@ -195,6 +194,8 @@ where
 
         // section 4.6.8 - init tx
         self.init_tx()?;
+
+        enable_bus_master(&mut self.device)?;
 
         for i in 0..self.num_rx_queues {
             self.start_rx_queue(i)?;

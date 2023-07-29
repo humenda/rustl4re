@@ -77,6 +77,14 @@ fn enable_msix<E, D: pc_hal::traits::PciDevice<Error=E>>(dev: &mut D, msix_cap: 
     Ok(())
 }
 
+pub fn enable_bus_master<E, D: pc_hal::traits::PciDevice<Error=E>>(dev: &mut D) -> Result<(), E> {
+    let mut command_reg = dev.read16(0x4)?;
+    // enable bus master
+    command_reg |= 4;
+    dev.write16(0x4, command_reg)?;
+    Ok(())
+}
+
 pub fn map_msix_cap<E, D, IM>(dev: &mut D) -> Result<Option<IM>, E>
 where
     D: pc_hal::traits::PciDevice<Error=E>,
