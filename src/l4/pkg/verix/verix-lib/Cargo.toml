@@ -7,7 +7,7 @@ edition = "2021"
 
 [dependencies]
 log = "0.4"
-
+byteorder = "1.4"
 
 pc-hal-util = { path = "../pc-hal-util" }
 pc-hal = { path = "../pc-hal" }

@@ -68,7 +68,7 @@ where
     pub (crate) num_descriptors: usize,
     pub (crate) clean_index: usize,
     pub (crate) tx_index: usize,
-    pub (crate) bufs_in_use: Vec<usize>
+    pub (crate) bufs_in_use: VecDeque<usize>
 }
 pub struct Interrupts<ISR> {
     pub (crate) timeout_ms : i16,
@@ -91,29 +91,11 @@ pub struct InterruptMovingAvg {
     pub sum: u64
 }
 
-/* Transmit Descriptor - Advanced */
-#[repr(C)]
-#[derive(Debug, Copy, Clone)]
-pub struct ixgbe_adv_tx_desc_read {
-    pub buffer_addr: u64,
-    /* Address of descriptor's data buf */
-    pub cmd_type_len: u32,
-    pub olinfo_status: u32,
-}
-
-#[repr(C)]
-#[derive(Debug, Copy, Clone)]
-pub struct ixgbe_adv_tx_desc_wb {
-    pub rsvd: u64,
-    /* Reserved */
-    pub nxtseq_seed: u32,
-    pub status: u32,
-}
-
-#[repr(C)]
-#[derive(Copy, Clone)]
-pub union ixgbe_adv_tx_desc {
-    pub read: ixgbe_adv_tx_desc_read,
-    pub wb: ixgbe_adv_tx_desc_wb,
-    _union_align: [u64; 2],
+#[derive(Default, Debug, Copy, Clone)]
+pub struct DeviceStats {
+    pub rx_pkts: u64,
+    pub tx_pkts: u64,
+    pub rx_bytes: u64,
+    pub tx_bytes: u64,
+    pub tx_dma_pkts: u64
 }

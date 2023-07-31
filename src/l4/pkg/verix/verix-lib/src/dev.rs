@@ -286,6 +286,9 @@ mm2types! {
             gptc @ 0x04080 RO {
                 gptc @ 31:0 = 0b0
             }
+            txdpgc @ 0x087A0 RO {
+                gptc @ 31:0 = 0b0
+            }
             gorcl @ 0x04088 RO {
                 cnt_l @ 31:0 = 0b0
             }
@@ -525,7 +528,14 @@ mm2types! {
                 rsv @ 17:16,
                 mac @ 19:18,
                 dtyp @ 23:20,
-                dcmd @ 31:24,
+                eop @ 24,
+                ifcs @ 25,
+                reserved0 @ 26,
+                rs @ 27,
+                reserved1 @ 28,
+                dext @ 29,
+                vle @ 30,
+                tse @ 31,
                 sta @ 35:32,
                 idx @ 38:36,
                 cc @ 39,

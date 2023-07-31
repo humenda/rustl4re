@@ -1,10 +1,12 @@
 use std::{thread, mem};
 use std::time::{Duration, Instant};
+use std::collections::VecDeque;
+use std::rc::Rc;
 
 use crate::constants::{NUM_RX_QUEUE_ENTRIES, NUM_TX_QUEUE_ENTRIES, PKT_BUF_ENTRY_SIZE, INTERRUPT_INITIAL_INTERVAL};
 use crate::dev;
-use crate::dma::{DmaMemory, Mempool};
-use crate::types::{Error, Result, Device, Interrupts, RxQueue, TxQueue, InterruptsQueue};
+use crate::dma::{DmaMemory, Mempool, Packet};
+use crate::types::{Error, Result, Device, Interrupts, RxQueue, TxQueue, InterruptsQueue, DeviceStats};
 
 use log::{info, trace};
 
@@ -221,8 +223,10 @@ where
         // crc offload and small packet padding
         self.bar0.hlreg0().modify(|_, w| w.txcren(1).txpaden(1));
 
+        self.bar0.rttdcs().modify(|_, w| w.arbdis(1));
+
         // section 4.6.11.3.4 - set default buffer size allocations
-        self.bar0.txpbsize(0).modify(|_, w| w.size(40));
+        self.bar0.txpbsize(0).modify(|_, w| w.size(160));
         for i in 1..8 {
             self.bar0.txpbsize(i).modify(|_, w| w.size(0));
         }
@@ -264,7 +268,7 @@ where
                 num_descriptors: NUM_TX_QUEUE_ENTRIES,
                 clean_index: 0,
                 tx_index: 0,
-                bufs_in_use: Vec::with_capacity(NUM_TX_QUEUE_ENTRIES)
+                bufs_in_use: VecDeque::with_capacity(NUM_TX_QUEUE_ENTRIES)
             };
 
             self.tx_queues.push(tx_queue);
@@ -452,6 +456,23 @@ where
         }
     }
 
+    pub fn read_stats(&mut self, stats: &mut DeviceStats) {
+        let rx_pkts = u64::from(self.bar0.gprc().read().gprc());
+        let tx_pkts = u64::from(self.bar0.gptc().read().gptc());
+        let rx_bytes =
+            u64::from(self.bar0.gorcl().read().cnt_l()) + (u64::from(self.bar0.gorch().read().cnt_h()) << 32);
+        let tx_bytes =
+            u64::from(self.bar0.gotcl().read().cnt_l()) + (u64::from(self.bar0.gotch().read().cnt_h()) << 32);
+        let tx_dma_pkts = self.bar0.txdpgc().read().gptc();
+
+        stats.rx_pkts += rx_pkts;
+        stats.tx_pkts += tx_pkts;
+        stats.rx_bytes += rx_bytes;
+        stats.tx_bytes += tx_bytes;
+        stats.tx_dma_pkts += tx_dma_pkts as u64;
+    }
+
+
     fn reset_stats(&mut self) {
         info!("Resetting statistic registers");
         // There are many more counters on the device but we only use these for now
@@ -461,6 +482,8 @@ where
         self.bar0.gorch().read();
         self.bar0.gotcl().read();
         self.bar0.gotch().read();
+
+        self.bar0.txdpgc().read();
     }
 
     fn init_link(&mut self) {
@@ -583,4 +606,119 @@ where
         self.bar0.eims().write(|w| w.interrupt_enable(0x0));
         self.clear_interrupts();
     }
+
+    pub fn tx_batch_busy_wait(&mut self, queue_id: u16, buffer: &mut VecDeque<Packet<E, Dma, MM>>) {
+        while !buffer.is_empty() {
+            self.tx_batch(queue_id, buffer);
+        }
+    }
+
+    // TODO: move this to tx.rs
+    pub fn tx_batch(&mut self, queue_id: u16, buffer: &mut VecDeque<Packet<E, Dma, MM>>) -> usize {
+        let mut sent = 0;
+
+        let mut queue = self
+            .tx_queues
+            .get_mut(queue_id as usize)
+            .expect("invalid tx queue id");
+
+        let mut cur_index = queue.tx_index;
+        let clean_index = clean_tx_queue(&mut queue);
+
+        while let Some(packet) = buffer.pop_front() {
+            assert!(
+                Rc::ptr_eq(&queue.pool, &packet.pool),
+                "distinct memory pools for a single tx queue are not supported yet"
+            );
+
+            let next_index = wrap_ring(cur_index, queue.num_descriptors);
+
+            if clean_index == next_index {
+                // tx queue of device is full, push packet back onto the
+                // queue of to-be-sent packets
+                buffer.push_front(packet);
+                break;
+            }
+
+            queue.tx_index = wrap_ring(queue.tx_index, queue.num_descriptors);
+
+
+            let descriptor_ptr = queue.nth_descriptor_ptr(cur_index);
+            let mut desc = dev::Descriptors::adv_tx_desc_read::new(descriptor_ptr);
+            desc.lower().write(|w| w.address(packet.addr_phys as u64));
+            // TODO: dtyp as constant 0011b is Advanced transmit data descriptor
+            desc.upper().write(|w| w.paylen(packet.len as u64).dtalen(PKT_BUF_ENTRY_SIZE as u64).eop(1).rs(1).ifcs(1).dext(1).dtyp(0b0011));
+
+            queue.bufs_in_use.push_back(packet.pool_entry);
+            // TODO: unclear if this is fine
+            mem::forget(packet);
+
+            cur_index = next_index;
+            sent += 1;
+        }
+
+        self.bar0.tdt(queue_id.into()).write(|w| w.tdt(self.tx_queues[queue_id as usize].tx_index as u32));
+
+        sent
+    }
+}
+
+const TX_CLEAN_BATCH: usize = 32;
+
+fn clean_tx_queue<E, Dma, MM>(queue: &mut TxQueue<E, Dma, MM>) -> usize
+where
+    MM: pc_hal::traits::MappableMemory<Error=E, DmaSpace=Dma>,
+    Dma: pc_hal::traits::DmaSpace,
+{
+    let mut clean_index = queue.clean_index;
+    let cur_index = queue.tx_index;
+
+    loop {
+        let mut cleanable = cur_index as i32 - clean_index as i32;
+
+        if cleanable < 0 {
+            cleanable += queue.num_descriptors as i32;
+        }
+        
+
+        if cleanable < TX_CLEAN_BATCH as i32 {
+            break;
+        }
+
+        let mut cleanup_to = clean_index + TX_CLEAN_BATCH - 1;
+
+        if cleanup_to >= queue.num_descriptors {
+            cleanup_to -= queue.num_descriptors;
+        }
+
+        let descriptor_ptr = queue.nth_descriptor_ptr(cleanup_to);
+        let mut desc = dev::Descriptors::adv_tx_desc_wb::new(descriptor_ptr);
+        let status = desc.lower().read().sta();
+
+        // TODO: refactor into bit field
+        let IXGBE_ADVTXD_STAT_DD: u64 = 0x00000001; /* Descriptor Done */
+        if (status & IXGBE_ADVTXD_STAT_DD) != 0 {
+            if TX_CLEAN_BATCH as usize >= queue.bufs_in_use.len() {
+                queue.pool.free_stack
+                    .borrow_mut()
+                    .extend(queue.bufs_in_use.drain(..))
+            } else {
+                queue.pool.free_stack
+                    .borrow_mut()
+                    .extend(queue.bufs_in_use.drain(..TX_CLEAN_BATCH))
+            }
+
+            clean_index = wrap_ring(cleanup_to, queue.num_descriptors);
+        } else {
+            break;
+        }
+    }
+
+    queue.clean_index = clean_index;
+
+    clean_index
+}
+
+fn wrap_ring(index: usize, ring_size: usize) -> usize {
+    (index + 1) & (ring_size - 1)
 }
