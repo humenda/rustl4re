@@ -1,44 +1,44 @@
 // TODO: maybe this fits into pc-hal-utils we will see
 
-use std::{cell::RefCell, rc::Rc, mem};
 use std::collections::VecDeque;
+use std::fmt;
 use std::fmt::Debug;
 use std::ops::Deref;
 use std::ops::DerefMut;
-use std::fmt;
 use std::slice;
+use std::{cell::RefCell, mem, rc::Rc};
 
 use log::trace;
-use pc_hal::traits::{MaFlags, DsMapFlags, DsAttachFlags, MemoryInterface};
+use pc_hal::traits::{DsAttachFlags, DsMapFlags, MaFlags, MemoryInterface};
 
-use crate::types::{TxQueue, RxQueue};
+use crate::types::{RxQueue, TxQueue};
 
 pub const PACKET_HEADROOM: usize = 32;
 
 pub struct DmaMemory<E, Dma, MM>
 where
-    MM: pc_hal::traits::MappableMemory<Error=E, DmaSpace=Dma>,
-    Dma: pc_hal::traits::DmaSpace
+    MM: pc_hal::traits::MappableMemory<Error = E, DmaSpace = Dma>,
+    Dma: pc_hal::traits::DmaSpace,
 {
     mem: MM,
-    device_addr: usize
+    device_addr: usize,
 }
 
 pub struct Mempool<E, Dma, MM>
 where
-    MM: pc_hal::traits::MappableMemory<Error=E, DmaSpace=Dma>,
-    Dma: pc_hal::traits::DmaSpace
+    MM: pc_hal::traits::MappableMemory<Error = E, DmaSpace = Dma>,
+    Dma: pc_hal::traits::DmaSpace,
 {
     num_entries: usize,
     entry_size: usize,
     mem: RefCell<DmaMemory<E, Dma, MM>>,
-    pub(crate) free_stack: RefCell<Vec<usize>>
+    pub(crate) free_stack: RefCell<Vec<usize>>,
 }
 
 pub struct Packet<E, Dma, MM>
 where
-    MM: pc_hal::traits::MappableMemory<Error=E, DmaSpace=Dma>,
-    Dma: pc_hal::traits::DmaSpace
+    MM: pc_hal::traits::MappableMemory<Error = E, DmaSpace = Dma>,
+    Dma: pc_hal::traits::DmaSpace,
 {
     pub(crate) addr_virt: *mut u8,
     pub(crate) addr_phys: usize,
@@ -49,28 +49,28 @@ where
 
 impl<E, Dma, MM> DmaMemory<E, Dma, MM>
 where
-    MM: pc_hal::traits::MappableMemory<Error=E, DmaSpace=Dma>,
-    Dma: pc_hal::traits::DmaSpace
+    MM: pc_hal::traits::MappableMemory<Error = E, DmaSpace = Dma>,
+    Dma: pc_hal::traits::DmaSpace,
 {
-    pub fn new(size: usize, space: &Dma) -> Result<Self, E>
-    {
-
+    pub fn new(size: usize, space: &Dma) -> Result<Self, E> {
         trace!("Allocating {} bytes of memory for DMA", size);
         let mut mem = MM::alloc(
             size,
             MaFlags::PINNED | MaFlags::CONTINUOUS,
             DsMapFlags::RW,
-            DsAttachFlags::SEARCH_ADDR | DsAttachFlags::EAGER_MAP
+            DsAttachFlags::SEARCH_ADDR | DsAttachFlags::EAGER_MAP,
         )?;
 
         trace!("Mapping memory to DMA");
         let device_addr = mem.map_dma(space)?;
-        trace!("Allocated {} bytes, our addr {:p}, device addr 0x{:x}", size, mem.ptr(), device_addr);
-
-        Ok(Self{
-            mem,
+        trace!(
+            "Allocated {} bytes, our addr {:p}, device addr 0x{:x}",
+            size,
+            mem.ptr(),
             device_addr
-        })
+        );
+
+        Ok(Self { mem, device_addr })
     }
 
     pub fn device_addr(&self) -> usize {
@@ -80,8 +80,8 @@ where
 
 impl<E, Dma, MM> MemoryInterface for DmaMemory<E, Dma, MM>
 where
-    MM: pc_hal::traits::MappableMemory<Error=E, DmaSpace=Dma>,
-    Dma: pc_hal::traits::DmaSpace
+    MM: pc_hal::traits::MappableMemory<Error = E, DmaSpace = Dma>,
+    Dma: pc_hal::traits::DmaSpace,
 {
     fn ptr(&mut self) -> *mut u8 {
         self.mem.ptr()
@@ -90,18 +90,21 @@ where
 
 impl<E, Dma, MM> Mempool<E, Dma, MM>
 where
-    MM: pc_hal::traits::MappableMemory<Error=E, DmaSpace=Dma>, 
-    Dma: pc_hal::traits::DmaSpace
+    MM: pc_hal::traits::MappableMemory<Error = E, DmaSpace = Dma>,
+    Dma: pc_hal::traits::DmaSpace,
 {
-    pub fn new(num_entries: usize, entry_size: usize, space: &Dma) -> Result<Rc<Self>, E>
-    {
-        trace!("Setting up mempool with {} entries, of size {} bytes", num_entries, entry_size);
+    pub fn new(num_entries: usize, entry_size: usize, space: &Dma) -> Result<Rc<Self>, E> {
+        trace!(
+            "Setting up mempool with {} entries, of size {} bytes",
+            num_entries,
+            entry_size
+        );
         // TODO: ixy allows the OS to be non contigious here, if i figure out how to tell L4 to translate arbitrary addresses we can do that
         let mut mem: DmaMemory<E, Dma, MM> = DmaMemory::new(num_entries * entry_size, space)?;
 
         // Clear the memory to a defined initial state
         for i in 0..(num_entries * entry_size) {
-            unsafe { core::ptr::write_volatile(mem.ptr().add(i), 0x0)}
+            unsafe { core::ptr::write_volatile(mem.ptr().add(i), 0x0) }
         }
 
         // Initially all elements are free
@@ -112,7 +115,7 @@ where
             num_entries,
             entry_size,
             mem: RefCell::new(mem),
-            free_stack: RefCell::new(free_stack)
+            free_stack: RefCell::new(free_stack),
         };
         trace!("Mempool setup done");
 
@@ -129,8 +132,7 @@ where
         self.free_stack.borrow_mut().push(id);
     }
 
-    pub fn get_device_addr(&self, entry: usize) -> usize
-    {
+    pub fn get_device_addr(&self, entry: usize) -> usize {
         self.mem.borrow().device_addr + entry * self.entry_size
     }
 
@@ -150,7 +152,7 @@ where
 // TODO: dedup
 impl<E, Dma, MM> RxQueue<E, Dma, MM>
 where
-    MM: pc_hal::traits::MappableMemory<Error=E, DmaSpace=Dma>,
+    MM: pc_hal::traits::MappableMemory<Error = E, DmaSpace = Dma>,
     Dma: pc_hal::traits::DmaSpace,
 {
     pub fn nth_descriptor_ptr(&mut self, nth: usize) -> *mut u8 {
@@ -160,7 +162,7 @@ where
 
 impl<E, Dma, MM> TxQueue<E, Dma, MM>
 where
-    MM: pc_hal::traits::MappableMemory<Error=E, DmaSpace=Dma>,
+    MM: pc_hal::traits::MappableMemory<Error = E, DmaSpace = Dma>,
     Dma: pc_hal::traits::DmaSpace,
 {
     pub fn nth_descriptor_ptr(&mut self, nth: usize) -> *mut u8 {
@@ -170,7 +172,7 @@ where
 
 impl<E, Dma, MM> Deref for Packet<E, Dma, MM>
 where
-    MM: pc_hal::traits::MappableMemory<Error=E, DmaSpace=Dma>,
+    MM: pc_hal::traits::MappableMemory<Error = E, DmaSpace = Dma>,
     Dma: pc_hal::traits::DmaSpace,
 {
     type Target = [u8];
@@ -182,7 +184,7 @@ where
 
 impl<E, Dma, MM> DerefMut for Packet<E, Dma, MM>
 where
-    MM: pc_hal::traits::MappableMemory<Error=E, DmaSpace=Dma>,
+    MM: pc_hal::traits::MappableMemory<Error = E, DmaSpace = Dma>,
     Dma: pc_hal::traits::DmaSpace,
 {
     fn deref_mut(&mut self) -> &mut [u8] {
@@ -192,7 +194,7 @@ where
 
 impl<E, Dma, MM> Debug for Packet<E, Dma, MM>
 where
-    MM: pc_hal::traits::MappableMemory<Error=E, DmaSpace=Dma>,
+    MM: pc_hal::traits::MappableMemory<Error = E, DmaSpace = Dma>,
     Dma: pc_hal::traits::DmaSpace,
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -202,14 +204,13 @@ where
 
 impl<E, Dma, MM> Drop for Packet<E, Dma, MM>
 where
-    MM: pc_hal::traits::MappableMemory<Error=E, DmaSpace=Dma>,
+    MM: pc_hal::traits::MappableMemory<Error = E, DmaSpace = Dma>,
     Dma: pc_hal::traits::DmaSpace,
 {
     fn drop(&mut self) {
         self.pool.free_buf(self.pool_entry);
     }
 }
-
 
 pub fn alloc_pkt_batch<E, Dma, MM>(
     pool: &Rc<Mempool<E, Dma, MM>>,
@@ -218,7 +219,7 @@ pub fn alloc_pkt_batch<E, Dma, MM>(
     packet_size: usize,
 ) -> usize
 where
-    MM: pc_hal::traits::MappableMemory<Error=E, DmaSpace=Dma>,
+    MM: pc_hal::traits::MappableMemory<Error = E, DmaSpace = Dma>,
     Dma: pc_hal::traits::DmaSpace,
 {
     let mut allocated = 0;
@@ -235,22 +236,23 @@ where
     allocated
 }
 
-pub fn alloc_pkt<E, Dma, MM>(pool: &Rc<Mempool<E, Dma, MM>>, size: usize) -> Option<Packet<E, Dma, MM>>
+pub fn alloc_pkt<E, Dma, MM>(
+    pool: &Rc<Mempool<E, Dma, MM>>,
+    size: usize,
+) -> Option<Packet<E, Dma, MM>>
 where
-    MM: pc_hal::traits::MappableMemory<Error=E, DmaSpace=Dma>,
+    MM: pc_hal::traits::MappableMemory<Error = E, DmaSpace = Dma>,
     Dma: pc_hal::traits::DmaSpace,
 {
     if size > pool.entry_size - PACKET_HEADROOM {
         return None;
     }
 
-    pool.alloc_buf().map(|id|
-        Packet {
-            addr_virt: unsafe { pool.get_our_addr(id).add(PACKET_HEADROOM) },
-            addr_phys: pool.get_device_addr(id) + PACKET_HEADROOM,
-            len: size,
-            pool: Rc::clone(pool),
-            pool_entry: id,
-        }
-    )
+    pool.alloc_buf().map(|id| Packet {
+        addr_virt: unsafe { pool.get_our_addr(id).add(PACKET_HEADROOM) },
+        addr_phys: pool.get_device_addr(id) + PACKET_HEADROOM,
+        len: size,
+        pool: Rc::clone(pool),
+        pool_entry: id,
+    })
 }

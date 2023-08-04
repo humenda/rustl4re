@@ -4,69 +4,195 @@ pub trait RegMarker {
 
 pub struct RegWidth<const WIDTH: usize>;
 
-impl RegMarker for RegWidth<1> { type Reg = u8; }
-impl RegMarker for RegWidth<2> { type Reg = u8; }
-impl RegMarker for RegWidth<3> { type Reg = u8; }
-impl RegMarker for RegWidth<4> { type Reg = u8; }
-impl RegMarker for RegWidth<5> { type Reg = u8; }
-impl RegMarker for RegWidth<6> { type Reg = u8; }
-impl RegMarker for RegWidth<7> { type Reg = u8; }
-impl RegMarker for RegWidth<8> { type Reg = u8; }
-impl RegMarker for RegWidth<9> { type Reg = u16; }
-impl RegMarker for RegWidth<10>{ type Reg = u16; }
-impl RegMarker for RegWidth<11>{ type Reg = u16; }
-impl RegMarker for RegWidth<12>{ type Reg = u16; }
-impl RegMarker for RegWidth<13>{ type Reg = u16; }
-impl RegMarker for RegWidth<14>{ type Reg = u16; }
-impl RegMarker for RegWidth<15>{ type Reg = u16; }
-impl RegMarker for RegWidth<16>{ type Reg = u16; }
-impl RegMarker for RegWidth<17>{ type Reg = u32; }
-impl RegMarker for RegWidth<18>{ type Reg = u32; }
-impl RegMarker for RegWidth<19>{ type Reg = u32; }
-impl RegMarker for RegWidth<20>{ type Reg = u32; }
-impl RegMarker for RegWidth<21>{ type Reg = u32; }
-impl RegMarker for RegWidth<22>{ type Reg = u32; }
-impl RegMarker for RegWidth<23>{ type Reg = u32; }
-impl RegMarker for RegWidth<24>{ type Reg = u32; }
-impl RegMarker for RegWidth<25>{ type Reg = u32; }
-impl RegMarker for RegWidth<26>{ type Reg = u32; }
-impl RegMarker for RegWidth<27>{ type Reg = u32; }
-impl RegMarker for RegWidth<28>{ type Reg = u32; }
-impl RegMarker for RegWidth<29>{ type Reg = u32; }
-impl RegMarker for RegWidth<30>{ type Reg = u32; }
-impl RegMarker for RegWidth<31>{ type Reg = u32; }
-impl RegMarker for RegWidth<32>{ type Reg = u32; }
-impl RegMarker for RegWidth<33>{ type Reg = u64; }
-impl RegMarker for RegWidth<34>{ type Reg = u64; }
-impl RegMarker for RegWidth<35>{ type Reg = u64; }
-impl RegMarker for RegWidth<36>{ type Reg = u64; }
-impl RegMarker for RegWidth<37>{ type Reg = u64; }
-impl RegMarker for RegWidth<38>{ type Reg = u64; }
-impl RegMarker for RegWidth<39>{ type Reg = u64; }
-impl RegMarker for RegWidth<40>{ type Reg = u64; }
-impl RegMarker for RegWidth<41>{ type Reg = u64; }
-impl RegMarker for RegWidth<42>{ type Reg = u64; }
-impl RegMarker for RegWidth<43>{ type Reg = u64; }
-impl RegMarker for RegWidth<44>{ type Reg = u64; }
-impl RegMarker for RegWidth<45>{ type Reg = u64; }
-impl RegMarker for RegWidth<46>{ type Reg = u64; }
-impl RegMarker for RegWidth<47>{ type Reg = u64; }
-impl RegMarker for RegWidth<48>{ type Reg = u64; }
-impl RegMarker for RegWidth<49>{ type Reg = u64; }
-impl RegMarker for RegWidth<50>{ type Reg = u64; }
-impl RegMarker for RegWidth<51>{ type Reg = u64; }
-impl RegMarker for RegWidth<52>{ type Reg = u64; }
-impl RegMarker for RegWidth<53>{ type Reg = u64; }
-impl RegMarker for RegWidth<54>{ type Reg = u64; }
-impl RegMarker for RegWidth<56>{ type Reg = u64; }
-impl RegMarker for RegWidth<57>{ type Reg = u64; }
-impl RegMarker for RegWidth<58>{ type Reg = u64; }
-impl RegMarker for RegWidth<59>{ type Reg = u64; }
-impl RegMarker for RegWidth<60>{ type Reg = u64; }
-impl RegMarker for RegWidth<61>{ type Reg = u64; }
-impl RegMarker for RegWidth<62>{ type Reg = u64; }
-impl RegMarker for RegWidth<63>{ type Reg = u64; }
-impl RegMarker for RegWidth<64>{ type Reg = u64; }
+impl RegMarker for RegWidth<1> {
+    type Reg = u8;
+}
+impl RegMarker for RegWidth<2> {
+    type Reg = u8;
+}
+impl RegMarker for RegWidth<3> {
+    type Reg = u8;
+}
+impl RegMarker for RegWidth<4> {
+    type Reg = u8;
+}
+impl RegMarker for RegWidth<5> {
+    type Reg = u8;
+}
+impl RegMarker for RegWidth<6> {
+    type Reg = u8;
+}
+impl RegMarker for RegWidth<7> {
+    type Reg = u8;
+}
+impl RegMarker for RegWidth<8> {
+    type Reg = u8;
+}
+impl RegMarker for RegWidth<9> {
+    type Reg = u16;
+}
+impl RegMarker for RegWidth<10> {
+    type Reg = u16;
+}
+impl RegMarker for RegWidth<11> {
+    type Reg = u16;
+}
+impl RegMarker for RegWidth<12> {
+    type Reg = u16;
+}
+impl RegMarker for RegWidth<13> {
+    type Reg = u16;
+}
+impl RegMarker for RegWidth<14> {
+    type Reg = u16;
+}
+impl RegMarker for RegWidth<15> {
+    type Reg = u16;
+}
+impl RegMarker for RegWidth<16> {
+    type Reg = u16;
+}
+impl RegMarker for RegWidth<17> {
+    type Reg = u32;
+}
+impl RegMarker for RegWidth<18> {
+    type Reg = u32;
+}
+impl RegMarker for RegWidth<19> {
+    type Reg = u32;
+}
+impl RegMarker for RegWidth<20> {
+    type Reg = u32;
+}
+impl RegMarker for RegWidth<21> {
+    type Reg = u32;
+}
+impl RegMarker for RegWidth<22> {
+    type Reg = u32;
+}
+impl RegMarker for RegWidth<23> {
+    type Reg = u32;
+}
+impl RegMarker for RegWidth<24> {
+    type Reg = u32;
+}
+impl RegMarker for RegWidth<25> {
+    type Reg = u32;
+}
+impl RegMarker for RegWidth<26> {
+    type Reg = u32;
+}
+impl RegMarker for RegWidth<27> {
+    type Reg = u32;
+}
+impl RegMarker for RegWidth<28> {
+    type Reg = u32;
+}
+impl RegMarker for RegWidth<29> {
+    type Reg = u32;
+}
+impl RegMarker for RegWidth<30> {
+    type Reg = u32;
+}
+impl RegMarker for RegWidth<31> {
+    type Reg = u32;
+}
+impl RegMarker for RegWidth<32> {
+    type Reg = u32;
+}
+impl RegMarker for RegWidth<33> {
+    type Reg = u64;
+}
+impl RegMarker for RegWidth<34> {
+    type Reg = u64;
+}
+impl RegMarker for RegWidth<35> {
+    type Reg = u64;
+}
+impl RegMarker for RegWidth<36> {
+    type Reg = u64;
+}
+impl RegMarker for RegWidth<37> {
+    type Reg = u64;
+}
+impl RegMarker for RegWidth<38> {
+    type Reg = u64;
+}
+impl RegMarker for RegWidth<39> {
+    type Reg = u64;
+}
+impl RegMarker for RegWidth<40> {
+    type Reg = u64;
+}
+impl RegMarker for RegWidth<41> {
+    type Reg = u64;
+}
+impl RegMarker for RegWidth<42> {
+    type Reg = u64;
+}
+impl RegMarker for RegWidth<43> {
+    type Reg = u64;
+}
+impl RegMarker for RegWidth<44> {
+    type Reg = u64;
+}
+impl RegMarker for RegWidth<45> {
+    type Reg = u64;
+}
+impl RegMarker for RegWidth<46> {
+    type Reg = u64;
+}
+impl RegMarker for RegWidth<47> {
+    type Reg = u64;
+}
+impl RegMarker for RegWidth<48> {
+    type Reg = u64;
+}
+impl RegMarker for RegWidth<49> {
+    type Reg = u64;
+}
+impl RegMarker for RegWidth<50> {
+    type Reg = u64;
+}
+impl RegMarker for RegWidth<51> {
+    type Reg = u64;
+}
+impl RegMarker for RegWidth<52> {
+    type Reg = u64;
+}
+impl RegMarker for RegWidth<53> {
+    type Reg = u64;
+}
+impl RegMarker for RegWidth<54> {
+    type Reg = u64;
+}
+impl RegMarker for RegWidth<56> {
+    type Reg = u64;
+}
+impl RegMarker for RegWidth<57> {
+    type Reg = u64;
+}
+impl RegMarker for RegWidth<58> {
+    type Reg = u64;
+}
+impl RegMarker for RegWidth<59> {
+    type Reg = u64;
+}
+impl RegMarker for RegWidth<60> {
+    type Reg = u64;
+}
+impl RegMarker for RegWidth<61> {
+    type Reg = u64;
+}
+impl RegMarker for RegWidth<62> {
+    type Reg = u64;
+}
+impl RegMarker for RegWidth<63> {
+    type Reg = u64;
+}
+impl RegMarker for RegWidth<64> {
+    type Reg = u64;
+}
 
 #[macro_export]
 macro_rules! mm2types {

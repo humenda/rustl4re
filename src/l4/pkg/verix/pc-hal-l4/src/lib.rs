@@ -2,13 +2,13 @@ extern crate l4;
 extern crate l4_sys;
 extern crate l4re;
 
-use l4re::env::get_cap;
-use l4re::OwnedCap;
-use l4re::mem::VolatileMemoryInterface;
-use l4re::io::ResourceType;
-use l4re::sys::l4vbus_iface_type_t;
-use l4re::factory::{Factory, FactoryCreate, IrqSender};
 use l4::cap::Cap;
+use l4re::env::get_cap;
+use l4re::factory::{Factory, FactoryCreate, IrqSender};
+use l4re::io::ResourceType;
+use l4re::mem::VolatileMemoryInterface;
+use l4re::sys::l4vbus_iface_type_t;
+use l4re::OwnedCap;
 
 use pc_hal::traits::Device as _;
 
@@ -27,7 +27,7 @@ pub struct IrqHandler {
     irq_num: u32,
     msi_addr: u64,
     msi_data: u32,
-    unmask_icu: bool
+    unmask_icu: bool,
 }
 
 impl AsMut<Device> for PciDevice {
@@ -35,7 +35,6 @@ impl AsMut<Device> for PciDevice {
         &mut self.0
     }
 }
-
 
 impl Iterator for DeviceIter {
     type Item = Device;
@@ -67,7 +66,6 @@ impl pc_hal::traits::Bus for Vbus {
     type DmaSpace = DmaSpace;
     type DeviceIter = DeviceIter;
 
-
     fn get() -> Option<Self> {
         Some(Vbus(get_cap("vbus")?))
     }
@@ -76,8 +74,13 @@ impl pc_hal::traits::Bus for Vbus {
         DeviceIter(self.0.device_iter())
     }
 
-    fn assign_dma_domain(&self, dma_domain: &mut Self::Resource, dma_space: &mut Self::DmaSpace) -> Result<(), Self::Error> {
-        self.0.assign_dma_domain(&mut dma_domain.0, &mut dma_space.0)
+    fn assign_dma_domain(
+        &self,
+        dma_domain: &mut Self::Resource,
+        dma_space: &mut Self::DmaSpace,
+    ) -> Result<(), Self::Error> {
+        self.0
+            .assign_dma_domain(&mut dma_domain.0, &mut dma_space.0)
     }
 }
 
@@ -91,13 +94,27 @@ impl pc_hal::traits::Device for Device {
 
     fn supports_interface(&self, iface: pc_hal::traits::BusInterface) -> bool {
         match iface {
-            pc_hal::traits::BusInterface::Icu => self.0.supports_interface(l4vbus_iface_type_t::L4VBUS_INTERFACE_ICU),
-            pc_hal::traits::BusInterface::Gpio => self.0.supports_interface(l4vbus_iface_type_t::L4VBUS_INTERFACE_GPIO),
-            pc_hal::traits::BusInterface::Pci => self.0.supports_interface(l4vbus_iface_type_t::L4VBUS_INTERFACE_PCI),
-            pc_hal::traits::BusInterface::Pcidev => self.0.supports_interface(l4vbus_iface_type_t::L4VBUS_INTERFACE_PCIDEV),
-            pc_hal::traits::BusInterface::PowerManagement => self.0.supports_interface(l4vbus_iface_type_t::L4VBUS_INTERFACE_PM),
-            pc_hal::traits::BusInterface::Vbus => self.0.supports_interface(l4vbus_iface_type_t::L4VBUS_INTERFACE_BUS),
-            pc_hal::traits::BusInterface::Generic => self.0.supports_interface(l4vbus_iface_type_t::L4VBUS_INTERFACE_GENERIC),
+            pc_hal::traits::BusInterface::Icu => self
+                .0
+                .supports_interface(l4vbus_iface_type_t::L4VBUS_INTERFACE_ICU),
+            pc_hal::traits::BusInterface::Gpio => self
+                .0
+                .supports_interface(l4vbus_iface_type_t::L4VBUS_INTERFACE_GPIO),
+            pc_hal::traits::BusInterface::Pci => self
+                .0
+                .supports_interface(l4vbus_iface_type_t::L4VBUS_INTERFACE_PCI),
+            pc_hal::traits::BusInterface::Pcidev => self
+                .0
+                .supports_interface(l4vbus_iface_type_t::L4VBUS_INTERFACE_PCIDEV),
+            pc_hal::traits::BusInterface::PowerManagement => self
+                .0
+                .supports_interface(l4vbus_iface_type_t::L4VBUS_INTERFACE_PM),
+            pc_hal::traits::BusInterface::Vbus => self
+                .0
+                .supports_interface(l4vbus_iface_type_t::L4VBUS_INTERFACE_BUS),
+            pc_hal::traits::BusInterface::Generic => self
+                .0
+                .supports_interface(l4vbus_iface_type_t::L4VBUS_INTERFACE_GENERIC),
         }
     }
 }
@@ -120,27 +137,27 @@ impl pc_hal::traits::FailibleMemoryInterface32 for PciDevice {
     type Error = l4::Error;
 
     fn read8(&self, reg: u32) -> Result<u8, Self::Error> {
-        self.0.0.vbus().pcidev_cfg_read8(&self.0.0, reg)
+        self.0 .0.vbus().pcidev_cfg_read8(&self.0 .0, reg)
     }
 
     fn read16(&self, reg: u32) -> Result<u16, Self::Error> {
-        self.0.0.vbus().pcidev_cfg_read16(&self.0.0, reg)
+        self.0 .0.vbus().pcidev_cfg_read16(&self.0 .0, reg)
     }
 
     fn read32(&self, reg: u32) -> Result<u32, Self::Error> {
-        self.0.0.vbus().pcidev_cfg_read32(&self.0.0, reg)
+        self.0 .0.vbus().pcidev_cfg_read32(&self.0 .0, reg)
     }
 
     fn write8(&mut self, reg: u32, val: u8) -> Result<(), Self::Error> {
-        self.0.0.vbus().pcidev_cfg_write8(&self.0.0, reg, val)
+        self.0 .0.vbus().pcidev_cfg_write8(&self.0 .0, reg, val)
     }
 
     fn write16(&mut self, reg: u32, val: u16) -> Result<(), Self::Error> {
-        self.0.0.vbus().pcidev_cfg_write16(&self.0.0, reg, val)
+        self.0 .0.vbus().pcidev_cfg_write16(&self.0 .0, reg, val)
     }
 
     fn write32(&mut self, reg: u32, val: u32) -> Result<(), Self::Error> {
-        self.0.0.vbus().pcidev_cfg_write32(&self.0.0, reg, val)
+        self.0 .0.vbus().pcidev_cfg_write32(&self.0 .0, reg, val)
     }
 }
 
@@ -163,7 +180,6 @@ impl pc_hal::traits::Resource for Resource {
 
     fn end(&mut self) -> usize {
         self.0.end()
-
     }
 
     fn typ(&self) -> pc_hal::traits::ResourceType {
@@ -186,27 +202,42 @@ impl pc_hal::traits::MemoryInterface for IoMem {
     }
 }
 
-
 impl pc_hal::traits::IoMem for IoMem {
     type Error = l4::Error;
 
-    fn request(phys: u64, size: u64, flags: pc_hal::traits::IoMemFlags) -> Result<Self, Self::Error> {
+    fn request(
+        phys: u64,
+        size: u64,
+        flags: pc_hal::traits::IoMemFlags,
+    ) -> Result<Self, Self::Error> {
         let pairs = [
-            (pc_hal::traits::IoMemFlags::NONCACHED, l4re::io::IoMemFlags::NONCACHED),
-            (pc_hal::traits::IoMemFlags::CACHED,    l4re::io::IoMemFlags::CACHED),
-            (pc_hal::traits::IoMemFlags::USE_MTRR,  l4re::io::IoMemFlags::USE_MTRR),
-            (pc_hal::traits::IoMemFlags::EAGER_MAP, l4re::io::IoMemFlags::EAGER_MAP),
+            (
+                pc_hal::traits::IoMemFlags::NONCACHED,
+                l4re::io::IoMemFlags::NONCACHED,
+            ),
+            (
+                pc_hal::traits::IoMemFlags::CACHED,
+                l4re::io::IoMemFlags::CACHED,
+            ),
+            (
+                pc_hal::traits::IoMemFlags::USE_MTRR,
+                l4re::io::IoMemFlags::USE_MTRR,
+            ),
+            (
+                pc_hal::traits::IoMemFlags::EAGER_MAP,
+                l4re::io::IoMemFlags::EAGER_MAP,
+            ),
         ];
-        let translated = pairs.iter().fold(
-            l4re::io::IoMemFlags::empty(),
-            |acc, (pc_flag, l4_flag)| {
-                if (flags.bits() & pc_flag.bits()) != 0{
-                    acc | *l4_flag
-                } else {
-                    acc
-                }
-            }
-        );
+        let translated =
+            pairs
+                .iter()
+                .fold(l4re::io::IoMemFlags::empty(), |acc, (pc_flag, l4_flag)| {
+                    if (flags.bits() & pc_flag.bits()) != 0 {
+                        acc | *l4_flag
+                    } else {
+                        acc
+                    }
+                });
 
         Ok(IoMem(l4re::io::IoMem::request(phys, size, translated)?))
     }
@@ -242,9 +273,13 @@ impl pc_hal::traits::Icu for Icu {
         Ok(Icu(l4re::io::Icu::from_device(&bus.0, dev.0)?))
     }
 
-    fn bind_msi(&self, irq_num: u32, target: &mut Self::Device) -> Result<Self::IrqHandler, Self::Error> {
+    fn bind_msi(
+        &self,
+        irq_num: u32,
+        target: &mut Self::Device,
+    ) -> Result<Self::IrqHandler, Self::Error> {
         let default_factory = Factory::default_factory_from_env();
-        let irq_cap : OwnedCap<IrqSender> = default_factory.create(())?;
+        let irq_cap: OwnedCap<IrqSender> = default_factory.create(())?;
         let (msi_info, unmask_icu) = self.0.bind_msi(&irq_cap, irq_num, &target.0)?;
         Ok(IrqHandler {
             irq_cap,
@@ -279,12 +314,23 @@ impl pc_hal::traits::MappableMemory for MappableMemory {
     type Error = l4::Error;
     type DmaSpace = DmaSpace;
 
-    fn alloc(size: usize, alloc_flags: pc_hal::traits::MaFlags, map_flags: pc_hal::traits::DsMapFlags, attach_flags: pc_hal::traits::DsAttachFlags) -> Result<Self, Self::Error> {
+    fn alloc(
+        size: usize,
+        alloc_flags: pc_hal::traits::MaFlags,
+        map_flags: pc_hal::traits::DsMapFlags,
+        attach_flags: pc_hal::traits::DsAttachFlags,
+    ) -> Result<Self, Self::Error> {
         // TODO: dedup
         let pairs_alloc = [
-            (pc_hal::traits::MaFlags::CONTINUOUS, l4re::mem::MaFlags::CONTINUOUS),
+            (
+                pc_hal::traits::MaFlags::CONTINUOUS,
+                l4re::mem::MaFlags::CONTINUOUS,
+            ),
             (pc_hal::traits::MaFlags::PINNED, l4re::mem::MaFlags::PINNED),
-            (pc_hal::traits::MaFlags::SUPER_PAGES, l4re::mem::MaFlags::SUPER_PAGES),
+            (
+                pc_hal::traits::MaFlags::SUPER_PAGES,
+                l4re::mem::MaFlags::SUPER_PAGES,
+            ),
         ];
 
         let pairs_map = [
@@ -294,55 +340,82 @@ impl pc_hal::traits::MappableMemory for MappableMemory {
             (pc_hal::traits::DsMapFlags::RW, l4re::mem::DsMapFlags::RW),
             (pc_hal::traits::DsMapFlags::RX, l4re::mem::DsMapFlags::RX),
             (pc_hal::traits::DsMapFlags::RWX, l4re::mem::DsMapFlags::RWX),
-            (pc_hal::traits::DsMapFlags::RIGHTS_MASK, l4re::mem::DsMapFlags::RIGHTS_MASK),
-            (pc_hal::traits::DsMapFlags::NORMAL, l4re::mem::DsMapFlags::NORMAL),
-            (pc_hal::traits::DsMapFlags::BUFFERABLE, l4re::mem::DsMapFlags::BUFFERABLE),
-            (pc_hal::traits::DsMapFlags::UNCACHEABLE, l4re::mem::DsMapFlags::UNCACHEABLE),
-            (pc_hal::traits::DsMapFlags::CACHING_MASK, l4re::mem::DsMapFlags::CACHING_MASK),
+            (
+                pc_hal::traits::DsMapFlags::RIGHTS_MASK,
+                l4re::mem::DsMapFlags::RIGHTS_MASK,
+            ),
+            (
+                pc_hal::traits::DsMapFlags::NORMAL,
+                l4re::mem::DsMapFlags::NORMAL,
+            ),
+            (
+                pc_hal::traits::DsMapFlags::BUFFERABLE,
+                l4re::mem::DsMapFlags::BUFFERABLE,
+            ),
+            (
+                pc_hal::traits::DsMapFlags::UNCACHEABLE,
+                l4re::mem::DsMapFlags::UNCACHEABLE,
+            ),
+            (
+                pc_hal::traits::DsMapFlags::CACHING_MASK,
+                l4re::mem::DsMapFlags::CACHING_MASK,
+            ),
         ];
 
         let pairs_attach = [
-            (pc_hal::traits::DsAttachFlags::SEARCH_ADDR, l4re::mem::DsAttachFlags::SEARCH_ADDR),
-            (pc_hal::traits::DsAttachFlags::IN_AREA, l4re::mem::DsAttachFlags::IN_AREA),
-            (pc_hal::traits::DsAttachFlags::EAGER_MAP, l4re::mem::DsAttachFlags::EAGER_MAP),
+            (
+                pc_hal::traits::DsAttachFlags::SEARCH_ADDR,
+                l4re::mem::DsAttachFlags::SEARCH_ADDR,
+            ),
+            (
+                pc_hal::traits::DsAttachFlags::IN_AREA,
+                l4re::mem::DsAttachFlags::IN_AREA,
+            ),
+            (
+                pc_hal::traits::DsAttachFlags::EAGER_MAP,
+                l4re::mem::DsAttachFlags::EAGER_MAP,
+            ),
         ];
 
+        let translated_alloc =
+            pairs_alloc
+                .iter()
+                .fold(l4re::mem::MaFlags::empty(), |acc, (pc_flag, l4_flag)| {
+                    if (alloc_flags.bits() & pc_flag.bits()) != 0 {
+                        acc | *l4_flag
+                    } else {
+                        acc
+                    }
+                });
 
-        let translated_alloc = pairs_alloc.iter().fold(
-            l4re::mem::MaFlags::empty(),
-            |acc, (pc_flag, l4_flag)| {
-                if (alloc_flags.bits() & pc_flag.bits()) != 0{
-                    acc | *l4_flag
-                } else {
-                    acc
-                }
-            }
-        );
-
-        let translated_map = pairs_map.iter().fold(
-            l4re::mem::DsMapFlags::empty(),
-            |acc, (pc_flag, l4_flag)| {
-                if (map_flags.bits() & pc_flag.bits()) != 0{
-                    acc | *l4_flag
-                } else {
-                    acc
-                }
-            }
-        );
+        let translated_map =
+            pairs_map
+                .iter()
+                .fold(l4re::mem::DsMapFlags::empty(), |acc, (pc_flag, l4_flag)| {
+                    if (map_flags.bits() & pc_flag.bits()) != 0 {
+                        acc | *l4_flag
+                    } else {
+                        acc
+                    }
+                });
 
         let translated_attach = pairs_attach.iter().fold(
             l4re::mem::DsAttachFlags::empty(),
             |acc, (pc_flag, l4_flag)| {
-                if (attach_flags.bits() & pc_flag.bits()) != 0{
+                if (attach_flags.bits() & pc_flag.bits()) != 0 {
                     acc | *l4_flag
                 } else {
                     acc
                 }
-            }
+            },
         );
 
         let mem = l4re::mem::Dataspace::alloc(size, translated_alloc)?;
-        Ok(MappableMemory(l4re::mem::Dataspace::attach(mem, translated_map, translated_attach)?))
+        Ok(MappableMemory(l4re::mem::Dataspace::attach(
+            mem,
+            translated_map,
+            translated_attach,
+        )?))
     }
     fn map_dma(&mut self, target: &Self::DmaSpace) -> Result<usize, Self::Error> {
         self.0.map_dma(&target.0)

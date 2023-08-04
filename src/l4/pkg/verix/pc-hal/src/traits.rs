@@ -6,15 +6,21 @@ pub trait DmaSpace {
 
 pub trait Bus {
     type Error;
-    type Device : Device;
-    type Resource : Resource;
-    type DmaSpace : DmaSpace;
-    type DeviceIter : Iterator<Item=Self::Device>;
+    type Device: Device;
+    type Resource: Resource;
+    type DmaSpace: DmaSpace;
+    type DeviceIter: Iterator<Item = Self::Device>;
 
-    fn get() -> Option<Self> where Self: Sized;
+    fn get() -> Option<Self>
+    where
+        Self: Sized;
     fn device_iter(&self) -> Self::DeviceIter;
 
-    fn assign_dma_domain(&self, dma_domain: &mut Self::Resource, dma_space: &mut Self::DmaSpace) -> Result<(), Self::Error>;
+    fn assign_dma_domain(
+        &self,
+        dma_domain: &mut Self::Resource,
+        dma_space: &mut Self::DmaSpace,
+    ) -> Result<(), Self::Error>;
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
@@ -25,18 +31,19 @@ pub enum BusInterface {
     Pcidev,
     PowerManagement,
     Vbus,
-    Generic
+    Generic,
 }
 
 pub trait Device {
-    type Resource : Resource;
+    type Resource: Resource;
 
-    type ResourceIter<'a> : Iterator<Item=Self::Resource> where Self : 'a;
+    type ResourceIter<'a>: Iterator<Item = Self::Resource>
+    where
+        Self: 'a;
 
     fn resource_iter<'a>(&'a self) -> Self::ResourceIter<'a>;
     fn supports_interface(&self, iface: BusInterface) -> bool;
 }
-
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum ResourceType {
@@ -46,7 +53,7 @@ pub enum ResourceType {
     Port,
     Bus,
     Gpio,
-    DmaDomain
+    DmaDomain,
 }
 
 pub trait Resource {
@@ -78,9 +85,11 @@ impl MemoryInterface for *mut u8 {
     }
 }
 
-pub trait PciDevice : Device + FailibleMemoryInterface32<Addr=u32> {
-    type Device : Device;
-    fn try_of_device(dev: Self::Device) -> Option<Self> where Self: Sized;
+pub trait PciDevice: Device + FailibleMemoryInterface32<Addr = u32> {
+    type Device: Device;
+    fn try_of_device(dev: Self::Device) -> Option<Self>
+    where
+        Self: Sized;
 }
 
 bitflags! {
@@ -92,11 +101,13 @@ bitflags! {
     }
 }
 
-pub trait IoMem : MemoryInterface {
+pub trait IoMem: MemoryInterface {
     type Error;
 
     // TODO: this is very l4 specific but it should be fine for our purposes
-    fn request(phys: u64, size: u64, flags: IoMemFlags) -> Result<Self, Self::Error> where Self: Sized;
+    fn request(phys: u64, size: u64, flags: IoMemFlags) -> Result<Self, Self::Error>
+    where
+        Self: Sized;
 }
 
 pub trait IrqHandler {
@@ -106,18 +117,22 @@ pub trait IrqHandler {
     fn msi_data(&self) -> u32;
     fn bind_curr_thread(&mut self, label: u64) -> Result<(), Self::Error>;
     fn receive(&mut self) -> Result<(), Self::Error>;
-
 }
-
 
 pub trait Icu {
     type Error;
-    type Device : Device;
-    type Bus : Bus;
-    type IrqHandler : IrqHandler;
+    type Device: Device;
+    type Bus: Bus;
+    type IrqHandler: IrqHandler;
 
-    fn from_device(bus: &Self::Bus, dev: Self::Device) -> Result<Self, Self::Error> where Self: Sized;
-    fn bind_msi(&self, irq_num: u32, target: &mut Self::Device) -> Result<Self::IrqHandler, Self::Error>;
+    fn from_device(bus: &Self::Bus, dev: Self::Device) -> Result<Self, Self::Error>
+    where
+        Self: Sized;
+    fn bind_msi(
+        &self,
+        irq_num: u32,
+        target: &mut Self::Device,
+    ) -> Result<Self::IrqHandler, Self::Error>;
     fn unmask(&self, handler: &mut Self::IrqHandler) -> Result<(), Self::Error>;
     fn nr_msis(&self) -> Result<u32, Self::Error>;
 }
@@ -154,13 +169,20 @@ bitflags! {
     }
 }
 
-pub trait MappableMemory : MemoryInterface {
+pub trait MappableMemory: MemoryInterface {
     type Error;
     // Very unclear if this should be associated types, makes it basically impossible to use
     // generically
-    type DmaSpace : DmaSpace;
+    type DmaSpace: DmaSpace;
 
     // TODO: this is very l4 specific but it should be fine for our purposes
-    fn alloc(size: usize, alloc_flags: MaFlags, map_flags: DsMapFlags, attach_flags: DsAttachFlags) -> Result<Self, Self::Error> where Self: Sized;
+    fn alloc(
+        size: usize,
+        alloc_flags: MaFlags,
+        map_flags: DsMapFlags,
+        attach_flags: DsAttachFlags,
+    ) -> Result<Self, Self::Error>
+    where
+        Self: Sized;
     fn map_dma(&mut self, target: &Self::DmaSpace) -> Result<usize, Self::Error>;
 }

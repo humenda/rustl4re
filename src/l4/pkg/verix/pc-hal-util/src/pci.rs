@@ -3,8 +3,8 @@ use pc_hal::traits::IoMemFlags;
 
 pub fn map_bar<E, D, IM>(dev: &mut D, bar_idx: u8) -> Result<IM, E>
 where
-    D: pc_hal::traits::PciDevice<Error=E>,
-    IM: pc_hal::traits::IoMem<Error=E>
+    D: pc_hal::traits::PciDevice<Error = E>,
+    IM: pc_hal::traits::IoMem<Error = E>,
 {
     // TODO: 64 bit BAR
     let mut command_reg = dev.read16(0x4)?;
@@ -21,7 +21,10 @@ where
     size = !size;
     size += 1;
     dev.write32(bar_addr, bar_reg)?;
-    info!("Mapping BAR{}, addr: 0x{:x}, size: 0x{:x}", bar_idx, bar, size);
+    info!(
+        "Mapping BAR{}, addr: 0x{:x}, size: 0x{:x}",
+        bar_idx, bar, size
+    );
 
     let mut command_reg = dev.read16(0x4)?;
     // enable memory BARs again
@@ -41,7 +44,10 @@ struct CapResult {
     ptr: u8,
 }
 
-fn parse_cap<E, D: pc_hal::traits::PciDevice<Error=E>>(dev: &mut D, curr_cap_ptr: u8) -> Result<CapResult, E> {
+fn parse_cap<E, D: pc_hal::traits::PciDevice<Error = E>>(
+    dev: &mut D,
+    curr_cap_ptr: u8,
+) -> Result<CapResult, E> {
     let id = dev.read8(curr_cap_ptr.into())?;
     let next = dev.read8((curr_cap_ptr + 1).into())?;
 
@@ -52,7 +58,10 @@ fn parse_cap<E, D: pc_hal::traits::PciDevice<Error=E>>(dev: &mut D, curr_cap_ptr
     })
 }
 
-fn find_msix_cap<E, D: pc_hal::traits::PciDevice<Error=E>>(dev: &mut D, initial_cap_ptr: u8) -> Result<Option<CapResult>, E> {
+fn find_msix_cap<E, D: pc_hal::traits::PciDevice<Error = E>>(
+    dev: &mut D,
+    initial_cap_ptr: u8,
+) -> Result<Option<CapResult>, E> {
     let mut cap_ptr = initial_cap_ptr;
     trace!("Looking for MSI-X capability, starting at 0x{:x}", cap_ptr);
     loop {
@@ -69,7 +78,10 @@ fn find_msix_cap<E, D: pc_hal::traits::PciDevice<Error=E>>(dev: &mut D, initial_
     }
 }
 
-fn enable_msix<E, D: pc_hal::traits::PciDevice<Error=E>>(dev: &mut D, msix_cap: u8) -> Result<(), E> {
+fn enable_msix<E, D: pc_hal::traits::PciDevice<Error = E>>(
+    dev: &mut D,
+    msix_cap: u8,
+) -> Result<(), E> {
     let mut message_control = dev.read16((msix_cap + 2).into())?;
     message_control |= 1 << 15; // set enable bit
     message_control &= !(1 << 14); // unset masking bit
@@ -77,7 +89,7 @@ fn enable_msix<E, D: pc_hal::traits::PciDevice<Error=E>>(dev: &mut D, msix_cap: 
     Ok(())
 }
 
-pub fn enable_bus_master<E, D: pc_hal::traits::PciDevice<Error=E>>(dev: &mut D) -> Result<(), E> {
+pub fn enable_bus_master<E, D: pc_hal::traits::PciDevice<Error = E>>(dev: &mut D) -> Result<(), E> {
     let mut command_reg = dev.read16(0x4)?;
     // enable bus master
     command_reg |= 4;
@@ -87,8 +99,8 @@ pub fn enable_bus_master<E, D: pc_hal::traits::PciDevice<Error=E>>(dev: &mut D) 
 
 pub fn map_msix_cap<E, D, IM>(dev: &mut D) -> Result<Option<IM>, E>
 where
-    D: pc_hal::traits::PciDevice<Error=E>,
-    IM: pc_hal::traits::IoMem<Error=E>
+    D: pc_hal::traits::PciDevice<Error = E>,
+    IM: pc_hal::traits::IoMem<Error = E>,
 {
     let status_register = dev.read16(0x6)?;
     let has_capabilities = (status_register & (1 << 4)) != 0;
@@ -107,4 +119,3 @@ where
         Ok(None)
     }
 }
-

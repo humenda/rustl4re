@@ -1,6 +1,6 @@
-pub const VENDOR_ID : u16 = 0x8086;
-pub const DEVICE_ID : u16 = 0x10fb;
-pub const MAX_QUEUES : u8 = 128;
+pub const VENDOR_ID: u16 = 0x8086;
+pub const DEVICE_ID: u16 = 0x10fb;
+pub const MAX_QUEUES: u8 = 128;
 
 mm2types! {
     Intel82559ES Bit32 {
@@ -466,7 +466,7 @@ mm2types! {
             }
             txpbsize @ [
                 8,
-                |n| 0x0CC00 + n * 4 
+                |n| 0x0CC00 + n * 4
             ] RW {
                 reserved0 @ 9:0 = 0b0,
                 size @ 19:10 = 0xa0,
