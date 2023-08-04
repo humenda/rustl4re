@@ -514,6 +514,22 @@ mm2types! {
             }
             upper @ 0x8 RO {
                 extended_status @ 19:0 = 0b0,
+                dd @ 0 = 0b0,
+                eop @ 1 = 0b0,
+                flm @ 2 = 0b0,
+                vp @ 3 = 0b0,
+                fcstat @ 5:4 = 0b0,
+                fceofs @ 6 = 0b0,
+                pif @ 7 = 0b0,
+                reserved0 @ 8 = 0b0,
+                vext @ 9 = 0b0,
+                udpv @ 10 = 0b0,
+                llint @ 11 = 0b0,
+                reserved1 @ 15:12 = 0b0,
+                ts @ 16 = 0b0,
+                secp @ 17 = 0b0,
+                lb @ 18 = 0b0,
+                eserved2 @ 19 = 0b0,
                 extended_error @ 31:20 = 0b0,
                 pkt_len @ 47:32 = 0b0,
                 vlan_tag @ 63:48 = 0b0

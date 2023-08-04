@@ -443,6 +443,12 @@ macro_rules! mm2types {
                         }
                     }
 
+                    impl<IM> Mem<IM> {
+                        pub fn consume(self) -> IM {
+                            self.inner
+                        }
+                    }
+
                     mm2types!(@reg_specs $width, $($reg_spec)+);
                 }
             )+

@@ -619,6 +619,111 @@ where
         self.clear_interrupts();
     }
 
+    pub fn rx_batch(
+        &mut self,
+        queue_id: u8,
+        buffer: &mut VecDeque<Packet<E, Dma, MM>>,
+        num_packets: usize,
+    ) -> usize {
+        let mut rx_index;
+        let mut last_rx_index;
+        let mut received_packets = 0;
+
+        {
+            let queue = self
+                .rx_queues
+                .get_mut(queue_id as usize)
+                .expect("invalid rx queue id");
+
+            rx_index = queue.rx_index;
+            last_rx_index = queue.rx_index;
+
+            // TODO: wait for interrupt on our queue
+
+            for i in 0..num_packets {
+                let descriptor_ptr = queue.nth_descriptor_ptr(rx_index);
+                let mut desc = dev::Descriptors::adv_rx_desc_wb::new(descriptor_ptr);
+                let upper = desc.upper().read();
+
+                if upper.dd() == 0 {
+                    break;
+                }
+
+                if upper.eop() != 1 {
+                    panic!("increase buffer size or decrease MTU")
+                }
+
+                let pool = &queue.pool;
+
+                // get a free buffer from the mempool
+                if let Some(buf) = pool.alloc_buf() {
+                    // replace currently used buffer with new buffer
+                    let buf = mem::replace(&mut queue.bufs_in_use[rx_index], buf);
+
+                    let p = Packet {
+                        addr_virt: pool.get_our_addr(buf),
+                        addr_phys: pool.get_device_addr(buf),
+                        len: upper.pkt_len().into(),
+                        pool: pool.clone(),
+                        pool_entry: buf,
+                    };
+
+                    // TODO: pre fetch magics
+                    // #[cfg(all(
+                    //     any(target_arch = "x86", target_arch = "x86_64"),
+                    //     target_feature = "sse"
+                    // ))]
+                    // p.prefetch(Prefetch::Time1);
+
+                    buffer.push_back(p);
+
+                    let mut desc = dev::Descriptors::adv_rx_desc_read::new(desc.consume());
+                    
+                    desc.pkt_addr().write(|w| w.pkt_addr(pool.get_device_addr(queue.bufs_in_use[rx_index]) as u64));
+                    desc.hdr_addr().write(|w| w.hdr_addr(0));
+
+                    last_rx_index = rx_index;
+                    rx_index = wrap_ring(rx_index, queue.num_descriptors.into());
+                    received_packets = i + 1;
+                } else {
+                    // break if there was no free buffer
+                    break;
+                }
+            }
+
+            // TODO: More interrupt stuff
+            //let interrupt = &mut self.interrupts.queues[queue_id as usize];
+            //let int_en = interrupt.interrupt_enabled;
+            //interrupt.rx_pkts += received_packets as u64;
+
+            //interrupt.instr_counter += 1;
+            //if (interrupt.instr_counter & 0xFFF) == 0 {
+            //    interrupt.instr_counter = 0;
+            //    let elapsed = interrupt.last_time_checked.elapsed();
+            //    let diff =
+            //        elapsed.as_secs() * 1_000_000_000 + u64::from(elapsed.subsec_nanos());
+            //    if diff > interrupt.interval {
+            //        interrupt.check_interrupt(diff, received_packets, num_packets);
+            //    }
+
+            //    if int_en != interrupt.interrupt_enabled {
+            //        if interrupt.interrupt_enabled {
+            //            self.enable_interrupt(queue_id).unwrap();
+            //        } else {
+            //            self.disable_interrupt(queue_id);
+            //        }
+            //    }
+            //}
+        }
+
+        if rx_index != last_rx_index {
+            self.bar0.rdt(queue_id.into()).modify(|_, w| w.rdt(last_rx_index as u16));
+            self.rx_queues[queue_id as usize].rx_index = rx_index;
+        }
+
+        received_packets
+    } 
+
     pub fn tx_batch_busy_wait(&mut self, queue_id: u16, buffer: &mut VecDeque<Packet<E, Dma, MM>>) {
         while !buffer.is_empty() {
             self.tx_batch(queue_id, buffer);
