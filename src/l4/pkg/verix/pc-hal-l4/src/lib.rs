@@ -12,7 +12,6 @@ use l4::cap::Cap;
 
 use pc_hal::traits::Device as _;
 
-// TODO: Dunno if I like this wrapper style
 pub struct Vbus(Cap<l4re::io::Vbus>);
 pub struct Device(l4re::io::Device);
 pub struct PciDevice(Device);

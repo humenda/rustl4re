@@ -549,7 +549,8 @@ mm2types! {
             }
             lower @ 0x8 RO {
                 reserved0 @ 31:0 = 0b0,
-                sta @ 35:32 = 0b0,
+                dd @ 32 = 0b0,
+                reserved_sta @ 35:33 = 0b0,
                 reserved1 @ 63:36 = 0b0
             }
         }

@@ -4,7 +4,6 @@ pub trait DmaSpace {
     fn new() -> Self;
 }
 
-// TODO: I think I want the sensible trait bounds on all associated types here;
 pub trait Bus {
     type Error;
     type Device : Device;
@@ -100,13 +99,6 @@ pub trait IoMem : MemoryInterface {
     fn request(phys: u64, size: u64, flags: IoMemFlags) -> Result<Self, Self::Error> where Self: Sized;
 }
 
-// Need an interrupt handler trait that plays with Icu,  it should support waiting
-// for an IRQ, as I see it I have two options to actually receive the IRQ here:
-// 1. Write a method that blockingly waits for the IRQ. This is nice for user space drivers like we
-//    are writing right now
-// 2. write a method that takes a function pointer and registers it + some general wait method.
-//    This is an unnecessary abstraction for us but! it mimics the way that IRQ stuff works
-//    in actual operating  systems more where you put an interrupt vector somewhere.
 pub trait IrqHandler {
     type Error;
 
@@ -125,9 +117,6 @@ pub trait Icu {
     type IrqHandler : IrqHandler;
 
     fn from_device(bus: &Self::Bus, dev: Self::Device) -> Result<Self, Self::Error> where Self: Sized;
-    // I think I want an object that actually manages Interrupts instead of just irq_num and such,
-    // that way i can avoid the bool pair here as well.
-    // TODO
     fn bind_msi(&self, irq_num: u32, target: &mut Self::Device) -> Result<Self::IrqHandler, Self::Error>;
     fn unmask(&self, handler: &mut Self::IrqHandler) -> Result<(), Self::Error>;
     fn nr_msis(&self) -> Result<u32, Self::Error>;

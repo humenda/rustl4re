@@ -1,5 +1,16 @@
-pub (crate) const NUM_RX_QUEUE_ENTRIES: u16 = 512;
-pub (crate) const NUM_TX_QUEUE_ENTRIES: u16 = 512;
-pub (crate) const PKT_BUF_ENTRY_SIZE: usize = 2048;
+pub const NUM_RX_QUEUE_ENTRIES: u16 = 512;
+pub const NUM_TX_QUEUE_ENTRIES: u16 = 512;
+pub const PKT_BUF_ENTRY_SIZE: usize = 2048;
 
-pub (crate) const INTERRUPT_INITIAL_INTERVAL: u64 = 1_000_000_000;
+pub const INTERRUPT_INITIAL_INTERVAL: u64 = 1_000_000_000;
+
+pub const SRRCTL_DESCTYPE_ADV_ONE_BUFFER: u8 = 0b001;
+
+pub const AUTOC_LMS_10G_SFI : u8 = 0b011;
+
+
+pub const LINKS_LINK_SPEED_100M : u8 = 0b01;
+pub const LINKS_LINK_SPEED_1G : u8 = 0b10;
+pub const LINKS_LINK_SPEED_10G : u8 = 0b11;
+
+pub const ADV_TX_DESC_DTYP : u8 = 0b0011;

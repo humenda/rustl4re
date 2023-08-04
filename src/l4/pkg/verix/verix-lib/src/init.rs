@@ -3,7 +3,7 @@ use std::time::{Duration, Instant};
 use std::collections::VecDeque;
 use std::rc::Rc;
 
-use crate::constants::{NUM_RX_QUEUE_ENTRIES, NUM_TX_QUEUE_ENTRIES, PKT_BUF_ENTRY_SIZE, INTERRUPT_INITIAL_INTERVAL};
+use crate::constants::{NUM_RX_QUEUE_ENTRIES, NUM_TX_QUEUE_ENTRIES, PKT_BUF_ENTRY_SIZE, INTERRUPT_INITIAL_INTERVAL, SRRCTL_DESCTYPE_ADV_ONE_BUFFER, AUTOC_LMS_10G_SFI, LINKS_LINK_SPEED_100M, LINKS_LINK_SPEED_1G, LINKS_LINK_SPEED_10G, ADV_TX_DESC_DTYP};
 use crate::dev;
 use crate::dma::{DmaMemory, Mempool, Packet};
 use crate::types::{Error, Result, Device, Interrupts, RxQueue, TxQueue, InterruptsQueue, DeviceStats};
@@ -27,6 +27,8 @@ where
     
     pub fn init<B, ICU>(
         bus: &mut B,
+        icu: &mut ICU,
+        mut nic: PD,
         num_rx_queues: u8,
         num_tx_queues: u8,
         interrupt_timeout: i16,
@@ -35,14 +37,6 @@ where
         B: pc_hal::traits::Bus<Error=E, Device=D, Resource=Res, DmaSpace=Dma>,
         ICU: pc_hal::traits::Icu<Bus=B, Device=D, Error=E, IrqHandler=ISR>,
     {
-        // TODO: this should be reworked to support actual device discovery
-        let mut devices = bus.device_iter();
-        let l40009 = devices.next().unwrap();
-        let mut icu = ICU::from_device(&bus, l40009)?;
-        let _pci_bridge = devices.next().unwrap();
-        let mut nic = PD::try_of_device(devices.next().unwrap()).unwrap();
-        info!("Obtained handles to ICU and NIC");
-
         let vendor_id = nic.read16(0x0)?;
         let device_id = nic.read16(0x2)?;
         info!("NIC has vendor ID: 0x{:x}, device ID: 0x{:x}", vendor_id, device_id);
@@ -58,8 +52,6 @@ where
         let bar0_mem : IM = map_bar(&mut nic, 0)?;
         let bar0 = dev::Intel82559ES::Bar0::new(bar0_mem);
 
-        // TODO: Also investigate the qemu iommu map to non memory area 0, it seems to be caused
-        // by one of our Drop implementations
         let msix_mem : IM = map_msix_cap(&mut nic)?.ok_or(Error::MsixMissing)?;
         let msix = MsixDev::Msix::new(msix_mem);
 
@@ -81,14 +73,14 @@ where
             device: nic,
             interrupts: Interrupts {
                 timeout_ms: interrupt_timeout,
-                // TODO: figure this funny value out
-                itr_rate: 0x028,
+                // specified in 2us units
+                itr_rate: 40,
                 queues: Vec::with_capacity(num_rx_queues.into()),
             },
             dma_space
         };
 
-        dev.setup_interrupts(&mut icu)?;
+        dev.setup_interrupts(icu)?;
 
         dev.reset_and_init()?;
 
@@ -157,14 +149,6 @@ where
         // section 4.6.3.1 - disable interrupts again after reset
         self.disable_interrupts();
 
-        // TODO: I believe strictly speaking we need to wait until the EEPROM read is done for this
-        let mac = self.get_mac_addr();
-        info!("initializing device");
-        info!(
-            "mac address: {:02x}:{:02x}:{:02x}:{:02x}:{:02x}:{:02x}",
-            mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]
-        );
-
         // section 4.6.3 - wait for EEPROM auto read completion
         loop {
             let eec = self.bar0.eec().read();
@@ -172,6 +156,13 @@ where
                 break;
             }
         }
+
+        let mac = self.get_mac_addr();
+        info!("initializing device");
+        info!(
+            "mac address: {:02x}:{:02x}:{:02x}:{:02x}:{:02x}:{:02x}",
+            mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]
+        );
 
         // section 4.6.3 - wait for dma initialization done
         loop {
@@ -289,7 +280,6 @@ where
         self.bar0.rxctrl().modify(|_, w| w.rxen(0));
 
         // section 4.6.11.3.4 - allocate all queues and traffic to PB0
-        // TODO: constant? it's 128 KB
         self.bar0.rxpbsize(0).modify(|_, w| w.size(128));
         for i in 1..8 {
             self.bar0.rxpbsize(i).modify(|_, w| w.size(0));
@@ -306,12 +296,9 @@ where
         for i in 0..self.num_rx_queues {
             info!("Initializing RX queue {}", i);
 
-            // TODO: constant, this is advanced, one buffer 
             // enable advanced rx descriptors
-            self.bar0.srrctl(i.into()).modify(|_, w| w.desctype(0b001));
-
             // let nic drop packets if no rx descriptor is available instead of buffering them
-            self.bar0.srrctl(i.into()).modify(|_, w| w.drop_en(1));
+            self.bar0.srrctl(i.into()).modify(|_, w| w.desctype(SRRCTL_DESCTYPE_ADV_ONE_BUFFER).drop_en(1));
 
             // section 7.1.9 - setup descriptor ring
             let ring_size_bytes =
@@ -334,13 +321,6 @@ where
             self.bar0.rdt(i.into()).modify(|_, w| w.rdt(0));
 
             info!("Set up of DMA for RX descriptor ring {} done", i);
-
-            // TODO: ixy does a thing where they limit it to page size here, let's check if we have to do this
-            //let mempool_size = if NUM_RX_QUEUE_ENTRIES + NUM_TX_QUEUE_ENTRIES < 4096 {
-            //    4096
-            //} else {
-            //    NUM_RX_QUEUE_ENTRIES + NUM_TX_QUEUE_ENTRIES
-            //};
 
             info!("Setting up RX/TX Mempool {}", i);
 
@@ -388,8 +368,6 @@ where
         assert!(queue.num_descriptors & (queue.num_descriptors - 1) == 0);
 
         for i in 0..queue.num_descriptors {
-
-            // TODO: ponder about how do implement the descriptor stuff nicely
             let descriptor_ptr = queue.nth_descriptor_ptr(i.into());
             let pool = &queue.pool;
             let mempool_idx = pool.alloc_buf().ok_or(Error::MempoolEmpty)?;
@@ -489,8 +467,7 @@ where
     fn init_link(&mut self) {
         info!("Initialising link");
         // We use SFI and XAUI because ixy does as well, if this fails we can probably conclude this is wrong for our card
-        // TODO: make constants out of this or support enums in generated API
-        self.bar0.autoc().modify(|_, w| w.lms(0b11).teng_pma_pmd_parallel(0b00));
+        self.bar0.autoc().modify(|_, w| w.lms(AUTOC_LMS_10G_SFI).teng_pma_pmd_parallel(0b00));
         // Start negotiation
         self.bar0.autoc().modify(|_, w| w.restart_an(1));
     }
@@ -500,12 +477,12 @@ where
         if links.link_up() == 0 {
             return None;
         }
-        // TODO: constants / enums
+
         match links.link_speed() {
             0b00 => None,
-            0b01 => Some(100),
-            0b10 => Some(1000),
-            0b11 => Some(10000),
+            LINKS_LINK_SPEED_100M => Some(100),
+            LINKS_LINK_SPEED_1G => Some(1000),
+            LINKS_LINK_SPEED_10G => Some(10000),
             _ => unreachable!()
         }
     }
@@ -573,22 +550,6 @@ where
         // In our case we prefer to not auto-mask the interrupts
 
         // Step 5: Set the interrupt throttling in EITR[n] and GPIE according to the preferred mode of operation.
-        // 0x000 (0us) => ... INT/s
-        // 0x008 (2us) => 488200 INT/s
-        // 0x010 (4us) => 244000 INT/s
-        // 0x028 (10us) => 97600 INT/s
-        // 0x0C8 (50us) => 20000 INT/s
-        // 0x190 (100us) => 9766 INT/s
-        // 0x320 (200us) => 4880 INT/s
-        // 0x4B0 (300us) => 3255 INT/s
-        // 0x640 (400us) => 2441 INT/s
-        // 0x7D0 (500us) => 2000 INT/s
-        // 0x960 (600us) => 1630 INT/s
-        // 0xAF0 (700us) => 1400 INT/s
-        // 0xC80 (800us) => 1220 INT/s
-        // 0xE10 (900us) => 1080 INT/s
-        // 0xFA7 (1000us) => 980 INT/s
-        // 0xFFF (1024us) => 950 INT/s
         self.bar0.eitr(rx_queue_id.into()).modify(|_, w| w.itr_interval(self.interrupts.itr_rate));
 
         // Step 6: Software enables the required interrupt causes by setting the EIMS register
@@ -613,7 +574,6 @@ where
         }
     }
 
-    // TODO: move this to tx.rs
     pub fn tx_batch(&mut self, queue_id: u16, buffer: &mut VecDeque<Packet<E, Dma, MM>>) -> usize {
         let mut sent = 0;
 
@@ -646,11 +606,12 @@ where
             let descriptor_ptr = queue.nth_descriptor_ptr(cur_index);
             let mut desc = dev::Descriptors::adv_tx_desc_read::new(descriptor_ptr);
             desc.lower().write(|w| w.address(packet.addr_phys as u64));
-            // TODO: dtyp as constant 0011b is Advanced transmit data descriptor
-            desc.upper().write(|w| w.paylen(packet.len as u32).dtalen(PKT_BUF_ENTRY_SIZE as u16).eop(1).rs(1).ifcs(1).dext(1).dtyp(0b0011));
+            desc.upper().write(|w| w.paylen(packet.len as u32).dtalen(PKT_BUF_ENTRY_SIZE as u16).eop(1).rs(1).ifcs(1).dext(1).dtyp(ADV_TX_DESC_DTYP));
 
             queue.bufs_in_use.push_back(packet.pool_entry);
-            // TODO: unclear if this is fine
+
+            // Here we purposely don't drop the packet because the memory would be returned to the mempool right away.
+            // Instead this will happen once we clean the tx queue.
             mem::forget(packet);
 
             cur_index = next_index;
@@ -693,11 +654,9 @@ where
 
         let descriptor_ptr = queue.nth_descriptor_ptr(cleanup_to);
         let mut desc = dev::Descriptors::adv_tx_desc_wb::new(descriptor_ptr);
-        let status = desc.lower().read().sta();
+        let status = desc.lower().read().dd();
 
-        // TODO: refactor into bit field
-        let IXGBE_ADVTXD_STAT_DD: u8 = 0x00000001; /* Descriptor Done */
-        if (status & IXGBE_ADVTXD_STAT_DD) != 0 {
+        if status != 0 {
             if TX_CLEAN_BATCH as usize >= queue.bufs_in_use.len() {
                 queue.pool.free_stack
                     .borrow_mut()

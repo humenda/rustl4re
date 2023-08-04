@@ -1,9 +1,9 @@
 #[macro_use]
 extern crate pc_hal_util;
 
-mod dev;
-mod constants;
-mod dma;
+pub mod dev;
+pub mod constants;
+pub mod dma;
 pub mod init;
 pub mod types;
 pub mod tx;
@@ -20,7 +20,7 @@ const BATCH_SIZE: usize = 1;
 // size of our packets
 const PACKET_SIZE: usize = 69;
 
-pub fn run<E, D, PD, B, Res, MM, Dma, ICU, IM, ISR>(mut vbus : B) -> Result<(), E>
+pub fn run<E, D, PD, B, Res, MM, Dma, ICU, IM, ISR>(mut bus : B) -> Result<(), E>
 where
     D: pc_hal::traits::Device,
     B: pc_hal::traits::Bus<Error=E, Device=D, Resource=Res, DmaSpace=Dma>,
@@ -32,8 +32,18 @@ where
     IM: pc_hal::traits::IoMem<Error=E>,
     ISR: pc_hal::traits::IrqHandler
 {
+    //  TODO: proper device discovery
+    let mut devices = bus.device_iter();
+    let l40009 = devices.next().unwrap();
+    let mut icu = ICU::from_device(&bus, l40009)?;
+    let _pci_bridge = devices.next().unwrap();
+    let nic = PD::try_of_device(devices.next().unwrap()).unwrap();
+    info!("Obtained handles to ICU and NIC");
+
     let mut dev : types::Device<E, IM, PD, D, Res, Dma, MM, ISR> = types::Device::init::<B, ICU>(
-        &mut vbus,
+        &mut bus,
+        &mut icu,
+        nic,
         1,
         1,
         10 // TODO: choose a good value

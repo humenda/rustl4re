@@ -85,6 +85,43 @@ macro_rules! mm2types {
     (@regwidth2ty $w1:literal $w2:literal) => { <$crate::mmio::RegWidth<{$w1 - $w2}> as $crate::mmio::RegMarker>::Reg };
     (@regwidth2ty $w1:literal) => { u8 }; // TODO we can condense this even further to just a bool
 
+    (@field_spec_accessor $width:ident, RO, $field:ident @ $w1:literal $(: $w2:literal)? = $default:literal) => {
+        impl R {
+            pub fn $field(&self) -> mm2types!(@regwidth2ty $w1 $($w2)?) {
+                // There is probably a more clever way to calculate this?
+                // I do however believe that LLVM should be capable of optimizing
+                let mut mask = <mm2types!(@width2ty $width)>::MAX;
+                let (end, start) = mm2types!(@field_bounds $w1 $(: $w2)?);
+                mask = (mask >> start) << start; // Get rid of the first n bits
+                let help = mm2types!(@width2num $width) - 1 - end;
+                mask = (mask << help) >> help; // Get rid of the last m bits
+                let slice = self.val & mask;
+                return (slice >> start) as mm2types!(@regwidth2ty $w1 $($w2)?);
+            }
+        }
+    };
+
+    (@field_spec_accessor $width:ident, WO, $field:ident @ $w1:literal $(: $w2:literal)?) => {
+        impl W  {
+            pub fn $field(mut self, val: mm2types!(@regwidth2ty $w1 $($w2)?)) -> Self {
+                let val = val as mm2types!(@width2ty $width);
+                // There is probably a more clever way to calculate this?
+                // I do however believe that LLVM should be capable of optimizing
+                let mut mask = <mm2types!(@width2ty $width)>::MAX;
+                let (end, start) = mm2types!(@field_bounds $w1 $(: $w2)?);
+                mask = (mask >> start) << start; // Get rid of the first n bits
+                let help = mm2types!(@width2num $width) - 1 - end;
+                mask = (mask << help) >> help; // Get rid of the last m bits
+                let shifted_val = val << start;
+                // If we passed in a correct shifted val this should always hold
+                assert!(shifted_val & mask == shifted_val);
+                self.val |= shifted_val; // set the new bits
+                self
+            }
+        }
+
+    };
+
     (@reg_spec_accessor $width:ident, RO, $($field:ident @ $w1:literal $(: $w2:literal)? = $default:literal),+) => {
         pub struct R {
             val: mm2types!(@width2ty $width)
@@ -94,21 +131,11 @@ macro_rules! mm2types {
             pub fn bits(&self) -> mm2types!(@width2ty $width) {
                 self.val
             }
-
-            $( // fields
-                pub fn $field(&self) -> mm2types!(@regwidth2ty $w1 $($w2)?) {
-                    // There is probably a more clever way to calculate this?
-                    // I do however believe that LLVM should be capable of optimizing
-                    let mut mask = <mm2types!(@width2ty $width)>::MAX;
-                    let (end, start) = mm2types!(@field_bounds $w1 $(: $w2)?);
-                    mask = (mask >> start) << start; // Get rid of the first n bits
-                    let help = mm2types!(@width2num $width) - 1 - end;
-                    mask = (mask << help) >> help; // Get rid of the last m bits
-                    let slice = self.val & mask;
-                    return (slice >> start) as mm2types!(@regwidth2ty $w1 $($w2)?);
-                }
-            )+
         }
+
+        $( // fields
+            mm2types!(@field_spec_accessor $width, RO, $field @ $w1 $(: $w2)? = $default);
+        )+
     };
 
     (@reg_spec_accessor $width:ident, WO, $($field:ident @ $w1:literal $(: $w2:literal)?),+) => {
@@ -116,25 +143,9 @@ macro_rules! mm2types {
             val: mm2types!(@width2ty $width)
         }
 
-        impl W {
-            $(
-                pub fn $field(mut self, val: mm2types!(@regwidth2ty $w1 $($w2)?)) -> Self {
-                    let val = val as mm2types!(@width2ty $width);
-                    // There is probably a more clever way to calculate this?
-                    // I do however believe that LLVM should be capable of optimizing
-                    let mut mask = <mm2types!(@width2ty $width)>::MAX;
-                    let (end, start) = mm2types!(@field_bounds $w1 $(: $w2)?);
-                    mask = (mask >> start) << start; // Get rid of the first n bits
-                    let help = mm2types!(@width2num $width) - 1 - end;
-                    mask = (mask << help) >> help; // Get rid of the last m bits
-                    let shifted_val = val << start;
-                    // If we passed in a correct shifted val this should always hold
-                    assert!(shifted_val & mask == shifted_val);
-                    self.val |= shifted_val; // set the new bits
-                    self
-                }
-            )+
-        }
+        $( // fields
+            mm2types!(@field_spec_accessor $width, WO, $field @ $w1 $(: $w2)?);
+        )+
     };
 
     (@reg_spec $width:ident, $reg:ident, [$n:literal, $translate:expr], RO, $($field:ident @ $w1:literal $(: $w2:literal)? = $default:literal),+) => {
