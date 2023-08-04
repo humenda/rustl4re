@@ -27,8 +27,8 @@ where
     
     pub fn init<B, ICU>(
         bus: &mut B,
-        num_rx_queues: u16,
-        num_tx_queues: u16,
+        num_rx_queues: u8,
+        num_tx_queues: u8,
         interrupt_timeout: i16,
     ) -> Result<Device<E, IM, PD, D, Res, Dma, MM, ISR>, E>
     where
@@ -63,8 +63,8 @@ where
         let msix_mem : IM = map_msix_cap(&mut nic)?.ok_or(Error::MsixMissing)?;
         let msix = MsixDev::Msix::new(msix_mem);
 
-        let rx_queues = Vec::with_capacity(num_rx_queues as usize);
-        let tx_queues = Vec::with_capacity(num_tx_queues as usize);
+        let rx_queues = Vec::with_capacity(num_rx_queues.into());
+        let tx_queues = Vec::with_capacity(num_tx_queues.into());
 
         trace!("Assigning DMA Domain");
         let mut dma_space = Dma::new();
@@ -83,7 +83,7 @@ where
                 timeout_ms: interrupt_timeout,
                 // TODO: figure this funny value out
                 itr_rate: 0x028,
-                queues: Vec::with_capacity(num_rx_queues as usize),
+                queues: Vec::with_capacity(num_rx_queues.into()),
             },
             dma_space
         };
@@ -109,7 +109,7 @@ where
             info!("Setting up MSIX interrupt for queue {}", rx_queue);
 
             let irq_num = rx_queue;
-            let mut irq_handler = icu.bind_msi(irq_num as u32, nic_dev)?;
+            let mut irq_handler = icu.bind_msi(irq_num.into(), nic_dev)?;
             self.msix.tadd(irq_num.into()).modify(|_, w| w.tadd((irq_handler.msi_addr() & 0xffffffff) as u32));
             self.msix.tuadd(rx_queue.into()).modify(|_, w| w.tuadd((irq_handler.msi_addr() >> 32) as u32));
             self.msix.tmsg(rx_queue.into()).modify(|_, w| w.tmsg(irq_handler.msi_data()));
@@ -268,7 +268,7 @@ where
                 num_descriptors: NUM_TX_QUEUE_ENTRIES,
                 clean_index: 0,
                 tx_index: 0,
-                bufs_in_use: VecDeque::with_capacity(NUM_TX_QUEUE_ENTRIES)
+                bufs_in_use: VecDeque::with_capacity(NUM_TX_QUEUE_ENTRIES as usize)
             };
 
             self.tx_queues.push(tx_queue);
@@ -347,7 +347,7 @@ where
             // The sum is used here because we share a mempool between rx and tx queues
             let mempool_entries = NUM_RX_QUEUE_ENTRIES + NUM_TX_QUEUE_ENTRIES;
 
-            let mempool = Mempool::new(mempool_entries, PKT_BUF_ENTRY_SIZE, &self.dma_space)?;
+            let mempool = Mempool::new(mempool_entries.into(), PKT_BUF_ENTRY_SIZE, &self.dma_space)?;
 
             info!("Set up of RX/TX Mempool {} done", i);
 
@@ -356,7 +356,7 @@ where
                 pool: mempool,
                 num_descriptors: NUM_RX_QUEUE_ENTRIES,
                 rx_index: 0,
-                bufs_in_use: Vec::with_capacity(NUM_RX_QUEUE_ENTRIES),
+                bufs_in_use: Vec::with_capacity(NUM_RX_QUEUE_ENTRIES.into()),
             };
 
 
@@ -380,7 +380,7 @@ where
         Ok(())
     }
 
-    fn start_rx_queue(&mut self, queue_id: u16) -> Result<(), E> {
+    fn start_rx_queue(&mut self, queue_id: u8) -> Result<(), E> {
         info!("Starting RX queue: {}", queue_id);
         let queue = &mut self.rx_queues[queue_id as usize];
 
@@ -390,7 +390,7 @@ where
         for i in 0..queue.num_descriptors {
 
             // TODO: ponder about how do implement the descriptor stuff nicely
-            let descriptor_ptr = queue.nth_descriptor_ptr(i);
+            let descriptor_ptr = queue.nth_descriptor_ptr(i.into());
             let pool = &queue.pool;
             let mempool_idx = pool.alloc_buf().ok_or(Error::MempoolEmpty)?;
             let device_addr = pool.get_device_addr(mempool_idx) as u64;
@@ -413,14 +413,14 @@ where
         }
 
         self.bar0.rdh(queue_id.into()).modify(|_, w| w.rdh(0));
-        self.bar0.rdt(queue_id.into()).modify(|_, w| w.rdt((queue.num_descriptors - 1) as u32));
+        self.bar0.rdt(queue_id.into()).modify(|_, w| w.rdt(queue.num_descriptors - 1));
 
         info!("Started RX queue: {}", queue_id);
 
         Ok(())
     }
 
-    fn start_tx_queue(&mut self, queue_id: u16) -> Result<(), E> {
+    fn start_tx_queue(&mut self, queue_id: u8) -> Result<(), E> {
         info!("Starting TX queue: {}", queue_id);
 
         let queue = &mut self.tx_queues[queue_id as usize];
@@ -538,20 +538,20 @@ where
         ]
     }
 
-    fn set_ivar(&mut self, queue_id: u16) {
+    fn set_ivar(&mut self, queue_id: u8) {
         let ivar_idx = (queue_id as usize) / 2;
         // We set up our interrupts such that the MSI-X index maps to the rx_queue_id, hence that is our allocation
         if queue_id % 2 == 0 {
             // even RX queues are at alloc_0
-            self.bar0.ivar(ivar_idx).modify(|_, w| w.int_alloc0(queue_id.into()).int_alloc_val0(1));
+            self.bar0.ivar(ivar_idx).modify(|_, w| w.int_alloc0(queue_id).int_alloc_val0(1));
         } else {
             // uneven RX queues are at alloc_2
-            self.bar0.ivar(ivar_idx).modify(|_, w| w.int_alloc2(queue_id.into()).int_alloc_val2(1));
+            self.bar0.ivar(ivar_idx).modify(|_, w| w.int_alloc2(queue_id).int_alloc_val2(1));
         }
     }
 
 
-    fn enable_interrupt(&mut self, rx_queue_id: u16) {
+    fn enable_interrupt(&mut self, rx_queue_id: u8) {
         // We only support MSI-X interrupt setups for now
         info!("Enabling interrupts for RX queue {}", rx_queue_id);
 
@@ -631,7 +631,7 @@ where
                 "distinct memory pools for a single tx queue are not supported yet"
             );
 
-            let next_index = wrap_ring(cur_index, queue.num_descriptors);
+            let next_index = wrap_ring(cur_index, queue.num_descriptors.into());
 
             if clean_index == next_index {
                 // tx queue of device is full, push packet back onto the
@@ -640,14 +640,14 @@ where
                 break;
             }
 
-            queue.tx_index = wrap_ring(queue.tx_index, queue.num_descriptors);
+            queue.tx_index = wrap_ring(queue.tx_index, queue.num_descriptors.into());
 
 
             let descriptor_ptr = queue.nth_descriptor_ptr(cur_index);
             let mut desc = dev::Descriptors::adv_tx_desc_read::new(descriptor_ptr);
             desc.lower().write(|w| w.address(packet.addr_phys as u64));
             // TODO: dtyp as constant 0011b is Advanced transmit data descriptor
-            desc.upper().write(|w| w.paylen(packet.len as u64).dtalen(PKT_BUF_ENTRY_SIZE as u64).eop(1).rs(1).ifcs(1).dext(1).dtyp(0b0011));
+            desc.upper().write(|w| w.paylen(packet.len as u32).dtalen(PKT_BUF_ENTRY_SIZE as u16).eop(1).rs(1).ifcs(1).dext(1).dtyp(0b0011));
 
             queue.bufs_in_use.push_back(packet.pool_entry);
             // TODO: unclear if this is fine
@@ -657,7 +657,7 @@ where
             sent += 1;
         }
 
-        self.bar0.tdt(queue_id.into()).write(|w| w.tdt(self.tx_queues[queue_id as usize].tx_index as u32));
+        self.bar0.tdt(queue_id.into()).write(|w| w.tdt(self.tx_queues[queue_id as usize].tx_index as u16));
 
         sent
     }
@@ -687,8 +687,8 @@ where
 
         let mut cleanup_to = clean_index + TX_CLEAN_BATCH - 1;
 
-        if cleanup_to >= queue.num_descriptors {
-            cleanup_to -= queue.num_descriptors;
+        if cleanup_to >= queue.num_descriptors.into() {
+            cleanup_to -= queue.num_descriptors as usize;
         }
 
         let descriptor_ptr = queue.nth_descriptor_ptr(cleanup_to);
@@ -696,7 +696,7 @@ where
         let status = desc.lower().read().sta();
 
         // TODO: refactor into bit field
-        let IXGBE_ADVTXD_STAT_DD: u64 = 0x00000001; /* Descriptor Done */
+        let IXGBE_ADVTXD_STAT_DD: u8 = 0x00000001; /* Descriptor Done */
         if (status & IXGBE_ADVTXD_STAT_DD) != 0 {
             if TX_CLEAN_BATCH as usize >= queue.bufs_in_use.len() {
                 queue.pool.free_stack
@@ -708,7 +708,7 @@ where
                     .extend(queue.bufs_in_use.drain(..TX_CLEAN_BATCH))
             }
 
-            clean_index = wrap_ring(cleanup_to, queue.num_descriptors);
+            clean_index = wrap_ring(cleanup_to, queue.num_descriptors.into());
         } else {
             break;
         }

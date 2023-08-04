@@ -1,6 +1,6 @@
 pub const VENDOR_ID : u16 = 0x8086;
 pub const DEVICE_ID : u16 = 0x10fb;
-pub const MAX_QUEUES : u16 = 64;
+pub const MAX_QUEUES : u8 = 128;
 
 mm2types! {
     Intel82559ES Bit32 {

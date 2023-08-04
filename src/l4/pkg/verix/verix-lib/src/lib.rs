@@ -17,8 +17,6 @@ use pc_hal::traits::MemoryInterface;
 
 // number of packets sent simultaneously by our driver
 const BATCH_SIZE: usize = 1;
-// number of packets in our mempool
-const NUM_PACKETS: usize = 2048;
 // size of our packets
 const PACKET_SIZE: usize = 69;
 
@@ -42,7 +40,6 @@ where
     )?;
 
     let mut dev_stats = Default::default();
-    let mut counter = 0;
     let mut seq_num = 0;
     let mut buffer: VecDeque<dma::Packet<E, Dma, MM>> = VecDeque::with_capacity(BATCH_SIZE);
 

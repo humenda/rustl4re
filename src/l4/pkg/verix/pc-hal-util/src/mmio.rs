@@ -1,3 +1,73 @@
+pub trait RegMarker {
+    type Reg;
+}
+
+pub struct RegWidth<const WIDTH: usize>;
+
+impl RegMarker for RegWidth<1> { type Reg = u8; }
+impl RegMarker for RegWidth<2> { type Reg = u8; }
+impl RegMarker for RegWidth<3> { type Reg = u8; }
+impl RegMarker for RegWidth<4> { type Reg = u8; }
+impl RegMarker for RegWidth<5> { type Reg = u8; }
+impl RegMarker for RegWidth<6> { type Reg = u8; }
+impl RegMarker for RegWidth<7> { type Reg = u8; }
+impl RegMarker for RegWidth<8> { type Reg = u8; }
+impl RegMarker for RegWidth<9> { type Reg = u16; }
+impl RegMarker for RegWidth<10>{ type Reg = u16; }
+impl RegMarker for RegWidth<11>{ type Reg = u16; }
+impl RegMarker for RegWidth<12>{ type Reg = u16; }
+impl RegMarker for RegWidth<13>{ type Reg = u16; }
+impl RegMarker for RegWidth<14>{ type Reg = u16; }
+impl RegMarker for RegWidth<15>{ type Reg = u16; }
+impl RegMarker for RegWidth<16>{ type Reg = u16; }
+impl RegMarker for RegWidth<17>{ type Reg = u32; }
+impl RegMarker for RegWidth<18>{ type Reg = u32; }
+impl RegMarker for RegWidth<19>{ type Reg = u32; }
+impl RegMarker for RegWidth<20>{ type Reg = u32; }
+impl RegMarker for RegWidth<21>{ type Reg = u32; }
+impl RegMarker for RegWidth<22>{ type Reg = u32; }
+impl RegMarker for RegWidth<23>{ type Reg = u32; }
+impl RegMarker for RegWidth<24>{ type Reg = u32; }
+impl RegMarker for RegWidth<25>{ type Reg = u32; }
+impl RegMarker for RegWidth<26>{ type Reg = u32; }
+impl RegMarker for RegWidth<27>{ type Reg = u32; }
+impl RegMarker for RegWidth<28>{ type Reg = u32; }
+impl RegMarker for RegWidth<29>{ type Reg = u32; }
+impl RegMarker for RegWidth<30>{ type Reg = u32; }
+impl RegMarker for RegWidth<31>{ type Reg = u32; }
+impl RegMarker for RegWidth<32>{ type Reg = u32; }
+impl RegMarker for RegWidth<33>{ type Reg = u64; }
+impl RegMarker for RegWidth<34>{ type Reg = u64; }
+impl RegMarker for RegWidth<35>{ type Reg = u64; }
+impl RegMarker for RegWidth<36>{ type Reg = u64; }
+impl RegMarker for RegWidth<37>{ type Reg = u64; }
+impl RegMarker for RegWidth<38>{ type Reg = u64; }
+impl RegMarker for RegWidth<39>{ type Reg = u64; }
+impl RegMarker for RegWidth<40>{ type Reg = u64; }
+impl RegMarker for RegWidth<41>{ type Reg = u64; }
+impl RegMarker for RegWidth<42>{ type Reg = u64; }
+impl RegMarker for RegWidth<43>{ type Reg = u64; }
+impl RegMarker for RegWidth<44>{ type Reg = u64; }
+impl RegMarker for RegWidth<45>{ type Reg = u64; }
+impl RegMarker for RegWidth<46>{ type Reg = u64; }
+impl RegMarker for RegWidth<47>{ type Reg = u64; }
+impl RegMarker for RegWidth<48>{ type Reg = u64; }
+impl RegMarker for RegWidth<49>{ type Reg = u64; }
+impl RegMarker for RegWidth<50>{ type Reg = u64; }
+impl RegMarker for RegWidth<51>{ type Reg = u64; }
+impl RegMarker for RegWidth<52>{ type Reg = u64; }
+impl RegMarker for RegWidth<53>{ type Reg = u64; }
+impl RegMarker for RegWidth<54>{ type Reg = u64; }
+impl RegMarker for RegWidth<56>{ type Reg = u64; }
+impl RegMarker for RegWidth<57>{ type Reg = u64; }
+impl RegMarker for RegWidth<58>{ type Reg = u64; }
+impl RegMarker for RegWidth<59>{ type Reg = u64; }
+impl RegMarker for RegWidth<60>{ type Reg = u64; }
+impl RegMarker for RegWidth<61>{ type Reg = u64; }
+impl RegMarker for RegWidth<62>{ type Reg = u64; }
+impl RegMarker for RegWidth<63>{ type Reg = u64; }
+impl RegMarker for RegWidth<64>{ type Reg = u64; }
+
 #[macro_export]
 macro_rules! mm2types {
     (@field_bounds $bit:literal) => {
@@ -12,6 +82,8 @@ macro_rules! mm2types {
     (@width2num Bit64) => { 64 };
     (@width2ty Bit32) => { u32 };
     (@width2ty Bit64) => { u64 };
+    (@regwidth2ty $w1:literal $w2:literal) => { <$crate::mmio::RegWidth<{$w1 - $w2}> as $crate::mmio::RegMarker>::Reg };
+    (@regwidth2ty $w1:literal) => { u8 }; // TODO we can condense this even further to just a bool
 
     (@reg_spec_accessor $width:ident, RO, $($field:ident @ $w1:literal $(: $w2:literal)? = $default:literal),+) => {
         pub struct R {
@@ -24,8 +96,7 @@ macro_rules! mm2types {
             }
 
             $( // fields
-            // TODO: This type can be improved
-                pub fn $field(&self) -> mm2types!(@width2ty $width) {
+                pub fn $field(&self) -> mm2types!(@regwidth2ty $w1 $($w2)?) {
                     // There is probably a more clever way to calculate this?
                     // I do however believe that LLVM should be capable of optimizing
                     let mut mask = <mm2types!(@width2ty $width)>::MAX;
@@ -34,7 +105,7 @@ macro_rules! mm2types {
                     let help = mm2types!(@width2num $width) - 1 - end;
                     mask = (mask << help) >> help; // Get rid of the last m bits
                     let slice = self.val & mask;
-                    return slice >> start;
+                    return (slice >> start) as mm2types!(@regwidth2ty $w1 $($w2)?);
                 }
             )+
         }
@@ -47,8 +118,8 @@ macro_rules! mm2types {
 
         impl W {
             $(
-                // TODO: This type can be improved
-                pub fn $field(mut self, val: mm2types!(@width2ty $width)) -> Self {
+                pub fn $field(mut self, val: mm2types!(@regwidth2ty $w1 $($w2)?)) -> Self {
+                    let val = val as mm2types!(@width2ty $width);
                     // There is probably a more clever way to calculate this?
                     // I do however believe that LLVM should be capable of optimizing
                     let mut mask = <mm2types!(@width2ty $width)>::MAX;
@@ -56,13 +127,9 @@ macro_rules! mm2types {
                     mask = (mask >> start) << start; // Get rid of the first n bits
                     let help = mm2types!(@width2num $width) - 1 - end;
                     mask = (mask << help) >> help; // Get rid of the last m bits
-                    let mut shifted_val = val << start;
-                    // TODO: we could have an assertion here that checks that
-                    // shifted_val & mask = shifted_val
-                    // which would be the definition of a correct val
-                    // this could be a verification condition for kani
-                    shifted_val = shifted_val & mask;
-                    self.val &= !mask; // clear all bits of the field that we have so far
+                    let shifted_val = val << start;
+                    // If we passed in a correct shifted val this should always hold
+                    assert!(shifted_val & mask == shifted_val);
                     self.val |= shifted_val; // set the new bits
                     self
                 }
@@ -70,7 +137,6 @@ macro_rules! mm2types {
         }
     };
 
-    // TODO: This w1 w2 approach is a bit hacky for my taste
     (@reg_spec $width:ident, $reg:ident, [$n:literal, $translate:expr], RO, $($field:ident @ $w1:literal $(: $w2:literal)? = $default:literal),+) => {
         mm2types!(@reg_spec_accessor $width, RO, $($field @ $w1 $(: $w2)? = $default),+);
 
@@ -107,7 +173,6 @@ macro_rules! mm2types {
             where
                 F: FnOnce(&R, W) -> W
             {
-                // TODO maybe assert nth < n
                 let r = self.read();
                 let w = W { val : r.bits() };
                 let w_final = f(&r, w);
@@ -116,7 +181,6 @@ macro_rules! mm2types {
         }
     };
 
-    // TODO: This w1 w2 approach is a bit hacky for my taste
     (@reg_spec $width:ident, $reg:ident, $reg_addr:literal, RO, $($field:ident @ $w1:literal $(: $w2:literal)? = $default:literal),+) => {
         mm2types!(@reg_spec_accessor $width, RO, $($field @ $w1 $(: $w2)? = $default),+);
 
@@ -169,7 +233,7 @@ macro_rules! mm2types {
 
         impl<IM> super::Mem<IM> {
             pub fn $reg<'a>(&'a mut self, nth: usize) -> Register<'a, IM> {
-                // TODO: maybe assert nth < n ?
+                assert!(nth < $n);
                 Register {
                     mem: self,
                     nth: nth
@@ -253,28 +317,24 @@ mm2types! {
     MsixDev Bit32 {
         Msix {
             tadd @ [
-                // TODO: what is the correct number?
                 128,
                 |n| 0x0000 + n * 0x10
             ] RW {
                 tadd @ 31:0 = 0b0
             }
             tuadd @ [
-                // TODO: what is the correct number?
                 128,
                 |n| 0x0004 + n * 0x10
             ] RW {
                 tuadd @ 31:0 = 0b0
             }
             tmsg @ [
-                // TODO: what is the correct number?
                 128,
                 |n| 0x0008 + n * 0x10
             ] RW {
                 tmsg @ 31:0 = 0b0
             }
             tvctrl @ [
-                // TODO: what is the correct number?
                 128,
                 |n| 0x000C + n * 0x10
             ] RW {

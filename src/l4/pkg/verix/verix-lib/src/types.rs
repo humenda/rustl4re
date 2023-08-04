@@ -39,8 +39,8 @@ where
     pub (crate) bar0: dev::Intel82559ES::Bar0::Mem<IM>,
     pub (crate) msix: MsixDev::Msix::Mem<IM>,
     pub (crate) device: PD,
-    pub (crate) num_rx_queues: u16,
-    pub (crate) num_tx_queues: u16,
+    pub (crate) num_rx_queues: u8,
+    pub (crate) num_tx_queues: u8,
     pub (crate) rx_queues: Vec<RxQueue<E, Dma, MM>>,
     pub (crate) tx_queues: Vec<TxQueue<E, Dma, MM>>,
     pub (crate) interrupts: Interrupts<ISR>,
@@ -54,7 +54,7 @@ where
 {
     pub (crate) descriptors: DmaMemory<E, Dma, MM>,
     pub (crate) pool: Rc<Mempool<E, Dma, MM>>,
-    pub (crate) num_descriptors: usize,
+    pub (crate) num_descriptors: u16,
     pub (crate) rx_index: usize,
     pub (crate) bufs_in_use: Vec<usize>
 }
@@ -65,14 +65,14 @@ where
 {
     pub (crate) descriptors: DmaMemory<E, Dma, MM>,
     pub (crate) pool: Rc<Mempool<E, Dma, MM>>,
-    pub (crate) num_descriptors: usize,
+    pub (crate) num_descriptors: u16,
     pub (crate) clean_index: usize,
     pub (crate) tx_index: usize,
     pub (crate) bufs_in_use: VecDeque<usize>
 }
 pub struct Interrupts<ISR> {
     pub (crate) timeout_ms : i16,
-    pub (crate) itr_rate : u32,
+    pub (crate) itr_rate : u8,
     pub (crate) queues : Vec<InterruptsQueue<ISR>>,
 }
 
