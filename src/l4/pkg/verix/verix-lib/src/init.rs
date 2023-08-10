@@ -1,10 +1,11 @@
+use core::slice;
 use std::collections::VecDeque;
 use std::rc::Rc;
 use std::time::{Duration, Instant};
 use std::{mem, thread};
 
 use crate::constants::{
-    ADV_TX_DESC_DTYP, AUTOC_LMS_10G_SFI, INTERRUPT_INITIAL_INTERVAL, LINKS_LINK_SPEED_100M,
+    ADV_TX_DESC_DTYP_DATA, AUTOC_LMS_10G_SFI, INTERRUPT_INITIAL_INTERVAL, LINKS_LINK_SPEED_100M,
     LINKS_LINK_SPEED_10G, LINKS_LINK_SPEED_1G, NUM_RX_QUEUE_ENTRIES, NUM_TX_QUEUE_ENTRIES,
     PKT_BUF_ENTRY_SIZE, SRRCTL_DESCTYPE_ADV_ONE_BUFFER,
 };
@@ -99,6 +100,44 @@ where
         dev.reset_and_init()?;
 
         Ok(dev)
+    }
+
+    pub fn log_queue_state(&mut self, queue_id: u8) {
+        let tdh = self.bar0.tdh(queue_id.into()).read().tdh();
+        let tdt = self.bar0.tdt(queue_id.into()).read().tdt();
+        let rdh = self.bar0.rdh(queue_id.into()).read().rdh();
+        let rdt = self.bar0.rdt(queue_id.into()).read().rdt();
+        let rdbal = self.bar0.rdbal(queue_id.into()) .read().rdbal();
+        let rdbah = self.bar0.rdbah(queue_id.into()) .read().rdbah();
+        let rdlen = self.bar0.rdlen(queue_id.into()) .read().len();
+        let tx_queue = &mut self.tx_queues[queue_id as usize];
+        trace!("tdh: {}, tdt: {}, rdh: {}, rdt: {}, rdbal: {:x}, rdbah: {:x}, rdlen: {}, descs: {}, index: {}", tdh, tdt, rdh, rdt, rdbal, rdbah, rdlen, tx_queue.num_descriptors, tx_queue.tx_index);
+        let desc_base_ptr = &mut tx_queue.descriptors.ptr();
+        for entry in 0..NUM_RX_QUEUE_ENTRIES {
+            let desc_ptr = unsafe { desc_base_ptr.add(entry as usize * mem::size_of::<[u64; 2]>()) };
+            let mut wb_desc = dev::Descriptors::adv_tx_desc_wb::new(desc_ptr);
+            let dd = wb_desc.lower().read().dd();
+            if dd != 0 {
+                // We are a wb descriptor
+                trace!("desc {}, wb", entry);
+            } else {
+                // We are a read descriptor
+                let mut read_desc = dev::Descriptors::adv_tx_desc_read::new(desc_ptr);
+                let pkt_addr = read_desc.lower().read().address();
+                let dtalen = read_desc.upper().read().dtalen();
+                let paylen = read_desc.upper().read().paylen();
+                trace!("desc {}, read: pkt_addr: 0x{:x}, dtalen: {}, paylen: {}", entry, pkt_addr, dtalen, paylen);
+            }
+        }
+
+        trace!("Dumping used buffers");
+        let pool = &tx_queue.pool;
+        for buf in tx_queue.bufs_in_use.iter() {
+            let our = pool.get_our_addr(*buf);
+            let dev = pool.get_device_addr(*buf);
+            let slice = unsafe { slice::from_raw_parts(our, 16) }; // dump the first 16 bytes
+            trace!("tx buf {}, our: {:p}, dev: 0x{:x}, bytes: {:x?}", *buf, our, dev, slice);
+        }
     }
 
     fn setup_interrupts<B, ICU>(&mut self, icu: &mut ICU) -> Result<(), E>
@@ -275,11 +314,13 @@ where
 
             info!("Set up of DMA for TX descriptor ring {} done", i);
 
-            // TODO: DPDK values for performance
-            let sorry = 0;
+            // Magic performance values from ixy/DPDK
+            let pthresh = 36;
+            let hthresh = 8;
+            let wthresh = 4;
             self.bar0
                 .txdctl(i.into())
-                .modify(|_, w| w.pthresh(sorry).hthresh(sorry).wthresh(sorry));
+                .modify(|_, w| w.pthresh(pthresh).hthresh(hthresh).wthresh(wthresh));
 
             let tx_queue = TxQueue {
                 descriptors: descriptor_mem,
@@ -323,6 +364,12 @@ where
         for i in 0..self.num_rx_queues {
             info!("Initializing RX queue {}", i);
 
+            // The sum is used here because we share a mempool between rx and tx queues
+            let mempool_entries = NUM_RX_QUEUE_ENTRIES + NUM_TX_QUEUE_ENTRIES;
+
+            let mempool =
+                Mempool::new(mempool_entries.into(), PKT_BUF_ENTRY_SIZE, &self.dma_space)?;
+
             // enable advanced rx descriptors
             // let nic drop packets if no rx descriptor is available instead of buffering them
             self.bar0
@@ -361,11 +408,7 @@ where
 
             info!("Setting up RX/TX Mempool {}", i);
 
-            // The sum is used here because we share a mempool between rx and tx queues
-            let mempool_entries = NUM_RX_QUEUE_ENTRIES + NUM_TX_QUEUE_ENTRIES;
-
-            let mempool =
-                Mempool::new(mempool_entries.into(), PKT_BUF_ENTRY_SIZE, &self.dma_space)?;
+            // Shifted upwards to check for TLB failures
 
             info!("Set up of RX/TX Mempool {} done", i);
 
@@ -763,13 +806,16 @@ where
             desc.lower().write(|w| w.address(packet.addr_phys as u64));
             desc.upper().write(|w| {
                 w.paylen(packet.len as u32)
-                    .dtalen(PKT_BUF_ENTRY_SIZE as u16)
+                    .dtalen(packet.len as u16)
                     .eop(1)
                     .rs(1)
                     .ifcs(1)
                     .dext(1)
-                    .dtyp(ADV_TX_DESC_DTYP)
+                    .dtyp(ADV_TX_DESC_DTYP_DATA)
             });
+            unsafe {
+            trace!("Wrote tx desc: 0x{:x}, 0x{:x}", std::ptr::read_volatile(descriptor_ptr as *mut u64), std::ptr::read_volatile(descriptor_ptr.add(4) as *mut u64));
+                   }
 
             queue.bufs_in_use.push_back(packet.pool_entry);
 

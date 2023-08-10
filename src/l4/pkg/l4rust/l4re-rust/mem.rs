@@ -52,11 +52,6 @@ pub struct AttachedDataspace {
 
 }
 
-pub struct OffsetAttachedDataspace<'a> {
-    ptr: *mut u8,
-    _space : PhantomData<&'a ()>
-}
-
 pub trait VolatileMemoryInterface {
     fn ptr(&self) -> *mut u8;
 
@@ -177,51 +172,47 @@ impl Dataspace {
     }
 }
 
+fn maxorder(base: usize, size: usize) -> usize {
+    let mut o = L4_LOG2_PAGESIZE as usize;
+    loop {
+		let m = (1 << (o+1)) - 1;
+		if (base & m) != 0 {
+			return o;
+		}
+		if size <= m {
+			return o;
+		}
+		o += 1;
+
+    }
+}
+
 impl AttachedDataspace {
     pub fn map_dma(&mut self, target: &DmaSpace) -> Result<usize> {
-        // TODO L4 only allows us to map 2^n pages at once, if your size
-        // is mis-aligned relative to that we have to do multiple maps,
-        // for now just panic if we have an invalid mapping size
+        let mut len = self.cap.size;
+        let mut addr = self.ptr as usize; // source address;
+        assert!((addr | len) % 4096 == 0);
+        println!("Starting to map dataspace from 0x{:x} to 0x{:x}, length: 0x{:x}", addr, addr, len);
 
-        // stanford bithacks, check if number is power of 2, if it is find first set bit
-        let is_pow_2 = (self.cap.size & (self.cap.size - 1)) == 0;
-        if !is_pow_2 {
-            panic!("Size of memory space is not a power of two: {}", self.cap.size);
+        while len != 0 {
+            let o = maxorder(addr, len);
+            let sz = 1 << o;
+
+            let fp = unsafe { l4_fpage_w(addr, o as u32, L4_FPAGE_RWX as u8) };
+            let ctl = l4_map_obj_control(addr as u64, L4_MAP_ITEM_MAP as u64);
+            let tag : MsgTag = unsafe { l4_task_map(target.raw(), THIS_TASK.raw(), fp, ctl as usize) }.into();
+            tag.result()?;
+
+            len -= sz;
+            println!("Mapped from 0x{:x} to 0x{:x}, length: 0x{:x}, remaining: 0x{:x}", addr, addr, sz, len);
+            addr += sz;
         }
-        if self.cap.size < 1 << L4_LOG2_PAGESIZE {
-            panic!("Size of memory space is smaller than page size: {}", self.cap.size);
-        }
-        let mut sz = self.cap.size;
-        let mut log2_size = 0;
-        while sz != 0 {
-            log2_size += 1;
-            sz >>= 1;
-        }
-        // Here self.ptr is in our address space
-        let fp = unsafe { l4_fpage_w(self.ptr as usize, log2_size, L4_FPAGE_RWX as u8) };
-        // This self.ptr is the address we want to use in the DMA one
-        // for simplicity we just use the same
-        let ctl = l4_map_obj_control(self.ptr as usize as u64, L4_MAP_ITEM_MAP as u64);
-        let tag : MsgTag = unsafe { l4_task_map(target.raw(), THIS_TASK.raw(), fp, ctl as usize) }.into();
-        tag.result()?;
+
         Ok(self.ptr as usize)
-    }
-
-    pub fn at_offset<'a>(&'a mut self, offset: usize) -> OffsetAttachedDataspace<'a> {
-        OffsetAttachedDataspace {
-            ptr: unsafe { self.ptr.add(offset) },
-            _space: PhantomData
-        }
     }
 }
 
 impl VolatileMemoryInterface for AttachedDataspace {
-    fn ptr(&self) -> *mut u8 {
-        self.ptr
-    }
-}
-
-impl<'a> VolatileMemoryInterface for OffsetAttachedDataspace<'a> {
     fn ptr(&self) -> *mut u8 {
         self.ptr
     }

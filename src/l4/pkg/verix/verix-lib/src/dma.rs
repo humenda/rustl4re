@@ -31,7 +31,7 @@ where
 {
     num_entries: usize,
     entry_size: usize,
-    mem: RefCell<DmaMemory<E, Dma, MM>>,
+    pub(crate) mem: RefCell<DmaMemory<E, Dma, MM>>,
     pub(crate) free_stack: RefCell<Vec<usize>>,
 }
 
@@ -73,6 +73,20 @@ where
         Ok(Self { mem, device_addr })
     }
 
+    pub fn find_addr_of_non_zero(&mut self, len: usize) -> Option<usize> {
+        let base_ptr = self.ptr();
+        for offset in 0..len {
+            let (curr_ptr, val) = unsafe {
+                let curr_ptr = base_ptr.add(offset);
+                (curr_ptr, core::ptr::read(curr_ptr))
+            };
+            if val != 0 {
+                return Some(curr_ptr as usize);
+            }
+        }
+        return None;
+    }
+
     pub fn device_addr(&self) -> usize {
         self.device_addr
     }
@@ -104,7 +118,7 @@ where
 
         // Clear the memory to a defined initial state
         for i in 0..(num_entries * entry_size) {
-            unsafe { core::ptr::write_volatile(mem.ptr().add(i), 0x0) }
+            unsafe { core::ptr::write_volatile(mem.ptr().add(i), 0x61) }
         }
 
         // Initially all elements are free

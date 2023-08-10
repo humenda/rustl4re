@@ -50,6 +50,7 @@ where
     let mut buffer: VecDeque<dma::Packet<E, Dma, MM>> = VecDeque::with_capacity(BATCH_SIZE);
     let mut time = Instant::now();
     let mut counter = 0;
+    dev.log_queue_state(0);
 
     loop {
         // TODO echo
@@ -57,17 +58,16 @@ where
 
         if num_rx > 0 {
             trace!("Got packets");
-            // touch all packets for a realistic workload
+
             for p in buffer.iter_mut() {
-                p[48] += 1;
+                trace!("Got: {:?}", p);
             }
 
             dev.tx_batch(0, &mut buffer);
+            dev.log_queue_state(0);
 
             // drop packets if they haven't been sent out
             buffer.drain(..);
-        } else {
-            trace!("Got no packets");
         }
 
         // don't poll the time unnecessarily
@@ -82,7 +82,6 @@ where
                 time = Instant::now();
             }
         }
-        
         counter += 1
     }
 }

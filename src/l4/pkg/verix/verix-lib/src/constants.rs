@@ -12,4 +12,4 @@ pub const LINKS_LINK_SPEED_100M: u8 = 0b01;
 pub const LINKS_LINK_SPEED_1G: u8 = 0b10;
 pub const LINKS_LINK_SPEED_10G: u8 = 0b11;
 
-pub const ADV_TX_DESC_DTYP: u8 = 0b0011;
+pub const ADV_TX_DESC_DTYP_DATA: u8 = 0b0011;

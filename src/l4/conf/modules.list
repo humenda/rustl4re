@@ -215,7 +215,7 @@ module[arch=arm64,fname=ramdisk-arm64.rd] https://os.inf.tu-dresden.de/~adam/dl/
 # TODO: Add x86 and MIPS
 
 entry verix
-kernel fiasco -serial_esc
+kernel fiasco -serial_esc -esc
 roottask moe rom/verix.ned
 module l4re
 module ned

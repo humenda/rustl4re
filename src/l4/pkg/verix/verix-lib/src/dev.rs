@@ -500,8 +500,8 @@ mm2types! {
 mm2types! {
     Descriptors Bit64 {
         adv_rx_desc_read {
-            pkt_addr @ 0x0 WO { pkt_addr @ 63:0 }
-            hdr_addr @ 0x8 WO { hdr_addr @ 63:0 }
+            pkt_addr @ 0x0 RW { pkt_addr @ 63:0 = 0b0 }
+            hdr_addr @ 0x8 RW { hdr_addr @ 63:0 = 0b0 }
         },
         adv_rx_desc_wb {
             lower @ 0x0 RO {
@@ -536,34 +536,34 @@ mm2types! {
             }
         },
         adv_tx_desc_read {
-            lower @ 0x0 WO {
-                address @ 63:0
+            lower @ 0x0 RW {
+                address @ 63:0 = 0b0
             }
-            upper @ 0x8 WO {
-                dtalen @ 15:0,
-                rsv @ 17:16,
-                mac @ 19:18,
-                dtyp @ 23:20,
-                eop @ 24,
-                ifcs @ 25,
-                reserved0 @ 26,
-                rs @ 27,
-                reserved1 @ 28,
-                dext @ 29,
-                vle @ 30,
-                tse @ 31,
-                sta @ 35:32,
-                idx @ 38:36,
-                cc @ 39,
-                popts @ 45:40,
-                paylen @ 63:46
+            upper @ 0x8 RW {
+                dtalen @ 15:0 = 0b0,
+                reserved0 @ 17:16 = 0b0,
+                mac @ 19:18 = 0b0,
+                dtyp @ 23:20 = 0b0,
+                eop @ 24 = 0b0,
+                ifcs @ 25 = 0b0,
+                reserved1 @ 26 = 0b0,
+                rs @ 27 = 0b0,
+                reserved2 @ 28 = 0b0,
+                dext @ 29 = 0b0,
+                vle @ 30 = 0b0,
+                tse @ 31 = 0b0,
+                sta @ 35:32 = 0b0,
+                idx @ 38:36 = 0b0,
+                cc @ 39 = 0b0,
+                popts @ 45:40 = 0b0,
+                paylen @ 63:46 = 0b0
             }
         },
         adv_tx_desc_wb {
-            upper @ 0x0 RO {
+            upper @ 0x0 RW {
                 reserved @ 63:0 = 0b0
             }
-            lower @ 0x8 RO {
+            lower @ 0x8 RW {
                 reserved0 @ 31:0 = 0b0,
                 dd @ 32 = 0b0,
                 reserved_sta @ 35:33 = 0b0,
