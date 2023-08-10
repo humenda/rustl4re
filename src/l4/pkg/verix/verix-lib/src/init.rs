@@ -95,49 +95,11 @@ where
             dma_space,
         };
 
-        dev.setup_interrupts(icu)?;
+        //dev.setup_interrupts(icu)?;
 
         dev.reset_and_init()?;
 
         Ok(dev)
-    }
-
-    pub fn log_queue_state(&mut self, queue_id: u8) {
-        let tdh = self.bar0.tdh(queue_id.into()).read().tdh();
-        let tdt = self.bar0.tdt(queue_id.into()).read().tdt();
-        let rdh = self.bar0.rdh(queue_id.into()).read().rdh();
-        let rdt = self.bar0.rdt(queue_id.into()).read().rdt();
-        let rdbal = self.bar0.rdbal(queue_id.into()) .read().rdbal();
-        let rdbah = self.bar0.rdbah(queue_id.into()) .read().rdbah();
-        let rdlen = self.bar0.rdlen(queue_id.into()) .read().len();
-        let tx_queue = &mut self.tx_queues[queue_id as usize];
-        trace!("tdh: {}, tdt: {}, rdh: {}, rdt: {}, rdbal: {:x}, rdbah: {:x}, rdlen: {}, descs: {}, index: {}", tdh, tdt, rdh, rdt, rdbal, rdbah, rdlen, tx_queue.num_descriptors, tx_queue.tx_index);
-        let desc_base_ptr = &mut tx_queue.descriptors.ptr();
-        for entry in 0..NUM_RX_QUEUE_ENTRIES {
-            let desc_ptr = unsafe { desc_base_ptr.add(entry as usize * mem::size_of::<[u64; 2]>()) };
-            let mut wb_desc = dev::Descriptors::adv_tx_desc_wb::new(desc_ptr);
-            let dd = wb_desc.lower().read().dd();
-            if dd != 0 {
-                // We are a wb descriptor
-                trace!("desc {}, wb", entry);
-            } else {
-                // We are a read descriptor
-                let mut read_desc = dev::Descriptors::adv_tx_desc_read::new(desc_ptr);
-                let pkt_addr = read_desc.lower().read().address();
-                let dtalen = read_desc.upper().read().dtalen();
-                let paylen = read_desc.upper().read().paylen();
-                trace!("desc {}, read: pkt_addr: 0x{:x}, dtalen: {}, paylen: {}", entry, pkt_addr, dtalen, paylen);
-            }
-        }
-
-        trace!("Dumping used buffers");
-        let pool = &tx_queue.pool;
-        for buf in tx_queue.bufs_in_use.iter() {
-            let our = pool.get_our_addr(*buf);
-            let dev = pool.get_device_addr(*buf);
-            let slice = unsafe { slice::from_raw_parts(our, 16) }; // dump the first 16 bytes
-            trace!("tx buf {}, our: {:p}, dev: 0x{:x}, bytes: {:x?}", *buf, our, dev, slice);
-        }
     }
 
     fn setup_interrupts<B, ICU>(&mut self, icu: &mut ICU) -> Result<(), E>
@@ -254,9 +216,10 @@ where
             self.start_tx_queue(i)?;
         }
 
-        for queue in 0..self.num_rx_queues {
-            self.enable_interrupt(queue);
-        }
+		// TODO: do I want to be interrupt based?
+        //for queue in 0..self.num_rx_queues {
+        //    self.enable_interrupt(queue);
+        //}
 
         self.set_promisc(true);
 
@@ -269,8 +232,6 @@ where
         // crc offload and small packet padding
         self.bar0.hlreg0().modify(|_, w| w.txcren(1).txpaden(1));
 
-        self.bar0.rttdcs().modify(|_, w| w.arbdis(1));
-
         // section 4.6.11.3.4 - set default buffer size allocations
         self.bar0.txpbsize(0).modify(|_, w| w.size(160));
         for i in 1..8 {
@@ -281,7 +242,7 @@ where
         // set the max bytes field to max
         self.bar0
             .dtxmxszrq()
-            .modify(|_, w| w.max_bytes_num_req(0b111111111111));
+            .modify(|_, w| w.max_bytes_num_req(0xfff));
         self.bar0.rttdcs().modify(|_, w| w.arbdis(0));
 
         // configure queues
@@ -813,9 +774,6 @@ where
                     .dext(1)
                     .dtyp(ADV_TX_DESC_DTYP_DATA)
             });
-            unsafe {
-            trace!("Wrote tx desc: 0x{:x}, 0x{:x}", std::ptr::read_volatile(descriptor_ptr as *mut u64), std::ptr::read_volatile(descriptor_ptr.add(4) as *mut u64));
-                   }
 
             queue.bufs_in_use.push_back(packet.pool_entry);
 
@@ -894,4 +852,48 @@ where
 
 fn wrap_ring(index: usize, ring_size: usize) -> usize {
     (index + 1) & (ring_size - 1)
+}
+
+impl DeviceStats {
+    ///  Prints the stats differences between `stats_old` and `self`.
+    pub fn print_stats_diff(&self, stats_old: &DeviceStats, nanos: u64) {
+        let mbits = self.diff_mbit(
+            self.rx_bytes,
+            stats_old.rx_bytes,
+            self.rx_pkts,
+            stats_old.rx_pkts,
+            nanos,
+        );
+        let mpps = self.diff_mpps(self.rx_pkts, stats_old.rx_pkts, nanos);
+        info!("RX: {:.2} Mbit/s {:.2} Mpps", mbits, mpps);
+
+        let mbits = self.diff_mbit(
+            self.tx_bytes,
+            stats_old.tx_bytes,
+            self.tx_pkts,
+            stats_old.tx_pkts,
+            nanos,
+        );
+        let mpps = self.diff_mpps(self.tx_pkts, stats_old.tx_pkts, nanos);
+        info!("TX: {:.2} Mbit/s {:.2} Mpps", mbits, mpps);
+    }
+
+    /// Returns Mbit/s between two points in time.
+    fn diff_mbit(
+        &self,
+        bytes_new: u64,
+        bytes_old: u64,
+        pkts_new: u64,
+        pkts_old: u64,
+        nanos: u64,
+    ) -> f64 {
+        ((bytes_new - bytes_old) as f64 / 1_000_000.0 / (nanos as f64 / 1_000_000_000.0))
+            * f64::from(8)
+            + self.diff_mpps(pkts_new, pkts_old, nanos) * f64::from(20) * f64::from(8)
+    }
+
+    /// Returns Mpps between two points in time.
+    fn diff_mpps(&self, pkts_new: u64, pkts_old: u64, nanos: u64) -> f64 {
+        (pkts_new - pkts_old) as f64 / 1_000_000.0 / (nanos as f64 / 1_000_000_000.0)
+    }
 }

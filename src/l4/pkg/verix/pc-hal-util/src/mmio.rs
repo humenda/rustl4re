@@ -228,7 +228,7 @@ macro_rules! mm2types {
     };
 
     (@field_spec_accessor $width:ident, WO, $field:ident @ $w1:literal $(: $w2:literal)?) => {
-        impl W  {
+        impl W {
             pub fn $field(mut self, val: mm2types!(@regwidth2ty $w1 $($w2)?)) -> Self {
                 let val = val as mm2types!(@width2ty $width);
                 // There is probably a more clever way to calculate this?
@@ -241,7 +241,8 @@ macro_rules! mm2types {
                 let shifted_val = val << start;
                 // If we passed in a correct shifted val this should always hold
                 assert!(shifted_val & mask == shifted_val);
-                self.val |= shifted_val; // set the new bits
+                // Clear the old bits and set the new ones for the field
+                self.val = (self.val & !mask) | shifted_val; // set the new bits
                 self
             }
         }

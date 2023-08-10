@@ -16,9 +16,7 @@ use crate::types::Result;
 use pc_hal::traits::MemoryInterface;
 
 // number of packets sent simultaneously by our driver
-const BATCH_SIZE: usize = 1;
-// size of our packets
-const PACKET_SIZE: usize = 69;
+const BATCH_SIZE: usize = 64;
 
 pub fn run<E, D, PD, B, Res, MM, Dma, ICU, IM, ISR>(mut bus: B) -> Result<(), E>
 where
@@ -45,26 +43,25 @@ where
     )?;
 
     let mut dev_stats = Default::default();
+    let mut dev_stats_old = Default::default();
     dev.read_stats(&mut dev_stats);
+    dev.read_stats(&mut dev_stats_old);
 
     let mut buffer: VecDeque<dma::Packet<E, Dma, MM>> = VecDeque::with_capacity(BATCH_SIZE);
     let mut time = Instant::now();
     let mut counter = 0;
-    dev.log_queue_state(0);
 
     loop {
-        // TODO echo
         let num_rx = dev.rx_batch(0, &mut buffer, BATCH_SIZE);
 
         if num_rx > 0 {
-            trace!("Got packets");
-
-            for p in buffer.iter_mut() {
-                trace!("Got: {:?}", p);
+            for pkt in buffer.iter_mut() {
+                for idx in 0..6 {
+                    pkt.swap(idx, idx+6);
+                }
             }
 
             dev.tx_batch(0, &mut buffer);
-            dev.log_queue_state(0);
 
             // drop packets if they haven't been sent out
             buffer.drain(..);
@@ -77,7 +74,8 @@ where
             // every second
             if nanos > 1_000_000_000 {
                 dev.read_stats(&mut dev_stats);
-                info!("Stats: {:?}", dev_stats);
+                dev_stats.print_stats_diff(&dev_stats_old, nanos);
+                dev_stats_old = dev_stats;
 
                 time = Instant::now();
             }
