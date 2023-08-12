@@ -37,5 +37,8 @@ pub fn receive<T: Interface>(object: Cap<T>, utcb: &mut Utcb, timeout: l4_timeou
 /// This submits a blocking IPC to an invalid destination with the timeout being the time to sleep.
 #[inline]
 pub fn sleep(timeout: l4_timeout_t) -> MsgTag {
-    receive(invalid_cap(), &mut Utcb::current(), timeout)
+    // SAFETY: This is currently assumed to be unsafe, ignoring UTCB concurrency.
+    unsafe {
+        receive(invalid_cap(), &mut Utcb::current(), timeout)
+    }
 }

@@ -1,6 +1,6 @@
 use core::ffi::{c_int, c_long, c_uint, c_ulong};
 
-use crate::c_api::{l4_error_code_t::*, l4_msg_item_consts_t::*, L4_fpage_control::*, *};
+use crate::c_api::{l4_error_code_t::*, l4_msg_item_consts_t::*, *};
 use crate::consts::*;
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -162,21 +162,6 @@ pub unsafe fn l4_sndfpage_add(
 #[inline(always)]
 pub unsafe fn l4_utcb() -> *mut l4_utcb_t {
     l4_utcb_w()
-}
-
-// ToDo: potentially broken (or one of the functions called
-//#[inline]
-//pub unsafe fn l4_rcv_ep_bind_thread(gate: l4_cap_idx_t, thread: l4_cap_idx_t,
-//        label: l4_umword_t) -> l4_msgtag_t {
-//    return l4_rcv_ep_bind_thread_u(gate, thread, label, l4_utcb())
-//}
-
-#[inline]
-pub fn l4_map_control(snd_base: l4_umword_t, cache: u8, grant: u32) -> l4_umword_t {
-    (snd_base & L4_FPAGE_CONTROL_MASK as l4_umword_t)
-        | ((cache as l4_umword_t) << 4)
-        | L4_ITEM_MAP as u64
-        | (grant as l4_umword_t)
 }
 
 /// Retrieve pointer to buffer registers from current UTCB

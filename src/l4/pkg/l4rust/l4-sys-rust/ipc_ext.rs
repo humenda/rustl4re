@@ -1,4 +1,5 @@
 use crate::c_api::{l4_msgtag_flags::*, *};
+use crate::cap;
 use crate::ipc_basic::{self, l4_utcb};
 
 /// Provide a convenient mechanism to access the message registers
@@ -65,5 +66,5 @@ pub fn sndfpage_add(snd_fpage: l4_fpage_t, snd_base: u64, tag: &mut l4_msgtag_t)
 
 #[inline]
 pub fn map_control(snd_base: l4_umword_t, cache: u8, grant: u32) -> l4_umword_t {
-    ipc_basic::l4_map_control(snd_base, cache, grant)
+    cap::l4_map_control(snd_base, cache, grant.into())
 }

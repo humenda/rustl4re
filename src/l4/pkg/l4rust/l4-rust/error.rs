@@ -115,7 +115,10 @@ impl TcrErr {
     /// Get error from given tag (for current thread)
     #[inline]
     pub fn from_tag(tag: l4_msgtag_t) -> Result<Self> {
-        Self::from_tag_u(tag, &Utcb::current())
+        // SAFETY: ToDo, this is unsafe and awaits a generic solution to track usage of the UTCB
+        unsafe {
+            Self::from_tag_u(tag, &Utcb::current())
+        }
     }
 
     /// Get error from given tag and corresponding UTCB.

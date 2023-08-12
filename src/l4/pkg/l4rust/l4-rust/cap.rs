@@ -141,7 +141,7 @@ impl<T: Interface> Cap<T> {
             L4_BASE_TASK_CAP as u64,
             L4_BASE_TASK_CAP as u64,
             l4_sys::l4_obj_fpage(source.raw(), 0, L4_CAP_FPAGE_RWSD as u8),
-            self.send_base(L4_MAP_ITEM_GRANT as u64, None) as super::sys::l4_addr_t | 0xe0,
+            self.send_base(L4_MAP_ITEM_GRANT as u32, None) as super::sys::l4_addr_t | 0xe0,
         );
         Ok(())
     }
@@ -152,7 +152,7 @@ impl<T: Interface> Cap<T> {
     /// itself). If the first parameter is set, the object will be **granted**.
     /// In other words, it is possible to specify the object space location of this capability for
     /// map operations.
-    fn send_base(&self, grant: u64, base_cap: Option<l4_cap_idx_t>) -> u64 {
+    fn send_base(&self, grant: u32, base_cap: Option<l4_cap_idx_t>) -> u64 {
         let base_cap = base_cap.unwrap_or_else(|| self.raw());
         l4_sys::l4_map_obj_control(base_cap, grant)
     }
