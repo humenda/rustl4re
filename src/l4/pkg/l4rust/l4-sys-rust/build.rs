@@ -7,8 +7,10 @@ fn main() {
         .use_core()
         .derive_default(true)
         .rustified_enum(".*") // ToDo: this is dangerous, get rid
-        .blacklist_type("l4_addr_t")
-        .blacklist_type("l4_map_control")
+        .blocklist_type("l4_addr_t")
+        .blocklist_type("strtod")
+        .blocklist_type("max_align_t")
+        .blocklist_file(".*/stdlib.h")
         .ctypes_prefix("core::ffi");
     if let Ok(include_dirs) = ::std::env::var("L4_INCLUDE_DIRS") {
         for item in include_dirs.split(" ") {
