@@ -21,15 +21,12 @@ pub unsafe trait Serialisable: Clone {}
 /// as well, great care has been taken. This is usually safe for primitive
 /// types, a few types from this framework and for structs with a C ABI.
 ///
-/// The UTCB is accessed through the [`ArgAccesss<T>`](struct.ArgAccess.T.html).
-/// The implementor may choose to use the default implementation which
-/// transmutes the message registers at the next free and already correctly
-/// aligned location and copies the data of `Self` to it. The implementor may
-/// choose to override this behaviour, i.e. by using the `write_items` function
-/// of the message registers, by doing internal accounting or by using the
-/// kernel buffer store (if capabilities are being transfered), etc. This
-/// description applies both for reading and writing. For examples of
-/// implementors, see the Flex Page and Cap(ability) types.
+/// # Safety
+///
+/// The implementor must make sure that the type does not contain references, pointers, and no
+/// non-primitive types.
+/// An exception is if the references can be resolved while writing. For instance, when writing a
+/// vector.
 pub unsafe trait Serialiser
 where
     Self: Sized,
@@ -43,12 +40,12 @@ where
     /// though it is expected to hold a value when this type reads a value from it. In other words,
     /// before the framework passes the slice and the implementing type for this method is a
     /// `Cap<T>`, a capability needs to be within the slice.
-    unsafe fn read(mr: &mut UtcbMr, _: &mut BufferAccess) -> Result<Self>;
+    fn read(mr: &mut UtcbMr, _: &mut BufferAccess) -> Result<Self>;
 
     /// Write a value of this type to the message registers
     ///
     /// Offset and alignment are automatically calculated by the `ArgAccess`.
-    unsafe fn write(self, mr: &mut UtcbMr) -> Result<()>;
+    fn write(self, mr: &mut UtcbMr) -> Result<()>;
 }
 
 macro_rules! impl_serialisable {
@@ -57,11 +54,11 @@ macro_rules! impl_serialisable {
             unsafe impl Serialisable for $type { }
             unsafe impl Serialiser for $type {
                 #[inline]
-                unsafe fn read(mr: &mut UtcbMr, _: &mut BufferAccess) -> Result<Self> {
+                fn read(mr: &mut UtcbMr, _: &mut BufferAccess) -> Result<Self> {
                     mr.read::<Self>() // most types are read from here
                 }
                 #[inline]
-                unsafe fn write(self, mr: &mut UtcbMr) -> Result<()> {
+                fn write(self, mr: &mut UtcbMr) -> Result<()> {
                     mr.write::<Self>(self)
                 }
             }
@@ -75,11 +72,12 @@ impl_serialisable!(
 
 unsafe impl Serialiser for () {
     #[inline]
-    unsafe fn read(_: &mut UtcbMr, _: &mut BufferAccess) -> Result<()> {
+    fn read(_: &mut UtcbMr, _: &mut BufferAccess) -> Result<()> {
         Ok(())
     }
+
     #[inline]
-    unsafe fn write(self, _: &mut UtcbMr) -> Result<()> {
+    fn write(self, _: &mut UtcbMr) -> Result<()> {
         Ok(())
     }
 }
@@ -87,25 +85,25 @@ unsafe impl Serialiser for () {
 unsafe impl Serialisable for SndFlexPage {}
 unsafe impl Serialiser for SndFlexPage {
     #[inline]
-    unsafe fn write(self, mr: &mut UtcbMr) -> Result<()> {
+    fn write(self, mr: &mut UtcbMr) -> Result<()> {
         mr.write_item::<Self>(self)
     }
 
     #[inline]
-    unsafe fn read(_: &mut UtcbMr, _: &mut BufferAccess) -> Result<Self> {
+    fn read(_: &mut UtcbMr, _: &mut BufferAccess) -> Result<Self> {
         unimplemented!("flex pages are read by the concrete type, e.g. Cap");
     }
 }
 
 unsafe impl<T: Serialisable> Serialiser for Option<T> {
     #[inline]
-    unsafe fn read(mr: &mut UtcbMr, _: &mut BufferAccess) -> Result<Option<T>> {
+    fn read(mr: &mut UtcbMr, _: &mut BufferAccess) -> Result<Option<T>> {
         let val = mr.read::<T>()?;
         mr.read::<bool>().map(|_| Some(val))
     }
 
     #[inline]
-    unsafe fn write(self, mr: &mut UtcbMr) -> Result<()> {
+    fn write(self, mr: &mut UtcbMr) -> Result<()> {
         match self {
             None => {
                 mr.skip::<T>()?;
@@ -120,46 +118,39 @@ unsafe impl<T: Serialisable> Serialiser for Option<T> {
 }
 
 unsafe impl<T: Interface + IfaceInit> Serialiser for Cap<T> {
-    /// Read a capability from the given capability slice
-    ///
-    /// The slice must be constructed such that the first entry is the capability to be read, this
-    /// method relies on it.
+    /// Read a capability.
     #[inline]
-    unsafe fn read(_: &mut UtcbMr, bufs: &mut BufferAccess) -> Result<Self> {
-        Ok(bufs.rcv_cap_unchecked())
+    fn read(_: &mut UtcbMr, bufs: &mut BufferAccess) -> Result<Self> {
+        // SAFETY: ToDo, this awaits the resolution of #5
+        unsafe {
+            Ok(bufs.rcv_cap_unchecked())
+        }
     }
 
     #[inline]
-    unsafe fn write(self, mr: &mut UtcbMr) -> Result<()> {
+    fn write(self, mr: &mut UtcbMr) -> Result<()> {
         let fp = SndFlexPage::from_cap(&self, FpageRights::RWX, None);
         fp.write(mr)
     }
 }
 
 #[cfg(feature = "std")]
-unsafe impl<'a> Serialiser for &'a str {
-    #[inline]
-    unsafe fn read(mr: &mut UtcbMr, _: &mut BufferAccess) -> Result<Self> {
-        mr.read_str()
-    }
-
-    #[inline]
-    unsafe fn write(self, mr: &mut UtcbMr) -> Result<()> {
-        mr.write_str(self)
-    }
-}
-
 #[cfg(feature = "std")]
 #[cfg(feature = "std")]
 unsafe impl Serialiser for std::string::String {
     #[inline]
-    unsafe fn read(mr: &mut UtcbMr, _x: &mut BufferAccess) -> Result<Self> {
+    fn read(mr: &mut UtcbMr, _x: &mut BufferAccess) -> Result<Self> {
         use std::borrow::ToOwned;
-        Ok(mr.read_str()?.to_owned())
+        // SAFETY: Reading a string slice is unsafe as the UTCB may be overridden at any point.
+        // Since we allocate a string straight after acquiring the slice, it is turned into a safe
+        // operation.
+        unsafe {
+            Ok(mr.read_str()?.to_owned())
+        }
     }
 
     #[inline]
-    unsafe fn write(self, mr: &mut UtcbMr) -> Result<()> {
+    fn write(self, mr: &mut UtcbMr) -> Result<()> {
         mr.write_str(&self)
     }
 }
@@ -167,13 +158,12 @@ unsafe impl Serialiser for std::string::String {
 #[cfg(feature = "std")]
 unsafe impl<T: Serialisable> Serialiser for std::vec::Vec<T> {
     #[inline]
-    unsafe fn read(mr: &mut UtcbMr, x: &mut BufferAccess) -> Result<Self> {
-        let slice: &[T] = super::types::BufArray::read(mr, x)?.into();
-        Ok(std::vec::Vec::from(slice))
+    fn read(mr: &mut UtcbMr, x: &mut BufferAccess) -> Result<Self> {
+        super::types::BufArray::read(mr, x).map(|v| v.into())
     }
 
     #[inline]
-    unsafe fn write(self, mr: &mut UtcbMr) -> Result<()> {
+    fn write(self, mr: &mut UtcbMr) -> Result<()> {
         mr.write_slice::<u16, T>(self.as_slice())
     }
 }

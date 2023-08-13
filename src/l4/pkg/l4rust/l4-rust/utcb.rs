@@ -334,7 +334,7 @@ impl<U: UtcbRegSize> Registers<U> {
         Ok(())
     }
 
-    /// Serialise a &str as a C-compatible, 0-terminated UTF-8 string.
+    /// Serialise a &str as a framework-compatible string.
     pub fn write_str(&mut self, val: &str) -> Result<()> {
         self.write_slice::<usize, u8>(val.as_bytes())
     }

@@ -1,11 +1,12 @@
 //! IPC Interface Types
-use core::{mem::transmute, ptr::NonNull};
+use core::ptr::NonNull;
 
 use super::super::{
     cap::{invalid_cap, Cap, CapIdx, IfaceInit, Interface},
     error::{Error, GenericErr, Result},
     ipc::serialise::{Serialisable, Serialiser},
     ipc::MsgTag,
+    l4_err,
     types::UMword,
     utcb::UtcbMr,
 };
@@ -299,57 +300,74 @@ impl CapProvider for BufferManager {
 /// Note that this array can be constructed from a slice and also supports the
 /// conversion into a vector via the `Into` trait.
 pub struct Array<'a, Len, T> {
-    inner: &'a [T],
-    // (l4) c++ arrays use different slice length by default
-    _len_type: ::core::marker::PhantomData<Len>,
+    len: Len,
+    start: *const T,
+    _life: core::marker::PhantomData<&'a T>,
 }
 
 unsafe impl<'a, Len, T> Serialiser for Array<'a, Len, T>
 where
-    Len: num::NumCast + Serialisable,
+    Len: num::NumCast + Serialisable + Copy,
     T: Serialisable,
+    Self: 'a,
 {
     #[inline]
-    unsafe fn read(mr: &mut UtcbMr, _: &mut BufferAccess) -> Result<Self> {
+    fn read(mr: &mut UtcbMr, _: &mut BufferAccess) -> Result<Self> {
+        // SAFETY: This can only be made safe when #9 is implemented.
+        let sl = unsafe {
+            mr.read_slice::<Len, T>()?
+        };
         Ok(Array {
-            inner: transmute::<_, &'a [T]>(mr.read_slice::<Len, T>()?),
-            _len_type: ::core::marker::PhantomData,
+            start: sl.as_ptr(),
+            // SAFETY: the IPC buffer is bounded to 32 mwords and hence the len always fits
+            len: Len::from(sl.len()).ok_or(GenericErr::OutOfBounds)?,
+            _life: core::marker::PhantomData,
         })
     }
-    unsafe fn write(self, mr: &mut UtcbMr) -> Result<()> {
+
+    fn write(self, mr: &mut UtcbMr) -> Result<()> {
+        // SAFETY: ToDo, this awaits resolution of #9. This is safe for anything valid *outside*
+        // the UTCB.
+        let sl = unsafe { core::slice::from_raw_parts(self.start, self.len().to_u64().unwrap() as usize) };
         // default array in C++ is unsigned short - should be flexible
-        mr.write_slice::<Len, T>(self.inner)
+        mr.write_slice::<Len, T>(sl)
     }
 }
 
 impl<'a, Len, T> From<&'a [T]> for Array<'a, Len, T>
 where
-    Len: Serialisable + num::NumCast,
+    Len: Serialisable + num::NumCast + num::FromPrimitive + Copy,
     T: Serialisable,
 {
     fn from(sl: &'a [T]) -> Self {
         Array {
-            inner: sl,
-            _len_type: ::core::marker::PhantomData,
+            start: sl.as_ptr(),
+            len: Len::from_u64(sl.len() as u64).unwrap(),
+            _life: core::marker::PhantomData,
         }
-    }
-}
-
-impl<'a, Len, T> Into<&'a [T]> for Array<'a, Len, T>
-where
-    Len: Serialisable + num::NumCast,
-    T: Serialisable,
-{
-    fn into(self) -> &'a [T] {
-        self.inner
     }
 }
 
 #[cfg(feature = "std")]
 impl<'a, T: Serialisable> core::convert::Into<Vec<T>> for BufArray<'a, T> {
     fn into(self) -> Vec<T> {
-        let slice: &[T] = self.into();
-        Vec::from(slice)
+        // SAFETY: Safe only because the slice is immediately copied to a vector.
+        let sl: &[T] = unsafe {
+            core::slice::from_raw_parts(self.start, self.len() as usize)
+        };
+        let mut v = Vec::new();
+        v.extend_from_slice(sl);
+        v
+    }
+}
+
+impl<'a, Len, T> Array<'a, Len, T>
+where
+    Len: Serialisable + num::NumCast + Copy,
+    T: Serialisable,
+{
+    pub fn len(&self) -> Len {
+        self.len
     }
 }
 

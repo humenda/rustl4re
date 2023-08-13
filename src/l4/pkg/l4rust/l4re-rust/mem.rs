@@ -24,11 +24,12 @@ pub struct DsStats {
 unsafe impl l4::ipc::Serialisable for DsStats { }
 unsafe impl l4::ipc::Serialiser for DsStats {
     #[inline]
-    unsafe fn read(mr: &mut l4::utcb::UtcbMr, _: &mut l4::ipc::BufferAccess) -> l4::error::Result<Self> {
+    fn read(mr: &mut l4::utcb::UtcbMr, _: &mut l4::ipc::BufferAccess) -> l4::error::Result<Self> {
         mr.read::<Self>() // most types are read from here
     }
+
     #[inline]
-    unsafe fn write(self, mr: &mut l4::utcb::UtcbMr) -> l4::error::Result<()> {
+    fn write(self, mr: &mut l4::utcb::UtcbMr) -> l4::error::Result<()> {
         mr.write::<Self>(self)
     }
 }
@@ -46,11 +47,12 @@ pub struct DeprecatedPhys {
 unsafe impl l4::ipc::Serialisable for DeprecatedPhys { }
 unsafe impl l4::ipc::Serialiser for DeprecatedPhys {
     #[inline]
-    unsafe fn read(mr: &mut l4::utcb::UtcbMr, _: &mut l4::ipc::BufferAccess) -> l4::error::Result<Self> {
+    fn read(mr: &mut l4::utcb::UtcbMr, _: &mut l4::ipc::BufferAccess) -> l4::error::Result<Self> {
         mr.read::<Self>()
     }
+
     #[inline]
-    unsafe fn write(self, mr: &mut l4::utcb::UtcbMr) -> l4::error::Result<()> {
+    fn write(self, mr: &mut l4::utcb::UtcbMr) -> l4::error::Result<()> {
         mr.write::<Self>(self)
     }
 }

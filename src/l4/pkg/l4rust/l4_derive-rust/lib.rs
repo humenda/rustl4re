@@ -1,7 +1,4 @@
 #![recursion_limit = "128"]
-extern crate lazy_static;
-extern crate proc_macro;
-extern crate proc_macro2;
 
 #[macro_use]
 mod macros;

@@ -228,7 +228,7 @@ $(strip $(TARGET)): $(SRC_FILES)
 	@echo 'Building rlib...'
 	$(if $(VERBOSE),,@echo CARGO_BUILD_RUSTFLAGS=$(CARGO_BUILD_RUSTFLAGS))
 	$(VERBOSE)CARGO_BUILD_RUSTFLAGS='$(CARGO_BUILD_RUSTFLAGS)' \
-		cargo build $(if $(VERBOSE),,-v) --release \
+		cargo check $(if $(VERBOSE),,-v) \
 			--target=$(RUST_TARGET) \
 			--manifest-path=$(PKGDIR)/Cargo.toml
 	@$(BUILT_MESSAGE)

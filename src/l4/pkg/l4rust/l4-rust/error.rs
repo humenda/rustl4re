@@ -230,6 +230,12 @@ impl Error {
     }
 }
 
+impl core::convert::From<GenericErr> for Error {
+    fn from(o: GenericErr) -> Self {
+        Error::Generic(o)
+    }
+}
+
 #[cfg(feature = "std")]
 impl core::convert::From<std::string::FromUtf8Error> for Error {
     fn from(u: std::string::FromUtf8Error) -> Self {
@@ -249,7 +255,7 @@ pub type Result<T> = core::result::Result<T, Error>;
 #[macro_export]
 macro_rules! l4_err {
     (Generic, $err:ident) => {
-        return Err($crate::error::Error::Generic(
+        Err($crate::error::Error::Generic(
             $crate::error::GenericErr::$err,
         ))
     };
@@ -268,7 +274,7 @@ macro_rules! l4_err {
 macro_rules! l4_err_if {
     ($condition:expr => $($token:tt)*) => {
         if $condition {
-            l4_err!($($token)*);
+            return l4_err!($($token)*);
         }
     }
 }
