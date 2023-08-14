@@ -13,7 +13,7 @@ use pc_hal::traits::{DsAttachFlags, DsMapFlags, MaFlags, MemoryInterface};
 
 use crate::types::{RxQueue, TxQueue};
 
-pub const PACKET_HEADROOM: usize = 32;
+const PACKET_HEADROOM: usize = 32;
 
 pub struct DmaMemory<E, Dma, MM>
 where
@@ -31,8 +31,16 @@ where
 {
     num_entries: usize,
     entry_size: usize,
-    pub(crate) mem: RefCell<DmaMemory<E, Dma, MM>>,
-    pub(crate) free_stack: RefCell<Vec<usize>>,
+    shared: RefCell<SharedPart<E, Dma, MM>>
+}
+
+struct SharedPart<E, Dma, MM>
+where
+    MM: pc_hal::traits::MappableMemory<Error = E, DmaSpace = Dma>,
+    Dma: pc_hal::traits::DmaSpace,
+{
+    mem: DmaMemory<E, Dma, MM>,
+    free_stack: Vec<usize>,
 }
 
 pub struct Packet<E, Dma, MM>
@@ -97,6 +105,7 @@ where
     MM: pc_hal::traits::MappableMemory<Error = E, DmaSpace = Dma>,
     Dma: pc_hal::traits::DmaSpace,
 {
+    #[inline(always)]
     fn ptr(&mut self) -> *mut u8 {
         self.mem.ptr()
     }
@@ -128,8 +137,7 @@ where
         let pool = Self {
             num_entries,
             entry_size,
-            mem: RefCell::new(mem),
-            free_stack: RefCell::new(free_stack),
+            shared: RefCell::new(SharedPart { mem, free_stack })
         };
         trace!("Mempool setup done");
 
@@ -137,21 +145,23 @@ where
     }
 
     pub fn alloc_buf<'a>(&'a self) -> Option<usize> {
-        self.free_stack.borrow_mut().pop()
+        self.shared.borrow_mut().free_stack.pop()
     }
 
     pub(crate) fn free_buf(&self, id: usize) {
-        assert!(id < self.num_entries, "buffer outside of memory pool");
+        self.shared.borrow_mut().free_stack.push(id);
+    }
 
-        self.free_stack.borrow_mut().push(id);
+    pub(crate) fn free_chunk<I>(&self, i: I) where I: Iterator<Item=usize> {
+        self.shared.borrow_mut().free_stack.extend(i);
     }
 
     pub fn get_device_addr(&self, entry: usize) -> usize {
-        self.mem.borrow().device_addr + entry * self.entry_size
+        self.shared.borrow().mem.device_addr + entry * self.entry_size
     }
 
     pub fn get_our_addr(&self, entry: usize) -> *mut u8 {
-        unsafe { self.mem.borrow_mut().ptr().add(entry * self.entry_size) }
+        unsafe { self.shared.borrow_mut().mem.ptr().add(entry * self.entry_size) }
     }
 
     pub fn size(&self) -> usize {

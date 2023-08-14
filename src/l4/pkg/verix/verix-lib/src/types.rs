@@ -100,5 +100,4 @@ pub struct DeviceStats {
     pub tx_pkts: u64,
     pub rx_bytes: u64,
     pub tx_bytes: u64,
-    pub tx_dma_pkts: u64,
 }

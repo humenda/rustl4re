@@ -70,12 +70,12 @@ impl pc_hal::traits::Bus for Vbus {
         Some(Vbus(get_cap("vbus")?))
     }
 
-    fn device_iter(&self) -> Self::DeviceIter {
+    fn device_iter(&mut self) -> Self::DeviceIter {
         DeviceIter(self.0.device_iter())
     }
 
     fn assign_dma_domain(
-        &self,
+        &mut self,
         dma_domain: &mut Self::Resource,
         dma_space: &mut Self::DmaSpace,
     ) -> Result<(), Self::Error> {
@@ -197,6 +197,7 @@ impl pc_hal::traits::Resource for Resource {
 }
 
 impl pc_hal::traits::MemoryInterface for IoMem {
+    #[inline(always)]
     fn ptr(&mut self) -> *mut u8 {
         self.0.ptr()
     }
@@ -305,6 +306,7 @@ impl pc_hal::traits::Icu for Icu {
 }
 
 impl pc_hal::traits::MemoryInterface for MappableMemory {
+    #[inline(always)]
     fn ptr(&mut self) -> *mut u8 {
         self.0.ptr()
     }

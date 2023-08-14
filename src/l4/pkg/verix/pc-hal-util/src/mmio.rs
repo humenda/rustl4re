@@ -213,6 +213,7 @@ macro_rules! mm2types {
 
     (@field_spec_accessor $width:ident, RO, $field:ident @ $w1:literal $(: $w2:literal)? = $default:literal) => {
         impl R {
+            #[inline(always)]
             pub fn $field(&self) -> mm2types!(@regwidth2ty $w1 $($w2)?) {
                 // There is probably a more clever way to calculate this?
                 // I do however believe that LLVM should be capable of optimizing
@@ -229,6 +230,7 @@ macro_rules! mm2types {
 
     (@field_spec_accessor $width:ident, WO, $field:ident @ $w1:literal $(: $w2:literal)?) => {
         impl W {
+            #[inline(always)]
             pub fn $field(mut self, val: mm2types!(@regwidth2ty $w1 $($w2)?)) -> Self {
                 let val = val as mm2types!(@width2ty $width);
                 // There is probably a more clever way to calculate this?
@@ -255,6 +257,7 @@ macro_rules! mm2types {
         }
 
         impl R {
+            #[inline(always)]
             pub fn bits(&self) -> mm2types!(@width2ty $width) {
                 self.val
             }
@@ -279,6 +282,7 @@ macro_rules! mm2types {
         mm2types!(@reg_spec_accessor $width, RO, $($field @ $w1 $(: $w2)? = $default),+);
 
         impl<'a, IM: pc_hal::traits::MemoryInterface> Register<'a, IM> {
+            #[inline(always)]
             pub fn read(&mut self) -> R {
                 R {
                     val: unsafe { core::ptr::read_volatile(self.mem.inner.ptr().add($translate(self.nth)) as *const mm2types!(@width2ty $width)) }
@@ -291,6 +295,7 @@ macro_rules! mm2types {
         mm2types!(@reg_spec_accessor $width, WO, $($field @ $w1 $(: $w2)?),+);
 
         impl<'a, IM: pc_hal::traits::MemoryInterface> Register<'a, IM> {
+            #[inline(always)]
             pub fn write<F>(&mut self, f: F)
             where
                 F: FnOnce(W) -> W
@@ -307,6 +312,7 @@ macro_rules! mm2types {
         mm2types!(@reg_spec $width, $reg, [$n, $translate], WO, $($field @ $w1 $(: $w2)?),+);
 
         impl<'a, IM: pc_hal::traits::MemoryInterface> Register<'a, IM> {
+            #[inline(always)]
             pub fn modify<F>(&mut self, f: F)
             where
                 F: FnOnce(&R, W) -> W
@@ -323,6 +329,7 @@ macro_rules! mm2types {
         mm2types!(@reg_spec_accessor $width, RO, $($field @ $w1 $(: $w2)? = $default),+);
 
         impl<'a, IM: pc_hal::traits::MemoryInterface> Register<'a, IM> {
+            #[inline(always)]
             pub fn read(&mut self) -> R {
                 R {
                     val: unsafe { core::ptr::read_volatile(self.mem.inner.ptr().add($reg_addr) as *const mm2types!(@width2ty $width)) }
@@ -335,6 +342,7 @@ macro_rules! mm2types {
         mm2types!(@reg_spec_accessor $width, WO, $($field @ $w1 $(: $w2)?),+);
 
         impl<'a, IM: pc_hal::traits::MemoryInterface> Register<'a, IM> {
+            #[inline(always)]
             pub fn write<F>(&mut self, f: F)
             where
                 F: FnOnce(W) -> W
@@ -351,6 +359,7 @@ macro_rules! mm2types {
         mm2types!(@reg_spec $width, $reg, $reg_addr, WO, $($field @ $w1 $(: $w2)?),+);
 
         impl<'a, IM: pc_hal::traits::MemoryInterface> Register<'a, IM> {
+            #[inline(always)]
             pub fn modify<F>(&mut self, f: F)
             where
                 F: FnOnce(&R, W) -> W
@@ -370,6 +379,7 @@ macro_rules! mm2types {
         }
 
         impl<IM> super::Mem<IM> {
+            #[inline(always)]
             pub fn $reg<'a>(&'a mut self, nth: usize) -> Register<'a, IM> {
                 assert!(nth < $n);
                 Register {
@@ -386,6 +396,7 @@ macro_rules! mm2types {
         }
 
         impl<IM> super::Mem<IM> {
+            #[inline(always)]
             pub fn $reg<'a>(&'a mut self) -> Register<'a, IM> {
                 Register {
                     mem: self
@@ -433,11 +444,13 @@ macro_rules! mm2types {
                     }
 
                     impl<IM> From<IM> for Mem<IM> {
+                        #[inline(always)]
                         fn from(value: IM) -> Mem<IM> {
                             new(value)
                         }
                     }
 
+                    #[inline(always)]
                     pub fn new<IM>(inner: IM) -> Mem<IM> {
                         Mem {
                             inner
@@ -445,6 +458,7 @@ macro_rules! mm2types {
                     }
 
                     impl<IM> Mem<IM> {
+                        #[inline(always)]
                         pub fn consume(self) -> IM {
                             self.inner
                         }

@@ -13,3 +13,6 @@ pc-hal = { path = "../pc-hal" }
 [dependencies.simple_logger]
 version = "4.2"
 default-features = false
+
+[profile.release]
+debug = true

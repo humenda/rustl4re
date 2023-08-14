@@ -1,4 +1,3 @@
-use core::slice;
 use std::collections::VecDeque;
 use std::rc::Rc;
 use std::time::{Duration, Instant};
@@ -484,13 +483,11 @@ where
             + (u64::from(self.bar0.gorch().read().cnt_h()) << 32);
         let tx_bytes = u64::from(self.bar0.gotcl().read().cnt_l())
             + (u64::from(self.bar0.gotch().read().cnt_h()) << 32);
-        let tx_dma_pkts = self.bar0.txdpgc().read().gptc();
 
         stats.rx_pkts += rx_pkts;
         stats.tx_pkts += tx_pkts;
         stats.rx_bytes += rx_bytes;
         stats.tx_bytes += tx_bytes;
-        stats.tx_dma_pkts += tx_dma_pkts as u64;
     }
 
     fn reset_stats(&mut self) {
@@ -826,17 +823,9 @@ where
 
         if status != 0 {
             if TX_CLEAN_BATCH as usize >= queue.bufs_in_use.len() {
-                queue
-                    .pool
-                    .free_stack
-                    .borrow_mut()
-                    .extend(queue.bufs_in_use.drain(..))
+                queue.pool.free_chunk(queue.bufs_in_use.drain(..));
             } else {
-                queue
-                    .pool
-                    .free_stack
-                    .borrow_mut()
-                    .extend(queue.bufs_in_use.drain(..TX_CLEAN_BATCH))
+                queue.pool.free_chunk(queue.bufs_in_use.drain(..TX_CLEAN_BATCH));
             }
 
             clean_index = wrap_ring(cleanup_to, queue.num_descriptors.into());
