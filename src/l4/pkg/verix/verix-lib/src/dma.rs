@@ -272,6 +272,7 @@ where
         return None;
     }
 
+    // TODO: Do we really need PACKET_HEADROOM? I think this is for virtio?
     pool.alloc_buf().map(|id| Packet {
         addr_virt: unsafe { pool.get_our_addr(id).add(PACKET_HEADROOM) },
         addr_phys: pool.get_device_addr(id) + PACKET_HEADROOM,

@@ -9,3 +9,7 @@ members = [
     "pc-hal-util",
     "mix"
 ]
+
+
+[profile.release]
+debug = true

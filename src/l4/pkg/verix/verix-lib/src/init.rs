@@ -656,11 +656,14 @@ where
 
                 let pool = &queue.pool;
 
+                // TODO: can we get bulk allocation going here?
                 // get a free buffer from the mempool
                 if let Some(buf) = pool.alloc_buf() {
                     // replace currently used buffer with new buffer
                     let buf = mem::replace(&mut queue.bufs_in_use[rx_index], buf);
 
+                    // TODO: This performs two RefCell and one Rc operation in the hot path
+                    // While we do need the addresses at some point it should surely be faster to bulk this
                     let p = Packet {
                         addr_virt: pool.get_our_addr(buf),
                         addr_phys: pool.get_device_addr(buf),
@@ -680,6 +683,7 @@ where
 
                     let mut desc = dev::Descriptors::adv_rx_desc_read::new(desc.consume());
                     
+                    // TODO: This is a second RefCell operation even though we already did the first to obtain the buffer above
                     desc.pkt_addr().write(|w| w.pkt_addr(pool.get_device_addr(queue.bufs_in_use[rx_index]) as u64));
                     desc.hdr_addr().write(|w| w.hdr_addr(0));
 

@@ -9,15 +9,15 @@ pub trait Bus {
     type Device: Device;
     type Resource: Resource;
     type DmaSpace: DmaSpace;
-    type DeviceIter: Iterator<Item = Self::Device>;
+    type DeviceIter: Iterator<Item=Self::Device>;
 
     fn get() -> Option<Self>
     where
         Self: Sized;
-    fn device_iter(&self) -> Self::DeviceIter;
+    fn device_iter(&mut self) -> Self::DeviceIter;
 
     fn assign_dma_domain(
-        &self,
+        &mut self,
         dma_domain: &mut Self::Resource,
         dma_space: &mut Self::DmaSpace,
     ) -> Result<(), Self::Error>;
@@ -45,7 +45,7 @@ pub trait Device {
     fn supports_interface(&self, iface: BusInterface) -> bool;
 }
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 pub enum ResourceType {
     Invalid,
     Irq,
