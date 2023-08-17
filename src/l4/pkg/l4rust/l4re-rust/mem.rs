@@ -24,12 +24,11 @@ use crate::sys::l4re_rm_attach;
 use crate::sys::l4re_rm_detach;
 use l4_sys::l4re_util_cap_alloc;
 use l4_sys::l4_error_code_t::L4_EOK;
-use l4_sys::L4_PAGESHIFT;
+use l4_sys::{L4_PAGESHIFT, L4_SUPERPAGESHIFT};
 use l4_sys::l4_task_map;
 use l4_sys::l4_msg_item_consts_t::*;
 use l4_sys::l4_map_obj_control;
 use l4_sys::L4_fpage_rights::*;
-use l4_sys::L4_LOG2_PAGESIZE;
 use l4_sys::l4_fpage_w;
 
 use core::ffi::c_void;
@@ -38,18 +37,16 @@ use core::marker::PhantomData;
 use crate::OwnedCap;
 
 // TODO: This file shows that the OwnedCap abstraction doesn't compose well, fix it
-// TODO: Consider using super pages for performance?
-
 #[derive(Debug)]
 pub struct Dataspace {
     cap : CapIdx,
-    size: usize
+    size: usize,
+    pageshift: usize
 }
 
 pub struct AttachedDataspace {
     cap: OwnedCap<Dataspace>,
-    ptr: *mut u8
-
+    ptr: *mut u8,
 }
 
 pub trait VolatileMemoryInterface {
@@ -143,9 +140,12 @@ impl Dataspace {
         if err != 0 {
             Err(Error::from_ipc(err.into()))
         } else {
+            let has_super = flags.contains(MaFlags::SUPER_PAGES);
+            let pageshift = if has_super { L4_SUPERPAGESHIFT } else { L4_PAGESHIFT };
             Ok(OwnedCap(Cap::from_raw(Dataspace {
                 cap,
-                size
+                size,
+                pageshift: pageshift as usize
             })))
         }
     }
@@ -158,7 +158,7 @@ impl Dataspace {
             map_flags.bits() as u64 | attach_flags.bits() as u64,
             space.cap,
             0,
-            L4_PAGESHIFT as u8
+            space.pageshift as u8
         ) };
 
         if err != L4_EOK as i32 {
@@ -166,14 +166,14 @@ impl Dataspace {
         } else {
             Ok(AttachedDataspace {
                 cap: space,
-                ptr: vaddr as *mut u8
+                ptr: vaddr as *mut u8,
             })
         }
     }
 }
 
-fn maxorder(base: usize, size: usize) -> usize {
-    let mut o = L4_LOG2_PAGESIZE as usize;
+fn maxorder(base: usize, size: usize, pageshift: usize) -> usize {
+    let mut o = pageshift;
     loop {
 		let m = (1 << (o+1)) - 1;
 		if (base & m) != 0 {
@@ -183,7 +183,6 @@ fn maxorder(base: usize, size: usize) -> usize {
 			return o;
 		}
 		o += 1;
-
     }
 }
 
@@ -191,11 +190,12 @@ impl AttachedDataspace {
     pub fn map_dma(&mut self, target: &DmaSpace) -> Result<usize> {
         let mut len = self.cap.size;
         let mut addr = self.ptr as usize; // source address;
-        assert!((addr | len) % 4096 == 0);
-        println!("Starting to map dataspace from 0x{:x} to 0x{:x}, length: 0x{:x}", addr, addr, len);
+        let page_size = 1 << self.cap.pageshift;
+        assert!((addr | len) % page_size == 0);
+        println!("Starting to map dataspace from 0x{:x} to 0x{:x}, length: 0x{:x}, alignment: 0x{:x}", addr, addr, len, page_size);
 
         while len != 0 {
-            let o = maxorder(addr, len);
+            let o = maxorder(addr, len, self.cap.pageshift);
             let sz = 1 << o;
 
             let fp = unsafe { l4_fpage_w(addr, o as u32, L4_FPAGE_RWX as u8) };

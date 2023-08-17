@@ -255,7 +255,7 @@ where
                 ring_size_bytes, i
             );
 
-            let mut descriptor_mem = DmaMemory::new(ring_size_bytes, &self.dma_space)?;
+            let mut descriptor_mem = DmaMemory::new(ring_size_bytes, &self.dma_space, false)?;
 
             // initialize to 0xff to prevent rogue memory accesses on premature dma activation
             for i in 0..ring_size_bytes {
@@ -324,12 +324,6 @@ where
         for i in 0..self.num_rx_queues {
             info!("Initializing RX queue {}", i);
 
-            // The sum is used here because we share a mempool between rx and tx queues
-            let mempool_entries = NUM_RX_QUEUE_ENTRIES + NUM_TX_QUEUE_ENTRIES;
-
-            let mempool =
-                Mempool::new(mempool_entries.into(), PKT_BUF_ENTRY_SIZE, &self.dma_space)?;
-
             // enable advanced rx descriptors
             // let nic drop packets if no rx descriptor is available instead of buffering them
             self.bar0
@@ -344,7 +338,7 @@ where
                 ring_size_bytes, i
             );
 
-            let mut descriptor_mem = DmaMemory::new(ring_size_bytes, &self.dma_space)?;
+            let mut descriptor_mem = DmaMemory::new(ring_size_bytes, &self.dma_space, false)?;
             // initialize to 0xff to prevent rogue memory accesses on premature dma activation
             for i in 0..ring_size_bytes {
                 unsafe { core::ptr::write_volatile(descriptor_mem.ptr().add(i), 0xff) }
@@ -368,7 +362,11 @@ where
 
             info!("Setting up RX/TX Mempool {}", i);
 
-            // Shifted upwards to check for TLB failures
+            // The sum is used here because we share a mempool between rx and tx queues
+            let mempool_entries = NUM_RX_QUEUE_ENTRIES + NUM_TX_QUEUE_ENTRIES;
+
+            let mempool =
+                Mempool::new(mempool_entries.into(), PKT_BUF_ENTRY_SIZE, &self.dma_space)?;
 
             info!("Set up of RX/TX Mempool {} done", i);
 

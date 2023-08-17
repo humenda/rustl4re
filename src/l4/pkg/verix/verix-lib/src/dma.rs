@@ -60,11 +60,15 @@ where
     MM: pc_hal::traits::MappableMemory<Error = E, DmaSpace = Dma>,
     Dma: pc_hal::traits::DmaSpace,
 {
-    pub fn new(size: usize, space: &Dma) -> Result<Self, E> {
+    pub fn new(size: usize, space: &Dma, super_pages: bool) -> Result<Self, E> {
         trace!("Allocating {} bytes of memory for DMA", size);
+        let mut maflags = MaFlags::PINNED | MaFlags::CONTINUOUS;
+        if super_pages {
+            maflags |= MaFlags::SUPER_PAGES;
+        }
         let mut mem = MM::alloc(
             size,
-            MaFlags::PINNED | MaFlags::CONTINUOUS,
+            maflags,
             DsMapFlags::RW,
             DsAttachFlags::SEARCH_ADDR | DsAttachFlags::EAGER_MAP,
         )?;
@@ -123,7 +127,7 @@ where
             entry_size
         );
         // TODO: ixy allows the OS to be non contigious here, if i figure out how to tell L4 to translate arbitrary addresses we can do that
-        let mut mem: DmaMemory<E, Dma, MM> = DmaMemory::new(num_entries * entry_size, space)?;
+        let mut mem: DmaMemory<E, Dma, MM> = DmaMemory::new(num_entries * entry_size, space, true)?;
 
         // Clear the memory to a defined initial state
         for i in 0..(num_entries * entry_size) {
