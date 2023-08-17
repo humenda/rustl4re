@@ -2,7 +2,7 @@ extern crate l4;
 
 use pc_hal::traits::Bus;
 use pc_hal_l4::{
-    Device, DmaSpace, Icu, IoMem, IrqHandler, MappableMemory, PciDevice, Resource, Vbus,
+    Device, DmaSpace, IoMem, MappableMemory, PciDevice, Resource, Vbus,
 };
 use verix_lib::run;
 
@@ -17,9 +17,7 @@ fn main() {
         Resource,
         MappableMemory,
         DmaSpace,
-        Icu,
         IoMem,
-        IrqHandler,
     >(vbus)
     .unwrap();
 }

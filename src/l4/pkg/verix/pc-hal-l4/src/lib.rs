@@ -163,6 +163,7 @@ impl pc_hal::traits::FailibleMemoryInterface32 for PciDevice {
 
 impl pc_hal::traits::PciDevice for PciDevice {
     type Device = Device;
+    type IoMem = IoMem;
 
     fn try_of_device(dev: Self::Device) -> Option<Self> {
         if dev.supports_interface(pc_hal::traits::BusInterface::Pcidev) {
@@ -171,46 +172,13 @@ impl pc_hal::traits::PciDevice for PciDevice {
             None
         }
     }
-}
 
-impl pc_hal::traits::Resource for Resource {
-    fn start(&mut self) -> usize {
-        self.0.start()
-    }
-
-    fn end(&mut self) -> usize {
-        self.0.end()
-    }
-
-    fn typ(&self) -> pc_hal::traits::ResourceType {
-        match self.0.typ() {
-            ResourceType::Invalid => pc_hal::traits::ResourceType::Invalid,
-            ResourceType::Irq => pc_hal::traits::ResourceType::Irq,
-            ResourceType::Mem => pc_hal::traits::ResourceType::Mem,
-            ResourceType::Port => pc_hal::traits::ResourceType::Port,
-            ResourceType::Bus => pc_hal::traits::ResourceType::Bus,
-            ResourceType::Gpio => pc_hal::traits::ResourceType::Gpio,
-            ResourceType::DmaDomain => pc_hal::traits::ResourceType::DmaDomain,
-            ResourceType::Max => unreachable!(),
-        }
-    }
-}
-
-impl pc_hal::traits::MemoryInterface for IoMem {
-    #[inline(always)]
-    fn ptr(&mut self) -> *mut u8 {
-        self.0.ptr()
-    }
-}
-
-impl pc_hal::traits::IoMem for IoMem {
-    type Error = l4::Error;
-
-    fn request(
+    fn request_iomem(
+        &mut self,
         phys: u64,
         size: u64,
         flags: pc_hal::traits::IoMemFlags,
-    ) -> Result<Self, Self::Error> {
+    ) -> Result<Self::IoMem, Self::Error> {
         let pairs = [
             (
                 pc_hal::traits::IoMemFlags::NONCACHED,
@@ -241,6 +209,36 @@ impl pc_hal::traits::IoMem for IoMem {
                 });
 
         Ok(IoMem(l4re::io::IoMem::request(phys, size, translated)?))
+    }
+}
+
+impl pc_hal::traits::Resource for Resource {
+    fn start(&mut self) -> usize {
+        self.0.start()
+    }
+
+    fn end(&mut self) -> usize {
+        self.0.end()
+    }
+
+    fn typ(&self) -> pc_hal::traits::ResourceType {
+        match self.0.typ() {
+            ResourceType::Invalid => pc_hal::traits::ResourceType::Invalid,
+            ResourceType::Irq => pc_hal::traits::ResourceType::Irq,
+            ResourceType::Mem => pc_hal::traits::ResourceType::Mem,
+            ResourceType::Port => pc_hal::traits::ResourceType::Port,
+            ResourceType::Bus => pc_hal::traits::ResourceType::Bus,
+            ResourceType::Gpio => pc_hal::traits::ResourceType::Gpio,
+            ResourceType::DmaDomain => pc_hal::traits::ResourceType::DmaDomain,
+            ResourceType::Max => unreachable!(),
+        }
+    }
+}
+
+impl pc_hal::traits::MemoryInterface for IoMem {
+    #[inline(always)]
+    fn ptr(&mut self) -> *mut u8 {
+        self.0.ptr()
     }
 }
 

@@ -211,7 +211,7 @@ macro_rules! mm2types {
     (@regwidth2ty $w1:literal $w2:literal) => { <$crate::mmio::RegWidth<{$w1 - $w2}> as $crate::mmio::RegMarker>::Reg };
     (@regwidth2ty $w1:literal) => { u8 }; // TODO we can condense this even further to just a bool
 
-    (@field_spec_accessor $width:ident, RO, $field:ident @ $w1:literal $(: $w2:literal)? = $default:literal) => {
+    (@field_spec_accessor $width:ident, RO, $field:ident @ $w1:literal $(: $w2:literal)?) => {
         impl R {
             #[inline(always)]
             pub fn $field(&self) -> mm2types!(@regwidth2ty $w1 $($w2)?) {
@@ -251,7 +251,7 @@ macro_rules! mm2types {
 
     };
 
-    (@reg_spec_accessor $width:ident, RO, $($field:ident @ $w1:literal $(: $w2:literal)? = $default:literal),+) => {
+    (@reg_spec_accessor $width:ident, RO, $($field:ident @ $w1:literal $(: $w2:literal)?),+) => {
         pub struct R {
             val: mm2types!(@width2ty $width)
         }
@@ -264,7 +264,7 @@ macro_rules! mm2types {
         }
 
         $( // fields
-            mm2types!(@field_spec_accessor $width, RO, $field @ $w1 $(: $w2)? = $default);
+            mm2types!(@field_spec_accessor $width, RO, $field @ $w1 $(: $w2)?);
         )+
     };
 
@@ -278,8 +278,8 @@ macro_rules! mm2types {
         )+
     };
 
-    (@reg_spec $width:ident, $reg:ident, [$n:literal, $translate:expr], RO, $($field:ident @ $w1:literal $(: $w2:literal)? = $default:literal),+) => {
-        mm2types!(@reg_spec_accessor $width, RO, $($field @ $w1 $(: $w2)? = $default),+);
+    (@reg_spec $width:ident, $reg:ident, [$n:literal, $translate:expr], RO, $($field:ident @ $w1:literal $(: $w2:literal)?),+) => {
+        mm2types!(@reg_spec_accessor $width, RO, $($field @ $w1 $(: $w2)?),+);
 
         impl<'a, IM: pc_hal::traits::MemoryInterface> Register<'a, IM> {
             #[inline(always)]
@@ -307,8 +307,8 @@ macro_rules! mm2types {
         }
     };
 
-    (@reg_spec $width:ident, $reg:ident, [$n:literal, $translate:expr], RW, $($field:ident @ $w1:literal $(: $w2:literal)? = $default:literal),+) => {
-        mm2types!(@reg_spec $width, $reg, [$n, $translate], RO, $($field @ $w1 $(: $w2)? = $default),+);
+    (@reg_spec $width:ident, $reg:ident, [$n:literal, $translate:expr], RW, $($field:ident @ $w1:literal $(: $w2:literal)?),+) => {
+        mm2types!(@reg_spec $width, $reg, [$n, $translate], RO, $($field @ $w1 $(: $w2)?),+);
         mm2types!(@reg_spec $width, $reg, [$n, $translate], WO, $($field @ $w1 $(: $w2)?),+);
 
         impl<'a, IM: pc_hal::traits::MemoryInterface> Register<'a, IM> {
@@ -325,8 +325,8 @@ macro_rules! mm2types {
         }
     };
 
-    (@reg_spec $width:ident, $reg:ident, $reg_addr:literal, RO, $($field:ident @ $w1:literal $(: $w2:literal)? = $default:literal),+) => {
-        mm2types!(@reg_spec_accessor $width, RO, $($field @ $w1 $(: $w2)? = $default),+);
+    (@reg_spec $width:ident, $reg:ident, $reg_addr:literal, RO, $($field:ident @ $w1:literal $(: $w2:literal)?),+) => {
+        mm2types!(@reg_spec_accessor $width, RO, $($field @ $w1 $(: $w2)?),+);
 
         impl<'a, IM: pc_hal::traits::MemoryInterface> Register<'a, IM> {
             #[inline(always)]
@@ -354,8 +354,8 @@ macro_rules! mm2types {
         }
     };
 
-    (@reg_spec $width:ident, $reg:ident, $reg_addr:literal, RW, $($field:ident @ $w1:literal $(: $w2:literal)? = $default:literal),+) => {
-        mm2types!(@reg_spec $width, $reg, $reg_addr, RO, $($field @ $w1 $(: $w2)? = $default),+);
+    (@reg_spec $width:ident, $reg:ident, $reg_addr:literal, RW, $($field:ident @ $w1:literal $(: $w2:literal)?),+) => {
+        mm2types!(@reg_spec $width, $reg, $reg_addr, RO, $($field @ $w1 $(: $w2)?),+);
         mm2types!(@reg_spec $width, $reg, $reg_addr, WO, $($field @ $w1 $(: $w2)?),+);
 
         impl<'a, IM: pc_hal::traits::MemoryInterface> Register<'a, IM> {
@@ -478,26 +478,26 @@ mm2types! {
                 128,
                 |n| 0x0000 + n * 0x10
             ] RW {
-                tadd @ 31:0 = 0b0
+                tadd @ 31:0
             }
             tuadd @ [
                 128,
                 |n| 0x0004 + n * 0x10
             ] RW {
-                tuadd @ 31:0 = 0b0
+                tuadd @ 31:0
             }
             tmsg @ [
                 128,
                 |n| 0x0008 + n * 0x10
             ] RW {
-                tmsg @ 31:0 = 0b0
+                tmsg @ 31:0
             }
             tvctrl @ [
                 128,
                 |n| 0x000C + n * 0x10
             ] RW {
-                masked @ 0 = 0b0,
-                reserved0 @ 31:1 = 0b0
+                masked @ 0,
+                reserved0 @ 31:1
             }
         }
     }

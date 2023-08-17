@@ -11,36 +11,31 @@ use crate::constants::{
 use crate::dev;
 use crate::dma::{DmaMemory, Mempool, Packet};
 use crate::types::{
-    Device, DeviceStats, Error, Interrupts, InterruptsQueue, Result, RxQueue, TxQueue,
+    Device, DeviceStats, Error, Result, RxQueue, TxQueue,
 };
 
 use log::{info, trace};
 
 use pc_hal::prelude::*;
-use pc_hal_util::mmio::MsixDev;
-use pc_hal_util::pci::{enable_bus_master, map_bar, map_msix_cap};
+use pc_hal_util::pci::{enable_bus_master, map_bar};
 
-impl<E, IM, PD, D, Res, Dma, MM, ISR> Device<E, IM, PD, D, Res, Dma, MM, ISR>
+impl<E, IM, PD, D, Res, Dma, MM> Device<E, IM, PD, D, Res, Dma, MM>
 where
     D: pc_hal::traits::Device,
     Res: pc_hal::traits::Resource,
-    IM: pc_hal::traits::IoMem<Error = E>,
-    PD: pc_hal::traits::PciDevice<Error = E, Device = D, Resource = Res> + AsMut<D>,
+    PD: pc_hal::traits::PciDevice<Error = E, Device = D, Resource = Res, IoMem=IM>,
     MM: pc_hal::traits::MappableMemory<Error = E, DmaSpace = Dma>,
     Dma: pc_hal::traits::DmaSpace,
-    ISR: pc_hal::traits::IrqHandler,
+    IM: pc_hal::traits::MemoryInterface,
 {
-    pub fn init<B, ICU>(
+    pub fn init<B>(
         bus: &mut B,
-        icu: &mut ICU,
         mut nic: PD,
         num_rx_queues: u8,
         num_tx_queues: u8,
-        interrupt_timeout: i16,
-    ) -> Result<Device<E, IM, PD, D, Res, Dma, MM, ISR>, E>
+    ) -> Result<Device<E, IM, PD, D, Res, Dma, MM>, E>
     where
         B: pc_hal::traits::Bus<Error = E, Device = D, Resource = Res, DmaSpace = Dma>,
-        ICU: pc_hal::traits::Icu<Bus = B, Device = D, Error = E, IrqHandler = ISR>,
     {
         let vendor_id = nic.read16(0x0)?;
         let device_id = nic.read16(0x2)?;
@@ -62,9 +57,6 @@ where
         let bar0_mem: IM = map_bar(&mut nic, 0)?;
         let bar0 = dev::Intel82559ES::Bar0::new(bar0_mem);
 
-        let msix_mem: IM = map_msix_cap(&mut nic)?.ok_or(Error::MsixMissing)?;
-        let msix = MsixDev::Msix::new(msix_mem);
-
         let rx_queues = Vec::with_capacity(num_rx_queues.into());
         let tx_queues = Vec::with_capacity(num_tx_queues.into());
 
@@ -79,18 +71,11 @@ where
 
         let mut dev = Device {
             bar0,
-            msix,
             num_rx_queues,
             num_tx_queues,
             rx_queues,
             tx_queues,
             device: nic,
-            interrupts: Interrupts {
-                timeout_ms: interrupt_timeout,
-                // specified in 2us units
-                itr_rate: 40,
-                queues: Vec::with_capacity(num_rx_queues.into()),
-            },
             dma_space,
         };
 
@@ -101,6 +86,7 @@ where
         Ok(dev)
     }
 
+    /*
     fn setup_interrupts<B, ICU>(&mut self, icu: &mut ICU) -> Result<(), E>
     where
         B: pc_hal::traits::Bus<Error = E, Device = D, Resource = Res, DmaSpace = Dma>,
@@ -144,6 +130,7 @@ where
 
         Ok(())
     }
+    */
 
     fn reset_and_init(&mut self) -> Result<(), E> {
         info!("Resetting device");
@@ -554,6 +541,7 @@ where
         ]
     }
 
+    /* 
     fn set_ivar(&mut self, queue_id: u8) {
         let ivar_idx = (queue_id as usize) / 2;
         // We set up our interrupts such that the MSI-X index maps to the rx_queue_id, hence that is our allocation
@@ -604,6 +592,7 @@ where
             .modify(|r, w| w.interrupt_enable(r.interrupt_enable() | (1 << rx_queue_id)));
         info!("Enabled interrupts for RX queue {}", rx_queue_id);
     }
+    */
 
     fn clear_interrupts(&mut self) {
         // 31 ones, the last bit in the register is reserved

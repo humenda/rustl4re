@@ -87,9 +87,13 @@ impl MemoryInterface for *mut u8 {
 
 pub trait PciDevice: Device + FailibleMemoryInterface32<Addr = u32> {
     type Device: Device;
+    type IoMem: MemoryInterface;
+
     fn try_of_device(dev: Self::Device) -> Option<Self>
     where
         Self: Sized;
+
+    fn request_iomem(&mut self, phys: u64, size: u64, flags: IoMemFlags) -> Result<Self::IoMem, Self::Error>;
 }
 
 bitflags! {
@@ -99,15 +103,6 @@ bitflags! {
         const USE_MTRR = 1 << 3;
         const EAGER_MAP = 1 << 4;
     }
-}
-
-pub trait IoMem: MemoryInterface {
-    type Error;
-
-    // TODO: this is very l4 specific but it should be fine for our purposes
-    fn request(phys: u64, size: u64, flags: IoMemFlags) -> Result<Self, Self::Error>
-    where
-        Self: Sized;
 }
 
 pub trait IrqHandler {
