@@ -3,7 +3,7 @@ use pc_hal::traits::IoMemFlags;
 
 pub fn map_bar<E, D, IM>(dev: &mut D, bar_idx: u8) -> Result<IM, E>
 where
-    D: pc_hal::traits::PciDevice<IoMem=IM, Error = E>,
+    D: pc_hal::traits::PciDevice<IoMem = IM, Error = E>,
 {
     // TODO: 64 bit BAR
     let mut command_reg = dev.read16(0x4)?;
@@ -98,7 +98,7 @@ pub fn enable_bus_master<E, D: pc_hal::traits::PciDevice<Error = E>>(dev: &mut D
 
 pub fn map_msix_cap<E, D, IM>(dev: &mut D) -> Result<Option<IM>, E>
 where
-    D: pc_hal::traits::PciDevice<IoMem=IM, Error = E>,
+    D: pc_hal::traits::PciDevice<IoMem = IM, Error = E>,
 {
     let status_register = dev.read16(0x6)?;
     let has_capabilities = (status_register & (1 << 4)) != 0;

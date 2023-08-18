@@ -32,10 +32,10 @@ pub struct Device<E, IM, PD, D, Res, Dma, MM>
 where
     D: pc_hal::traits::Device,
     Res: pc_hal::traits::Resource,
-    PD: pc_hal::traits::PciDevice<Error = E, Device = D, Resource = Res, IoMem=IM>,
+    PD: pc_hal::traits::PciDevice<Error = E, Device = D, Resource = Res, IoMem = IM>,
     MM: pc_hal::traits::MappableMemory<Error = E, DmaSpace = Dma>,
     Dma: pc_hal::traits::DmaSpace,
-    IM: pc_hal::traits::MemoryInterface
+    IM: pc_hal::traits::MemoryInterface,
 {
     pub(crate) bar0: dev::Intel82559ES::Bar0::Mem<IM>,
     pub(crate) device: PD,

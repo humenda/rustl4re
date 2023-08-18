@@ -9,7 +9,7 @@ pub trait Bus {
     type Device: Device;
     type Resource: Resource;
     type DmaSpace: DmaSpace;
-    type DeviceIter: Iterator<Item=Self::Device>;
+    type DeviceIter: Iterator<Item = Self::Device>;
 
     fn get() -> Option<Self>
     where
@@ -93,7 +93,12 @@ pub trait PciDevice: Device + FailibleMemoryInterface32<Addr = u32> {
     where
         Self: Sized;
 
-    fn request_iomem(&mut self, phys: u64, size: u64, flags: IoMemFlags) -> Result<Self::IoMem, Self::Error>;
+    fn request_iomem(
+        &mut self,
+        phys: u64,
+        size: u64,
+        flags: IoMemFlags,
+    ) -> Result<Self::IoMem, Self::Error>;
 }
 
 bitflags! {

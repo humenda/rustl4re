@@ -31,7 +31,7 @@ where
 {
     num_entries: usize,
     entry_size: usize,
-    shared: RefCell<SharedPart<E, Dma, MM>>
+    shared: RefCell<SharedPart<E, Dma, MM>>,
 }
 
 struct SharedPart<E, Dma, MM>
@@ -141,7 +141,7 @@ where
         let pool = Self {
             num_entries,
             entry_size,
-            shared: RefCell::new(SharedPart { mem, free_stack })
+            shared: RefCell::new(SharedPart { mem, free_stack }),
         };
         trace!("Mempool setup done");
 
@@ -156,7 +156,10 @@ where
         self.shared.borrow_mut().free_stack.push(id);
     }
 
-    pub(crate) fn free_chunk<I>(&self, i: I) where I: Iterator<Item=usize> {
+    pub(crate) fn free_chunk<I>(&self, i: I)
+    where
+        I: Iterator<Item = usize>,
+    {
         self.shared.borrow_mut().free_stack.extend(i);
     }
 
@@ -165,7 +168,13 @@ where
     }
 
     pub fn get_our_addr(&self, entry: usize) -> *mut u8 {
-        unsafe { self.shared.borrow_mut().mem.ptr().add(entry * self.entry_size) }
+        unsafe {
+            self.shared
+                .borrow_mut()
+                .mem
+                .ptr()
+                .add(entry * self.entry_size)
+        }
     }
 
     pub fn size(&self) -> usize {

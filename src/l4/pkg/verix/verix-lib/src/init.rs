@@ -4,15 +4,13 @@ use std::time::{Duration, Instant};
 use std::{mem, thread};
 
 use crate::constants::{
-    ADV_TX_DESC_DTYP_DATA, AUTOC_LMS_10G_SFI, LINKS_LINK_SPEED_100M,
-    LINKS_LINK_SPEED_10G, LINKS_LINK_SPEED_1G, NUM_RX_QUEUE_ENTRIES, NUM_TX_QUEUE_ENTRIES,
-    PKT_BUF_ENTRY_SIZE, SRRCTL_DESCTYPE_ADV_ONE_BUFFER,
+    ADV_TX_DESC_DTYP_DATA, AUTOC_LMS_10G_SFI, LINKS_LINK_SPEED_100M, LINKS_LINK_SPEED_10G,
+    LINKS_LINK_SPEED_1G, NUM_RX_QUEUE_ENTRIES, NUM_TX_QUEUE_ENTRIES, PKT_BUF_ENTRY_SIZE,
+    SRRCTL_DESCTYPE_ADV_ONE_BUFFER,
 };
 use crate::dev;
 use crate::dma::{DmaMemory, Mempool, Packet};
-use crate::types::{
-    Device, DeviceStats, Error, Result, RxQueue, TxQueue,
-};
+use crate::types::{Device, DeviceStats, Error, Result, RxQueue, TxQueue};
 
 use log::{info, trace};
 
@@ -23,7 +21,7 @@ impl<E, IM, PD, D, Res, Dma, MM> Device<E, IM, PD, D, Res, Dma, MM>
 where
     D: pc_hal::traits::Device,
     Res: pc_hal::traits::Resource,
-    PD: pc_hal::traits::PciDevice<Error = E, Device = D, Resource = Res, IoMem=IM>,
+    PD: pc_hal::traits::PciDevice<Error = E, Device = D, Resource = Res, IoMem = IM>,
     MM: pc_hal::traits::MappableMemory<Error = E, DmaSpace = Dma>,
     Dma: pc_hal::traits::DmaSpace,
     IM: pc_hal::traits::MemoryInterface,
@@ -202,7 +200,7 @@ where
             self.start_tx_queue(i)?;
         }
 
-		// TODO: do I want to be interrupt based?
+        // TODO: do I want to be interrupt based?
         //for queue in 0..self.num_rx_queues {
         //    self.enable_interrupt(queue);
         //}
@@ -541,7 +539,7 @@ where
         ]
     }
 
-    /* 
+    /*
     fn set_ivar(&mut self, queue_id: u8) {
         let ivar_idx = (queue_id as usize) / 2;
         // We set up our interrupts such that the MSI-X index maps to the rx_queue_id, hence that is our allocation
@@ -661,9 +659,11 @@ where
                     buffer.push_back(p);
 
                     let mut desc = dev::Descriptors::adv_rx_desc_read::new(desc.consume());
-                    
+
                     // TODO: This is a second RefCell operation even though we already did the first to obtain the buffer above
-                    desc.pkt_addr().write(|w| w.pkt_addr(pool.get_device_addr(queue.bufs_in_use[rx_index]) as u64));
+                    desc.pkt_addr().write(|w| {
+                        w.pkt_addr(pool.get_device_addr(queue.bufs_in_use[rx_index]) as u64)
+                    });
                     desc.hdr_addr().write(|w| w.hdr_addr(0));
 
                     last_rx_index = rx_index;
@@ -701,12 +701,14 @@ where
         }
 
         if rx_index != last_rx_index {
-            self.bar0.rdt(queue_id.into()).modify(|_, w| w.rdt(last_rx_index as u16));
+            self.bar0
+                .rdt(queue_id.into())
+                .modify(|_, w| w.rdt(last_rx_index as u16));
             self.rx_queues[queue_id as usize].rx_index = rx_index;
         }
 
         received_packets
-    } 
+    }
 
     pub fn tx_batch_busy_wait(&mut self, queue_id: u16, buffer: &mut VecDeque<Packet<E, Dma, MM>>) {
         while !buffer.is_empty() {
@@ -744,7 +746,8 @@ where
 
             let descriptor_ptr = queue.nth_descriptor_ptr(cur_index);
             let mut desc = dev::Descriptors::adv_tx_desc_read::new(descriptor_ptr);
-            desc.lower().write(|w| w.address(packet.get_device_addr() as u64));
+            desc.lower()
+                .write(|w| w.address(packet.get_device_addr() as u64));
             desc.upper().write(|w| {
                 w.paylen(packet.len() as u32)
                     .dtalen(packet.len() as u16)
@@ -808,7 +811,9 @@ where
             if TX_CLEAN_BATCH as usize >= queue.bufs_in_use.len() {
                 queue.pool.free_chunk(queue.bufs_in_use.drain(..));
             } else {
-                queue.pool.free_chunk(queue.bufs_in_use.drain(..TX_CLEAN_BATCH));
+                queue
+                    .pool
+                    .free_chunk(queue.bufs_in_use.drain(..TX_CLEAN_BATCH));
             }
 
             clean_index = wrap_ring(cleanup_to, queue.num_descriptors.into());

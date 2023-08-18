@@ -20,11 +20,11 @@ pub fn run<E, D, PD, B, Res, MM, Dma, IM>(mut bus: B) -> Result<(), E>
 where
     D: pc_hal::traits::Device,
     B: pc_hal::traits::Bus<Error = E, Device = D, Resource = Res, DmaSpace = Dma>,
-    PD: pc_hal::traits::PciDevice<Error = E, Device = D, Resource = Res, IoMem=IM>,
+    PD: pc_hal::traits::PciDevice<Error = E, Device = D, Resource = Res, IoMem = IM>,
     Res: pc_hal::traits::Resource,
     MM: pc_hal::traits::MappableMemory<Error = E, DmaSpace = Dma>,
     Dma: pc_hal::traits::DmaSpace,
-    IM: pc_hal::traits::MemoryInterface
+    IM: pc_hal::traits::MemoryInterface,
 {
     //  TODO: proper device discovery
     let mut devices = bus.device_iter();
@@ -33,9 +33,8 @@ where
     let nic = PD::try_of_device(devices.next().unwrap()).unwrap();
     info!("Obtained handles to NIC");
 
-    let mut dev: types::Device<E, IM, PD, D, Res, Dma, MM> = types::Device::init(
-        &mut bus, nic, 1, 1
-    )?;
+    let mut dev: types::Device<E, IM, PD, D, Res, Dma, MM> =
+        types::Device::init(&mut bus, nic, 1, 1)?;
 
     let mut dev_stats = Default::default();
     let mut dev_stats_old = Default::default();
@@ -52,7 +51,7 @@ where
         if num_rx > 0 {
             for pkt in buffer.iter_mut() {
                 for idx in 0..6 {
-                    pkt.swap(idx, idx+6);
+                    pkt.swap(idx, idx + 6);
                 }
             }
 
