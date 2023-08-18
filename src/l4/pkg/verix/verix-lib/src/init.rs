@@ -1,10 +1,10 @@
 use std::collections::VecDeque;
-use std::rc::Rc;
+
 use std::time::{Duration, Instant};
 use std::{mem, thread};
 
 use crate::constants::{
-    ADV_TX_DESC_DTYP_DATA, AUTOC_LMS_10G_SFI, INTERRUPT_INITIAL_INTERVAL, LINKS_LINK_SPEED_100M,
+    ADV_TX_DESC_DTYP_DATA, AUTOC_LMS_10G_SFI, LINKS_LINK_SPEED_100M,
     LINKS_LINK_SPEED_10G, LINKS_LINK_SPEED_1G, NUM_RX_QUEUE_ENTRIES, NUM_TX_QUEUE_ENTRIES,
     PKT_BUF_ENTRY_SIZE, SRRCTL_DESCTYPE_ADV_ONE_BUFFER,
 };
@@ -649,15 +649,7 @@ where
                     // replace currently used buffer with new buffer
                     let buf = mem::replace(&mut queue.bufs_in_use[rx_index], buf);
 
-                    // TODO: This performs two RefCell and one Rc operation in the hot path
-                    // While we do need the addresses at some point it should surely be faster to bulk this
-                    let p = Packet {
-                        addr_virt: pool.get_our_addr(buf),
-                        addr_phys: pool.get_device_addr(buf),
-                        len: upper.pkt_len().into(),
-                        pool: pool.clone(),
-                        pool_entry: buf,
-                    };
+                    let p = Packet::new(pool, buf, upper.pkt_len().into());
 
                     // TODO: pre fetch magics
                     // #[cfg(all(
@@ -733,9 +725,9 @@ where
         let mut cur_index = queue.tx_index;
         let clean_index = clean_tx_queue(&mut queue);
 
-        while let Some(packet) = buffer.pop_front() {
+        while let Some(mut packet) = buffer.pop_front() {
             assert!(
-                Rc::ptr_eq(&queue.pool, &packet.pool),
+                queue.contains(&packet),
                 "distinct memory pools for a single tx queue are not supported yet"
             );
 
@@ -752,10 +744,10 @@ where
 
             let descriptor_ptr = queue.nth_descriptor_ptr(cur_index);
             let mut desc = dev::Descriptors::adv_tx_desc_read::new(descriptor_ptr);
-            desc.lower().write(|w| w.address(packet.addr_phys as u64));
+            desc.lower().write(|w| w.address(packet.get_device_addr() as u64));
             desc.upper().write(|w| {
-                w.paylen(packet.len as u32)
-                    .dtalen(packet.len as u16)
+                w.paylen(packet.len() as u32)
+                    .dtalen(packet.len() as u16)
                     .eop(1)
                     .rs(1)
                     .ifcs(1)
@@ -763,7 +755,7 @@ where
                     .dtyp(ADV_TX_DESC_DTYP_DATA)
             });
 
-            queue.bufs_in_use.push_back(packet.pool_entry);
+            queue.bufs_in_use.push_back(packet.get_pool_entry());
 
             // Here we purposely don't drop the packet because the memory would be returned to the mempool right away.
             // Instead this will happen once we clean the tx queue.

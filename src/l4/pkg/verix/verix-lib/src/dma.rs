@@ -48,11 +48,11 @@ where
     MM: pc_hal::traits::MappableMemory<Error = E, DmaSpace = Dma>,
     Dma: pc_hal::traits::DmaSpace,
 {
-    pub(crate) addr_virt: *mut u8,
-    pub(crate) addr_phys: usize,
-    pub(crate) len: usize,
-    pub(crate) pool: Rc<Mempool<E, Dma, MM>>,
-    pub(crate) pool_entry: usize,
+    addr_virt: *mut u8,
+    addr_phys: usize,
+    len: usize,
+    pool: Rc<Mempool<E, Dma, MM>>,
+    pool_entry: usize,
 }
 
 impl<E, Dma, MM> DmaMemory<E, Dma, MM>
@@ -183,6 +183,10 @@ where
     MM: pc_hal::traits::MappableMemory<Error = E, DmaSpace = Dma>,
     Dma: pc_hal::traits::DmaSpace,
 {
+    pub fn contains(&self, packet: &Packet<E, Dma, MM>) -> bool {
+        Rc::ptr_eq(&self.pool, &packet.pool)
+    }
+
     pub fn nth_descriptor_ptr(&mut self, nth: usize) -> *mut u8 {
         unsafe { self.descriptors.ptr().add(mem::size_of::<[u64; 2]>() * nth) }
     }
@@ -193,6 +197,10 @@ where
     MM: pc_hal::traits::MappableMemory<Error = E, DmaSpace = Dma>,
     Dma: pc_hal::traits::DmaSpace,
 {
+    pub fn contains(&self, packet: &Packet<E, Dma, MM>) -> bool {
+        Rc::ptr_eq(&self.pool, &packet.pool)
+    }
+
     pub fn nth_descriptor_ptr(&mut self, nth: usize) -> *mut u8 {
         unsafe { self.descriptors.ptr().add(mem::size_of::<[u64; 2]>() * nth) }
     }
@@ -237,6 +245,30 @@ where
 {
     fn drop(&mut self) {
         self.pool.free_buf(self.pool_entry);
+    }
+}
+
+impl<E, Dma, MM> Packet<E, Dma, MM>
+where
+    MM: pc_hal::traits::MappableMemory<Error = E, DmaSpace = Dma>,
+    Dma: pc_hal::traits::DmaSpace,
+{
+    pub fn new(pool: &Rc<Mempool<E, Dma, MM>>, buf: usize, len: usize) -> Self {
+        Self {
+            addr_virt: pool.get_our_addr(buf),
+            addr_phys: pool.get_device_addr(buf),
+            len,
+            pool: pool.clone(),
+            pool_entry: buf,
+        }
+    }
+
+    pub fn get_device_addr(&mut self) -> usize {
+        self.addr_phys
+    }
+
+    pub fn get_pool_entry(&mut self) -> usize {
+        self.pool_entry
     }
 }
 
