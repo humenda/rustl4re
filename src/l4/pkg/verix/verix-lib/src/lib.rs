@@ -16,7 +16,7 @@ use crate::types::Result;
 // number of packets sent simultaneously by our driver
 const BATCH_SIZE: usize = 64;
 
-pub fn run<E, D, PD, B, Res, MM, Dma, IM>(mut bus: B) -> Result<(), E>
+pub fn find_dev<E, D, PD, B, Res, MM, Dma, IM>(bus: &mut B) -> Result<types::Device<E, IM, PD, D, Res, Dma, MM>, E>
 where
     D: pc_hal::traits::Device,
     B: pc_hal::traits::Bus<Error = E, Device = D, Resource = Res, DmaSpace = Dma>,
@@ -26,16 +26,30 @@ where
     Dma: pc_hal::traits::DmaSpace,
     IM: pc_hal::traits::MemoryInterface,
 {
-    //  TODO: proper device discovery
     let mut devices = bus.device_iter();
     let _l40009 = devices.next().unwrap();
     let _pci_bridge = devices.next().unwrap();
     let nic = PD::try_of_device(devices.next().unwrap()).unwrap();
     info!("Obtained handles to NIC");
 
-    let mut dev: types::Device<E, IM, PD, D, Res, Dma, MM> =
-        types::Device::init(&mut bus, nic, 1, 1)?;
+    let dev: types::Device<E, IM, PD, D, Res, Dma, MM> =
+        types::Device::new(bus, nic, 1, 1)?;
+    Ok(dev)
+}
 
+
+pub fn run<E, D, PD, B, Res, MM, Dma, IM>(bus: &mut B) -> Result<(), E>
+where
+    D: pc_hal::traits::Device,
+    B: pc_hal::traits::Bus<Error = E, Device = D, Resource = Res, DmaSpace = Dma>,
+    PD: pc_hal::traits::PciDevice<Error = E, Device = D, Resource = Res, IoMem = IM>,
+    Res: pc_hal::traits::Resource,
+    MM: pc_hal::traits::MappableMemory<Error = E, DmaSpace = Dma>,
+    Dma: pc_hal::traits::DmaSpace,
+    IM: pc_hal::traits::MemoryInterface,
+{
+    let mut dev: types::Device<E, IM, PD, D, Res, Dma, MM> = find_dev(bus)?;
+    dev.init()?;
     let mut dev_stats = Default::default();
     let mut dev_stats_old = Default::default();
     dev.read_stats(&mut dev_stats);

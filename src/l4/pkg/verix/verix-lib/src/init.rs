@@ -26,7 +26,7 @@ where
     Dma: pc_hal::traits::DmaSpace,
     IM: pc_hal::traits::MemoryInterface,
 {
-    pub fn init<B>(
+    pub fn new<B>(
         bus: &mut B,
         mut nic: PD,
         num_rx_queues: u8,
@@ -67,7 +67,7 @@ where
             .unwrap();
         bus.assign_dma_domain(&mut dma_domain, &mut dma_space)?;
 
-        let mut dev = Device {
+        let dev = Device {
             bar0,
             num_rx_queues,
             num_tx_queues,
@@ -77,11 +77,13 @@ where
             dma_space,
         };
 
-        //dev.setup_interrupts(icu)?;
-
-        dev.reset_and_init()?;
-
         Ok(dev)
+    }
+
+    pub fn init(&mut self) -> Result<(), E> {
+        //dev.setup_interrupts(icu)?;
+        self.reset_and_init()?;
+        Ok(())
     }
 
     /*

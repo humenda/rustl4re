@@ -6,7 +6,7 @@ use verix_lib::run;
 
 fn main() {
     simple_logger::SimpleLogger::new().init().unwrap();
-    let vbus = Vbus::get().unwrap();
-    run::<l4::Error, Device, PciDevice, Vbus, Resource, MappableMemory, DmaSpace, IoMem>(vbus)
+    let mut vbus = Vbus::get().unwrap();
+    run::<l4::Error, Device, PciDevice, Vbus, Resource, MappableMemory, DmaSpace, IoMem>(&mut vbus)
         .unwrap();
 }
