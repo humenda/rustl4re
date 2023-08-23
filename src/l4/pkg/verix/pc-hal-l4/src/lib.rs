@@ -235,7 +235,7 @@ impl pc_hal::traits::Resource for Resource {
     }
 }
 
-impl pc_hal::traits::MemoryInterface for IoMem {
+impl pc_hal::traits::RawMemoryInterface for IoMem {
     #[inline(always)]
     fn ptr(&mut self) -> *mut u8 {
         self.0.ptr()
@@ -303,7 +303,7 @@ impl pc_hal::traits::Icu for Icu {
     }
 }
 
-impl pc_hal::traits::MemoryInterface for MappableMemory {
+impl pc_hal::traits::RawMemoryInterface for MappableMemory {
     #[inline(always)]
     fn ptr(&mut self) -> *mut u8 {
         self.0.ptr()

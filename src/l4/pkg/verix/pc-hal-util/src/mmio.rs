@@ -208,6 +208,10 @@ macro_rules! mm2types {
     (@width2num Bit64) => { 64 };
     (@width2ty Bit32) => { u32 };
     (@width2ty Bit64) => { u64 };
+    (@width2writer $mem:expr, Bit32, $offset:expr, $val:expr) => { $mem.write32($offset, $val) };
+    (@width2writer $mem:expr, Bit64, $offset:expr, $val:expr) => { $mem.write64($offset, $val) };
+    (@width2reader $mem:expr, Bit32, $offset:expr) => { $mem.read32($offset) };
+    (@width2reader $mem:expr, Bit64, $offset:expr) => { $mem.read64($offset) };
     (@regwidth2ty $w1:literal $w2:literal) => { <$crate::mmio::RegWidth<{$w1 - $w2}> as $crate::mmio::RegMarker>::Reg };
     (@regwidth2ty $w1:literal) => { u8 }; // TODO we can condense this even further to just a bool
 
@@ -285,7 +289,7 @@ macro_rules! mm2types {
             #[inline(always)]
             pub fn read(&mut self) -> R {
                 R {
-                    val: unsafe { core::ptr::read_volatile(self.mem.inner.ptr().add($translate(self.nth)) as *const mm2types!(@width2ty $width)) }
+                    val: unsafe { mm2types!(@width2reader self.mem.inner, $width, $translate(self.nth)) }
                 }
             }
         }
@@ -302,7 +306,7 @@ macro_rules! mm2types {
             {
                 let w = W { val : 0 };
                 let w_final = f(w);
-                unsafe { core::ptr::write_volatile(self.mem.inner.ptr().add($translate(self.nth)) as *mut mm2types!(@width2ty $width), w_final.val) }
+                unsafe { mm2types!(@width2writer self.mem.inner, $width, $translate(self.nth), w_final.val) }
             }
         }
     };
@@ -320,7 +324,7 @@ macro_rules! mm2types {
                 let r = self.read();
                 let w = W { val : r.bits() };
                 let w_final = f(&r, w);
-                unsafe { core::ptr::write_volatile(self.mem.inner.ptr().add($translate(self.nth)) as *mut mm2types!(@width2ty $width), w_final.val) }
+                unsafe { mm2types!(@width2writer self.mem.inner, $width, $translate(self.nth), w_final.val) }
             }
         }
     };
@@ -332,7 +336,7 @@ macro_rules! mm2types {
             #[inline(always)]
             pub fn read(&mut self) -> R {
                 R {
-                    val: unsafe { core::ptr::read_volatile(self.mem.inner.ptr().add($reg_addr) as *const mm2types!(@width2ty $width)) }
+                    val: unsafe { mm2types!(@width2reader self.mem.inner, $width, $reg_addr) }
                 }
             }
         }
@@ -349,7 +353,7 @@ macro_rules! mm2types {
             {
                 let w = W { val : 0 };
                 let w_final = f(w);
-                unsafe { core::ptr::write_volatile(self.mem.inner.ptr().add($reg_addr) as *mut mm2types!(@width2ty $width), w_final.val) }
+                unsafe { mm2types!(@width2writer self.mem.inner, $width, $reg_addr, w_final.val) }
             }
         }
     };
@@ -367,7 +371,7 @@ macro_rules! mm2types {
                 let r = self.read();
                 let w = W { val : r.bits() };
                 let w_final = f(&r, w);
-                unsafe { core::ptr::write_volatile(self.mem.inner.ptr().add($reg_addr) as *mut mm2types!(@width2ty $width), w_final.val) }
+                unsafe { mm2types!(@width2writer self.mem.inner, $width, $reg_addr, w_final.val) }
             }
         }
     };

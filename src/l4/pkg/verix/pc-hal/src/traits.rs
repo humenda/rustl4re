@@ -1,4 +1,5 @@
 use bitflags::bitflags;
+use std::ptr;
 
 pub trait DmaSpace {
     fn new() -> Self;
@@ -75,11 +76,33 @@ pub trait FailibleMemoryInterface32 {
     fn read32(&self, offset: Self::Addr) -> Result<u32, Self::Error>;
 }
 
-pub trait MemoryInterface {
+pub trait RawMemoryInterface {
     fn ptr(&mut self) -> *mut u8;
 }
+pub trait MemoryInterface {
+    unsafe fn write8(&mut self, offset: usize, val: u8);
+    unsafe fn write16(&mut self, offset: usize, val: u16);
+    unsafe fn write32(&mut self, offset: usize, val: u32);
+    unsafe fn write64(&mut self, offset: usize, val: u64);
+    unsafe fn read8(&mut self, offset: usize) -> u8;
+    unsafe fn read16(&mut self, offset: usize) -> u16;
+    unsafe fn read32(&mut self, offset: usize) -> u32;
+    unsafe fn read64(&mut self, offset: usize) -> u64;
+}
 
-impl MemoryInterface for *mut u8 {
+impl<T: RawMemoryInterface> MemoryInterface for T {
+    unsafe fn write8(&mut self, offset: usize, val: u8) { ptr::write_volatile(self.ptr().add(offset) as *mut _, val) }
+    unsafe fn write16(&mut self, offset: usize, val: u16) { ptr::write_volatile(self.ptr().add(offset) as *mut _, val) }
+    unsafe fn write32(&mut self, offset: usize, val: u32) { ptr::write_volatile(self.ptr().add(offset) as *mut _, val) }
+    unsafe fn write64(&mut self, offset: usize, val: u64) { ptr::write_volatile(self.ptr().add(offset) as *mut _, val) }
+
+    unsafe fn read8(&mut self, offset: usize) -> u8 { ptr::read_volatile(self.ptr().add(offset) as *const _) }
+    unsafe fn read16(&mut self, offset: usize) -> u16 { ptr::read_volatile(self.ptr().add(offset) as *const _) }
+    unsafe fn read32(&mut self, offset: usize) -> u32 { ptr::read_volatile(self.ptr().add(offset) as *const _) }
+    unsafe fn read64(&mut self, offset: usize) -> u64 { ptr::read_volatile(self.ptr().add(offset) as *const _) }
+}
+
+impl RawMemoryInterface for *mut u8 {
     fn ptr(&mut self) -> *mut u8 {
         self.clone()
     }
@@ -169,7 +192,7 @@ bitflags! {
     }
 }
 
-pub trait MappableMemory: MemoryInterface {
+pub trait MappableMemory: RawMemoryInterface {
     type Error;
     // Very unclear if this should be associated types, makes it basically impossible to use
     // generically

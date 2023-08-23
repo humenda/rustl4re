@@ -37,13 +37,13 @@ where
     Dma: pc_hal::traits::DmaSpace,
     IM: pc_hal::traits::MemoryInterface,
 {
-    pub(crate) bar0: dev::Intel82559ES::Bar0::Mem<IM>,
-    pub(crate) device: PD,
-    pub(crate) num_rx_queues: u8,
-    pub(crate) num_tx_queues: u8,
-    pub(crate) rx_queues: Vec<RxQueue<E, Dma, MM>>,
-    pub(crate) tx_queues: Vec<TxQueue<E, Dma, MM>>,
-    pub(crate) dma_space: Dma,
+    pub bar0: dev::Intel82559ES::Bar0::Mem<IM>,
+    pub device: PD,
+    pub num_rx_queues: u8,
+    pub num_tx_queues: u8,
+    pub rx_queues: Vec<RxQueue<E, Dma, MM>>,
+    pub tx_queues: Vec<TxQueue<E, Dma, MM>>,
+    pub dma_space: Dma,
 }
 
 pub struct RxQueue<E, Dma, MM>

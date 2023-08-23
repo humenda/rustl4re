@@ -286,9 +286,6 @@ mm2types! {
             gptc @ 0x04080 RO {
                 gptc @ 31:0
             }
-            txdpgc @ 0x087A0 RO {
-                gptc @ 31:0
-            }
             gorcl @ 0x04088 RO {
                 cnt_l @ 31:0
             }
@@ -369,6 +366,16 @@ mm2types! {
                 link_up @ 30,
                 kx_kx4_kr_backplane_completed @ 31
             }
+            autoc2 @ 0x042A8 RW {
+                reserved0 @ 15:0,
+                teng_pma_pmd_serial @ 17:16,
+                ddpt @ 18,
+                reserved1 @ 27:19,
+                fasm @ 28,
+                reserved2 @ 29,
+                pdd @ 30,
+                reserved3 @ 31
+            }
             rttdcs @ 0x04900 RW {
                 tdpac @ 0,
                 vmpac @ 1,
@@ -383,6 +390,13 @@ mm2types! {
                 bpbfsm @ 23,
                 reserved4 @ 30:24,
                 speed_chg @ 31
+            }
+            txpbthresh @ [
+                8,
+                |n| 0x04950 + n * 0x4
+            ] RW {
+                thresh @ 9:0,
+                reserved0 @ 31:10
             }
             dmatxctl @ 0x04A80 RW {
                 te @ 0,

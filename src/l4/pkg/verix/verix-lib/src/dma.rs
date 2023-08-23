@@ -7,8 +7,10 @@ use std::ops::Deref;
 use std::ops::DerefMut;
 use std::slice;
 use std::{cell::RefCell, mem, rc::Rc};
+use std::ptr;
 
 use log::trace;
+use pc_hal::traits::RawMemoryInterface;
 use pc_hal::traits::{DsAttachFlags, DsMapFlags, MaFlags, MemoryInterface};
 
 use crate::types::{RxQueue, TxQueue};
@@ -22,6 +24,7 @@ where
 {
     mem: MM,
     device_addr: usize,
+    size: usize
 }
 
 pub struct Mempool<E, Dma, MM>
@@ -82,21 +85,17 @@ where
             device_addr
         );
 
-        Ok(Self { mem, device_addr })
+        Ok(Self { mem, device_addr, size })
     }
 
-    pub fn find_addr_of_non_zero(&mut self, len: usize) -> Option<usize> {
-        let base_ptr = self.ptr();
-        for offset in 0..len {
-            let (curr_ptr, val) = unsafe {
-                let curr_ptr = base_ptr.add(offset);
-                (curr_ptr, core::ptr::read(curr_ptr))
-            };
-            if val != 0 {
-                return Some(curr_ptr as usize);
-            }
+    pub fn memset(&mut self, val: u8) {
+        for i in 0..self.size {
+            unsafe { self.write8(i, val) }
         }
-        return None;
+    }
+
+    pub fn size(&self) -> usize {
+        self.size
     }
 
     pub fn device_addr(&self) -> usize {
@@ -104,7 +103,7 @@ where
     }
 }
 
-impl<E, Dma, MM> MemoryInterface for DmaMemory<E, Dma, MM>
+impl<E, Dma, MM> RawMemoryInterface for DmaMemory<E, Dma, MM>
 where
     MM: pc_hal::traits::MappableMemory<Error = E, DmaSpace = Dma>,
     Dma: pc_hal::traits::DmaSpace,
@@ -130,9 +129,7 @@ where
         let mut mem: DmaMemory<E, Dma, MM> = DmaMemory::new(num_entries * entry_size, space, true)?;
 
         // Clear the memory to a defined initial state
-        for i in 0..(num_entries * entry_size) {
-            unsafe { core::ptr::write_volatile(mem.ptr().add(i), 0x61) }
-        }
+        mem.memset(0x0);
 
         // Initially all elements are free
         let mut free_stack = Vec::with_capacity(num_entries);

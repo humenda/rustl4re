@@ -1,6 +1,6 @@
 use std::cell::RefCell;
 use std::mem;
-use std::{collections::HashSet, rc::Rc};
+use std::rc::Rc;
 
 use pc_hal::prelude::*;
 use pc_hal::traits::ResourceType;
@@ -22,7 +22,7 @@ pub struct Bus {
 
 pub struct BasicDevice {
     ifaces: Vec<pc_hal::traits::BusInterface>,
-    resources: Vec<Resource>,
+    pub (crate) resources: Vec<Resource>,
 }
 
 pub enum Device {
@@ -54,9 +54,6 @@ pub enum Resource {
 #[derive(PartialEq, Eq, Clone)]
 pub struct DmaSpace {
     domain: Option<Rc<DmaDomainResource>>,
-}
-pub struct IoMem {
-    pub(crate) ptr: *mut u8
 }
 pub struct MappableMemory {
     data: Vec<u8>,
@@ -188,13 +185,7 @@ impl pc_hal::traits::DmaSpace for DmaSpace {
     }
 }
 
-impl pc_hal::traits::MemoryInterface for IoMem {
-    fn ptr(&mut self) -> *mut u8 {
-        self.ptr
-    }
-}
-
-impl pc_hal::traits::MemoryInterface for MappableMemory {
+impl pc_hal::traits::RawMemoryInterface for MappableMemory {
     fn ptr(&mut self) -> *mut u8 {
         self.data.as_mut_ptr()
     }

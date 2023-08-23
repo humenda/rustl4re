@@ -1,12 +1,12 @@
 use std::collections::VecDeque;
 
-use std::time::{Duration, Instant};
+use std::time::{Duration};
 use std::{mem, thread};
 
 use crate::constants::{
     ADV_TX_DESC_DTYP_DATA, AUTOC_LMS_10G_SFI, LINKS_LINK_SPEED_100M, LINKS_LINK_SPEED_10G,
     LINKS_LINK_SPEED_1G, NUM_RX_QUEUE_ENTRIES, NUM_TX_QUEUE_ENTRIES, PKT_BUF_ENTRY_SIZE,
-    SRRCTL_DESCTYPE_ADV_ONE_BUFFER,
+    SRRCTL_DESCTYPE_ADV_ONE_BUFFER, AUTOC2_10G_PMA_SERIAL_SFI, WAIT_LIMIT,
 };
 use crate::dev;
 use crate::dma::{DmaMemory, Mempool, Packet};
@@ -132,6 +132,19 @@ where
     }
     */
 
+    #[inline(always)]
+    #[track_caller]
+    fn wait_reg<F>(&mut self, f: F) where F: Clone + FnMut(&mut Self) -> bool {
+        for _ in 0..=WAIT_LIMIT {
+            if f.clone()(self) {
+                return;
+            }
+            // TODO: make this sleep high enough such that the driver consistently works
+            thread::sleep(Duration::from_millis(100));
+        }
+        panic!("Wait limit exceeded");
+    }
+
     fn reset_and_init(&mut self) -> Result<(), E> {
         info!("Resetting device");
         // section 4.6.3.1 - disable all interrupts
@@ -140,26 +153,14 @@ where
         // Do a link and software reset
         self.bar0.ctrl().modify(|_, w| w.lrst(1).rst(1));
 
-        // Wait until the reset is done
-        loop {
-            let ctrl = self.bar0.ctrl().read();
-            if ctrl.lrst() == 0 && ctrl.rst() == 0 {
-                break;
-            }
-        }
-        // Just to be sure wait the length that the datasheet tells us to
+        // Wait the length that the datasheet tells us to
         thread::sleep(Duration::from_millis(10));
 
         // section 4.6.3.1 - disable interrupts again after reset
         self.disable_interrupts();
 
         // section 4.6.3 - wait for EEPROM auto read completion
-        loop {
-            let eec = self.bar0.eec().read();
-            if eec.auto_rd() == 1 {
-                break;
-            }
-        }
+        self.wait_reg(|s| s.bar0.eec().read().auto_rd() == 1);
 
         let mac = self.get_mac_addr();
         info!("initializing device");
@@ -169,12 +170,7 @@ where
         );
 
         // section 4.6.3 - wait for dma initialization done
-        loop {
-            let rdrxctl = self.bar0.rdrxctl().read();
-            if rdrxctl.dmaidone() == 1 {
-                break;
-            }
-        }
+        self.wait_reg(|s| s.bar0.rdrxctl().read().dmaidone() == 1);
 
         // section 4.6.4 - initialize link (auto negotiation)
         self.init_link();
@@ -192,6 +188,7 @@ where
         // section 4.6.8 - init tx
         self.init_tx()?;
 
+        // TODO: is this required?
         enable_bus_master(&mut self.device)?;
 
         for i in 0..self.num_rx_queues {
@@ -207,8 +204,6 @@ where
         //    self.enable_interrupt(queue);
         //}
 
-        self.set_promisc(true);
-
         Ok(())
     }
 
@@ -218,10 +213,16 @@ where
         // crc offload and small packet padding
         self.bar0.hlreg0().modify(|_, w| w.txcren(1).txpaden(1));
 
+        self.bar0.rttdcs().modify(|_, w| w.arbdis(1));
         // section 4.6.11.3.4 - set default buffer size allocations
         self.bar0.txpbsize(0).modify(|_, w| w.size(160));
         for i in 1..8 {
             self.bar0.txpbsize(i).modify(|_, w| w.size(0));
+        }
+
+        self.bar0.txpbthresh(0).modify(|_, w| w.thresh(0xa0));
+        for i in 1..8 {
+            self.bar0.txpbthresh(i).modify(|_, w| w.thresh(0));
         }
 
         // required when not using DCB/VTd
@@ -245,9 +246,7 @@ where
             let mut descriptor_mem = DmaMemory::new(ring_size_bytes, &self.dma_space, false)?;
 
             // initialize to 0xff to prevent rogue memory accesses on premature dma activation
-            for i in 0..ring_size_bytes {
-                unsafe { core::ptr::write_volatile(descriptor_mem.ptr().add(i), 0xff) }
-            }
+            descriptor_mem.memset(0xff);
 
             self.bar0
                 .tdbal(i.into())
@@ -295,17 +294,18 @@ where
         self.bar0.rxctrl().modify(|_, w| w.rxen(0));
 
         // section 4.6.11.3.4 - allocate all queues and traffic to PB0
-        self.bar0.rxpbsize(0).modify(|_, w| w.size(128));
+        self.bar0.rxpbsize(0).modify(|_, w| w.size(0x200));
         for i in 1..8 {
             self.bar0.rxpbsize(i).modify(|_, w| w.size(0));
         }
 
         // enable CRC offloading
         self.bar0.hlreg0().modify(|_, w| w.rxcrstrip(1));
-        self.bar0.rdrxctl().modify(|_, w| w.crcstrip(1));
+        self.bar0.rdrxctl().modify(|_, w| w.crcstrip(1).rscfrstsize(0x0));
 
         // accept broadcast packets
         self.bar0.fctrl().modify(|_, w| w.bam(1));
+        self.set_promisc(true);
 
         // configure queues, same for all queues
         for i in 0..self.num_rx_queues {
@@ -327,9 +327,7 @@ where
 
             let mut descriptor_mem = DmaMemory::new(ring_size_bytes, &self.dma_space, false)?;
             // initialize to 0xff to prevent rogue memory accesses on premature dma activation
-            for i in 0..ring_size_bytes {
-                unsafe { core::ptr::write_volatile(descriptor_mem.ptr().add(i), 0xff) }
-            }
+            descriptor_mem.memset(0xff);
 
             self.bar0
                 .rdbal(i.into())
@@ -387,34 +385,31 @@ where
 
     fn start_rx_queue(&mut self, queue_id: u8) -> Result<(), E> {
         info!("Starting RX queue: {}", queue_id);
-        let queue = &mut self.rx_queues[queue_id as usize];
+        {
+            let queue = &mut self.rx_queues[queue_id as usize];
 
-        // Power of 2
-        assert!(queue.num_descriptors & (queue.num_descriptors - 1) == 0);
+            // Power of 2
+            assert!(queue.num_descriptors & (queue.num_descriptors - 1) == 0);
 
-        for i in 0..queue.num_descriptors {
-            let descriptor_ptr = queue.nth_descriptor_ptr(i.into());
-            let pool = &queue.pool;
-            let mempool_idx = pool.alloc_buf().ok_or(Error::MempoolEmpty)?;
-            let device_addr = pool.get_device_addr(mempool_idx) as u64;
+            for i in 0..queue.num_descriptors {
+                let descriptor_ptr = queue.nth_descriptor_ptr(i.into());
+                let pool = &queue.pool;
+                let mempool_idx = pool.alloc_buf().ok_or(Error::MempoolEmpty)?;
+                let device_addr = pool.get_device_addr(mempool_idx) as u64;
 
-            let mut desc = dev::Descriptors::adv_rx_desc_read::new(descriptor_ptr);
-            desc.pkt_addr().write(|w| w.pkt_addr(device_addr));
-            desc.hdr_addr().write(|w| w.hdr_addr(0));
+                let mut desc = dev::Descriptors::adv_rx_desc_read::new(descriptor_ptr);
+                desc.pkt_addr().write(|w| w.pkt_addr(device_addr));
+                desc.hdr_addr().write(|w| w.hdr_addr(0));
 
-            // we need to remember which descriptor entry belongs to which mempool entry
-            queue.bufs_in_use.push(mempool_idx);
-        }
-
-        // enable queue and wait if necessary
-        self.bar0.rxdctl(queue_id.into()).modify(|_, w| w.enable(1));
-        loop {
-            let rxdctl = self.bar0.rxdctl(queue_id.into()).read();
-            if rxdctl.enable() == 1 {
-                break;
+                // we need to remember which descriptor entry belongs to which mempool entry
+                queue.bufs_in_use.push(mempool_idx);
             }
         }
+        // enable queue and wait if necessary
+        self.bar0.rxdctl(queue_id.into()).modify(|_, w| w.enable(1));
+        self.wait_reg(|s| s.bar0.rxdctl(queue_id.into()).read().enable() == 1);
 
+        let queue = &mut self.rx_queues[queue_id as usize];
         self.bar0.rdh(queue_id.into()).modify(|_, w| w.rdh(0));
         self.bar0
             .rdt(queue_id.into())
@@ -439,12 +434,7 @@ where
 
         // enable queue and wait if necessary
         self.bar0.txdctl(queue_id.into()).modify(|_, w| w.enable(1));
-        loop {
-            let txdctl = self.bar0.txdctl(queue_id.into()).read();
-            if txdctl.enable() == 1 {
-                break;
-            }
-        }
+        self.wait_reg(|s| s.bar0.txdctl(queue_id.into()).read().enable() == 1);
 
         info!("Started TX queue: {}", queue_id);
 
@@ -484,8 +474,6 @@ where
         self.bar0.gorch().read();
         self.bar0.gotcl().read();
         self.bar0.gotch().read();
-
-        self.bar0.txdpgc().read();
     }
 
     fn init_link(&mut self) {
@@ -494,6 +482,9 @@ where
         self.bar0
             .autoc()
             .modify(|_, w| w.lms(AUTOC_LMS_10G_SFI).teng_pma_pmd_parallel(0b00));
+        self.bar0
+            .autoc2()
+            .modify(|_, w| w.teng_pma_pmd_serial(AUTOC2_10G_PMA_SERIAL_SFI));
         // Start negotiation
         self.bar0.autoc().modify(|_, w| w.restart_an(1));
     }
@@ -514,18 +505,15 @@ where
     }
 
     fn wait_for_link(&mut self) -> Result<(), E> {
-        // TODO: unclear how this will map to kani
         info!("Waiting for link");
-        let time = Instant::now();
-        while time.elapsed().as_secs() < 10 {
-            if let Some(s) = self.get_link_speed() {
-                info!("link speed is {} Mbit/s", s);
-                return Ok(());
-            }
-            thread::sleep(Duration::from_millis(100));
-        }
+        self.wait_reg(|s|s.bar0.links().read().link_up() == 1);
 
-        return Err(Error::LinkDown);
+        if let Some(s) = self.get_link_speed() {
+            info!("link speed is {} Mbit/s", s);
+            Ok(())
+        } else {
+            Err(Error::LinkDown)
+        }
     }
 
     pub fn get_mac_addr(&mut self) -> [u8; 6] {
@@ -595,15 +583,13 @@ where
     */
 
     fn clear_interrupts(&mut self) {
-        // 31 ones, the last bit in the register is reserved
+        // 31 1s, the last bit in the register is reserved
         self.bar0
             .eimc()
             .write(|w| w.interrupt_mask(0b1111111111111111111111111111111));
-        self.bar0.eicr().read();
     }
 
     fn disable_interrupts(&mut self) {
-        self.bar0.eims().write(|w| w.interrupt_enable(0x0));
         self.clear_interrupts();
     }
 
