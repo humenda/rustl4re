@@ -114,6 +114,7 @@ iface! {
     }
 }
 
+
 /// Flags for memory allocation
 #[repr(u8)]
 pub enum MemAllocFlags {

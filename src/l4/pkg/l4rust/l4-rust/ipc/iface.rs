@@ -90,7 +90,10 @@ macro_rules! derive_ipc_calls {
                 // ToDo: would re-allocate a capability each time; how to control number of
                 // required slots
                 let mut caps = $crate::ipc::types::Bufferless { };
-                let mut mr = $crate::utcb::Utcb::current().mr();
+                // SAFETY: We have to assume that the UTCB is unused, see #5.
+                let mut mr = unsafe {
+                    $crate::utcb::Utcb::current().mr()
+                };
                 // write opcode
                 unsafe {
                     mr.write($opcode)?;
