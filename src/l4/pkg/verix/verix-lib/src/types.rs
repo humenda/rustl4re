@@ -1,4 +1,4 @@
-use std::{collections::VecDeque, rc::Rc};
+use std::{collections::VecDeque, cell::RefCell};
 
 use crate::{
     dev,
@@ -41,9 +41,10 @@ where
     pub device: PD,
     pub num_rx_queues: u8,
     pub num_tx_queues: u8,
-    pub rx_queues: Vec<RxQueue<E, Dma, MM>>,
-    pub tx_queues: Vec<TxQueue<E, Dma, MM>>,
+    pub rx_queues: Vec<RefCell<RxQueue<E, Dma, MM>>>,
+    pub tx_queues: Vec<RefCell<TxQueue<E, Dma, MM>>>,
     pub dma_space: Dma,
+    pub pools: Vec<Mempool<E, Dma, MM>>,
 }
 
 pub struct RxQueue<E, Dma, MM>
@@ -52,7 +53,6 @@ where
     Dma: pc_hal::traits::DmaSpace,
 {
     pub(crate) descriptors: DmaMemory<E, Dma, MM>,
-    pub(crate) pool: Rc<Mempool<E, Dma, MM>>,
     pub(crate) num_descriptors: u16,
     pub(crate) rx_index: usize,
     pub(crate) bufs_in_use: Vec<usize>,
@@ -63,7 +63,6 @@ where
     Dma: pc_hal::traits::DmaSpace,
 {
     pub(crate) descriptors: DmaMemory<E, Dma, MM>,
-    pub(crate) pool: Rc<Mempool<E, Dma, MM>>,
     pub(crate) num_descriptors: u16,
     pub(crate) clean_index: usize,
     pub(crate) tx_index: usize,

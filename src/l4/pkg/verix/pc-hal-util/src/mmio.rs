@@ -287,7 +287,7 @@ macro_rules! mm2types {
 
         impl<'a, IM: pc_hal::traits::MemoryInterface> Register<'a, IM> {
             #[inline(always)]
-            pub fn read(&mut self) -> R {
+            pub fn read(&self) -> R {
                 R {
                     val: unsafe { mm2types!(@width2reader self.mem.inner, $width, $translate(self.nth)) }
                 }
@@ -300,7 +300,7 @@ macro_rules! mm2types {
 
         impl<'a, IM: pc_hal::traits::MemoryInterface> Register<'a, IM> {
             #[inline(always)]
-            pub fn write<F>(&mut self, f: F)
+            pub fn write<F>(&self, f: F)
             where
                 F: FnOnce(W) -> W
             {
@@ -317,7 +317,7 @@ macro_rules! mm2types {
 
         impl<'a, IM: pc_hal::traits::MemoryInterface> Register<'a, IM> {
             #[inline(always)]
-            pub fn modify<F>(&mut self, f: F)
+            pub fn modify<F>(&self, f: F)
             where
                 F: FnOnce(&R, W) -> W
             {
@@ -334,7 +334,7 @@ macro_rules! mm2types {
 
         impl<'a, IM: pc_hal::traits::MemoryInterface> Register<'a, IM> {
             #[inline(always)]
-            pub fn read(&mut self) -> R {
+            pub fn read(&self) -> R {
                 R {
                     val: unsafe { mm2types!(@width2reader self.mem.inner, $width, $reg_addr) }
                 }
@@ -347,7 +347,7 @@ macro_rules! mm2types {
 
         impl<'a, IM: pc_hal::traits::MemoryInterface> Register<'a, IM> {
             #[inline(always)]
-            pub fn write<F>(&mut self, f: F)
+            pub fn write<F>(&self, f: F)
             where
                 F: FnOnce(W) -> W
             {
@@ -364,7 +364,7 @@ macro_rules! mm2types {
 
         impl<'a, IM: pc_hal::traits::MemoryInterface> Register<'a, IM> {
             #[inline(always)]
-            pub fn modify<F>(&mut self, f: F)
+            pub fn modify<F>(&self, f: F)
             where
                 F: FnOnce(&R, W) -> W
             {
@@ -378,13 +378,13 @@ macro_rules! mm2types {
 
     (@reg_decl $reg:ident, $n:literal) => {
         pub struct Register<'a, IM> {
-            mem: &'a mut super::Mem<IM>,
+            mem: &'a super::Mem<IM>,
             nth : usize
         }
 
         impl<IM> super::Mem<IM> {
             #[inline(always)]
-            pub fn $reg<'a>(&'a mut self, nth: usize) -> Register<'a, IM> {
+            pub fn $reg<'a>(&'a self, nth: usize) -> Register<'a, IM> {
                 assert!(nth < $n);
                 Register {
                     mem: self,
@@ -396,12 +396,12 @@ macro_rules! mm2types {
 
     (@reg_decl $reg:ident) => {
         pub struct Register<'a, IM> {
-            mem: &'a mut super::Mem<IM>
+            mem: &'a super::Mem<IM>
         }
 
         impl<IM> super::Mem<IM> {
             #[inline(always)]
-            pub fn $reg<'a>(&'a mut self) -> Register<'a, IM> {
+            pub fn $reg<'a>(&'a self) -> Register<'a, IM> {
                 Register {
                     mem: self
                 }

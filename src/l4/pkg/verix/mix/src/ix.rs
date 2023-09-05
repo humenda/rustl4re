@@ -169,7 +169,7 @@ impl pc_hal::traits::PciDevice for IxDevice {
         assert!(size == self.pci_state.bar0.len as u64);
         assert!(flags.contains(pc_hal::traits::IoMemFlags::NONCACHED));
         assert!(!flags.contains(pc_hal::traits::IoMemFlags::CACHED));
-        Ok(IoMem::new(self.eec_read_limit, self.dmaidone_read_limit, self.links_read_limit, self.rxdctl0_read_limit, self.txdctl0_read_limit, self.mac_addr))
+        Ok(IoMem::new(IoMemInner::new(self.eec_read_limit, self.dmaidone_read_limit, self.links_read_limit, self.rxdctl0_read_limit, self.txdctl0_read_limit, self.mac_addr)))
     }
 }
 
@@ -205,7 +205,16 @@ impl WaitRegConfig {
         WaitRegConfig { reads: 0, limit }
     }
 }
-pub struct IoMem {
+
+pub struct IoMem(RefCell<IoMemInner>);
+
+impl IoMem {
+    pub fn new(inner: IoMemInner) -> Self {
+        Self(RefCell::new(inner))
+    }
+}
+
+pub struct IoMemInner {
     pub init_state: InitializationState,
     mmio: MmioState,
     eec_reads: WaitRegConfig,
@@ -216,9 +225,9 @@ pub struct IoMem {
     mac_addr: [u8; 6],
 }
 
-impl IoMem {
-    pub fn new(eec_read_limit: u8, dmaidone_read_limit:u8, links_read_limit: u8, rxdctl0_read_limit: u8, txdctl0_read_limit: u8, mac_addr: [u8; 6]) -> IoMem {
-        IoMem {
+impl IoMemInner {
+    pub fn new(eec_read_limit: u8, dmaidone_read_limit:u8, links_read_limit: u8, rxdctl0_read_limit: u8, txdctl0_read_limit: u8, mac_addr: [u8; 6]) -> IoMemInner {
+        IoMemInner {
             init_state: InitializationState::DisableInterruptInitial,
             mmio: MmioState::new(mac_addr),
             eec_reads: WaitRegConfig::new(eec_read_limit),
@@ -800,14 +809,14 @@ impl IoMem {
 }
 
 impl pc_hal::traits::MemoryInterface for IoMem {
-    unsafe fn write32(&mut self, offset: usize, val: u32) { self.handle_write32(offset, val) }
-    unsafe fn read32(&mut self, offset: usize) -> u32 { self.handle_read32(offset) }
+    unsafe fn write32(&self, offset: usize, val: u32) { self.0.borrow_mut().handle_write32(offset, val) }
+    unsafe fn read32(&self, offset: usize) -> u32 { self.0.borrow_mut().handle_read32(offset) }
 
-    unsafe fn write8(&mut self, _offset: usize, _val: u8) { panic!("only 32 bit"); }
-    unsafe fn write16(&mut self, _offset: usize, _val: u16) { panic!("only 32 bit"); }
-    unsafe fn write64(&mut self, _offset: usize, _val: u64) { panic!("only 32 bit"); }
+    unsafe fn write8(&self, _offset: usize, _val: u8) { panic!("only 32 bit"); }
+    unsafe fn write16(&self, _offset: usize, _val: u16) { panic!("only 32 bit"); }
+    unsafe fn write64(&self, _offset: usize, _val: u64) { panic!("only 32 bit"); }
 
-    unsafe fn read8(&mut self, _offset: usize) -> u8 { panic!("only 32 bit"); }
-    unsafe fn read16(&mut self, _offset: usize) -> u16 { panic!("only 32 bit"); }
-    unsafe fn read64(&mut self, _offset: usize) -> u64 { panic!("only 32 bit"); }
+    unsafe fn read8(&self, _offset: usize) -> u8 { panic!("only 32 bit"); }
+    unsafe fn read16(&self, _offset: usize) -> u16 { panic!("only 32 bit"); }
+    unsafe fn read64(&self, _offset: usize) -> u64 { panic!("only 32 bit"); }
 }

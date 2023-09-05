@@ -186,8 +186,8 @@ impl pc_hal::traits::DmaSpace for DmaSpace {
 }
 
 impl pc_hal::traits::RawMemoryInterface for MappableMemory {
-    fn ptr(&mut self) -> *mut u8 {
-        self.data.as_mut_ptr()
+    fn ptr(&self) -> *mut u8 {
+        self.data.as_ptr() as *mut u8
     }
 }
 

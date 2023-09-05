@@ -6,8 +6,7 @@ use std::fmt::Debug;
 use std::ops::Deref;
 use std::ops::DerefMut;
 use std::slice;
-use std::{cell::RefCell, mem, rc::Rc};
-use std::ptr;
+use std::{cell::RefCell, mem};
 
 use log::trace;
 use pc_hal::traits::RawMemoryInterface;
@@ -46,7 +45,7 @@ where
     free_stack: Vec<usize>,
 }
 
-pub struct Packet<E, Dma, MM>
+pub struct Packet<'a, E, Dma, MM>
 where
     MM: pc_hal::traits::MappableMemory<Error = E, DmaSpace = Dma>,
     Dma: pc_hal::traits::DmaSpace,
@@ -54,7 +53,7 @@ where
     addr_virt: *mut u8,
     addr_phys: usize,
     len: usize,
-    pool: Rc<Mempool<E, Dma, MM>>,
+    pool: &'a Mempool<E, Dma, MM>,
     pool_entry: usize,
 }
 
@@ -109,7 +108,7 @@ where
     Dma: pc_hal::traits::DmaSpace,
 {
     #[inline(always)]
-    fn ptr(&mut self) -> *mut u8 {
+    fn ptr(&self) -> *mut u8 {
         self.mem.ptr()
     }
 }
@@ -119,7 +118,7 @@ where
     MM: pc_hal::traits::MappableMemory<Error = E, DmaSpace = Dma>,
     Dma: pc_hal::traits::DmaSpace,
 {
-    pub fn new(num_entries: usize, entry_size: usize, space: &Dma) -> Result<Rc<Self>, E> {
+    pub fn new(num_entries: usize, entry_size: usize, space: &Dma) -> Result<Self, E> {
         trace!(
             "Setting up mempool with {} entries, of size {} bytes",
             num_entries,
@@ -142,10 +141,10 @@ where
         };
         trace!("Mempool setup done");
 
-        Ok(Rc::new(pool))
+        Ok(pool)
     }
 
-    pub fn alloc_buf<'a>(&'a self) -> Option<usize> {
+    pub fn alloc_buf(&self) -> Option<usize> {
         self.shared.borrow_mut().free_stack.pop()
     }
 
@@ -189,10 +188,6 @@ where
     MM: pc_hal::traits::MappableMemory<Error = E, DmaSpace = Dma>,
     Dma: pc_hal::traits::DmaSpace,
 {
-    pub fn contains(&self, packet: &Packet<E, Dma, MM>) -> bool {
-        Rc::ptr_eq(&self.pool, &packet.pool)
-    }
-
     pub fn nth_descriptor_ptr(&mut self, nth: usize) -> *mut u8 {
         unsafe { self.descriptors.ptr().add(mem::size_of::<[u64; 2]>() * nth) }
     }
@@ -203,16 +198,12 @@ where
     MM: pc_hal::traits::MappableMemory<Error = E, DmaSpace = Dma>,
     Dma: pc_hal::traits::DmaSpace,
 {
-    pub fn contains(&self, packet: &Packet<E, Dma, MM>) -> bool {
-        Rc::ptr_eq(&self.pool, &packet.pool)
-    }
-
     pub fn nth_descriptor_ptr(&mut self, nth: usize) -> *mut u8 {
         unsafe { self.descriptors.ptr().add(mem::size_of::<[u64; 2]>() * nth) }
     }
 }
 
-impl<E, Dma, MM> Deref for Packet<E, Dma, MM>
+impl<'a, E, Dma, MM> Deref for Packet<'a, E, Dma, MM>
 where
     MM: pc_hal::traits::MappableMemory<Error = E, DmaSpace = Dma>,
     Dma: pc_hal::traits::DmaSpace,
@@ -224,7 +215,7 @@ where
     }
 }
 
-impl<E, Dma, MM> DerefMut for Packet<E, Dma, MM>
+impl<'a, E, Dma, MM> DerefMut for Packet<'a, E, Dma, MM>
 where
     MM: pc_hal::traits::MappableMemory<Error = E, DmaSpace = Dma>,
     Dma: pc_hal::traits::DmaSpace,
@@ -234,7 +225,7 @@ where
     }
 }
 
-impl<E, Dma, MM> Debug for Packet<E, Dma, MM>
+impl<'a, E, Dma, MM> Debug for Packet<'a, E, Dma, MM>
 where
     MM: pc_hal::traits::MappableMemory<Error = E, DmaSpace = Dma>,
     Dma: pc_hal::traits::DmaSpace,
@@ -244,7 +235,7 @@ where
     }
 }
 
-impl<E, Dma, MM> Drop for Packet<E, Dma, MM>
+impl<'a, E, Dma, MM> Drop for Packet<'a, E, Dma, MM>
 where
     MM: pc_hal::traits::MappableMemory<Error = E, DmaSpace = Dma>,
     Dma: pc_hal::traits::DmaSpace,
@@ -254,12 +245,12 @@ where
     }
 }
 
-impl<E, Dma, MM> Packet<E, Dma, MM>
+impl<'a, E, Dma, MM> Packet<'a, E, Dma, MM>
 where
     MM: pc_hal::traits::MappableMemory<Error = E, DmaSpace = Dma>,
     Dma: pc_hal::traits::DmaSpace,
 {
-    pub fn new(pool: &Rc<Mempool<E, Dma, MM>>, buf: usize, len: usize) -> Self {
+    pub fn new(pool: &'a Mempool<E, Dma, MM>, buf: usize, len: usize) -> Self {
         Self {
             addr_virt: pool.get_our_addr(buf),
             addr_phys: pool.get_device_addr(buf),
@@ -278,9 +269,9 @@ where
     }
 }
 
-pub fn alloc_pkt_batch<E, Dma, MM>(
-    pool: &Rc<Mempool<E, Dma, MM>>,
-    buffer: &mut VecDeque<Packet<E, Dma, MM>>,
+pub fn alloc_pkt_batch<'a, E, Dma, MM>(
+    pool: &'a Mempool<E, Dma, MM>,
+    buffer: &mut VecDeque<Packet<'a, E, Dma, MM>>,
     num_packets: usize,
     packet_size: usize,
 ) -> usize
@@ -302,10 +293,10 @@ where
     allocated
 }
 
-pub fn alloc_pkt<E, Dma, MM>(
-    pool: &Rc<Mempool<E, Dma, MM>>,
+pub fn alloc_pkt<'a, E, Dma, MM>(
+    pool: &'a Mempool<E, Dma, MM>,
     size: usize,
-) -> Option<Packet<E, Dma, MM>>
+) -> Option<Packet<'a, E, Dma, MM>>
 where
     MM: pc_hal::traits::MappableMemory<Error = E, DmaSpace = Dma>,
     Dma: pc_hal::traits::DmaSpace,
@@ -319,7 +310,7 @@ where
         addr_virt: unsafe { pool.get_our_addr(id).add(PACKET_HEADROOM) },
         addr_phys: pool.get_device_addr(id) + PACKET_HEADROOM,
         len: size,
-        pool: Rc::clone(pool),
+        pool: &pool,
         pool_entry: id,
     })
 }

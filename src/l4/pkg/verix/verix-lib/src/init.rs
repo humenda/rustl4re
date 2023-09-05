@@ -1,3 +1,4 @@
+use std::cell::RefCell;
 use std::collections::VecDeque;
 
 use std::time::{Duration};
@@ -67,6 +68,8 @@ where
             .unwrap();
         bus.assign_dma_domain(&mut dma_domain, &mut dma_space)?;
 
+        let mut pools =  Vec::with_capacity(num_rx_queues.into());
+
         let dev = Device {
             bar0,
             num_rx_queues,
@@ -75,6 +78,7 @@ where
             tx_queues,
             device: nic,
             dma_space,
+            pools,
         };
 
         Ok(dev)
@@ -134,9 +138,22 @@ where
 
     #[inline(always)]
     #[track_caller]
-    fn wait_reg<F>(&mut self, f: F) where F: Clone + FnMut(&mut Self) -> bool {
+    fn wait_reg(&self, f: fn(&Self) -> bool) {
         for _ in 0..=WAIT_LIMIT {
-            if f.clone()(self) {
+            if f(self) {
+                return;
+            }
+            // TODO: make this sleep high enough such that the driver consistently works
+            thread::sleep(Duration::from_millis(100));
+        }
+        panic!("Wait limit exceeded");
+    }
+
+    #[inline(always)]
+    #[track_caller]
+    fn wait_queue_reg(&self, queue_id: u8, f: fn(u8, &Self) -> bool) {
+        for _ in 0..=WAIT_LIMIT {
+            if f(queue_id, self) {
                 return;
             }
             // TODO: make this sleep high enough such that the driver consistently works
@@ -181,6 +198,19 @@ where
         // section 4.6.5 - statistical counters
         // reset-on-read registers, just read them once
         self.reset_stats();
+
+        for i in 0..self.num_rx_queues {
+            info!("Setting up RX/TX Mempool {}", i);
+
+            // The sum is used here because we share a mempool between rx and tx queues
+            let mempool_entries = NUM_RX_QUEUE_ENTRIES + NUM_TX_QUEUE_ENTRIES;
+
+            let mempool =
+                Mempool::new(mempool_entries.into(), PKT_BUF_ENTRY_SIZE, &self.dma_space)?;
+            self.pools.push(mempool);
+            info!("Set up of RX/TX Mempool {} done", i);
+        }
+
 
         // section 4.6.7 - init rx
         self.init_rx()?;
@@ -270,14 +300,13 @@ where
 
             let tx_queue = TxQueue {
                 descriptors: descriptor_mem,
-                pool: self.rx_queues[i as usize].pool.clone(),
                 num_descriptors: NUM_TX_QUEUE_ENTRIES,
                 clean_index: 0,
                 tx_index: 0,
                 bufs_in_use: VecDeque::with_capacity(NUM_TX_QUEUE_ENTRIES as usize),
             };
 
-            self.tx_queues.push(tx_queue);
+            self.tx_queues.push(RefCell::new(tx_queue));
             info!("TX queue {} initialized", i);
         }
 
@@ -345,25 +374,15 @@ where
 
             info!("Set up of DMA for RX descriptor ring {} done", i);
 
-            info!("Setting up RX/TX Mempool {}", i);
-
-            // The sum is used here because we share a mempool between rx and tx queues
-            let mempool_entries = NUM_RX_QUEUE_ENTRIES + NUM_TX_QUEUE_ENTRIES;
-
-            let mempool =
-                Mempool::new(mempool_entries.into(), PKT_BUF_ENTRY_SIZE, &self.dma_space)?;
-
-            info!("Set up of RX/TX Mempool {} done", i);
 
             let queue = RxQueue {
                 descriptors: descriptor_mem,
-                pool: mempool,
                 num_descriptors: NUM_RX_QUEUE_ENTRIES,
                 rx_index: 0,
                 bufs_in_use: Vec::with_capacity(NUM_RX_QUEUE_ENTRIES.into()),
             };
 
-            self.rx_queues.push(queue);
+            self.rx_queues.push(RefCell::new(queue));
             info!("RX queue {} initialized", i);
         }
 
@@ -386,18 +405,18 @@ where
     fn start_rx_queue(&mut self, queue_id: u8) -> Result<(), E> {
         info!("Starting RX queue: {}", queue_id);
         {
-            let queue = &mut self.rx_queues[queue_id as usize];
+            let queue = self.rx_queues[queue_id as usize].get_mut();
+            let pool = &self.pools[queue_id as usize];
 
             // Power of 2
             assert!(queue.num_descriptors & (queue.num_descriptors - 1) == 0);
 
             for i in 0..queue.num_descriptors {
                 let descriptor_ptr = queue.nth_descriptor_ptr(i.into());
-                let pool = &queue.pool;
                 let mempool_idx = pool.alloc_buf().ok_or(Error::MempoolEmpty)?;
                 let device_addr = pool.get_device_addr(mempool_idx) as u64;
 
-                let mut desc = dev::Descriptors::adv_rx_desc_read::new(descriptor_ptr);
+                let desc = dev::Descriptors::adv_rx_desc_read::new(descriptor_ptr);
                 desc.pkt_addr().write(|w| w.pkt_addr(device_addr));
                 desc.hdr_addr().write(|w| w.hdr_addr(0));
 
@@ -407,9 +426,10 @@ where
         }
         // enable queue and wait if necessary
         self.bar0.rxdctl(queue_id.into()).modify(|_, w| w.enable(1));
-        self.wait_reg(|s| s.bar0.rxdctl(queue_id.into()).read().enable() == 1);
+        self.wait_queue_reg(queue_id, |q, s| s.bar0.rxdctl(q.into()).read().enable() == 1);
 
-        let queue = &mut self.rx_queues[queue_id as usize];
+        let queue = self.rx_queues[queue_id as usize].get_mut();
+
         self.bar0.rdh(queue_id.into()).modify(|_, w| w.rdh(0));
         self.bar0
             .rdt(queue_id.into())
@@ -423,7 +443,7 @@ where
     fn start_tx_queue(&mut self, queue_id: u8) -> Result<(), E> {
         info!("Starting TX queue: {}", queue_id);
 
-        let queue = &mut self.tx_queues[queue_id as usize];
+        let queue = self.tx_queues[queue_id as usize].get_mut();
 
         // Power of 2
         assert!(queue.num_descriptors & (queue.num_descriptors - 1) == 0);
@@ -434,7 +454,7 @@ where
 
         // enable queue and wait if necessary
         self.bar0.txdctl(queue_id.into()).modify(|_, w| w.enable(1));
-        self.wait_reg(|s| s.bar0.txdctl(queue_id.into()).read().enable() == 1);
+        self.wait_queue_reg(queue_id, |q, s| s.bar0.txdctl(q.into()).read().enable() == 1);
 
         info!("Started TX queue: {}", queue_id);
 
@@ -451,7 +471,7 @@ where
         }
     }
 
-    pub fn read_stats(&mut self, stats: &mut DeviceStats) {
+    pub fn read_stats(&self, stats: &mut DeviceStats) {
         let rx_pkts = u64::from(self.bar0.gprc().read().gprc());
         let tx_pkts = u64::from(self.bar0.gptc().read().gptc());
         let rx_bytes = u64::from(self.bar0.gorcl().read().cnt_l())
@@ -593,133 +613,126 @@ where
         self.clear_interrupts();
     }
 
-    pub fn rx_batch(
-        &mut self,
+    pub fn rx_batch<'a>(
+        &'a self,
         queue_id: u8,
-        buffer: &mut VecDeque<Packet<E, Dma, MM>>,
+        buffer: &mut VecDeque<Packet<'a, E, Dma, MM>>,
         num_packets: usize,
     ) -> usize {
         let mut rx_index;
         let mut last_rx_index;
         let mut received_packets = 0;
 
-        {
-            let queue = self
-                .rx_queues
-                .get_mut(queue_id as usize)
-                .expect("invalid rx queue id");
+        let mut queue = self.rx_queues[queue_id as usize].borrow_mut();
+        let pool = &self.pools[queue_id as usize];
 
-            rx_index = queue.rx_index;
-            last_rx_index = queue.rx_index;
+        rx_index = queue.rx_index;
+        last_rx_index = queue.rx_index;
 
-            // TODO: wait for interrupt on our queue
+        // TODO: wait for interrupt on our queue
 
-            for i in 0..num_packets {
-                let descriptor_ptr = queue.nth_descriptor_ptr(rx_index);
-                let mut desc = dev::Descriptors::adv_rx_desc_wb::new(descriptor_ptr);
-                let upper = desc.upper().read();
+        for i in 0..num_packets {
+            let descriptor_ptr = queue.nth_descriptor_ptr(rx_index);
+            let desc = dev::Descriptors::adv_rx_desc_wb::new(descriptor_ptr);
+            let upper = desc.upper().read();
 
-                if upper.dd() == 0 {
-                    break;
-                }
-
-                if upper.eop() != 1 {
-                    panic!("increase buffer size or decrease MTU")
-                }
-
-                let pool = &queue.pool;
-
-                // TODO: can we get bulk allocation going here?
-                // get a free buffer from the mempool
-                if let Some(buf) = pool.alloc_buf() {
-                    // replace currently used buffer with new buffer
-                    let buf = mem::replace(&mut queue.bufs_in_use[rx_index], buf);
-
-                    let p = Packet::new(pool, buf, upper.pkt_len().into());
-
-                    // TODO: pre fetch magics
-                    // #[cfg(all(
-                    //     any(target_arch = "x86", target_arch = "x86_64"),
-                    //     target_feature = "sse"
-                    // ))]
-                    // p.prefetch(Prefetch::Time1);
-
-                    buffer.push_back(p);
-
-                    let mut desc = dev::Descriptors::adv_rx_desc_read::new(desc.consume());
-
-                    // TODO: This is a second RefCell operation even though we already did the first to obtain the buffer above
-                    desc.pkt_addr().write(|w| {
-                        w.pkt_addr(pool.get_device_addr(queue.bufs_in_use[rx_index]) as u64)
-                    });
-                    desc.hdr_addr().write(|w| w.hdr_addr(0));
-
-                    last_rx_index = rx_index;
-                    rx_index = wrap_ring(rx_index, queue.num_descriptors.into());
-                    received_packets = i + 1;
-                } else {
-                    // break if there was no free buffer
-                    break;
-                }
+            if upper.dd() == 0 {
+                break;
             }
 
-            // TODO: More interrupt stuff
-            //let interrupt = &mut self.interrupts.queues[queue_id as usize];
-            //let int_en = interrupt.interrupt_enabled;
-            //interrupt.rx_pkts += received_packets as u64;
+            if upper.eop() != 1 {
+                panic!("increase buffer size or decrease MTU")
+            }
 
-            //interrupt.instr_counter += 1;
-            //if (interrupt.instr_counter & 0xFFF) == 0 {
-            //    interrupt.instr_counter = 0;
-            //    let elapsed = interrupt.last_time_checked.elapsed();
-            //    let diff =
-            //        elapsed.as_secs() * 1_000_000_000 + u64::from(elapsed.subsec_nanos());
-            //    if diff > interrupt.interval {
-            //        interrupt.check_interrupt(diff, received_packets, num_packets);
-            //    }
+            // TODO: can we get bulk allocation going here?
+            // get a free buffer from the mempool
+            if let Some(buf) = pool.alloc_buf() {
+                // replace currently used buffer with new buffer
+                let buf = mem::replace(&mut queue.bufs_in_use[rx_index], buf);
 
-            //    if int_en != interrupt.interrupt_enabled {
-            //        if interrupt.interrupt_enabled {
-            //            self.enable_interrupt(queue_id).unwrap();
-            //        } else {
-            //            self.disable_interrupt(queue_id);
-            //        }
-            //    }
-            //}
+                let p = Packet::new(&pool, buf, upper.pkt_len().into());
+
+                // TODO: pre fetch magics
+                // #[cfg(all(
+                //     any(target_arch = "x86", target_arch = "x86_64"),
+                //     target_feature = "sse"
+                // ))]
+                // p.prefetch(Prefetch::Time1);
+
+                buffer.push_back(p);
+
+                let desc = dev::Descriptors::adv_rx_desc_read::new(desc.consume());
+
+                // TODO: This is a second RefCell operation even though we already did the first to obtain the buffer above
+                desc.pkt_addr().write(|w| {
+                    w.pkt_addr(pool.get_device_addr(queue.bufs_in_use[rx_index]) as u64)
+                });
+                desc.hdr_addr().write(|w| w.hdr_addr(0));
+
+                last_rx_index = rx_index;
+                rx_index = wrap_ring(rx_index, queue.num_descriptors.into());
+                received_packets = i + 1;
+            } else {
+                // break if there was no free buffer
+                break;
+            }
         }
+
+        // TODO: More interrupt stuff
+        //let interrupt = &mut self.interrupts.queues[queue_id as usize];
+        //let int_en = interrupt.interrupt_enabled;
+        //interrupt.rx_pkts += received_packets as u64;
+
+        //interrupt.instr_counter += 1;
+        //if (interrupt.instr_counter & 0xFFF) == 0 {
+        //    interrupt.instr_counter = 0;
+        //    let elapsed = interrupt.last_time_checked.elapsed();
+        //    let diff =
+        //        elapsed.as_secs() * 1_000_000_000 + u64::from(elapsed.subsec_nanos());
+        //    if diff > interrupt.interval {
+        //        interrupt.check_interrupt(diff, received_packets, num_packets);
+        //    }
+
+        //    if int_en != interrupt.interrupt_enabled {
+        //        if interrupt.interrupt_enabled {
+        //            self.enable_interrupt(queue_id).unwrap();
+        //        } else {
+        //            self.disable_interrupt(queue_id);
+        //        }
+        //    }
+        //}
 
         if rx_index != last_rx_index {
             self.bar0
                 .rdt(queue_id.into())
                 .modify(|_, w| w.rdt(last_rx_index as u16));
-            self.rx_queues[queue_id as usize].rx_index = rx_index;
+            queue.rx_index = rx_index;
         }
 
         received_packets
     }
 
-    pub fn tx_batch_busy_wait(&mut self, queue_id: u16, buffer: &mut VecDeque<Packet<E, Dma, MM>>) {
+    pub fn tx_batch_busy_wait<'a>(&'a self, queue_id: u16, buffer: &mut VecDeque<Packet<'a, E, Dma, MM>>) {
         while !buffer.is_empty() {
             self.tx_batch(queue_id, buffer);
         }
     }
 
-    pub fn tx_batch(&mut self, queue_id: u16, buffer: &mut VecDeque<Packet<E, Dma, MM>>) -> usize {
+    pub fn tx_batch<'a>(&'a self, queue_id: u16, buffer: &mut VecDeque<Packet<'a, E, Dma, MM>>) -> usize {
         let mut sent = 0;
 
-        let mut queue = self
-            .tx_queues
-            .get_mut(queue_id as usize)
-            .expect("invalid tx queue id");
+        let mut queue = self.tx_queues[queue_id as usize].borrow_mut();
 
         let mut cur_index = queue.tx_index;
-        let clean_index = clean_tx_queue(&mut queue);
+        let pool = &self.pools[queue_id as usize];
+        let clean_index = clean_tx_queue(&mut queue, pool);
 
         while let Some(mut packet) = buffer.pop_front() {
-            assert!(
-                queue.contains(&packet),
-                "distinct memory pools for a single tx queue are not supported yet"
-            );
+            // TODO
+            //assert!(
+            //    queue.contains(&packet),
+            //    "distinct memory pools for a single tx queue are not supported yet"
+            //);
 
             let next_index = wrap_ring(cur_index, queue.num_descriptors.into());
 
@@ -733,7 +746,7 @@ where
             queue.tx_index = wrap_ring(queue.tx_index, queue.num_descriptors.into());
 
             let descriptor_ptr = queue.nth_descriptor_ptr(cur_index);
-            let mut desc = dev::Descriptors::adv_tx_desc_read::new(descriptor_ptr);
+            let desc = dev::Descriptors::adv_tx_desc_read::new(descriptor_ptr);
             desc.lower()
                 .write(|w| w.address(packet.get_device_addr() as u64));
             desc.upper().write(|w| {
@@ -758,7 +771,7 @@ where
 
         self.bar0
             .tdt(queue_id.into())
-            .write(|w| w.tdt(self.tx_queues[queue_id as usize].tx_index as u16));
+            .write(|w| w.tdt(queue.tx_index as u16));
 
         sent
     }
@@ -766,7 +779,7 @@ where
 
 const TX_CLEAN_BATCH: usize = 32;
 
-fn clean_tx_queue<E, Dma, MM>(queue: &mut TxQueue<E, Dma, MM>) -> usize
+fn clean_tx_queue<E, Dma, MM>(queue: &mut TxQueue<E, Dma, MM>, pool: &Mempool<E, Dma, MM>) -> usize
 where
     MM: pc_hal::traits::MappableMemory<Error = E, DmaSpace = Dma>,
     Dma: pc_hal::traits::DmaSpace,
@@ -792,16 +805,14 @@ where
         }
 
         let descriptor_ptr = queue.nth_descriptor_ptr(cleanup_to);
-        let mut desc = dev::Descriptors::adv_tx_desc_wb::new(descriptor_ptr);
+        let desc = dev::Descriptors::adv_tx_desc_wb::new(descriptor_ptr);
         let status = desc.lower().read().dd();
 
         if status != 0 {
             if TX_CLEAN_BATCH as usize >= queue.bufs_in_use.len() {
-                queue.pool.free_chunk(queue.bufs_in_use.drain(..));
+                pool.free_chunk(queue.bufs_in_use.drain(..));
             } else {
-                queue
-                    .pool
-                    .free_chunk(queue.bufs_in_use.drain(..TX_CLEAN_BATCH));
+                pool.free_chunk(queue.bufs_in_use.drain(..TX_CLEAN_BATCH));
             }
 
             clean_index = wrap_ring(cleanup_to, queue.num_descriptors.into());

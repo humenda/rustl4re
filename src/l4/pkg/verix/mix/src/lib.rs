@@ -7,7 +7,7 @@ mod unit {
     use crate::emulator::{
         Bus, DmaSpace, MappableMemory
     };
-    use crate::ix::{IxDevice, IoMem};
+    use crate::ix::{IxDevice, IoMemInner, IoMem};
     use pc_hal::prelude::*;
 
     fn get_resource_starts() -> (u32, u32) {
@@ -27,7 +27,7 @@ mod unit {
         // This is equivalent to the state of the bus after device_iter has been called
         let mut bus = Bus::new(vec![]);
 
-        let bar0_mem : IoMem = IoMem::new(eec_read_limit, dmaidone_read_limit, links_read_limit, rxdctl0_read_limit, txdctl0_read_limit, [0x1, 0x2, 0x3, 0x4, 0x5, 0x6]);
+        let bar0_mem = IoMem::new(IoMemInner::new(eec_read_limit, dmaidone_read_limit, links_read_limit, rxdctl0_read_limit, txdctl0_read_limit, [0x1, 0x2, 0x3, 0x4, 0x5, 0x6]));
         let bar0 = verix_lib::dev::Intel82559ES::Bar0::new(bar0_mem);
 
         let mut dma_space = DmaSpace::new();
@@ -37,6 +37,7 @@ mod unit {
         let num_rx_queues: u8 = 1;
         let num_tx_queues: u8 = 1;
         let rx_queues = Vec::with_capacity(num_rx_queues.into());
+        let pools = Vec::with_capacity(num_rx_queues.into());
         let tx_queues = Vec::with_capacity(num_tx_queues.into());
 
         let mut dev = verix_lib::types::Device::<_, _, _, _, _, _, MappableMemory> {
@@ -47,6 +48,7 @@ mod unit {
             tx_queues,
             device: ix,
             dma_space,
+            pools
         };
 
         let res = dev.init();
@@ -62,7 +64,7 @@ mod tests {
     use crate::emulator::{
         BasicDevice, Bus, Device, DmaSpace, Error, MappableMemory, Resource,
     };
-    use crate::ix::{IxDevice, IoMem};
+    use crate::ix::{IxDevice, IoMemInner, IoMem};
     use pc_hal::prelude::*;
     use verix_lib::dma::DmaMemory;
 
@@ -167,7 +169,7 @@ mod tests {
         // This is equivalent to the state of the bus after device_iter has been called
         let mut bus = Bus::new(vec![]);
 
-        let bar0_mem : IoMem = IoMem::new(eec_read_limit, dmaidone_read_limit, links_read_limit, rxdctl0_read_limit, txdctl0_read_limit, mac_addr);
+        let bar0_mem = IoMem::new(IoMemInner::new(eec_read_limit, dmaidone_read_limit, links_read_limit, rxdctl0_read_limit, txdctl0_read_limit, [0x1, 0x2, 0x3, 0x4, 0x5, 0x6]));
         let bar0 = verix_lib::dev::Intel82559ES::Bar0::new(bar0_mem);
 
         let mut dma_space = DmaSpace::new();
@@ -177,6 +179,7 @@ mod tests {
         let num_rx_queues: u8 = 1;
         let num_tx_queues: u8 = 1;
         let rx_queues = Vec::with_capacity(num_rx_queues.into());
+        let pools = Vec::with_capacity(num_rx_queues.into());
         let tx_queues = Vec::with_capacity(num_tx_queues.into());
 
         let mut dev = verix_lib::types::Device::<_, _, _, _, _, _, MappableMemory> {
@@ -187,6 +190,7 @@ mod tests {
             tx_queues,
             device: ix,
             dma_space,
+            pools
         };
 
         let res = dev.init();
