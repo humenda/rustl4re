@@ -34,24 +34,13 @@ mod unit {
         let mut dma_domain = ix.basic.resources[1].clone();
         bus.assign_dma_domain(&mut dma_domain, &mut dma_space).unwrap();
 
-        let num_rx_queues: u8 = 1;
-        let num_tx_queues: u8 = 1;
-        let rx_queues = Vec::with_capacity(num_rx_queues.into());
-        let pools = Vec::with_capacity(num_rx_queues.into());
-        let tx_queues = Vec::with_capacity(num_tx_queues.into());
-
-        let mut dev = verix_lib::types::Device::<_, _, _, _, _, _, MappableMemory> {
+        let dev = verix_lib::types::UninitializedDevice {
             bar0,
-            num_rx_queues,
-            num_tx_queues,
-            rx_queues,
-            tx_queues,
             device: ix,
             dma_space,
-            pools
         };
 
-        let res = dev.init();
+        let res = dev.init::<MappableMemory>();
         assert!(res.is_ok());
     }
 }
@@ -125,7 +114,6 @@ mod tests {
             IxDevice,
             Bus,
             Resource,
-            MappableMemory,
             DmaSpace,
             IoMem,
         >(&mut bus);
@@ -176,24 +164,13 @@ mod tests {
         let mut dma_domain = ix.basic.resources[1].clone();
         bus.assign_dma_domain(&mut dma_domain, &mut dma_space).unwrap();
 
-        let num_rx_queues: u8 = 1;
-        let num_tx_queues: u8 = 1;
-        let rx_queues = Vec::with_capacity(num_rx_queues.into());
-        let pools = Vec::with_capacity(num_rx_queues.into());
-        let tx_queues = Vec::with_capacity(num_tx_queues.into());
-
-        let mut dev = verix_lib::types::Device::<_, _, _, _, _, _, MappableMemory> {
+        let dev = verix_lib::types::UninitializedDevice {
             bar0,
-            num_rx_queues,
-            num_tx_queues,
-            rx_queues,
-            tx_queues,
             device: ix,
             dma_space,
-            pools
         };
 
-        let res = dev.init();
+        let res = dev.init::<MappableMemory>();
         assert!(res.is_ok());
     }
 /*

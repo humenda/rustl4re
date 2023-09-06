@@ -28,7 +28,20 @@ impl<E> From<E> for Error<E> {
 
 pub type Result<T, E> = std::result::Result<T, Error<E>>;
 
-pub struct Device<E, IM, PD, D, Res, Dma, MM>
+pub struct UninitializedDevice<E, IM, PD, D, Res, Dma>
+where
+    D: pc_hal::traits::Device,
+    Res: pc_hal::traits::Resource,
+    PD: pc_hal::traits::PciDevice<Error = E, Device = D, Resource = Res, IoMem = IM>,
+    Dma: pc_hal::traits::DmaSpace,
+    IM: pc_hal::traits::MemoryInterface,
+{
+    pub bar0: dev::Intel82559ES::Bar0::Mem<IM>,
+    pub device: PD,
+    pub dma_space: Dma,
+}
+
+pub struct InitializedDevice<E, IM, PD, D, Res, MM, Dma>
 where
     D: pc_hal::traits::Device,
     Res: pc_hal::traits::Resource,
@@ -39,12 +52,10 @@ where
 {
     pub bar0: dev::Intel82559ES::Bar0::Mem<IM>,
     pub device: PD,
-    pub num_rx_queues: u8,
-    pub num_tx_queues: u8,
-    pub rx_queues: Vec<RefCell<RxQueue<E, Dma, MM>>>,
-    pub tx_queues: Vec<RefCell<TxQueue<E, Dma, MM>>>,
+    pub rx_queue: RefCell<RxQueue<E, Dma, MM>>,
+    pub tx_queue: RefCell<TxQueue<E, Dma, MM>>,
     pub dma_space: Dma,
-    pub pools: Vec<Mempool<E, Dma, MM>>,
+    pub pool: Mempool<E, Dma, MM>,
 }
 
 pub struct RxQueue<E, Dma, MM>

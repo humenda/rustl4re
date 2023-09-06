@@ -16,13 +16,12 @@ use crate::types::Result;
 // number of packets sent simultaneously by our driver
 const BATCH_SIZE: usize = 64;
 
-pub fn find_dev<E, D, PD, B, Res, MM, Dma, IM>(bus: &mut B) -> Result<types::Device<E, IM, PD, D, Res, Dma, MM>, E>
+pub fn find_dev<E, D, PD, B, Res, Dma, IM>(bus: &mut B) -> Result<types::UninitializedDevice<E, IM, PD, D, Res, Dma>, E>
 where
     D: pc_hal::traits::Device,
     B: pc_hal::traits::Bus<Error = E, Device = D, Resource = Res, DmaSpace = Dma>,
     PD: pc_hal::traits::PciDevice<Error = E, Device = D, Resource = Res, IoMem = IM>,
     Res: pc_hal::traits::Resource,
-    MM: pc_hal::traits::MappableMemory<Error = E, DmaSpace = Dma>,
     Dma: pc_hal::traits::DmaSpace,
     IM: pc_hal::traits::MemoryInterface,
 {
@@ -32,8 +31,8 @@ where
     let nic = PD::try_of_device(devices.next().unwrap()).unwrap();
     info!("Obtained handles to NIC");
 
-    let dev: types::Device<E, IM, PD, D, Res, Dma, MM> =
-        types::Device::new(bus, nic, 1, 1)?;
+    let dev: types::UninitializedDevice<E, IM, PD, D, Res, Dma> =
+        types::UninitializedDevice::new(bus, nic)?;
     Ok(dev)
 }
 
@@ -48,8 +47,8 @@ where
     Dma: pc_hal::traits::DmaSpace,
     IM: pc_hal::traits::MemoryInterface,
 {
-    let mut dev: types::Device<E, IM, PD, D, Res, Dma, MM> = find_dev(bus)?;
-    dev.init()?;
+    let uninit_dev: types::UninitializedDevice<E, IM, PD, D, Res, Dma> = find_dev(bus)?;
+    let dev = uninit_dev.init()?;
     let mut dev_stats = Default::default();
     let mut dev_stats_old = Default::default();
     dev.read_stats(&mut dev_stats);
@@ -60,7 +59,7 @@ where
     let mut counter = 0;
 
     loop {
-        let num_rx = dev.rx_batch(0, &mut buffer, BATCH_SIZE);
+        let num_rx = dev.rx_batch(&mut buffer, BATCH_SIZE);
 
         if num_rx > 0 {
             for pkt in buffer.iter_mut() {
@@ -69,7 +68,7 @@ where
                 }
             }
 
-            dev.tx_batch(0, &mut buffer) as u64;
+            dev.tx_batch(&mut buffer) as u64;
 
             // drop packets if they haven't been sent out
             buffer.drain(..);
