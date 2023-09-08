@@ -14,6 +14,8 @@ use crate::emulator::{BasicDevice, Device, Error, Resource, BasicResource, DmaDo
 pub struct IxDevice {
     pub(crate) basic: BasicDevice,
     pub(crate) pci_state: PciState,
+    pub(crate) dma_dom: Rc<DmaDomainResource>,
+    bar_res: BasicResource,
     eec_read_limit: u8,
     dmaidone_read_limit: u8,
     links_read_limit: u8,
@@ -36,30 +38,24 @@ impl IxDevice {
             mapping: RefCell::new(Vec::new())
         });
 
-        let mut bar_res = Resource::Basic(BasicResource {
+        let bar_res = BasicResource {
             start: bar0_addr as usize,
             end: bar0_addr as usize + BAR0_SIZE,
             typ: pc_hal::traits::ResourceType::Mem
-        });
-        let mut dma_dom_res = Resource::DmaDomain(dma_dom.clone());
-
+        };
         // Resources don't overlap
-        assert!(dma_dom_res.end() < bar_res.start() || bar_res.end() < dma_dom_res.start());
-
-        let resources = vec![
-            bar_res,
-            dma_dom_res
-        ];
 
         Self {
-            basic: BasicDevice::new(ifaces, resources),
+            basic: BasicDevice::new(ifaces),
             pci_state,
             eec_read_limit,
             dmaidone_read_limit,
             links_read_limit,
             rxdctl0_read_limit,
             txdctl0_read_limit,
-            mac_addr
+            mac_addr,
+            dma_dom,
+            bar_res,
         }
     }
 }
@@ -69,7 +65,10 @@ impl pc_hal::traits::Device for IxDevice {
     type ResourceIter<'a> = <Device as pc_hal::traits::Device>::ResourceIter<'a>;
 
     fn resource_iter<'a>(&'a self) -> Self::ResourceIter<'a> {
-        self.basic.resource_iter()
+        vec![
+            Resource::Basic(self.bar_res.clone()),
+            Resource::DmaDomain(self.dma_dom.clone())
+        ].into_iter()
     }
 
     fn supports_interface(&self, iface: pc_hal::traits::BusInterface) -> bool {

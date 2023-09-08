@@ -22,7 +22,6 @@ pub struct Bus {
 
 pub struct BasicDevice {
     ifaces: Vec<pc_hal::traits::BusInterface>,
-    pub (crate) resources: Vec<Resource>,
 }
 
 pub enum Device {
@@ -123,8 +122,8 @@ impl Device {
 }
 
 impl BasicDevice {
-    pub fn new(ifaces: Vec<pc_hal::traits::BusInterface>, resources: Vec<Resource>) -> Self {
-        Self { ifaces, resources }
+    pub fn new(ifaces: Vec<pc_hal::traits::BusInterface>) -> Self {
+        Self { ifaces }
     }
 }
 
@@ -134,7 +133,7 @@ impl pc_hal::traits::Device for BasicDevice {
     type ResourceIter<'a> = std::vec::IntoIter<Resource>;
 
     fn resource_iter<'a>(&'a self) -> Self::ResourceIter<'a> {
-        self.resources.clone().into_iter()
+        vec![].into_iter()
     }
 
     fn supports_interface(&self, iface: pc_hal::traits::BusInterface) -> bool {

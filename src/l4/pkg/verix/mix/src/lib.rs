@@ -31,7 +31,7 @@ mod unit {
         let bar0 = verix_lib::dev::Intel82559ES::Bar0::new(bar0_mem);
 
         let mut dma_space = DmaSpace::new();
-        let mut dma_domain = ix.basic.resources[1].clone();
+        let mut dma_domain = crate::emulator::Resource::DmaDomain(ix.dma_dom.clone());
         bus.assign_dma_domain(&mut dma_domain, &mut dma_space).unwrap();
 
         let dev = verix_lib::types::UninitializedDevice {
@@ -103,8 +103,8 @@ mod tests {
         let ix = IxDevice::new(bar0_addr, dma_domain_start, kani::any(), kani::any(), kani::any(), kani::any(), kani::any(), mac_addr);
 
         let mut bus = Bus::new(vec![
-            Device::Basic(BasicDevice::new(vec![], vec![])),
-            Device::Basic(BasicDevice::new(vec![], vec![])),
+            Device::Basic(BasicDevice::new(vec![])),
+            Device::Basic(BasicDevice::new(vec![])),
             Device::Ix(ix),
         ]);
 
@@ -161,7 +161,7 @@ mod tests {
         let bar0 = verix_lib::dev::Intel82559ES::Bar0::new(bar0_mem);
 
         let mut dma_space = DmaSpace::new();
-        let mut dma_domain = ix.basic.resources[1].clone();
+        let mut dma_domain = crate::emulator::Resource::DmaDomain(ix.dma_dom.clone());
         bus.assign_dma_domain(&mut dma_domain, &mut dma_space).unwrap();
 
         let dev = verix_lib::types::UninitializedDevice {
