@@ -8,7 +8,7 @@ edition = "2018"
 path = "lib.rs"
 
 [build-dependencies]
-bindgen = "0.66"
+bindgen = "0.68"
 
 [dependencies]
 core-ffi-helpers = { path = "../core-ffi-helpers" }
