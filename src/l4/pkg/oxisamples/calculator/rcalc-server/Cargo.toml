@@ -5,6 +5,11 @@ authors = ["Sebastian Humenda <shumenda@gmx.de>"]
 edition = "2018"
 build = "build.rs"
 
+[dependencies]
+l4_sys = { path = "../../../l4rust/l4-sys-rust" }
+l4 = { path = "../../../l4rust/l4-rust" }
+l4re = { path = "../../../l4rust/l4re-rust" }
+l4_derive = { path = "../../../l4rust/l4_derive-rust" }
+
 [build-dependencies]
-# ToDo: this is temporary until Cargo is capable of passing rustc flags 
 l4_derive = { path = "../../../l4rust/l4_derive-rust" }

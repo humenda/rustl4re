@@ -2,7 +2,9 @@
 name = "ox_rcalc-client"
 version = "0.1.0"
 authors = ["Sebastian Humenda <shumenda@gmx.de>"]
-edition = "2018"
+edition = "2021"
 
 [dependencies]
-#num-traits = "*"
+l4 = { path = "../../../l4rust/l4-rust/" }
+l4_derive = { path = "../../../l4rust/l4_derive-rust/" }
+l4re = { path = "../../../l4rust/l4re-rust/" }

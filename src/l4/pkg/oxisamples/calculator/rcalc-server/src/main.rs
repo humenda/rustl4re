@@ -1,9 +1,3 @@
-extern crate core;
-extern crate l4_sys;
-extern crate l4_derive;
-extern crate l4;
-extern crate l4re;
-
 use l4::{error::Result, ipc};
 use l4_derive::{iface, l4_server};
 use l4_sys::{l4_utcb};

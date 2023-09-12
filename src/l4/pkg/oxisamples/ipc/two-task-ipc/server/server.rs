@@ -1,12 +1,8 @@
 //! A simple square server (squaring a number for a client). This server listens on an IPC gate for
 //! incoming connections of arbitrary clients.
 // This doesn't work with stable Rust, use "extern crate libc" here:
-#![feature(libc)]
-extern crate l4_sys as l4;
-extern crate l4re;
-extern crate libc;
 
-use l4::{l4_ipc_error, l4_msgtag, l4_utcb};
+use l4_sys::{l4_ipc_error, l4_msgtag, l4_utcb};
 
 pub fn main() {
     unsafe { // avoid deep nesting of unsafe blocks, just make the whole program unsafe
@@ -19,7 +15,7 @@ pub unsafe fn unsafe_main() {
     // clients. Here's one:
     let gatelabel = 0b11111100 as u64;
     // place to put label in when a message is received
-    let mut label = std::mem::uninitialized();
+    let mut label = 0;
 
 
     // get IPC gate capability from Lua script (see ../*.cfg)

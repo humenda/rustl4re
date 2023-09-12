@@ -1,5 +1,4 @@
 #![feature(proc_macro_hygiene)]
-extern crate l4_derive;
 use l4_derive::iface_export;
 
 fn main() {

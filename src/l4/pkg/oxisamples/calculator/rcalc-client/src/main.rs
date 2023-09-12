@@ -1,9 +1,3 @@
-extern crate core;
-extern crate l4_sys;
-extern crate l4re;
-extern crate l4;
-extern crate l4_derive;
-
 // required for interface initialisation
 use l4::cap::IfaceInit;
 use l4_derive::{iface, l4_client};

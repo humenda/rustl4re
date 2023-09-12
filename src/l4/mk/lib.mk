@@ -234,14 +234,15 @@ $(strip $(TARGET)): $(SRC_FILES)
 	@$(BUILT_MESSAGE)
 	$(VERBOSE)[ -d $(OBJ_BASE)/lib/rustlib/$(PKGNAME) ] || \
 		mkdir -p $(RLIB_BASE)/$(PKGNAME)
-	$(VERBOSE)if [ -z $(call is_pkg_procmacro) ]; then \
-		if [ -e $(RUST_RESULT_DIR)/$@ ]; then \
-			rm $(RUST_RESULT_DIR)/$@; \
-		fi; \
-		mv $(RUST_RESULT_DIR)/$(patsubst %-rust.rlib,%.rlib,$@) \
-				$(RUST_RESULT_DIR)/$@; fi
-	$(call mklink_rustlib,$(CARGO_BUILD_TARGET_DIR)/release/deps,host-deps)
-	$(call mklink_rustlib,$(CARGO_BUILD_TARGET_DIR)/$(RUST_TARGET)/release,$(RUST_TARGET))
+	@# ToDo: don't move rlib's around
+	#$(VERBOSE)if [ -z $(call is_pkg_procmacro) ]; then \
+	#	if [ -e $(RUST_RESULT_DIR)/$@ ]; then \
+	#		rm $(RUST_RESULT_DIR)/$@; \
+	#	fi; \
+	#	mv $(RUST_RESULT_DIR)/$(patsubst %-rust.rlib,%.rlib,$@) \
+	#			$(RUST_RESULT_DIR)/$@; fi
+	#$(call mklink_rustlib,$(CARGO_BUILD_TARGET_DIR)/release/deps,host-deps)
+	#$(call mklink_rustlib,$(CARGO_BUILD_TARGET_DIR)/$(RUST_TARGET)/release,$(RUST_TARGET))
 endif # SRC_RS is defined
 
 endif	# architecture is defined, really build
