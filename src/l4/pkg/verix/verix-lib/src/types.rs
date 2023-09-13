@@ -63,10 +63,10 @@ where
     MM: pc_hal::traits::MappableMemory<Error = E, DmaSpace = Dma>,
     Dma: pc_hal::traits::DmaSpace,
 {
-    pub(crate) descriptors: DmaMemory<E, Dma, MM>,
-    pub(crate) num_descriptors: u16,
-    pub(crate) rx_index: usize,
-    pub(crate) bufs_in_use: Vec<usize>,
+    pub descriptors: DmaMemory<E, Dma, MM>,
+    pub num_descriptors: u16,
+    pub rx_index: usize,
+    pub bufs_in_use: Vec<usize>,
 }
 pub struct TxQueue<E, Dma, MM>
 where

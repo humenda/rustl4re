@@ -2,12 +2,40 @@ pub mod constants;
 pub mod emulator;
 pub mod ix;
 
+fn assert_valid_adv_rx_read(descq_mem: *const u8, idx: u16) {
+    let offset = idx as usize * std::mem::size_of::<[u64; 2]>();
+    let desc_mem = unsafe { descq_mem.add(offset) } as *const u64;
+    let lower = unsafe { desc_mem.read() };
+    let upper = unsafe { desc_mem.add(1).read() };
+    assert_eq!(upper, 0, "{}", idx);
+    // TODO: lower must be a valid address
+}
+
+fn assert_valid_rx_queue(descq_mem: *const u8, descq_len: usize, rdh: u16, rdt: u16, rdlen: u32, rdbal: u32, rdbah: u32, rx_index: usize) {
+    assert!(descq_len == rdlen as usize);
+    let desc_count = (descq_len / std::mem::size_of::<[u64; 2]>()) as u16;
+    let distance = if rdh < rdt {
+        rdt - rdh
+    } else {
+        desc_count - rdt + rdh
+    };
+    assert!(distance <= desc_count);
+    let mut counter = 0;
+    // TODO: import this as a constant
+    while counter < distance && counter < 128 {
+        let idx = (rdh + counter) % desc_count;
+        assert_valid_adv_rx_read(descq_mem, idx);
+        counter += 1;
+    }
+}
+
 #[cfg(test)]
 mod unit {
     use crate::emulator::{
         Bus, DmaSpace, MappableMemory
     };
     use crate::ix::{IxDevice, IoMemInner, IoMem};
+    use crate::{assert_valid_rx_queue, assert_valid_adv_rx_read};
     use pc_hal::prelude::*;
 
     fn get_resource_starts() -> (u32, u32) {
@@ -40,8 +68,17 @@ mod unit {
             dma_space,
         };
 
-        let res = dev.init::<MappableMemory>();
-        assert!(res.is_ok());
+        let dev = dev.init::<MappableMemory>().unwrap();
+        let rx_queue = dev.rx_queue.borrow_mut();
+        let descq_addr = rx_queue.descriptors.ptr();
+        let descq_len = rx_queue.descriptors.size();
+        let rdh = dev.bar0.rdh(0).read().rdh();
+        let rdt = dev.bar0.rdt(0).read().rdt();
+        let rdlen = dev.bar0.rdlen(0).read().len();
+        let rdbal = dev.bar0.rdbal(0).read().rdbal();
+        let rdbah = dev.bar0.rdbah(0).read().rdbah();
+        let rx_index = rx_queue.rx_index;
+        assert_valid_rx_queue(descq_addr, descq_len, rdh, rdt, rdlen, rdbal, rdbah, rx_index);
     }
 }
 
@@ -56,6 +93,7 @@ mod tests {
     use crate::ix::{IxDevice, IoMemInner, IoMem};
     use pc_hal::prelude::*;
     use verix_lib::dma::DmaMemory;
+    use crate::{assert_valid_rx_queue, assert_valid_adv_rx_read};
 
     fn get_bar_addr(size: u32) -> u32 {
         let bar_addr : u32 = kani::any::<u32>();
@@ -140,7 +178,7 @@ mod tests {
     }
 
     #[kani::proof]
-    #[kani::unwind(1025)]
+    #[kani::unwind(257)]
     #[kani::stub(std::thread::sleep, mock_sleep)]
     #[kani::stub(verix_lib::dma::DmaMemory::memset, mock_memset)]
     fn test_setup() {
@@ -170,30 +208,16 @@ mod tests {
             dma_space,
         };
 
-        let res = dev.init::<MappableMemory>();
-        assert!(res.is_ok());
+        let dev = dev.init::<MappableMemory>().unwrap();
+        let rx_queue = dev.rx_queue.borrow_mut();
+        let descq_addr = rx_queue.descriptors.ptr();
+        let descq_len = rx_queue.descriptors.size();
+        let rdh = dev.bar0.rdh(0).read().rdh();
+        let rdt = dev.bar0.rdt(0).read().rdt();
+        let rdlen = dev.bar0.rdlen(0).read().len();
+        let rdbal = dev.bar0.rdbal(0).read().rdbal();
+        let rdbah = dev.bar0.rdbah(0).read().rdbah();
+        let rx_index = rx_queue.rx_index;
+        assert_valid_rx_queue(descq_addr, descq_len, rdh, rdt, rdlen, rdbal, rdbah, rx_index);
     }
-/*
-    #[kani::proof]
-    #[kani::unwind(1024)]
-    fn test_condition() {
-        let mut x1 : Vec<usize> = (1..1024).collect();
-        let x2 : Vec<usize> = x1.drain(0..400).collect();
-        let x3 : Vec<usize> = x1.drain(400..600).collect();
-
-        let check_range = 1..1024;
-        assert!(check_range.len() == x1.len() + x2.len() + x3.len());
-        for x in check_range {
-            let x1elem = x1.contains(&x);
-            let x2elem = x2.contains(&x);
-            let x3elem = x3.contains(&x);
-            assert!(
-                (x1elem && !x2elem && !x3elem) ||
-                (!x1elem && x2elem && !x3elem) ||
-                (!x1elem && !x2elem && x3elem)
-            );
-        }
-    }
-    */
-
 }
