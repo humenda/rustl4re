@@ -47,3 +47,14 @@ pub mod util {
         }
     }
 }
+
+#[cfg(any(target_arch = "x86_64", target_arch = "aarch64"))]
+pub type L4Umword = u64;
+#[cfg(any(target_arch = "x86_64", target_arch = "aarch64"))]
+pub type L4Mword = i64;
+
+#[cfg(any(target_arch = "x86", target_arch = "aarch32"))]
+pub type L4Umword = u32;
+#[cfg(any(target_arch = "x86", target_arch = "aarch32"))]
+pub type L4Mword = i32;
+
