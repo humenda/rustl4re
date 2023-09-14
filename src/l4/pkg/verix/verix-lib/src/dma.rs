@@ -12,6 +12,7 @@ use log::trace;
 use pc_hal::traits::RawMemoryInterface;
 use pc_hal::traits::{DsAttachFlags, DsMapFlags, MaFlags, MemoryInterface};
 
+use crate::constants::MIN_MEMPOOL_ENTRIES;
 use crate::types::{RxQueue, TxQueue};
 
 const PACKET_HEADROOM: usize = 32;
@@ -87,6 +88,7 @@ where
         Ok(Self { mem, device_addr, size })
     }
 
+    // TODO: we do not necessarily have to memset everything, just the mapped chunk...
     pub fn memset(&mut self, val: u8) {
         for i in 0..self.size {
             unsafe { self.write8(i, val) }
@@ -124,8 +126,14 @@ where
             num_entries,
             entry_size
         );
+        let alloc_entries =
+            if num_entries < MIN_MEMPOOL_ENTRIES as usize {
+                MIN_MEMPOOL_ENTRIES as usize
+            } else {
+                num_entries
+            };
         // TODO: ixy allows the OS to be non contigious here, if i figure out how to tell L4 to translate arbitrary addresses we can do that
-        let mut mem: DmaMemory<E, Dma, MM> = DmaMemory::new(num_entries * entry_size, space, true)?;
+        let mut mem: DmaMemory<E, Dma, MM> = DmaMemory::new(alloc_entries * entry_size, space, true)?;
 
         // Clear the memory to a defined initial state
         mem.memset(0x0);
@@ -171,6 +179,12 @@ where
                 .ptr()
                 .add(entry * self.entry_size)
         }
+    }
+
+    pub fn contains_device_addr<T>(&self, ptr: *mut T) -> bool {
+        let ptr = ptr as usize;
+        let device_base = self.shared.borrow().mem.device_addr; 
+        (ptr >= device_base) && (ptr <= device_base + self.entry_size * self.num_entries)
     }
 
     pub fn size(&self) -> usize {

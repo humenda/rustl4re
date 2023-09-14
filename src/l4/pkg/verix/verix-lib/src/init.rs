@@ -1,4 +1,5 @@
 use std::cell::RefCell;
+use std::cmp::max;
 use std::collections::VecDeque;
 
 use std::time::{Duration};
@@ -7,7 +8,7 @@ use std::{mem, thread};
 use crate::constants::{
     ADV_TX_DESC_DTYP_DATA, AUTOC_LMS_10G_SFI, LINKS_LINK_SPEED_100M, LINKS_LINK_SPEED_10G,
     LINKS_LINK_SPEED_1G, NUM_RX_QUEUE_ENTRIES, NUM_TX_QUEUE_ENTRIES, PKT_BUF_ENTRY_SIZE,
-    SRRCTL_DESCTYPE_ADV_ONE_BUFFER, AUTOC2_10G_PMA_SERIAL_SFI, WAIT_LIMIT,
+    SRRCTL_DESCTYPE_ADV_ONE_BUFFER, AUTOC2_10G_PMA_SERIAL_SFI, WAIT_LIMIT, MIN_MEMPOOL_ENTRIES, NUM_MIN_QUEUE_ENTRIES,
 };
 use crate::dev;
 use crate::dma::{DmaMemory, Mempool, Packet};
@@ -142,7 +143,6 @@ where
 
         // The sum is used here because we share a mempool between rx and tx queues
         let mempool_entries = NUM_RX_QUEUE_ENTRIES + NUM_TX_QUEUE_ENTRIES;
-
         let mempool =
             Mempool::new(mempool_entries.into(), PKT_BUF_ENTRY_SIZE, &self.dma_space)?;
 
@@ -201,7 +201,7 @@ where
         // configure queues
         info!("Initializing TX queue");
         // section 7.1.9 - setup descriptor ring
-        let ring_size_bytes = NUM_TX_QUEUE_ENTRIES as usize * mem::size_of::<[u64; 2]>();
+        let ring_size_bytes = max(NUM_TX_QUEUE_ENTRIES, NUM_MIN_QUEUE_ENTRIES) as usize * mem::size_of::<[u64; 2]>();
 
         info!(
             "Allocating {} bytes for TX queue descriptor ring",
@@ -219,9 +219,10 @@ where
         self.bar0
             .tdbah(0)
             .write(|w| w.tdbah((descriptor_mem.device_addr() >> 32) as u32));
+        let qlen = NUM_TX_QUEUE_ENTRIES as usize * mem::size_of::<[u64; 2]>();
         self.bar0
             .tdlen(0)
-            .write(|w| w.len(ring_size_bytes as u32));
+            .write(|w| w.len(qlen as u32));
 
         info!("Set up of DMA for TX descriptor ring done");
 
@@ -282,7 +283,7 @@ where
             .modify(|_, w| w.desctype(SRRCTL_DESCTYPE_ADV_ONE_BUFFER).drop_en(1));
 
         // section 7.1.9 - setup descriptor ring
-        let ring_size_bytes = NUM_RX_QUEUE_ENTRIES as usize * mem::size_of::<[u64; 2]>();
+        let ring_size_bytes = max(NUM_RX_QUEUE_ENTRIES, NUM_MIN_QUEUE_ENTRIES) as usize * mem::size_of::<[u64; 2]>();
 
         info!(
             "Allocating {} bytes for RX queue descriptor ring",
@@ -299,9 +300,10 @@ where
         self.bar0
             .rdbah(0)
             .write(|w| w.rdbah((descriptor_mem.device_addr() >> 32) as u32));
+        let qlen = NUM_RX_QUEUE_ENTRIES as usize * mem::size_of::<[u64; 2]>();
         self.bar0
             .rdlen(0)
-            .write(|w| w.len(ring_size_bytes as u32));
+            .write(|w| w.len(qlen as u32));
 
         // set ring to empty at start
         self.bar0.rdh(0).modify(|_, w| w.rdh(0));

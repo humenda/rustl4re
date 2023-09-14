@@ -2,18 +2,24 @@ pub mod constants;
 pub mod emulator;
 pub mod ix;
 
-fn assert_valid_adv_rx_read(descq_mem: *const u8, idx: u16) {
+use verix_lib::{constants::{NUM_RX_QUEUE_ENTRIES, PKT_BUF_ENTRY_SIZE}, dma::Mempool};
+
+fn assert_valid_adv_rx_read(descq_mem: *const u8, idx: u16)
+{
     let offset = idx as usize * std::mem::size_of::<[u64; 2]>();
     let desc_mem = unsafe { descq_mem.add(offset) } as *const u64;
     let lower = unsafe { desc_mem.read() };
     let upper = unsafe { desc_mem.add(1).read() };
+    // We can read from this pointer as we use an identity mapping for DMA, just like L4
     assert_eq!(upper, 0, "{}", idx);
-    // TODO: lower must be a valid address
+    let pba_ptr = lower as *mut u8;
+    unsafe { pba_ptr.read() };
 }
 
-fn assert_valid_rx_queue(descq_mem: *const u8, descq_len: usize, rdh: u16, rdt: u16, rdlen: u32, rdbal: u32, rdbah: u32, rx_index: usize) {
-    assert!(descq_len == rdlen as usize);
-    let desc_count = (descq_len / std::mem::size_of::<[u64; 2]>()) as u16;
+fn assert_valid_rx_queue(descq_mem: *const u8, rdh: u16, rdt: u16, rdlen: u32, rdbal: u32, rdbah: u32, rx_index: usize)
+{
+    let desc_count = NUM_RX_QUEUE_ENTRIES;
+    assert!(desc_count == (rdlen as usize / std::mem::size_of::<[u64; 2]>()) as u16);
     let distance = if rdh < rdt {
         rdt - rdh
     } else {
@@ -21,8 +27,7 @@ fn assert_valid_rx_queue(descq_mem: *const u8, descq_len: usize, rdh: u16, rdt: 
     };
     assert!(distance <= desc_count);
     let mut counter = 0;
-    // TODO: import this as a constant
-    while counter < distance && counter < 128 {
+    while counter < distance && counter < NUM_RX_QUEUE_ENTRIES {
         let idx = (rdh + counter) % desc_count;
         assert_valid_adv_rx_read(descq_mem, idx);
         counter += 1;
@@ -35,7 +40,7 @@ mod unit {
         Bus, DmaSpace, MappableMemory
     };
     use crate::ix::{IxDevice, IoMemInner, IoMem};
-    use crate::{assert_valid_rx_queue, assert_valid_adv_rx_read};
+    use crate::assert_valid_rx_queue;
     use pc_hal::prelude::*;
 
     fn get_resource_starts() -> (u32, u32) {
@@ -71,14 +76,13 @@ mod unit {
         let dev = dev.init::<MappableMemory>().unwrap();
         let rx_queue = dev.rx_queue.borrow_mut();
         let descq_addr = rx_queue.descriptors.ptr();
-        let descq_len = rx_queue.descriptors.size();
         let rdh = dev.bar0.rdh(0).read().rdh();
         let rdt = dev.bar0.rdt(0).read().rdt();
         let rdlen = dev.bar0.rdlen(0).read().len();
         let rdbal = dev.bar0.rdbal(0).read().rdbal();
         let rdbah = dev.bar0.rdbah(0).read().rdbah();
         let rx_index = rx_queue.rx_index;
-        assert_valid_rx_queue(descq_addr, descq_len, rdh, rdt, rdlen, rdbal, rdbah, rx_index);
+        assert_valid_rx_queue(descq_addr, rdh, rdt, rdlen, rdbal, rdbah, rx_index);
     }
 }
 
@@ -211,13 +215,12 @@ mod tests {
         let dev = dev.init::<MappableMemory>().unwrap();
         let rx_queue = dev.rx_queue.borrow_mut();
         let descq_addr = rx_queue.descriptors.ptr();
-        let descq_len = rx_queue.descriptors.size();
         let rdh = dev.bar0.rdh(0).read().rdh();
         let rdt = dev.bar0.rdt(0).read().rdt();
         let rdlen = dev.bar0.rdlen(0).read().len();
         let rdbal = dev.bar0.rdbal(0).read().rdbal();
         let rdbah = dev.bar0.rdbah(0).read().rdbah();
         let rx_index = rx_queue.rx_index;
-        assert_valid_rx_queue(descq_addr, descq_len, rdh, rdt, rdlen, rdbal, rdbah, rx_index);
+        assert_valid_rx_queue(descq_addr, rdh, rdt, rdlen, rdbal, rdbah, rx_index);
     }
 }
