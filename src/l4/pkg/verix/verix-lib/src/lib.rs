@@ -14,7 +14,6 @@ use std::{collections::VecDeque, time::Instant};
 use crate::types::Result;
 
 // number of packets sent simultaneously by our driver
-const BATCH_SIZE: usize = 64;
 
 pub fn find_dev<E, D, PD, B, Res, Dma, IM>(bus: &mut B) -> Result<types::UninitializedDevice<E, IM, PD, D, Res, Dma>, E>
 where
@@ -54,12 +53,12 @@ where
     dev.read_stats(&mut dev_stats);
     dev.read_stats(&mut dev_stats_old);
 
-    let mut buffer: VecDeque<dma::Packet<E, Dma, MM>> = VecDeque::with_capacity(BATCH_SIZE);
+    let mut buffer: VecDeque<dma::Packet<E, Dma, MM>> = VecDeque::with_capacity(constants::BATCH_SIZE);
     let mut time = Instant::now();
     let mut counter = 0;
 
     loop {
-        let num_rx = dev.rx_batch(&mut buffer, BATCH_SIZE);
+        let num_rx = dev.rx_batch(&mut buffer, constants::BATCH_SIZE);
 
         if num_rx > 0 {
             for pkt in buffer.iter_mut() {

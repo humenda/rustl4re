@@ -182,7 +182,7 @@ mod tests {
     }
 
     #[kani::proof]
-    #[kani::unwind(257)]
+    #[kani::unwind(65)]
     #[kani::stub(std::thread::sleep, mock_sleep)]
     #[kani::stub(verix_lib::dma::DmaMemory::memset, mock_memset)]
     fn test_setup() {

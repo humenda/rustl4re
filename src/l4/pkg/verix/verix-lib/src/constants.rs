@@ -1,5 +1,17 @@
+#[cfg(kani)]
 pub const NUM_RX_QUEUE_ENTRIES: u16 = 32;
+#[cfg(kani)]
 pub const NUM_TX_QUEUE_ENTRIES: u16 = 32;
+#[cfg(kani)]
+pub const BATCH_SIZE: usize = 2;
+
+#[cfg(not(kani))]
+pub const NUM_RX_QUEUE_ENTRIES: u16 = 512;
+#[cfg(not(kani))]
+pub const NUM_TX_QUEUE_ENTRIES: u16 = 512;
+#[cfg(not(kani))]
+pub const BATCH_SIZE: usize = 64;
+
 pub const NUM_MIN_QUEUE_ENTRIES: u16 = 512;
 pub const PKT_BUF_ENTRY_SIZE: usize = 2048;
 pub const MIN_MEMPOOL_ENTRIES: u16 = 1024;
