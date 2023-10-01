@@ -12,7 +12,6 @@ use log::trace;
 use pc_hal::traits::RawMemoryInterface;
 use pc_hal::traits::{DsAttachFlags, DsMapFlags, MaFlags, MemoryInterface};
 
-use crate::constants::MIN_MEMPOOL_ENTRIES;
 use crate::types::{RxQueue, TxQueue};
 
 const PACKET_HEADROOM: usize = 32;
@@ -126,14 +125,8 @@ where
             num_entries,
             entry_size
         );
-        let alloc_entries =
-            if num_entries < MIN_MEMPOOL_ENTRIES as usize {
-                MIN_MEMPOOL_ENTRIES as usize
-            } else {
-                num_entries
-            };
         // TODO: ixy allows the OS to be non contigious here, if i figure out how to tell L4 to translate arbitrary addresses we can do that
-        let mut mem: DmaMemory<E, Dma, MM> = DmaMemory::new(alloc_entries * entry_size, space, true)?;
+        let mut mem: DmaMemory<E, Dma, MM> = DmaMemory::new(num_entries * entry_size, space, true)?;
 
         // Clear the memory to a defined initial state
         mem.memset(0x0);

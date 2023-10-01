@@ -8,7 +8,7 @@ use std::{mem, thread};
 use crate::constants::{
     ADV_TX_DESC_DTYP_DATA, AUTOC_LMS_10G_SFI, LINKS_LINK_SPEED_100M, LINKS_LINK_SPEED_10G,
     LINKS_LINK_SPEED_1G, NUM_RX_QUEUE_ENTRIES, NUM_TX_QUEUE_ENTRIES, PKT_BUF_ENTRY_SIZE,
-    SRRCTL_DESCTYPE_ADV_ONE_BUFFER, AUTOC2_10G_PMA_SERIAL_SFI, WAIT_LIMIT, MIN_MEMPOOL_ENTRIES, NUM_MIN_QUEUE_ENTRIES,
+    SRRCTL_DESCTYPE_ADV_ONE_BUFFER, AUTOC2_10G_PMA_SERIAL_SFI, WAIT_LIMIT
 };
 use crate::dev;
 use crate::dma::{DmaMemory, Mempool, Packet};
@@ -201,7 +201,7 @@ where
         // configure queues
         info!("Initializing TX queue");
         // section 7.1.9 - setup descriptor ring
-        let ring_size_bytes = max(NUM_TX_QUEUE_ENTRIES, NUM_MIN_QUEUE_ENTRIES) as usize * mem::size_of::<[u64; 2]>();
+        let ring_size_bytes = NUM_TX_QUEUE_ENTRIES as usize * mem::size_of::<[u64; 2]>();
 
         info!(
             "Allocating {} bytes for TX queue descriptor ring",
@@ -283,7 +283,7 @@ where
             .modify(|_, w| w.desctype(SRRCTL_DESCTYPE_ADV_ONE_BUFFER).drop_en(1));
 
         // section 7.1.9 - setup descriptor ring
-        let ring_size_bytes = max(NUM_RX_QUEUE_ENTRIES, NUM_MIN_QUEUE_ENTRIES) as usize * mem::size_of::<[u64; 2]>();
+        let ring_size_bytes = NUM_RX_QUEUE_ENTRIES as usize * mem::size_of::<[u64; 2]>();
 
         info!(
             "Allocating {} bytes for RX queue descriptor ring",

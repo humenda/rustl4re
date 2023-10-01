@@ -12,9 +12,7 @@ pub const NUM_TX_QUEUE_ENTRIES: u16 = 512;
 #[cfg(not(kani))]
 pub const BATCH_SIZE: usize = 64;
 
-pub const NUM_MIN_QUEUE_ENTRIES: u16 = 512;
 pub const PKT_BUF_ENTRY_SIZE: usize = 2048;
-pub const MIN_MEMPOOL_ENTRIES: u16 = 1024;
 
 pub const INTERRUPT_INITIAL_INTERVAL: u64 = 1_000_000_000;
 
