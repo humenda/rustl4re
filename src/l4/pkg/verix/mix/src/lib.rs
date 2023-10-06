@@ -18,34 +18,45 @@ mod tests {
     use verix_lib::types::InitializedDevice;
     use verix_lib::constants::NUM_RX_QUEUE_ENTRIES;
 
-    fn assert_valid_adv_rx_read(descq_mem: *const u8, idx: u16)
-    {
-        let offset = idx as usize * std::mem::size_of::<[u64; 2]>();
-        let desc_mem = unsafe { descq_mem.add(offset) } as *const u64;
-        let lower = unsafe { desc_mem.read() };
-        let upper = unsafe { desc_mem.add(1).read() };
-        let pba_ptr = lower as *mut u8;
-        let pba_mtu_ptr = unsafe { pba_ptr.add(1500) }; // At least MTU size
-        unsafe { pba_ptr.read() };
-        unsafe { pba_mtu_ptr.read() };
-        // HBA and DD should be 0, this is what upper consists of:
-        assert!(upper == 0);
+    #[derive(Copy, Clone)]
+    enum Mode {
+        Assert,
+        Assume
     }
 
-    // TODO: dedup
-    fn assume_valid_adv_rx_read(descq_mem: *const u8, idx: u16)
-    {
+    fn verify(x : bool, mode: Mode) {
+        match mode {
+            Mode::Assert => assert!(x),
+            Mode::Assume => kani::assume(x)
+        }
+    }
+
+    fn valid_adv_rx_read(descq_mem: *const u8, idx: u16, mode: Mode) {
         let offset = idx as usize * std::mem::size_of::<[u64; 2]>();
         let desc_mem = unsafe { descq_mem.add(offset) } as *mut u64;
         let upper = unsafe { desc_mem.add(1).read() };
-        let mut buf = std::mem::ManuallyDrop::new(kani::vec::exact_vec::<u8, 2048>());
-        let buf_ptr = buf.as_mut_ptr() as u64;
-        unsafe { desc_mem.write(buf_ptr); }
         // HBA and DD should be 0, this is what upper consists of:
-        kani::assume(upper == 0);
+        verify(upper == 0, mode);
+
+        match mode {
+            Mode::Assume => {
+                // TODO: this memory should come from the descriptor allocator in the driver
+                let mut buf = std::mem::ManuallyDrop::new(kani::vec::exact_vec::<u8, 2048>());
+                let buf_ptr = buf.as_mut_ptr() as u64;
+                unsafe { desc_mem.write(buf_ptr); }
+            },
+            Mode::Assert => {
+                let lower = unsafe { desc_mem.read() };
+                let pba_ptr = lower as *mut u8;
+                let pba_mtu_ptr = unsafe { pba_ptr.add(1500) }; // At least MTU size
+                unsafe { pba_ptr.read() };
+                unsafe { pba_mtu_ptr.read() };
+            }
+
+        }
     }
 
-    fn assert_valid_adv_rx_wb(descq_mem: *const u8, idx: u16)
+    fn valid_adv_rx_wb(descq_mem: *const u8, idx: u16, mode: Mode)
     {
         let offset = idx as usize * std::mem::size_of::<[u64; 2]>();
         let desc_mem = unsafe { descq_mem.add(offset) } as *const u64;
@@ -53,96 +64,47 @@ mod tests {
         let upper = unsafe { desc_mem.add(1).read() };
         // EOP and DD are the last two bits and both should be one
         let relevant = upper & 0b11;
-        assert!(relevant == 0b11);
+        verify(relevant == 0b11, mode);
         // TODO: correct pkt_len
     }
 
-    // TODO: dedup
-    fn assume_valid_adv_rx_wb(descq_mem: *const u8, idx: u16)
-    {
-        let offset = idx as usize * std::mem::size_of::<[u64; 2]>();
-        let desc_mem = unsafe { descq_mem.add(offset) } as *const u64;
-        unsafe { desc_mem.read() };
-        let upper = unsafe { desc_mem.add(1).read() };
-        // EOP and DD are the last two bits and both should be one
-        let relevant = upper & 0b11;
-        kani::assume(relevant == 0b11);
-        // TODO: correct pkt_len
-    }
-
-    fn assert_valid_rx_read(descq_mem: *const u8, rdh: u16, rdt: u16, rdlen: u32, rdbal: u32, rdbah: u32) {
+    fn valid_rx_read(descq_mem: *const u8, rdh: u16, rdt: u16, rdlen: u32, rdbal: u32, rdbah: u32, mode: Mode) {
         let desc_count = NUM_RX_QUEUE_ENTRIES;
-        assert!(desc_count == (rdlen as usize / std::mem::size_of::<[u64; 2]>()) as u16);
+        verify(desc_count == (rdlen as usize / std::mem::size_of::<[u64; 2]>()) as u16, mode);
 
         let addr : u64 = (rdbal as u64) | ((rdbah as u64) << 32);
-        assert!(addr == descq_mem as u64);
+        verify(addr == descq_mem as u64, mode);
 
         let mut counter = 0;
         let mut idx = rdh;
         while idx != rdt && counter < NUM_RX_QUEUE_ENTRIES {
-            assert_valid_adv_rx_read(descq_mem, idx);
+            valid_adv_rx_read(descq_mem, idx, mode);
             counter += 1;
             idx = (idx + 1) % desc_count;
         }
     }
 
-    // TODO: dedup
-    fn assume_valid_rx_read(descq_mem: *const u8, rdh: u16, rdt: u16, rdlen: u32, rdbal: u32, rdbah: u32) {
-        let desc_count = NUM_RX_QUEUE_ENTRIES;
-        kani::assume(desc_count == (rdlen as usize / std::mem::size_of::<[u64; 2]>()) as u16);
-
-        let addr : u64 = (rdbal as u64) | ((rdbah as u64) << 32);
-        kani::assume(addr == descq_mem as u64);
-
-        let mut counter = 0;
-        let mut idx = rdh;
-        while idx != rdt && counter < NUM_RX_QUEUE_ENTRIES {
-            assume_valid_adv_rx_read(descq_mem, idx);
-            counter += 1;
-            idx = (idx + 1) % desc_count;
-        }
-    }
-
-    fn assert_valid_rx_wb(descq_mem: *const u8, rdh: u16, rdt: u16, rdlen: u32, rdbal: u32, rdbah: u32, rx_index: usize)
+    fn valid_rx_wb(descq_mem: *const u8, rdh: u16, rdt: u16, rdlen: u32, rdbal: u32, rdbah: u32, rx_index: usize, mode: Mode)
     {
         let desc_count = NUM_RX_QUEUE_ENTRIES;
-        assert!(desc_count == (rdlen as usize / std::mem::size_of::<[u64; 2]>()) as u16);
+        verify(desc_count == (rdlen as usize / std::mem::size_of::<[u64; 2]>()) as u16, mode);
 
         let addr : u64 = (rdbal as u64) | ((rdbah as u64) << 32);
-        assert!(addr == descq_mem as u64);
+        verify(addr == descq_mem as u64, mode);
 
         let rx_index = rx_index as u16;
         let mut counter = 0;
         let mut idx = rx_index;
         while idx != rdh && counter < NUM_RX_QUEUE_ENTRIES {
-            assert_valid_adv_rx_wb(descq_mem, idx);
+            valid_adv_rx_wb(descq_mem, idx, mode);
             counter += 1;
             idx = (idx + 1) % desc_count;
         }
     }
 
-    // TODO: dedup
-    fn assume_valid_rx_wb(descq_mem: *const u8, rdh: u16, rdt: u16, rdlen: u32, rdbal: u32, rdbah: u32, rx_index: usize)
-    {
-        let desc_count = NUM_RX_QUEUE_ENTRIES;
-        kani::assume(desc_count == (rdlen as usize / std::mem::size_of::<[u64; 2]>()) as u16);
-
-        let addr : u64 = (rdbal as u64) | ((rdbah as u64) << 32);
-        kani::assume(addr == descq_mem as u64);
-
+    fn valid_rx_undefined(rdh: u16, rx_index: usize, mode: Mode) {
         let rx_index = rx_index as u16;
-        let mut counter = 0;
-        let mut idx = rx_index;
-        while idx != rdh && counter < NUM_RX_QUEUE_ENTRIES {
-            assume_valid_adv_rx_wb(descq_mem, idx);
-            counter += 1;
-            idx = (idx + 1) % desc_count;
-        }
-    }
-
-    fn assert_valid_rx_undefined(rdh: u16, rx_index: usize) {
-        let rx_index = rx_index as u16;
-        assert!(rdh == rx_index);
+        verify(rdh == rx_index, mode);
     }
 
     fn get_bar_addr(size: u32) -> u32 {
@@ -274,8 +236,8 @@ mod tests {
         let rdbal = dev.bar0.rdbal(0).read().rdbal();
         let rdbah = dev.bar0.rdbah(0).read().rdbah();
         let rx_index = rx_queue.rx_index;
-        assert_valid_rx_wb(descq_addr, rdh, rdt, rdlen, rdbal, rdbah, rx_index);
-        assert_valid_rx_undefined(rdh, rx_index);
+        valid_rx_wb(descq_addr, rdh, rdt, rdlen, rdbal, rdbah, rx_index, Mode::Assert);
+        valid_rx_undefined(rdh, rx_index, Mode::Assert);
     }
 
     #[kani::proof]
@@ -292,7 +254,7 @@ mod tests {
         let rdbal = dev.bar0.rdbal(0).read().rdbal();
         let rdbah = dev.bar0.rdbah(0).read().rdbah();
         let rx_index = rx_queue.rx_index;
-        assert_valid_rx_read(descq_addr, rdh, rdt, rdlen, rdbal, rdbah);
+        valid_rx_read(descq_addr, rdh, rdt, rdlen, rdbal, rdbah, Mode::Assert);
         // The read slice is not empty
         assert!(rdh != rdt);
     }
@@ -314,8 +276,8 @@ mod tests {
 
         kani::assume(rdh != rdt);
 
-        assume_valid_rx_wb(mem_ptr, rdh, rdt, rdlen, rdbal, rdbah, rx_index);
-        assume_valid_rx_read(mem_ptr, rdh, rdt, rdlen, rdbal, rdbah);
-        assert_valid_rx_read(mem_ptr, rdh, rdt, rdlen, rdbal, rdbah);
+        valid_rx_wb(mem_ptr, rdh, rdt, rdlen, rdbal, rdbah, rx_index, Mode::Assume);
+        valid_rx_read(mem_ptr, rdh, rdt, rdlen, rdbal, rdbah, Mode::Assume);
+        valid_rx_read(mem_ptr, rdh, rdt, rdlen, rdbal, rdbah, Mode::Assert);
     }
 }
