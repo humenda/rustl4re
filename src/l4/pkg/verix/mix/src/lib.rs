@@ -24,14 +24,25 @@ mod tests {
         let desc_mem = unsafe { descq_mem.add(offset) } as *const u64;
         let lower = unsafe { desc_mem.read() };
         let upper = unsafe { desc_mem.add(1).read() };
-        // We can read from this pointer as we use an identity mapping for DMA, just like L4
-        assert_eq!(upper, 0, "{}", idx);
         let pba_ptr = lower as *mut u8;
         let pba_mtu_ptr = unsafe { pba_ptr.add(1500) }; // At least MTU size
         unsafe { pba_ptr.read() };
         unsafe { pba_mtu_ptr.read() };
         // HBA and DD should be 0, this is what upper consists of:
         assert!(upper == 0);
+    }
+
+    // TODO: dedup
+    fn assume_valid_adv_rx_read(descq_mem: *const u8, idx: u16)
+    {
+        let offset = idx as usize * std::mem::size_of::<[u64; 2]>();
+        let desc_mem = unsafe { descq_mem.add(offset) } as *mut u64;
+        let upper = unsafe { desc_mem.add(1).read() };
+        let mut buf = std::mem::ManuallyDrop::new(kani::vec::exact_vec::<u8, 2048>());
+        let buf_ptr = buf.as_mut_ptr() as u64;
+        unsafe { desc_mem.write(buf_ptr); }
+        // HBA and DD should be 0, this is what upper consists of:
+        kani::assume(upper == 0);
     }
 
     fn assert_valid_adv_rx_wb(descq_mem: *const u8, idx: u16)
@@ -46,6 +57,19 @@ mod tests {
         // TODO: correct pkt_len
     }
 
+    // TODO: dedup
+    fn assume_valid_adv_rx_wb(descq_mem: *const u8, idx: u16)
+    {
+        let offset = idx as usize * std::mem::size_of::<[u64; 2]>();
+        let desc_mem = unsafe { descq_mem.add(offset) } as *const u64;
+        unsafe { desc_mem.read() };
+        let upper = unsafe { desc_mem.add(1).read() };
+        // EOP and DD are the last two bits and both should be one
+        let relevant = upper & 0b11;
+        kani::assume(relevant == 0b11);
+        // TODO: correct pkt_len
+    }
+
     fn assert_valid_rx_read(descq_mem: *const u8, rdh: u16, rdt: u16, rdlen: u32, rdbal: u32, rdbah: u32) {
         let desc_count = NUM_RX_QUEUE_ENTRIES;
         assert!(desc_count == (rdlen as usize / std::mem::size_of::<[u64; 2]>()) as u16);
@@ -54,10 +78,28 @@ mod tests {
         assert!(addr == descq_mem as u64);
 
         let mut counter = 0;
-        while rdh + counter < rdt && counter < NUM_RX_QUEUE_ENTRIES {
-            let idx = (rdh + counter) % desc_count;
+        let mut idx = rdh;
+        while idx != rdt && counter < NUM_RX_QUEUE_ENTRIES {
             assert_valid_adv_rx_read(descq_mem, idx);
             counter += 1;
+            idx = (idx + 1) % desc_count;
+        }
+    }
+
+    // TODO: dedup
+    fn assume_valid_rx_read(descq_mem: *const u8, rdh: u16, rdt: u16, rdlen: u32, rdbal: u32, rdbah: u32) {
+        let desc_count = NUM_RX_QUEUE_ENTRIES;
+        kani::assume(desc_count == (rdlen as usize / std::mem::size_of::<[u64; 2]>()) as u16);
+
+        let addr : u64 = (rdbal as u64) | ((rdbah as u64) << 32);
+        kani::assume(addr == descq_mem as u64);
+
+        let mut counter = 0;
+        let mut idx = rdh;
+        while idx != rdt && counter < NUM_RX_QUEUE_ENTRIES {
+            assume_valid_adv_rx_read(descq_mem, idx);
+            counter += 1;
+            idx = (idx + 1) % desc_count;
         }
     }
 
@@ -71,10 +113,30 @@ mod tests {
 
         let rx_index = rx_index as u16;
         let mut counter = 0;
-        while rx_index + counter < rdh && counter < NUM_RX_QUEUE_ENTRIES {
-            let idx = (rx_index + counter) % desc_count;
+        let mut idx = rx_index;
+        while idx != rdh && counter < NUM_RX_QUEUE_ENTRIES {
             assert_valid_adv_rx_wb(descq_mem, idx);
             counter += 1;
+            idx = (idx + 1) % desc_count;
+        }
+    }
+
+    // TODO: dedup
+    fn assume_valid_rx_wb(descq_mem: *const u8, rdh: u16, rdt: u16, rdlen: u32, rdbal: u32, rdbah: u32, rx_index: usize)
+    {
+        let desc_count = NUM_RX_QUEUE_ENTRIES;
+        kani::assume(desc_count == (rdlen as usize / std::mem::size_of::<[u64; 2]>()) as u16);
+
+        let addr : u64 = (rdbal as u64) | ((rdbah as u64) << 32);
+        kani::assume(addr == descq_mem as u64);
+
+        let rx_index = rx_index as u16;
+        let mut counter = 0;
+        let mut idx = rx_index;
+        while idx != rdh && counter < NUM_RX_QUEUE_ENTRIES {
+            assume_valid_adv_rx_wb(descq_mem, idx);
+            counter += 1;
+            idx = (idx + 1) % desc_count;
         }
     }
 
@@ -233,5 +295,27 @@ mod tests {
         assert_valid_rx_read(descq_addr, rdh, rdt, rdlen, rdbal, rdbah);
         // The read slice is not empty
         assert!(rdh != rdt);
+    }
+
+    #[kani::proof]
+    #[kani::unwind(32)]
+    fn test_assumption() {
+        let mut mem = kani::vec::exact_vec::<u8, { 32 * std::mem::size_of::<[u64; 2]>() }>();
+        let mem_ptr = mem.as_mut_ptr();
+
+        let rdh = kani::any::<u16>();
+        kani::assume(rdh < 32);
+        let rdt = kani::any::<u16>();
+        kani::assume(rdt < 32);
+        let rdlen = (32 * std::mem::size_of::<[u64; 2]>()) as u32;
+        let rdbal = (mem_ptr as usize & 0xffff_ffff) as u32;
+        let rdbah = (mem_ptr as usize >> 32) as u32;
+        let rx_index = rdh as usize;
+
+        kani::assume(rdh != rdt);
+
+        assume_valid_rx_wb(mem_ptr, rdh, rdt, rdlen, rdbal, rdbah, rx_index);
+        assume_valid_rx_read(mem_ptr, rdh, rdt, rdlen, rdbal, rdbah);
+        assert_valid_rx_read(mem_ptr, rdh, rdt, rdlen, rdbal, rdbah);
     }
 }
