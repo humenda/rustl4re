@@ -73,11 +73,11 @@ where
     MM: pc_hal::traits::MappableMemory<Error = E, DmaSpace = Dma>,
     Dma: pc_hal::traits::DmaSpace,
 {
-    pub(crate) descriptors: DmaMemory<E, Dma, MM>,
-    pub(crate) num_descriptors: u16,
-    pub(crate) clean_index: usize,
-    pub(crate) tx_index: usize,
-    pub(crate) bufs_in_use: VecDeque<usize>,
+    pub descriptors: DmaMemory<E, Dma, MM>,
+    pub num_descriptors: u16,
+    pub clean_index: usize,
+    pub tx_index: usize,
+    pub bufs_in_use: VecDeque<usize>,
 }
 /*
 pub struct Interrupts<ISR> {

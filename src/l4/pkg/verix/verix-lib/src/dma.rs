@@ -21,9 +21,9 @@ where
     MM: pc_hal::traits::MappableMemory<Error = E, DmaSpace = Dma>,
     Dma: pc_hal::traits::DmaSpace,
 {
-    mem: MM,
-    device_addr: usize,
-    size: usize
+    pub mem: MM,
+    pub device_addr: usize,
+    pub size: usize
 }
 
 pub struct Mempool<E, Dma, MM>
@@ -31,18 +31,18 @@ where
     MM: pc_hal::traits::MappableMemory<Error = E, DmaSpace = Dma>,
     Dma: pc_hal::traits::DmaSpace,
 {
-    num_entries: usize,
-    entry_size: usize,
-    shared: RefCell<SharedPart<E, Dma, MM>>,
+    pub num_entries: usize,
+    pub entry_size: usize,
+    pub shared: RefCell<SharedPart<E, Dma, MM>>,
 }
 
-struct SharedPart<E, Dma, MM>
+pub struct SharedPart<E, Dma, MM>
 where
     MM: pc_hal::traits::MappableMemory<Error = E, DmaSpace = Dma>,
     Dma: pc_hal::traits::DmaSpace,
 {
-    mem: DmaMemory<E, Dma, MM>,
-    free_stack: Vec<usize>,
+    pub mem: DmaMemory<E, Dma, MM>,
+    pub free_stack: Vec<usize>,
 }
 
 pub struct Packet<'a, E, Dma, MM>
