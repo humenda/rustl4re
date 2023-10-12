@@ -525,13 +525,6 @@ where
 
                 let p = Packet::new(&pool, buf, upper.pkt_len().into());
 
-                // TODO: pre fetch magics
-                // #[cfg(all(
-                //     any(target_arch = "x86", target_arch = "x86_64"),
-                //     target_feature = "sse"
-                // ))]
-                // p.prefetch(Prefetch::Time1);
-
                 buffer.push_back(p);
 
                 let desc = dev::Descriptors::adv_rx_desc_read::new(desc.consume());
@@ -550,30 +543,6 @@ where
                 break;
             }
         }
-
-        // TODO: More interrupt stuff
-        //let interrupt = &mut self.interrupts.queues[queue_id as usize];
-        //let int_en = interrupt.interrupt_enabled;
-        //interrupt.rx_pkts += received_packets as u64;
-
-        //interrupt.instr_counter += 1;
-        //if (interrupt.instr_counter & 0xFFF) == 0 {
-        //    interrupt.instr_counter = 0;
-        //    let elapsed = interrupt.last_time_checked.elapsed();
-        //    let diff =
-        //        elapsed.as_secs() * 1_000_000_000 + u64::from(elapsed.subsec_nanos());
-        //    if diff > interrupt.interval {
-        //        interrupt.check_interrupt(diff, received_packets, num_packets);
-        //    }
-
-        //    if int_en != interrupt.interrupt_enabled {
-        //        if interrupt.interrupt_enabled {
-        //            self.enable_interrupt(queue_id).unwrap();
-        //        } else {
-        //            self.disable_interrupt(queue_id);
-        //        }
-        //    }
-        //}
 
         let queue_id = 0;
         if rx_index != last_rx_index {

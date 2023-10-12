@@ -1,6 +1,6 @@
 use std::cell::RefCell;
 
-use crate::{emulator::{BasicDevice, Device, Error}, constants::mmio::{DescriptorLen, QueuePointer, IXGBE_RDBAL0, IXGBE_RDBAH0, IXGBE_RDLEN0, IXGBE_RDT0, IXGBE_RDH0}};
+use crate::{emulator::{BasicDevice, Device, Error}, constants::{mmio::{DescriptorLen, QueuePointer, IXGBE_RDBAL0, IXGBE_RDBAH0, IXGBE_RDLEN0, IXGBE_RDT0, IXGBE_RDH0}, WriteRegister}};
 
 pub struct IxInitializedDevice {
     pub(crate) basic: BasicDevice,
@@ -36,7 +36,30 @@ impl InitializedIoMem {
 
 impl InitializedIoMemInner {
     fn handle_write32(&mut self, offset: usize, val: u32) {
-        panic!("Write!!!");
+        match offset {
+            IXGBE_RDBAL0 => {
+                self.rdbal0 = val;
+            }
+            IXGBE_RDBAH0 => {
+                self.rdbah0 = val;
+            },
+            IXGBE_RDLEN0 => {
+                let proposed = DescriptorLen(val);
+                proposed.assert_valid();
+                self.rdlen0 = proposed;
+            }
+            IXGBE_RDH0 => {
+                let proposed = QueuePointer(val);
+                proposed.assert_valid();
+                self.rdh0 = proposed;
+            }
+            IXGBE_RDT0 => {
+                let proposed = QueuePointer(val);
+                proposed.assert_valid();
+                self.rdt0 = proposed;
+            }
+            _ => panic!("invalid write offset: 0x{:x}", offset),
+        }
     }
 
     fn handle_read32(&mut self, offset: usize) -> u32 {

@@ -19,7 +19,7 @@ mod tests {
     use pc_hal::prelude::*;
     use verix_lib::dma::{DmaMemory, Mempool, SharedPart};
     use verix_lib::types::{InitializedDevice, RxQueue, TxQueue};
-    use verix_lib::constants::{NUM_RX_QUEUE_ENTRIES, NUM_TX_QUEUE_ENTRIES, PKT_BUF_ENTRY_SIZE};
+    use verix_lib::constants::{NUM_RX_QUEUE_ENTRIES, NUM_TX_QUEUE_ENTRIES, PKT_BUF_ENTRY_SIZE, BATCH_SIZE};
     use verix_lib::dev::Intel82559ES::Bar0;
     use std::cell::RefCell;
     use pc_hal::traits::{DsAttachFlags, DsMapFlags, MaFlags};
@@ -340,7 +340,7 @@ mod tests {
     }
 
     #[kani::proof]
-    #[kani::unwind(65)]
+    #[kani::unwind(33)]
     #[kani::stub(std::thread::sleep, mock_sleep)]
     #[kani::stub(verix_lib::dma::DmaMemory::memset, mock_memset)]
     fn test_setup_rx_wb_and_undefined() {
@@ -361,7 +361,7 @@ mod tests {
     }
 
     #[kani::proof]
-    #[kani::unwind(65)]
+    #[kani::unwind(33)]
     #[kani::stub(std::thread::sleep, mock_sleep)]
     #[kani::stub(verix_lib::dma::DmaMemory::memset, mock_memset)]
     fn test_setup_rx_read() {
@@ -380,9 +380,13 @@ mod tests {
     }
 
     #[kani::proof]
-    #[kani::unwind(64)]
-    fn test_assumption() {
+    #[kani::unwind(32)]
+    fn test_rx_batch_read() {
         let mut dev = get_initialized_device();
+        let mut buffer = VecDeque::with_capacity(1);
+        let num_rx = dev.rx_batch(&mut buffer, 1);
+        // Dropping the buffer seems to confuse kani, we thus leak it for now
+        let buffer = std::mem::ManuallyDrop::new(buffer);
 
         let rdh = dev.bar0.rdh(0).read().rdh();
         let rdt = dev.bar0.rdt(0).read().rdt();
@@ -392,5 +396,26 @@ mod tests {
         let mem_ptr = dev.rx_queue.borrow_mut().descriptors.mem.ptr();
 
         valid_rx_read(mem_ptr, rdh, rdt, rdlen, rdbal, rdbah, &Mode::Assert);
+    }
+
+    #[kani::proof]
+    #[kani::unwind(32)]
+    fn test_rx_batch_wb_undef() {
+        let mut dev = get_initialized_device();
+        let mut buffer = VecDeque::with_capacity(1);
+        let num_rx = dev.rx_batch(&mut buffer, 1);
+        // Dropping the buffer seems to confuse kani, we thus leak it for now
+        let buffer = std::mem::ManuallyDrop::new(buffer);
+
+        let rdh = dev.bar0.rdh(0).read().rdh();
+        let rdt = dev.bar0.rdt(0).read().rdt();
+        let rdlen = dev.bar0.rdlen(0).read().len();
+        let rdbal = dev.bar0.rdbal(0).read().rdbal();
+        let rdbah = dev.bar0.rdbah(0).read().rdbah();
+        let mem_ptr = dev.rx_queue.borrow_mut().descriptors.mem.ptr();
+        let rx_index = dev.rx_queue.borrow_mut().rx_index;
+
+        valid_rx_wb(mem_ptr, rdh, rdt, rdlen, rdbal, rdbah, rx_index, &Mode::Assert);
+        valid_rx_undefined(rdh, rx_index, &Mode::Assert);
     }
 }
