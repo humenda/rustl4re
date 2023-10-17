@@ -65,12 +65,10 @@ mod tests {
     {
         let offset = idx as usize * std::mem::size_of::<[u64; 2]>();
         let desc_mem = unsafe { descq_mem.add(offset) } as *const u64;
-        unsafe { desc_mem.read() };
         let upper = unsafe { desc_mem.add(1).read() };
         // EOP and DD are the last two bits and both should be one
         let relevant = upper & 0b11;
         verify(relevant == 0b11, mode);
-        // TODO: correct pkt_len
     }
 
     fn valid_rx_read(descq_mem: *const u8, rdh: u16, rdt: u16, rdlen: u32, rdbal: u32, rdbah: u32, mode: &Mode) {
@@ -150,7 +148,12 @@ mod tests {
         addr
     }
 
-    fn get_initialized_device() -> verix_lib::types::InitializedDevice<Error, InitializedIoMem, IxInitializedDevice, Device, Resource, MappableMemory, DmaSpace> {
+    enum InitMode {
+        DontCare,
+        Nonempty(u16)
+    }
+
+    fn get_initialized_device(init_mode: InitMode) -> verix_lib::types::InitializedDevice<Error, InitializedIoMem, IxInitializedDevice, Device, Resource, MappableMemory, DmaSpace> {
         // Compute a random but valid RX queue state
         let rdh = kani::any::<u16>();
         kani::assume(rdh < NUM_RX_QUEUE_ENTRIES);
@@ -164,7 +167,6 @@ mod tests {
         } else {
             kani::assume(rx_index < rdh && rx_index >= rdt);
         }
-        let rx_index = rx_index as usize;
 
         /*
          * Missing for RX are:
@@ -220,11 +222,23 @@ mod tests {
                     mem: buf_mem,
                     device_addr: buf_dev_addr,
                     size: buf_mem_size,
-                }, 
+                },
                 free_stack: free_bufs
             })
         };
 
+        if let InitMode::Nonempty(pkt_len) = init_mode {
+            kani::assume(rx_index != rdh);
+            // TODO duplication with valid_adv_rx_wb
+            let idx = rx_index;
+            let offset = idx as usize * std::mem::size_of::<[u64; 2]>();
+            let desc_mem = unsafe { rx_mem.ptr().add(offset) } as *mut u64;
+            let upper = unsafe { desc_mem.add(1) } as *mut u16;
+            let pkt_len_ptr = unsafe { upper.add(2) };
+            unsafe { pkt_len_ptr.write(pkt_len) }
+        }
+
+        let rx_index = rx_index as usize;
         let mode = Mode::Assume(&rx_used_bufs, &mempool);
         valid_rx_wb(rx_ptr, rdh, rdt, rdlen, rdbal, rdbah, rx_index, &mode);
         valid_rx_read(rx_ptr, rdh, rdt, rdlen, rdbal, rdbah, &mode);
@@ -252,7 +266,7 @@ mod tests {
             tx_index: 0,
             bufs_in_use: VecDeque::new()
         };
-        
+
         let mut dev = InitializedDevice {
             bar0,
             device,
@@ -382,7 +396,7 @@ mod tests {
     #[kani::proof]
     #[kani::unwind(32)]
     fn test_rx_batch_read() {
-        let mut dev = get_initialized_device();
+        let mut dev = get_initialized_device(InitMode::DontCare);
         let mut buffer = VecDeque::with_capacity(1);
         let num_rx = dev.rx_batch(&mut buffer, 1);
         // Dropping the buffer seems to confuse kani, we thus leak it for now
@@ -401,7 +415,7 @@ mod tests {
     #[kani::proof]
     #[kani::unwind(32)]
     fn test_rx_batch_wb_undef() {
-        let mut dev = get_initialized_device();
+        let mut dev = get_initialized_device(InitMode::DontCare);
         let mut buffer = VecDeque::with_capacity(1);
         let num_rx = dev.rx_batch(&mut buffer, 1);
         // Dropping the buffer seems to confuse kani, we thus leak it for now
@@ -417,5 +431,37 @@ mod tests {
 
         valid_rx_wb(mem_ptr, rdh, rdt, rdlen, rdbal, rdbah, rx_index, &Mode::Assert);
         valid_rx_undefined(rdh, rx_index, &Mode::Assert);
+    }
+
+    #[kani::proof]
+    #[kani::unwind(32)]
+    fn test_rx_batch_nonempty() {
+        let pkt_len = kani::any::<u16>();
+        kani::assume(pkt_len >= 64);
+        kani::assume(pkt_len <= 1500);
+
+        let mut dev = get_initialized_device(InitMode::Nonempty(pkt_len));
+
+        // This computes the index of the first buffer that we would take a look
+        // at to receive a packet. We want to assert later on that this is indeed
+        // the index that we received.
+
+        let rx_index = dev.rx_queue.borrow().rx_index;
+        let target_buf_idx = dev.rx_queue.borrow().bufs_in_use[rx_index];
+
+        let mut buffer = VecDeque::with_capacity(1);
+        let num_rx = dev.rx_batch(&mut buffer, 1);
+
+        // We received precisely 1 packet
+        assert!(num_rx == 1);
+        let mut pkt = buffer.pop_back().unwrap();
+        // This packet has the expected length
+        assert!(pkt.len() == pkt_len as usize);
+        // And is at the expected memory location
+        assert!(pkt.get_pool_entry() == target_buf_idx);
+
+        // Dropping the buffer seems to confuse kani, we thus leak it for now
+        let buffer = std::mem::ManuallyDrop::new(buffer);
+        let pkt = std::mem::ManuallyDrop::new(pkt);
     }
 }
