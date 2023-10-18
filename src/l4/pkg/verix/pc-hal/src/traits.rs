@@ -91,15 +91,31 @@ pub trait MemoryInterface {
 }
 
 impl<T: RawMemoryInterface> MemoryInterface for T {
-    unsafe fn write8(&self, offset: usize, val: u8) { ptr::write_volatile(self.ptr().add(offset) as *mut _, val) }
-    unsafe fn write16(&self, offset: usize, val: u16) { ptr::write_volatile(self.ptr().add(offset) as *mut _, val) }
-    unsafe fn write32(&self, offset: usize, val: u32) { ptr::write_volatile(self.ptr().add(offset) as *mut _, val) }
-    unsafe fn write64(&self, offset: usize, val: u64) { ptr::write_volatile(self.ptr().add(offset) as *mut _, val) }
+    unsafe fn write8(&self, offset: usize, val: u8) {
+        ptr::write_volatile(self.ptr().add(offset) as *mut _, val)
+    }
+    unsafe fn write16(&self, offset: usize, val: u16) {
+        ptr::write_volatile(self.ptr().add(offset) as *mut _, val)
+    }
+    unsafe fn write32(&self, offset: usize, val: u32) {
+        ptr::write_volatile(self.ptr().add(offset) as *mut _, val)
+    }
+    unsafe fn write64(&self, offset: usize, val: u64) {
+        ptr::write_volatile(self.ptr().add(offset) as *mut _, val)
+    }
 
-    unsafe fn read8(&self, offset: usize) -> u8 { ptr::read_volatile(self.ptr().add(offset) as *const _) }
-    unsafe fn read16(&self, offset: usize) -> u16 { ptr::read_volatile(self.ptr().add(offset) as *const _) }
-    unsafe fn read32(&self, offset: usize) -> u32 { ptr::read_volatile(self.ptr().add(offset) as *const _) }
-    unsafe fn read64(&self, offset: usize) -> u64 { ptr::read_volatile(self.ptr().add(offset) as *const _) }
+    unsafe fn read8(&self, offset: usize) -> u8 {
+        ptr::read_volatile(self.ptr().add(offset) as *const _)
+    }
+    unsafe fn read16(&self, offset: usize) -> u16 {
+        ptr::read_volatile(self.ptr().add(offset) as *const _)
+    }
+    unsafe fn read32(&self, offset: usize) -> u32 {
+        ptr::read_volatile(self.ptr().add(offset) as *const _)
+    }
+    unsafe fn read64(&self, offset: usize) -> u64 {
+        ptr::read_volatile(self.ptr().add(offset) as *const _)
+    }
 }
 
 impl RawMemoryInterface for *mut u8 {

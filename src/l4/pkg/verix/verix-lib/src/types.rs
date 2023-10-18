@@ -1,4 +1,4 @@
-use std::{collections::VecDeque, cell::RefCell};
+use std::{cell::RefCell, collections::VecDeque};
 
 use crate::{
     dev,

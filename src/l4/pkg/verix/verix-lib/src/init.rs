@@ -5,14 +5,15 @@ use std::time::Duration;
 use std::{mem, thread};
 
 use crate::constants::{
-    ADV_TX_DESC_DTYP_DATA, AUTOC_LMS_10G_SFI, LINKS_LINK_SPEED_100M, LINKS_LINK_SPEED_10G,
-    LINKS_LINK_SPEED_1G, NUM_RX_QUEUE_ENTRIES, NUM_TX_QUEUE_ENTRIES, PKT_BUF_ENTRY_SIZE,
-    SRRCTL_DESCTYPE_ADV_ONE_BUFFER, AUTOC2_10G_PMA_SERIAL_SFI, WAIT_LIMIT,
-    TX_CLEAN_BATCH
+    ADV_TX_DESC_DTYP_DATA, AUTOC2_10G_PMA_SERIAL_SFI, AUTOC_LMS_10G_SFI, LINKS_LINK_SPEED_100M,
+    LINKS_LINK_SPEED_10G, LINKS_LINK_SPEED_1G, NUM_RX_QUEUE_ENTRIES, NUM_TX_QUEUE_ENTRIES,
+    PKT_BUF_ENTRY_SIZE, SRRCTL_DESCTYPE_ADV_ONE_BUFFER, TX_CLEAN_BATCH, WAIT_LIMIT,
 };
 use crate::dev;
 use crate::dma::{DmaMemory, Mempool, Packet};
-use crate::types::{UninitializedDevice, DeviceStats, Error, Result, RxQueue, TxQueue, InitializedDevice};
+use crate::types::{
+    DeviceStats, Error, InitializedDevice, Result, RxQueue, TxQueue, UninitializedDevice,
+};
 
 use log::{info, trace};
 
@@ -143,8 +144,7 @@ where
 
         // The sum is used here because we share a mempool between rx and tx queues
         let mempool_entries = NUM_RX_QUEUE_ENTRIES + NUM_TX_QUEUE_ENTRIES;
-        let mempool =
-            Mempool::new(mempool_entries.into(), PKT_BUF_ENTRY_SIZE, &self.dma_space)?;
+        let mempool = Mempool::new(mempool_entries.into(), PKT_BUF_ENTRY_SIZE, &self.dma_space)?;
 
         info!("Set up of RX/TX Mempool done");
 
@@ -166,7 +166,7 @@ where
             rx_queue: RefCell::new(rx_queue),
             tx_queue: RefCell::new(tx_queue),
             dma_space: self.dma_space,
-            pool: mempool
+            pool: mempool,
         })
     }
 
@@ -220,9 +220,7 @@ where
             .tdbah(0)
             .write(|w| w.tdbah((descriptor_mem.device_addr() >> 32) as u32));
         let qlen = NUM_TX_QUEUE_ENTRIES as usize * mem::size_of::<[u64; 2]>();
-        self.bar0
-            .tdlen(0)
-            .write(|w| w.len(qlen as u32));
+        self.bar0.tdlen(0).write(|w| w.len(qlen as u32));
 
         info!("Set up of DMA for TX descriptor ring done");
 
@@ -267,7 +265,9 @@ where
 
         // enable CRC offloading
         self.bar0.hlreg0().modify(|_, w| w.rxcrstrip(1));
-        self.bar0.rdrxctl().modify(|_, w| w.crcstrip(1).rscfrstsize(0x0));
+        self.bar0
+            .rdrxctl()
+            .modify(|_, w| w.crcstrip(1).rscfrstsize(0x0));
 
         // accept broadcast packets
         self.bar0.fctrl().modify(|_, w| w.bam(1));
@@ -301,16 +301,13 @@ where
             .rdbah(0)
             .write(|w| w.rdbah((descriptor_mem.device_addr() >> 32) as u32));
         let qlen = NUM_RX_QUEUE_ENTRIES as usize * mem::size_of::<[u64; 2]>();
-        self.bar0
-            .rdlen(0)
-            .write(|w| w.len(qlen as u32));
+        self.bar0.rdlen(0).write(|w| w.len(qlen as u32));
 
         // set ring to empty at start
         self.bar0.rdh(0).modify(|_, w| w.rdh(0));
         self.bar0.rdt(0).modify(|_, w| w.rdt(0));
 
         info!("Set up of DMA for RX descriptor ring done");
-
 
         let queue = RxQueue {
             descriptors: descriptor_mem,
@@ -335,7 +332,11 @@ where
         Ok(queue)
     }
 
-    fn start_rx_queue<MM>(&mut self, queue: &mut RxQueue<E, Dma, MM>, pool: &Mempool<E, Dma, MM>) -> Result<(), E>
+    fn start_rx_queue<MM>(
+        &mut self,
+        queue: &mut RxQueue<E, Dma, MM>,
+        pool: &Mempool<E, Dma, MM>,
+    ) -> Result<(), E>
     where
         MM: pc_hal::traits::MappableMemory<Error = E, DmaSpace = Dma>,
     {
@@ -442,7 +443,7 @@ where
 
     fn wait_for_link(&mut self) -> Result<(), E> {
         info!("Waiting for link");
-        self.wait_reg(|s|s.bar0.links().read().link_up() == 1);
+        self.wait_reg(|s| s.bar0.links().read().link_up() == 1);
 
         if let Some(s) = self.get_link_speed() {
             info!("link speed is {} Mbit/s", s);
@@ -476,7 +477,6 @@ where
         self.clear_interrupts();
     }
 }
-
 
 impl<E, IM, PD, D, Res, Dma, MM> InitializedDevice<E, IM, PD, D, Res, MM, Dma>
 where
@@ -555,7 +555,11 @@ where
         received_packets
     }
 
-    pub fn tx_batch<'a>(&'a self, buffer: &mut VecDeque<Packet<'a, E, Dma, MM>>, num_packets: usize) -> usize {
+    pub fn tx_batch<'a>(
+        &'a self,
+        buffer: &mut VecDeque<Packet<'a, E, Dma, MM>>,
+        num_packets: usize,
+    ) -> usize {
         let mut sent = 0;
 
         let mut queue = self.tx_queue.borrow_mut();
@@ -636,13 +640,11 @@ where
     }
 }
 
-
 fn clean_tx_queue<E, Dma, MM>(queue: &mut TxQueue<E, Dma, MM>, pool: &Mempool<E, Dma, MM>) -> usize
 where
     MM: pc_hal::traits::MappableMemory<Error = E, DmaSpace = Dma>,
     Dma: pc_hal::traits::DmaSpace,
 {
-
     let mut clean_index = queue.clean_index;
     let cur_index = queue.tx_index;
 

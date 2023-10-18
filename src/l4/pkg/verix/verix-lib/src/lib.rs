@@ -15,7 +15,9 @@ use crate::types::Result;
 
 // number of packets sent simultaneously by our driver
 
-pub fn find_dev<E, D, PD, B, Res, Dma, IM>(bus: &mut B) -> Result<types::UninitializedDevice<E, IM, PD, D, Res, Dma>, E>
+pub fn find_dev<E, D, PD, B, Res, Dma, IM>(
+    bus: &mut B,
+) -> Result<types::UninitializedDevice<E, IM, PD, D, Res, Dma>, E>
 where
     D: pc_hal::traits::Device,
     B: pc_hal::traits::Bus<Error = E, Device = D, Resource = Res, DmaSpace = Dma>,
@@ -35,7 +37,6 @@ where
     Ok(dev)
 }
 
-
 pub fn run<E, D, PD, B, Res, MM, Dma, IM>(bus: &mut B) -> Result<(), E>
 where
     D: pc_hal::traits::Device,
@@ -53,7 +54,8 @@ where
     dev.read_stats(&mut dev_stats);
     dev.read_stats(&mut dev_stats_old);
 
-    let mut buffer: VecDeque<dma::Packet<E, Dma, MM>> = VecDeque::with_capacity(constants::BATCH_SIZE);
+    let mut buffer: VecDeque<dma::Packet<E, Dma, MM>> =
+        VecDeque::with_capacity(constants::BATCH_SIZE);
     let mut time = Instant::now();
     let mut counter = 0;
 

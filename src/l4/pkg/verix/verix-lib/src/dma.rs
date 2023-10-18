@@ -21,7 +21,7 @@ where
 {
     pub mem: MM,
     pub device_addr: usize,
-    pub size: usize
+    pub size: usize,
 }
 
 pub struct Mempool<E, Dma, MM>
@@ -82,7 +82,11 @@ where
             device_addr
         );
 
-        Ok(Self { mem, device_addr, size })
+        Ok(Self {
+            mem,
+            device_addr,
+            size,
+        })
     }
 
     // TODO: we do not necessarily have to memset everything, just the mapped chunk...
@@ -174,7 +178,7 @@ where
 
     pub fn contains_device_addr<T>(&self, ptr: *mut T) -> bool {
         let ptr = ptr as usize;
-        let device_base = self.shared.borrow().mem.device_addr; 
+        let device_base = self.shared.borrow().mem.device_addr;
         (ptr >= device_base) && (ptr <= device_base + self.entry_size * self.num_entries)
     }
 

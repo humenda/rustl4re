@@ -3,12 +3,25 @@ use std::rc::Rc;
 
 use verix_lib::dev::VENDOR_ID;
 
-use crate::constants::WriteRegister;
-use crate::constants::mmio::{Eimc, IXGBE_EIMC, MmioState, IXGBE_CTRL, Ctrl, IXGBE_EEC, IXGBE_RAH0, IXGBE_RAL0, IXGBE_RDRXCTL, IXGBE_AUTOC, Autoc, IXGBE_AUTOC2, Autoc2, IXGBE_LINKS, IXGBE_GPRC, IXGBE_GPTC, IXGBE_GORCL, IXGBE_GORCH, IXGBE_GOTCL, IXGBE_GOTCH, IXGBE_RXCTRL, Rxctrl, IXGBE_RXPBSIZE_MIN, IXGBE_RXPBSIZE_MAX, IXGBE_RXPBSIZE_IDX, Rxpbsize, IXGBE_HLREG0, Hlreg0, Rdrxctl, IXGBE_FCTRL, Fctrl, IXGBE_SRCCTRL0, Srrctl, IXGBE_RDBAL0, IXGBE_RDBAH0, IXGBE_RDLEN0, DescriptorLen, IXGBE_RDH0, IXGBE_RDT0, QueuePointer, IXGBE_CTRL_EXT, CtrlExt, IXGBE_DCA_RXCTRL0, DcaRxctrl, IXGBE_MRQC, Mrqc, IXGBE_PFVTCTL, Pfvtctl, IXGBE_RTTDCS, Rttdcs, IXGBE_TXPBSIZE_MIN, IXGBE_TXPBSIZE_MAX, IXGBE_TXPBSIZE_IDX, Txpbsize, IXGBE_DTXMXSZRQ, Dtxmxszrq, IXGBE_TXPBTHRESH_MIN, IXGBE_TXPBTHRESH_MAX, IXGBE_TXPBTHRESH_IDX, Txpbthresh, IXGBE_TDBAL0, IXGBE_TDBAH0, IXGBE_TDLEN0, IXGBE_TXDCTL0, Txdctl, IXGBE_DMATXCTL, Dmatxctl, IXGBE_RXDCTL0, Rxdctl, IXGBE_TDT0, IXGBE_TDH0};
-use crate::constants::pci::{
-    Command, PciState, BAR0_ADDR, COMMAND_ADDR, DEVICE_ID, DEVICE_ID_ADDR, VENDOR_ID_ADDR, BAR_ALIGNMENT, BAR0_SIZE,
+use crate::constants::mmio::{
+    Autoc, Autoc2, Ctrl, CtrlExt, DcaRxctrl, DescriptorLen, Dmatxctl, Dtxmxszrq, Eimc, Fctrl,
+    Hlreg0, MmioState, Mrqc, Pfvtctl, QueuePointer, Rdrxctl, Rttdcs, Rxctrl, Rxdctl, Rxpbsize,
+    Srrctl, Txdctl, Txpbsize, Txpbthresh, IXGBE_AUTOC, IXGBE_AUTOC2, IXGBE_CTRL, IXGBE_CTRL_EXT,
+    IXGBE_DCA_RXCTRL0, IXGBE_DMATXCTL, IXGBE_DTXMXSZRQ, IXGBE_EEC, IXGBE_EIMC, IXGBE_FCTRL,
+    IXGBE_GORCH, IXGBE_GORCL, IXGBE_GOTCH, IXGBE_GOTCL, IXGBE_GPRC, IXGBE_GPTC, IXGBE_HLREG0,
+    IXGBE_LINKS, IXGBE_MRQC, IXGBE_PFVTCTL, IXGBE_RAH0, IXGBE_RAL0, IXGBE_RDBAH0, IXGBE_RDBAL0,
+    IXGBE_RDH0, IXGBE_RDLEN0, IXGBE_RDRXCTL, IXGBE_RDT0, IXGBE_RTTDCS, IXGBE_RXCTRL, IXGBE_RXDCTL0,
+    IXGBE_RXPBSIZE_IDX, IXGBE_RXPBSIZE_MAX, IXGBE_RXPBSIZE_MIN, IXGBE_SRCCTRL0, IXGBE_TDBAH0,
+    IXGBE_TDBAL0, IXGBE_TDH0, IXGBE_TDLEN0, IXGBE_TDT0, IXGBE_TXDCTL0, IXGBE_TXPBSIZE_IDX,
+    IXGBE_TXPBSIZE_MAX, IXGBE_TXPBSIZE_MIN, IXGBE_TXPBTHRESH_IDX, IXGBE_TXPBTHRESH_MAX,
+    IXGBE_TXPBTHRESH_MIN,
 };
-use crate::emulator::{BasicDevice, Device, Error, Resource, BasicResource, DmaDomainResource};
+use crate::constants::pci::{
+    Command, PciState, BAR0_ADDR, BAR0_SIZE, BAR_ALIGNMENT, COMMAND_ADDR, DEVICE_ID,
+    DEVICE_ID_ADDR, VENDOR_ID_ADDR,
+};
+use crate::constants::WriteRegister;
+use crate::emulator::{BasicDevice, BasicResource, Device, DmaDomainResource, Error, Resource};
 
 pub struct IxDevice {
     pub(crate) basic: BasicDevice,
@@ -24,7 +37,16 @@ pub struct IxDevice {
 }
 
 impl IxDevice {
-    pub fn new(bar0_addr: u32, dma_domain_start: u32, eec_read_limit: u8, dmaidone_read_limit: u8, links_read_limit: u8, rxdctl0_read_limit: u8, txdctl0_read_limit: u8, mac_addr: [u8; 6]) -> Self {
+    pub fn new(
+        bar0_addr: u32,
+        dma_domain_start: u32,
+        eec_read_limit: u8,
+        dmaidone_read_limit: u8,
+        links_read_limit: u8,
+        rxdctl0_read_limit: u8,
+        txdctl0_read_limit: u8,
+        mac_addr: [u8; 6],
+    ) -> Self {
         // 16 byte aligned
         assert!(bar0_addr % 16 == 0);
 
@@ -34,13 +56,13 @@ impl IxDevice {
         let dma_dom = Rc::new(DmaDomainResource {
             start: dma_domain_start as usize,
             end: (dma_domain_start as usize) + 1,
-            mapping: RefCell::new(Vec::new())
+            mapping: RefCell::new(Vec::new()),
         });
 
         let bar_res = BasicResource {
             start: bar0_addr as usize,
             end: bar0_addr as usize + BAR0_SIZE,
-            typ: pc_hal::traits::ResourceType::Mem
+            typ: pc_hal::traits::ResourceType::Mem,
         };
         // Resources don't overlap
 
@@ -66,8 +88,9 @@ impl pc_hal::traits::Device for IxDevice {
     fn resource_iter<'a>(&'a self) -> Self::ResourceIter<'a> {
         vec![
             Resource::Basic(self.bar_res.clone()),
-            Resource::DmaDomain(self.dma_dom.clone())
-        ].into_iter()
+            Resource::DmaDomain(self.dma_dom.clone()),
+        ]
+        .into_iter()
     }
 
     fn supports_interface(&self, iface: pc_hal::traits::BusInterface) -> bool {
@@ -167,7 +190,14 @@ impl pc_hal::traits::PciDevice for IxDevice {
         assert!(size == self.pci_state.bar0.len as u64);
         assert!(flags.contains(pc_hal::traits::IoMemFlags::NONCACHED));
         assert!(!flags.contains(pc_hal::traits::IoMemFlags::CACHED));
-        Ok(IoMem::new(IoMemInner::new(self.eec_read_limit, self.dmaidone_read_limit, self.links_read_limit, self.rxdctl0_read_limit, self.txdctl0_read_limit, self.mac_addr)))
+        Ok(IoMem::new(IoMemInner::new(
+            self.eec_read_limit,
+            self.dmaidone_read_limit,
+            self.links_read_limit,
+            self.rxdctl0_read_limit,
+            self.txdctl0_read_limit,
+            self.mac_addr,
+        )))
     }
 }
 
@@ -190,12 +220,12 @@ pub enum InitializationState {
     WaitRxStart = 14,
     TxStart = 15,
     WaitTxStart = 16,
-    Done = 17
+    Done = 17,
 }
 
 pub struct WaitRegConfig {
     pub reads: u16,
-    pub limit: u8
+    pub limit: u8,
 }
 
 impl WaitRegConfig {
@@ -224,7 +254,14 @@ pub struct IoMemInner {
 }
 
 impl IoMemInner {
-    pub fn new(eec_read_limit: u8, dmaidone_read_limit:u8, links_read_limit: u8, rxdctl0_read_limit: u8, txdctl0_read_limit: u8, mac_addr: [u8; 6]) -> IoMemInner {
+    pub fn new(
+        eec_read_limit: u8,
+        dmaidone_read_limit: u8,
+        links_read_limit: u8,
+        rxdctl0_read_limit: u8,
+        txdctl0_read_limit: u8,
+        mac_addr: [u8; 6],
+    ) -> IoMemInner {
         IoMemInner {
             init_state: InitializationState::DisableInterruptInitial,
             mmio: MmioState::new(mac_addr),
@@ -233,20 +270,19 @@ impl IoMemInner {
             links_reads: WaitRegConfig::new(links_read_limit),
             rxdctl0_reads: WaitRegConfig::new(rxdctl0_read_limit),
             txdctl0_reads: WaitRegConfig::new(txdctl0_read_limit),
-            mac_addr
+            mac_addr,
         }
     }
 
     fn check_stat_reset(&mut self) {
         let mmio = &self.mmio;
-        if 
-            mmio.gprc == 0 &&
-            mmio.gptc == 0 &&
-            mmio.gorcl == 0 &&
-            mmio.gorch == 0 &&
-            mmio.gotcl == 0 &&
-            mmio.gotch == 0 &&
-            self.init_state == InitializationState::InitializeStatistics
+        if mmio.gprc == 0
+            && mmio.gptc == 0
+            && mmio.gorcl == 0
+            && mmio.gorch == 0
+            && mmio.gotcl == 0
+            && mmio.gotch == 0
+            && self.init_state == InitializationState::InitializeStatistics
         {
             self.init_state = InitializationState::DisablingReceive;
         }
@@ -262,10 +298,12 @@ impl IoMemInner {
                 self.mmio.eimc = proposed;
                 self.init_state = match self.init_state {
                     InitializationState::DisableInterruptInitial => InitializationState::Reset,
-                    InitializationState::DisableInterruptAfterReset => InitializationState::WaitEeprom,
-                    _ => panic!("shouldn't be necessary")
+                    InitializationState::DisableInterruptAfterReset => {
+                        InitializationState::WaitEeprom
+                    }
+                    _ => panic!("shouldn't be necessary"),
                 }
-            } ,
+            }
             IXGBE_CTRL => {
                 assert!(self.init_state == InitializationState::Reset);
                 let proposed = Ctrl(val);
@@ -277,7 +315,7 @@ impl IoMemInner {
                 // Reset our MMIO state
                 self.mmio = MmioState::new(self.mac_addr);
                 self.init_state = InitializationState::DisableInterruptAfterReset;
-            },
+            }
             IXGBE_AUTOC => {
                 assert!(self.init_state == InitializationState::SetupLink);
                 let proposed = Autoc(val);
@@ -287,7 +325,7 @@ impl IoMemInner {
                 if self.mmio.autoc.restart_an() {
                     /* 4.6.4.2 says to configure LMS and 10G_PARALLEL_PMA_PMD in AUTOC
                      * as well as 10G_PMA_PMD_Serial in AUTOC2.
-                     */ 
+                     */
                     // XAUI
                     assert!(self.mmio.autoc.teng_pma_pmd_parallel() == 0b00);
                     // SFI
@@ -296,7 +334,7 @@ impl IoMemInner {
                     assert!(self.mmio.autoc2.teng_pam_pmd_serial() == 0b10);
                     self.init_state = InitializationState::WaitLink;
                 }
-            },
+            }
             IXGBE_AUTOC2 => {
                 assert!(self.init_state == InitializationState::SetupLink);
                 let proposed = Autoc2(val);
@@ -308,10 +346,14 @@ impl IoMemInner {
                 let proposed = Rxctrl(val);
                 proposed.assert_valid();
                 self.mmio.rxctrl = proposed;
-                if self.mmio.rxctrl.rxen() == false && InitializationState::DisablingReceive == self.init_state {
+                if self.mmio.rxctrl.rxen() == false
+                    && InitializationState::DisablingReceive == self.init_state
+                {
                     self.init_state = InitializationState::ConfigReceive;
                     return;
-                } else if self.mmio.rxctrl.rxen() == true && InitializationState::ConfigReceive == self.init_state {
+                } else if self.mmio.rxctrl.rxen() == true
+                    && InitializationState::ConfigReceive == self.init_state
+                {
                     /* For a config to be valid we follow the definition of 4.6.7.
                      * First we are supposed to setup RAL, RAH, PFUTA, VFTA, PFVLVF, MPSAR and PFLVFB.
                      * Since we do not make use of VLAN and just want to use the default MAC we don't touch these -> no need for assertions.
@@ -321,7 +363,7 @@ impl IoMemInner {
                      */
                     assert!(self.mmio.rdrxctl.crcstrip() == self.mmio.hlreg0.rxcrcstrp()); // is equal
                     assert!(self.mmio.rdrxctl.crcstrip() == true); // is set
-                    // Furthermore: At the same time the RDRXCTL.RSCFRSTSIZE should be set to 0x0 
+                                                                   // Furthermore: At the same time the RDRXCTL.RSCFRSTSIZE should be set to 0x0
                     assert!(self.mmio.rdrxctl.rscfrstsize() == 0);
 
                     assert!(self.mmio.fctrl.mpe() == true);
@@ -330,7 +372,7 @@ impl IoMemInner {
 
                     // Next setup the values from 4.6.11.3.4 since we are DCB off VT off
                     assert!(self.mmio.rxpbsizes[0].size() == 0x200);
-                    for i in 1..8  {
+                    for i in 1..8 {
                         assert!(self.mmio.rxpbsizes[i].size() == 0x0);
                     }
                     assert!(self.mmio.mrqc.mrqe() == 0x0); // we don't do RSS
@@ -352,7 +394,8 @@ impl IoMemInner {
                     // Per queue setup
                     // RDBAL and RDBAH should be a valid pointer and the region should be valid for RDLEN.
                     // Since asserting this is quite hard we simple probe the first and last byte.
-                    let addr : *mut u8 = (((self.mmio.rdbah0 as u64) << 32) | (self.mmio.rdbal0 as u64)) as *mut u8;
+                    let addr: *mut u8 =
+                        (((self.mmio.rdbah0 as u64) << 32) | (self.mmio.rdbal0 as u64)) as *mut u8;
                     let len = self.mmio.rdlen0.0;
                     // We know memory should be configured to 0xff
                     assert!(unsafe { addr.read() } == 0xff);
@@ -360,7 +403,7 @@ impl IoMemInner {
                     assert!(self.mmio.srrctl0.bsizepacket() == 0x2);
                     assert!(self.mmio.srrctl0.desctype() == 0b001);
                     assert!(self.mmio.srrctl0.drop_en() == true);
-                    
+
                     // We do not care about header split so no PSRTYPE
                     // We do also not care about RSC so no RSCCTL
                     // We defer the queue start to after TX has been configured
@@ -370,9 +413,12 @@ impl IoMemInner {
                 } else {
                     panic!("Invalid write");
                 }
-            },
+            }
             IXGBE_HLREG0 => {
-                assert!(InitializationState::ConfigReceive == self.init_state || InitializationState::ConfigTransmitMac == self.init_state);
+                assert!(
+                    InitializationState::ConfigReceive == self.init_state
+                        || InitializationState::ConfigTransmitMac == self.init_state
+                );
                 let proposed = Hlreg0(val);
                 proposed.assert_valid();
                 self.mmio.hlreg0 = proposed;
@@ -382,13 +428,13 @@ impl IoMemInner {
                 let proposed = Rdrxctl(val);
                 proposed.assert_valid();
                 self.mmio.rdrxctl = proposed;
-            },
+            }
             IXGBE_FCTRL => {
                 assert!(InitializationState::ConfigReceive == self.init_state);
                 let proposed = Fctrl(val);
                 proposed.assert_valid();
                 self.mmio.fctrl = proposed;
-            },
+            }
             IXGBE_SRCCTRL0 => {
                 assert!(InitializationState::ConfigReceive == self.init_state);
                 let proposed = Srrctl(val);
@@ -402,7 +448,7 @@ impl IoMemInner {
             IXGBE_RDBAH0 => {
                 assert!(InitializationState::ConfigReceive == self.init_state);
                 self.mmio.rdbah0 = val;
-            },
+            }
             IXGBE_RDLEN0 => {
                 assert!(InitializationState::ConfigReceive == self.init_state);
                 let proposed = DescriptorLen(val);
@@ -446,20 +492,27 @@ impl IoMemInner {
                 self.mmio.pfvtctl = proposed;
             }
             IXGBE_RTTDCS => {
-                assert!(InitializationState::ConfigTransmitMac == self.init_state || InitializationState::ConfigTransmitDcb == self.init_state);
+                assert!(
+                    InitializationState::ConfigTransmitMac == self.init_state
+                        || InitializationState::ConfigTransmitDcb == self.init_state
+                );
                 let proposed = Rttdcs(val);
                 proposed.assert_valid();
                 self.mmio.rttdcs = proposed;
-                if self.mmio.rttdcs.arbdis() && self.init_state == InitializationState::ConfigTransmitMac {
+                if self.mmio.rttdcs.arbdis()
+                    && self.init_state == InitializationState::ConfigTransmitMac
+                {
                     // according to 4.6.8
                     // We don't care about TCP segmentation for now so only the hlreg0 values matter
                     assert!(self.mmio.hlreg0.txcrcen() && self.mmio.hlreg0.txpaden());
                     self.init_state = InitializationState::ConfigTransmitDcb;
-                } else if !self.mmio.rttdcs.arbdis() && self.init_state == InitializationState::ConfigTransmitDcb {
+                } else if !self.mmio.rttdcs.arbdis()
+                    && self.init_state == InitializationState::ConfigTransmitDcb
+                {
                     // According to 4.6.11.3.4
                     assert!(self.mmio.txpbsizes[0].size() == 0xa0);
                     assert!(self.mmio.txpbthresh[0].thresh() == 0xa0);
-                    for i in 1..8  {
+                    for i in 1..8 {
                         assert!(self.mmio.txpbsizes[i].size() == 0x0);
                         assert!(self.mmio.txpbthresh[i].thresh() == 0x0);
                     }
@@ -547,22 +600,22 @@ impl IoMemInner {
                 proposed.assert_valid();
                 let idx = IXGBE_RXPBSIZE_IDX(offset);
                 self.mmio.rxpbsizes[idx] = proposed;
-            },
+            }
             IXGBE_TXPBSIZE_MIN..=IXGBE_TXPBSIZE_MAX => {
                 assert!(InitializationState::ConfigTransmitDcb == self.init_state);
                 let proposed = Txpbsize(val);
                 proposed.assert_valid();
                 let idx = IXGBE_TXPBSIZE_IDX(offset);
                 self.mmio.txpbsizes[idx] = proposed;
-            },
+            }
             IXGBE_TXPBTHRESH_MIN..=IXGBE_TXPBTHRESH_MAX => {
                 assert!(InitializationState::ConfigTransmitDcb == self.init_state);
                 let proposed = Txpbthresh(val);
                 proposed.assert_valid();
                 let idx = IXGBE_TXPBTHRESH_IDX(offset);
                 self.mmio.txpbthresh[idx] = proposed;
-            },
-            _ => panic!("invalid write offset: 0x{:x}", offset)
+            }
+            _ => panic!("invalid write offset: 0x{:x}", offset),
         }
     }
 
@@ -579,15 +632,15 @@ impl IoMemInner {
                     self.eec_reads.reads += 1;
                 }
                 self.mmio.eec.0
-            },
+            }
             IXGBE_RAL0 => {
                 assert!(InitializationState::WaitEeprom < self.init_state);
                 self.mmio.ral.0
-            },
+            }
             IXGBE_RAH0 => {
                 assert!(InitializationState::WaitEeprom < self.init_state);
                 self.mmio.rah.0
-            },
+            }
             IXGBE_RDRXCTL => {
                 assert!(InitializationState::WaitDma <= self.init_state);
                 if self.init_state == InitializationState::WaitDma {
@@ -599,16 +652,16 @@ impl IoMemInner {
                     }
                 }
                 self.mmio.rdrxctl.0
-            },
+            }
             // TODO: This should use the semaphore mechanism described in the datasheet
             IXGBE_AUTOC => {
                 assert!(self.init_state == InitializationState::SetupLink);
                 self.mmio.autoc.0
-            },
+            }
             IXGBE_AUTOC2 => {
                 assert!(self.init_state == InitializationState::SetupLink);
                 self.mmio.autoc2.0
-            },
+            }
             IXGBE_LINKS => {
                 assert!(InitializationState::WaitLink <= self.init_state);
                 if self.links_reads.reads > self.links_reads.limit.into() {
@@ -623,7 +676,7 @@ impl IoMemInner {
                     self.links_reads.reads += 1;
                 }
                 self.mmio.links.0
-            },
+            }
             IXGBE_GPRC => {
                 assert!(InitializationState::InitializeStatistics <= self.init_state);
                 if self.init_state == InitializationState::InitializeStatistics {
@@ -677,7 +730,10 @@ impl IoMemInner {
                 self.mmio.rxctrl.0
             }
             IXGBE_HLREG0 => {
-                assert!(InitializationState::ConfigReceive == self.init_state || InitializationState::ConfigTransmitMac == self.init_state);
+                assert!(
+                    InitializationState::ConfigReceive == self.init_state
+                        || InitializationState::ConfigTransmitMac == self.init_state
+                );
                 self.mmio.hlreg0.0
             }
             IXGBE_FCTRL => {
@@ -686,7 +742,7 @@ impl IoMemInner {
             }
             IXGBE_SRCCTRL0 => {
                 assert!(InitializationState::ConfigReceive == self.init_state);
-                self.mmio.srrctl0.0 
+                self.mmio.srrctl0.0
             }
             IXGBE_RDBAL0 => {
                 assert!(InitializationState::ConfigReceive <= self.init_state);
@@ -701,7 +757,7 @@ impl IoMemInner {
                 self.mmio.rdlen0.0
             }
             IXGBE_RDT0 => {
-                assert!(InitializationState::ConfigReceive <= self.init_state );
+                assert!(InitializationState::ConfigReceive <= self.init_state);
                 self.mmio.rdt0.0
             }
             IXGBE_RDH0 => {
@@ -718,14 +774,17 @@ impl IoMemInner {
             }
             IXGBE_MRQC => {
                 assert!(self.init_state == InitializationState::ConfigReceive);
-                self.mmio.mrqc.0 
+                self.mmio.mrqc.0
             }
             IXGBE_PFVTCTL => {
                 assert!(self.init_state == InitializationState::ConfigReceive);
-                self.mmio.pfvtctl.0 
+                self.mmio.pfvtctl.0
             }
             IXGBE_RTTDCS => {
-                assert!(InitializationState::ConfigTransmitMac == self.init_state || InitializationState::ConfigTransmitDcb == self.init_state);
+                assert!(
+                    InitializationState::ConfigTransmitMac == self.init_state
+                        || InitializationState::ConfigTransmitDcb == self.init_state
+                );
                 self.mmio.rttdcs.0
             }
             IXGBE_DTXMXSZRQ => {
@@ -779,7 +838,7 @@ impl IoMemInner {
                 self.mmio.rxdctl0.0
             }
             IXGBE_TDT0 => {
-                assert!(InitializationState::TxStart <= self.init_state );
+                assert!(InitializationState::TxStart <= self.init_state);
                 self.mmio.tdt0.0
             }
             IXGBE_TDH0 => {
@@ -790,31 +849,47 @@ impl IoMemInner {
                 assert!(InitializationState::ConfigReceive == self.init_state);
                 let idx = IXGBE_RXPBSIZE_IDX(offset);
                 self.mmio.rxpbsizes[idx].0
-            },
+            }
             IXGBE_TXPBSIZE_MIN..=IXGBE_TXPBSIZE_MAX => {
                 assert!(InitializationState::ConfigTransmitDcb == self.init_state);
                 let idx = IXGBE_TXPBSIZE_IDX(offset);
                 self.mmio.txpbsizes[idx].0
-            },
+            }
             IXGBE_TXPBTHRESH_MIN..=IXGBE_TXPBTHRESH_MAX => {
                 assert!(InitializationState::ConfigTransmitDcb == self.init_state);
                 let idx = IXGBE_TXPBTHRESH_IDX(offset);
                 self.mmio.txpbthresh[idx].0
-            },
+            }
             _ => panic!("invalid read offset: 0x{:x}", offset),
         }
     }
 }
 
 impl pc_hal::traits::MemoryInterface for IoMem {
-    unsafe fn write32(&self, offset: usize, val: u32) { self.0.borrow_mut().handle_write32(offset, val) }
-    unsafe fn read32(&self, offset: usize) -> u32 { self.0.borrow_mut().handle_read32(offset) }
+    unsafe fn write32(&self, offset: usize, val: u32) {
+        self.0.borrow_mut().handle_write32(offset, val)
+    }
+    unsafe fn read32(&self, offset: usize) -> u32 {
+        self.0.borrow_mut().handle_read32(offset)
+    }
 
-    unsafe fn write8(&self, _offset: usize, _val: u8) { panic!("only 32 bit"); }
-    unsafe fn write16(&self, _offset: usize, _val: u16) { panic!("only 32 bit"); }
-    unsafe fn write64(&self, _offset: usize, _val: u64) { panic!("only 32 bit"); }
+    unsafe fn write8(&self, _offset: usize, _val: u8) {
+        panic!("only 32 bit");
+    }
+    unsafe fn write16(&self, _offset: usize, _val: u16) {
+        panic!("only 32 bit");
+    }
+    unsafe fn write64(&self, _offset: usize, _val: u64) {
+        panic!("only 32 bit");
+    }
 
-    unsafe fn read8(&self, _offset: usize) -> u8 { panic!("only 32 bit"); }
-    unsafe fn read16(&self, _offset: usize) -> u16 { panic!("only 32 bit"); }
-    unsafe fn read64(&self, _offset: usize) -> u64 { panic!("only 32 bit"); }
+    unsafe fn read8(&self, _offset: usize) -> u8 {
+        panic!("only 32 bit");
+    }
+    unsafe fn read16(&self, _offset: usize) -> u16 {
+        panic!("only 32 bit");
+    }
+    unsafe fn read64(&self, _offset: usize) -> u64 {
+        panic!("only 32 bit");
+    }
 }

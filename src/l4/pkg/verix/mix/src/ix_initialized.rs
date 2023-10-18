@@ -1,6 +1,15 @@
 use std::cell::RefCell;
 
-use crate::{emulator::{BasicDevice, Device, Error}, constants::{mmio::{DescriptorLen, QueuePointer, IXGBE_RDBAL0, IXGBE_RDBAH0, IXGBE_RDLEN0, IXGBE_RDT0, IXGBE_RDH0, IXGBE_TDBAL0, IXGBE_TDBAH0, IXGBE_TDLEN0, IXGBE_TDT0, IXGBE_TDH0}, WriteRegister}};
+use crate::{
+    constants::{
+        mmio::{
+            DescriptorLen, QueuePointer, IXGBE_RDBAH0, IXGBE_RDBAL0, IXGBE_RDH0, IXGBE_RDLEN0,
+            IXGBE_RDT0, IXGBE_TDBAH0, IXGBE_TDBAL0, IXGBE_TDH0, IXGBE_TDLEN0, IXGBE_TDT0,
+        },
+        WriteRegister,
+    },
+    emulator::{BasicDevice, Device, Error},
+};
 
 pub struct IxInitializedDevice {
     pub(crate) basic: BasicDevice,
@@ -23,14 +32,25 @@ pub struct InitializedIoMemInner {
 impl IxInitializedDevice {
     pub fn new() -> Self {
         let ifaces = vec![pc_hal::traits::BusInterface::Pcidev];
-        IxInitializedDevice { basic: BasicDevice::new(ifaces) }
+        IxInitializedDevice {
+            basic: BasicDevice::new(ifaces),
+        }
     }
 }
 
 impl InitializedIoMem {
-    pub fn new(rdbal0: u32, rdbah0: u32, rdlen0: u32, rdt0: u16, rdh0: u16,
-               tdbal0: u32, tdbah0: u32, tdlen0: u32, tdt0: u16, tdh0: u16
-               ) -> Self {
+    pub fn new(
+        rdbal0: u32,
+        rdbah0: u32,
+        rdlen0: u32,
+        rdt0: u16,
+        rdh0: u16,
+        tdbal0: u32,
+        tdbah0: u32,
+        tdlen0: u32,
+        tdt0: u16,
+        tdh0: u16,
+    ) -> Self {
         InitializedIoMem(RefCell::new(InitializedIoMemInner {
             rdbal0,
             rdbah0,
@@ -54,7 +74,7 @@ impl InitializedIoMemInner {
             }
             IXGBE_RDBAH0 => {
                 self.rdbah0 = val;
-            },
+            }
             IXGBE_RDLEN0 => {
                 let proposed = DescriptorLen(val);
                 proposed.assert_valid();
@@ -75,7 +95,7 @@ impl InitializedIoMemInner {
             }
             IXGBE_TDBAH0 => {
                 self.tdbah0 = val;
-            },
+            }
             IXGBE_TDLEN0 => {
                 let proposed = DescriptorLen(val);
                 proposed.assert_valid();
@@ -97,36 +117,16 @@ impl InitializedIoMemInner {
 
     fn handle_read32(&mut self, offset: usize) -> u32 {
         match offset {
-            IXGBE_RDBAL0 => {
-                self.rdbal0
-            }
-            IXGBE_RDBAH0 => {
-                self.rdbah0
-            }
-            IXGBE_RDLEN0 => {
-                self.rdlen0.0
-            }
-            IXGBE_RDT0 => {
-                self.rdt0.0
-            }
-            IXGBE_RDH0 => {
-                self.rdh0.0
-            }
-            IXGBE_TDBAL0 => {
-                self.tdbal0
-            }
-            IXGBE_TDBAH0 => {
-                self.tdbah0
-            }
-            IXGBE_TDLEN0 => {
-                self.tdlen0.0
-            }
-            IXGBE_TDT0 => {
-                self.tdt0.0
-            }
-            IXGBE_TDH0 => {
-                self.tdh0.0
-            }
+            IXGBE_RDBAL0 => self.rdbal0,
+            IXGBE_RDBAH0 => self.rdbah0,
+            IXGBE_RDLEN0 => self.rdlen0.0,
+            IXGBE_RDT0 => self.rdt0.0,
+            IXGBE_RDH0 => self.rdh0.0,
+            IXGBE_TDBAL0 => self.tdbal0,
+            IXGBE_TDBAH0 => self.tdbah0,
+            IXGBE_TDLEN0 => self.tdlen0.0,
+            IXGBE_TDT0 => self.tdt0.0,
+            IXGBE_TDH0 => self.tdh0.0,
             _ => panic!("invalid read offset: 0x{:x}", offset),
         }
     }
@@ -194,14 +194,30 @@ impl pc_hal::traits::PciDevice for IxInitializedDevice {
 }
 
 impl pc_hal::traits::MemoryInterface for InitializedIoMem {
-    unsafe fn write32(&self, offset: usize, val: u32) { self.0.borrow_mut().handle_write32(offset, val) }
-    unsafe fn read32(&self, offset: usize) -> u32 { self.0.borrow_mut().handle_read32(offset) }
+    unsafe fn write32(&self, offset: usize, val: u32) {
+        self.0.borrow_mut().handle_write32(offset, val)
+    }
+    unsafe fn read32(&self, offset: usize) -> u32 {
+        self.0.borrow_mut().handle_read32(offset)
+    }
 
-    unsafe fn write8(&self, _offset: usize, _val: u8) { panic!("only 32 bit"); }
-    unsafe fn write16(&self, _offset: usize, _val: u16) { panic!("only 32 bit"); }
-    unsafe fn write64(&self, _offset: usize, _val: u64) { panic!("only 32 bit"); }
+    unsafe fn write8(&self, _offset: usize, _val: u8) {
+        panic!("only 32 bit");
+    }
+    unsafe fn write16(&self, _offset: usize, _val: u16) {
+        panic!("only 32 bit");
+    }
+    unsafe fn write64(&self, _offset: usize, _val: u64) {
+        panic!("only 32 bit");
+    }
 
-    unsafe fn read8(&self, _offset: usize) -> u8 { panic!("only 32 bit"); }
-    unsafe fn read16(&self, _offset: usize) -> u16 { panic!("only 32 bit"); }
-    unsafe fn read64(&self, _offset: usize) -> u64 { panic!("only 32 bit"); }
+    unsafe fn read8(&self, _offset: usize) -> u8 {
+        panic!("only 32 bit");
+    }
+    unsafe fn read16(&self, _offset: usize) -> u16 {
+        panic!("only 32 bit");
+    }
+    unsafe fn read64(&self, _offset: usize) -> u64 {
+        panic!("only 32 bit");
+    }
 }

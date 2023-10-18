@@ -109,7 +109,7 @@ pub mod mmio {
     use super::WriteRegister;
 
     pub struct MmioState {
-        pub eimc : Eimc,
+        pub eimc: Eimc,
         pub ctrl: Ctrl,
         pub eec: Eec,
         pub ral: Ral,
@@ -147,7 +147,7 @@ pub mod mmio {
         pub tdbah0: u32,
         pub tdlen0: DescriptorLen,
         pub txdctl0: Txdctl,
-        pub dmatxctl : Dmatxctl,
+        pub dmatxctl: Dmatxctl,
         pub tdh0: QueuePointer,
         pub tdt0: QueuePointer,
         pub rxdctl0: Rxdctl,
@@ -159,14 +159,9 @@ pub mod mmio {
                 mac_addr[3],
                 mac_addr[2],
                 mac_addr[1],
-                mac_addr[0]
+                mac_addr[0],
             ]));
-            let rah = Rah(u32::from_be_bytes([
-                0,
-                0,
-                mac_addr[5],
-                mac_addr[4]
-            ]));
+            let rah = Rah(u32::from_be_bytes([0, 0, mac_addr[5], mac_addr[4]]));
 
             let mut txpbthresh0 = Txpbthresh(0);
             txpbthresh0.set_thresh(0x96);
@@ -245,42 +240,57 @@ pub mod mmio {
     pub const IXGBE_GOTCH: usize = 0x04094;
     pub const IXGBE_RXCTRL: usize = 0x03000;
     pub const IXGBE_RXPBSIZE_BASE: usize = 0x03C00;
-    pub const fn IXGBE_RXPBSIZE(i: usize) -> usize { assert!(i <= 7); IXGBE_RXPBSIZE_BASE + i * 4 }
-    pub const fn IXGBE_RXPBSIZE_IDX(addr: usize) -> usize { (addr - IXGBE_RXPBSIZE_BASE) / 4 }
-    pub const IXGBE_RXPBSIZE_MIN : usize = IXGBE_RXPBSIZE(0);
-    pub const IXGBE_RXPBSIZE_MAX : usize = IXGBE_RXPBSIZE(7);
-    pub const IXGBE_HLREG0 : usize = 0x04240;
-    pub const IXGBE_FCTRL : usize = 0x05080;
-    pub const IXGBE_SRCCTRL0 : usize = 0x2100;
-    pub const IXGBE_RDBAL0 : usize = 0x01000;
-    pub const IXGBE_RDBAH0 : usize = 0x01004;
-    pub const IXGBE_RDLEN0 : usize = 0x01008;
-    pub const IXGBE_RDH0 : usize = 0x01010;
-    pub const IXGBE_RDT0 : usize = 0x01018;
-    pub const IXGBE_CTRL_EXT : usize = 0x00018;
-    pub const IXGBE_DCA_RXCTRL0 : usize = 0x02200;
-    pub const IXGBE_MRQC : usize = 0x05818;
-    pub const IXGBE_PFVTCTL : usize = 0x051B0;
-    pub const IXGBE_RTTDCS : usize = 0x04900;
-    pub const IXGBE_TXPBSIZE_BASE : usize = 0x0CC00;
-    pub const fn IXGBE_TXPBSIZE(i: usize) -> usize { assert!(i <= 7); IXGBE_TXPBSIZE_BASE + i * 4 }
-    pub const fn IXGBE_TXPBSIZE_IDX(addr: usize) -> usize { (addr - IXGBE_TXPBSIZE_BASE) / 4 }
-    pub const IXGBE_TXPBSIZE_MIN : usize = IXGBE_TXPBSIZE(0);
-    pub const IXGBE_TXPBSIZE_MAX : usize = IXGBE_TXPBSIZE(7);
-    pub const IXGBE_DTXMXSZRQ : usize = 0x08100;
-    pub const IXGBE_TXPBTHRESH_BASE : usize = 0x04950;
-    pub const fn IXGBE_TXPBTHRESH(i: usize) -> usize { assert!(i <= 7); IXGBE_TXPBTHRESH_BASE + i * 4 }
-    pub const fn IXGBE_TXPBTHRESH_IDX(addr: usize) -> usize { (addr - IXGBE_TXPBTHRESH_BASE) / 4 }
-    pub const IXGBE_TXPBTHRESH_MIN : usize = IXGBE_TXPBTHRESH(0);
-    pub const IXGBE_TXPBTHRESH_MAX : usize = IXGBE_TXPBTHRESH(7);
-    pub const IXGBE_TDBAL0 : usize = 0x06000;
-    pub const IXGBE_TDBAH0 : usize = 0x06004;
-    pub const IXGBE_TDLEN0 : usize = 0x06008;
-    pub const IXGBE_TXDCTL0 : usize = 0x06028;
-    pub const IXGBE_DMATXCTL : usize = 0x04A80; 
-    pub const IXGBE_RXDCTL0 : usize = 0x01028;
-    pub const IXGBE_TDH0 : usize = 0x06010;
-    pub const IXGBE_TDT0 : usize = 0x06018;
+    pub const fn IXGBE_RXPBSIZE(i: usize) -> usize {
+        assert!(i <= 7);
+        IXGBE_RXPBSIZE_BASE + i * 4
+    }
+    pub const fn IXGBE_RXPBSIZE_IDX(addr: usize) -> usize {
+        (addr - IXGBE_RXPBSIZE_BASE) / 4
+    }
+    pub const IXGBE_RXPBSIZE_MIN: usize = IXGBE_RXPBSIZE(0);
+    pub const IXGBE_RXPBSIZE_MAX: usize = IXGBE_RXPBSIZE(7);
+    pub const IXGBE_HLREG0: usize = 0x04240;
+    pub const IXGBE_FCTRL: usize = 0x05080;
+    pub const IXGBE_SRCCTRL0: usize = 0x2100;
+    pub const IXGBE_RDBAL0: usize = 0x01000;
+    pub const IXGBE_RDBAH0: usize = 0x01004;
+    pub const IXGBE_RDLEN0: usize = 0x01008;
+    pub const IXGBE_RDH0: usize = 0x01010;
+    pub const IXGBE_RDT0: usize = 0x01018;
+    pub const IXGBE_CTRL_EXT: usize = 0x00018;
+    pub const IXGBE_DCA_RXCTRL0: usize = 0x02200;
+    pub const IXGBE_MRQC: usize = 0x05818;
+    pub const IXGBE_PFVTCTL: usize = 0x051B0;
+    pub const IXGBE_RTTDCS: usize = 0x04900;
+    pub const IXGBE_TXPBSIZE_BASE: usize = 0x0CC00;
+    pub const fn IXGBE_TXPBSIZE(i: usize) -> usize {
+        assert!(i <= 7);
+        IXGBE_TXPBSIZE_BASE + i * 4
+    }
+    pub const fn IXGBE_TXPBSIZE_IDX(addr: usize) -> usize {
+        (addr - IXGBE_TXPBSIZE_BASE) / 4
+    }
+    pub const IXGBE_TXPBSIZE_MIN: usize = IXGBE_TXPBSIZE(0);
+    pub const IXGBE_TXPBSIZE_MAX: usize = IXGBE_TXPBSIZE(7);
+    pub const IXGBE_DTXMXSZRQ: usize = 0x08100;
+    pub const IXGBE_TXPBTHRESH_BASE: usize = 0x04950;
+    pub const fn IXGBE_TXPBTHRESH(i: usize) -> usize {
+        assert!(i <= 7);
+        IXGBE_TXPBTHRESH_BASE + i * 4
+    }
+    pub const fn IXGBE_TXPBTHRESH_IDX(addr: usize) -> usize {
+        (addr - IXGBE_TXPBTHRESH_BASE) / 4
+    }
+    pub const IXGBE_TXPBTHRESH_MIN: usize = IXGBE_TXPBTHRESH(0);
+    pub const IXGBE_TXPBTHRESH_MAX: usize = IXGBE_TXPBTHRESH(7);
+    pub const IXGBE_TDBAL0: usize = 0x06000;
+    pub const IXGBE_TDBAH0: usize = 0x06004;
+    pub const IXGBE_TDLEN0: usize = 0x06008;
+    pub const IXGBE_TXDCTL0: usize = 0x06028;
+    pub const IXGBE_DMATXCTL: usize = 0x04A80;
+    pub const IXGBE_RXDCTL0: usize = 0x01028;
+    pub const IXGBE_TDH0: usize = 0x06010;
+    pub const IXGBE_TDT0: usize = 0x06018;
 
     bitfield! {
         #[derive(Clone, Copy)]
@@ -477,7 +487,7 @@ pub mod mmio {
 
     impl Default for Autoc2 {
         fn default() -> Autoc2 {
-            Autoc2(0) 
+            Autoc2(0)
         }
     }
 
@@ -609,9 +619,9 @@ pub mod mmio {
 
     impl WriteRegister for Hlreg0 {
         fn assert_valid(&self) {
-           assert!(self.reserved0() == true);
-           assert!(self.reserved1() == 0x1);
-           assert!(self.reserved2() == 0b101);
+            assert!(self.reserved0() == true);
+            assert!(self.reserved1() == 0x1);
+            assert!(self.reserved2() == 0b101);
         }
     }
 
@@ -779,7 +789,6 @@ pub mod mmio {
         }
     }
 
-
     bitfield! {
         #[derive(Copy, Clone)]
         pub struct Mrqc(u32);
@@ -929,7 +938,7 @@ pub mod mmio {
     impl Default for Dtxmxszrq {
         fn default() -> Self {
             let mut val = Dtxmxszrq(0);
-            val.set_max_bytes_num_req(0x10); 
+            val.set_max_bytes_num_req(0x10);
             val
         }
     }
