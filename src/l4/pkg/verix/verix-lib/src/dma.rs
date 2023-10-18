@@ -264,7 +264,7 @@ where
             addr_virt: pool.get_our_addr(buf),
             addr_phys: pool.get_device_addr(buf),
             len,
-            pool: pool.clone(),
+            pool,
             pool_entry: buf,
         }
     }

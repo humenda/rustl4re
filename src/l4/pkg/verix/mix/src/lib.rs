@@ -12,7 +12,7 @@ mod tests {
 
     use crate::emulator::{BasicDevice, Bus, Device, DmaSpace, Error, MappableMemory, Resource};
     use crate::ix::{IoMem, IoMemInner, IxDevice};
-    use crate::ix_initialized::{InitializedIoMem, InitializedIoMemInner, IxInitializedDevice};
+    use crate::ix_initialized::{InitializedIoMem, IxInitializedDevice};
     use pc_hal::prelude::*;
     use pc_hal::traits::{DsAttachFlags, DsMapFlags, MaFlags};
     use std::cell::RefCell;
@@ -24,7 +24,7 @@ mod tests {
     use verix_lib::dma::{alloc_pkt_batch, DmaMemory, Mempool, SharedPart};
     use verix_lib::types::{InitializedDevice, RxQueue, TxQueue};
 
-    enum Mode<'a> {
+    pub enum Mode<'a> {
         Assert,
         Assume(&'a Vec<usize>, &'a Mempool<Error, DmaSpace, MappableMemory>),
     }
@@ -106,7 +106,6 @@ mod tests {
         pub fn valid_wb(
             descq_mem: *const u8,
             rdh: u16,
-            rdt: u16,
             rdlen: u32,
             rdbal: u32,
             rdbah: u32,
@@ -435,7 +434,7 @@ mod tests {
         let io_mem =
             InitializedIoMem::new(rdbal, rdbah, rdlen, rdt, rdh, tdbal, tdbah, tdlen, tdt, tdh);
         let bar0 = Bar0::new(io_mem);
-        let mut dma_space = DmaSpace::new();
+        let dma_space = DmaSpace::new();
 
         let mempool = Mempool {
             num_entries: queue_len.into(),
@@ -469,7 +468,7 @@ mod tests {
 
         let rx_index = rx_index as usize;
         let mode = Mode::Assume(&rx_used_bufs, &mempool);
-        rx::valid_wb(rx_ptr, rdh, rdt, rdlen, rdbal, rdbah, rx_index, &mode);
+        rx::valid_wb(rx_ptr, rdh, rdlen, rdbal, rdbah, rx_index, &mode);
         rx::valid_read(rx_ptr, rdh, rdt, rdlen, rdbal, rdbah, &mode);
 
         let rx_queue = RxQueue {
@@ -495,7 +494,7 @@ mod tests {
             bufs_in_use: tx_used_bufs,
         };
 
-        let mut dev = InitializedDevice {
+        let dev = InitializedDevice {
             bar0,
             device,
             rx_queue: RefCell::new(rx_queue),
@@ -507,8 +506,10 @@ mod tests {
         dev
     }
 
+    #[allow(dead_code)]
     fn mock_sleep(_dur: Duration) {}
 
+    #[allow(dead_code)]
     fn mock_memset<E, Dma, MM>(mem: &mut DmaMemory<E, Dma, MM>, val: u8)
     where
         MM: pc_hal::traits::MappableMemory<Error = E, DmaSpace = Dma>,
@@ -519,7 +520,8 @@ mod tests {
         }
     }
 
-    fn mock_clean<E, Dma, MM>(queue: &mut TxQueue<E, Dma, MM>, pool: &Mempool<E, Dma, MM>) -> usize
+    #[allow(dead_code)]
+    fn mock_clean<E, Dma, MM>(queue: &mut TxQueue<E, Dma, MM>, _pool: &Mempool<E, Dma, MM>) -> usize
     where
         MM: pc_hal::traits::MappableMemory<Error = E, DmaSpace = Dma>,
         Dma: pc_hal::traits::DmaSpace,
@@ -543,7 +545,7 @@ mod tests {
         let txdctl0_read_limit: u8 = loop_limit(10);
 
         let mac_addr = get_mac_addr();
-        let mut ix = IxDevice::new(
+        let ix = IxDevice::new(
             bar0_addr,
             dma_domain_start,
             eec_read_limit,
@@ -589,11 +591,10 @@ mod tests {
         // TODO: It would be cool if we had a version that doesn't do assertions
         // such that we can skip the validation of the device here since we call setup_dev in
         // multiple locations
-        let mut dev = setup_dev();
+        let dev = setup_dev();
         let rx_queue = dev.rx_queue.borrow_mut();
         let descq_addr = rx_queue.descriptors.ptr();
         let rdh = dev.bar0.rdh(0).read().rdh();
-        let rdt = dev.bar0.rdt(0).read().rdt();
         let rdlen = dev.bar0.rdlen(0).read().len();
         let rdbal = dev.bar0.rdbal(0).read().rdbal();
         let rdbah = dev.bar0.rdbah(0).read().rdbah();
@@ -601,7 +602,6 @@ mod tests {
         rx::valid_wb(
             descq_addr,
             rdh,
-            rdt,
             rdlen,
             rdbal,
             rdbah,
@@ -615,7 +615,7 @@ mod tests {
     #[kani::stub(std::thread::sleep, mock_sleep)]
     #[kani::stub(verix_lib::dma::DmaMemory::memset, mock_memset)]
     fn test_setup_rx_read() {
-        let mut dev = setup_dev();
+        let dev = setup_dev();
         let rx_queue = dev.rx_queue.borrow_mut();
         let descq_addr = rx_queue.descriptors.ptr();
         let rdh = dev.bar0.rdh(0).read().rdh();
@@ -623,7 +623,6 @@ mod tests {
         let rdlen = dev.bar0.rdlen(0).read().len();
         let rdbal = dev.bar0.rdbal(0).read().rdbal();
         let rdbah = dev.bar0.rdbah(0).read().rdbah();
-        let rx_index = rx_queue.rx_index;
         rx::valid_read(descq_addr, rdh, rdt, rdlen, rdbal, rdbah, &Mode::Assert);
         // The read slice is not empty
         assert!(rdh != rdt);
@@ -637,7 +636,7 @@ mod tests {
         // TODO: It would be cool if we had a version that doesn't do assertions
         // such that we can skip the validation of the device here since we call setup_dev in
         // multiple locations
-        let mut dev = setup_dev();
+        let dev = setup_dev();
         let tx_queue = dev.tx_queue.borrow_mut();
         let descq_addr = tx_queue.descriptors.ptr();
         let tdh = dev.bar0.tdh(0).read().tdh();
@@ -665,7 +664,7 @@ mod tests {
     #[kani::stub(std::thread::sleep, mock_sleep)]
     #[kani::stub(verix_lib::dma::DmaMemory::memset, mock_memset)]
     fn test_setup_tx_read() {
-        let mut dev = setup_dev();
+        let dev = setup_dev();
         let tx_queue = dev.tx_queue.borrow_mut();
         let descq_addr = tx_queue.descriptors.ptr();
         let tdh = dev.bar0.tdh(0).read().tdh();
@@ -673,16 +672,15 @@ mod tests {
         let tdlen = dev.bar0.tdlen(0).read().len();
         let tdbal = dev.bar0.tdbal(0).read().tdbal();
         let tdbah = dev.bar0.tdbah(0).read().tdbah();
-        let tx_index = tx_queue.tx_index;
         tx::valid_read(descq_addr, tdh, tdt, tdlen, tdbal, tdbah, &Mode::Assert);
     }
 
     #[kani::proof]
     #[kani::unwind(32)]
     fn test_rx_batch_read() {
-        let mut dev = get_initialized_device(InitMode::DontCare);
+        let dev = get_initialized_device(InitMode::DontCare);
         let mut buffer = VecDeque::with_capacity(BATCH_SIZE);
-        let num_rx = dev.rx_batch(&mut buffer, BATCH_SIZE);
+        dev.rx_batch(&mut buffer, BATCH_SIZE);
 
         let rdh = dev.bar0.rdh(0).read().rdh();
         let rdt = dev.bar0.rdt(0).read().rdt();
@@ -700,11 +698,10 @@ mod tests {
     #[kani::proof]
     #[kani::unwind(32)]
     fn test_rx_batch_wb() {
-        let mut dev = get_initialized_device(InitMode::DontCare);
+        let dev = get_initialized_device(InitMode::DontCare);
         let mut buffer = VecDeque::with_capacity(BATCH_SIZE);
-        let num_rx = dev.rx_batch(&mut buffer, BATCH_SIZE);
+        dev.rx_batch(&mut buffer, BATCH_SIZE);
         let rdh = dev.bar0.rdh(0).read().rdh();
-        let rdt = dev.bar0.rdt(0).read().rdt();
         let rdlen = dev.bar0.rdlen(0).read().len();
         let rdbal = dev.bar0.rdbal(0).read().rdbal();
         let rdbah = dev.bar0.rdbah(0).read().rdbah();
@@ -714,7 +711,6 @@ mod tests {
         rx::valid_wb(
             mem_ptr,
             rdh,
-            rdt,
             rdlen,
             rdbal,
             rdbah,
@@ -731,14 +727,14 @@ mod tests {
     // We don't clean in kani as the symex gets confused in the allocator
     #[kani::stub(verix_lib::init::clean_tx_queue, mock_clean)]
     fn test_tx_batch_read() {
-        let mut dev = get_initialized_device(InitMode::DontCare);
+        let dev = get_initialized_device(InitMode::DontCare);
 
         let mut pkts = VecDeque::new();
         let pkt_len = kani::any();
         kani::assume(pkt_len < 1500);
         alloc_pkt_batch(&dev.pool, &mut pkts, BATCH_SIZE, pkt_len);
 
-        let num_tx = dev.tx_batch(&mut pkts, BATCH_SIZE);
+        dev.tx_batch(&mut pkts, BATCH_SIZE);
 
         let tx_queue = dev.tx_queue.borrow_mut();
         let descq_addr = tx_queue.descriptors.ptr();
@@ -757,14 +753,14 @@ mod tests {
     // We don't clean in kani as the symex gets confused in the allocator
     #[kani::stub(verix_lib::init::clean_tx_queue, mock_clean)]
     fn test_tx_batch_wb() {
-        let mut dev = get_initialized_device(InitMode::DontCare);
+        let dev = get_initialized_device(InitMode::DontCare);
 
         let mut pkts = VecDeque::new();
         let pkt_len = kani::any();
         kani::assume(pkt_len < 1500);
         alloc_pkt_batch(&dev.pool, &mut pkts, BATCH_SIZE, pkt_len);
 
-        let num_tx = dev.tx_batch(&mut pkts, BATCH_SIZE);
+        dev.tx_batch(&mut pkts, BATCH_SIZE);
 
         let tx_queue = dev.tx_queue.borrow_mut();
         let descq_addr = tx_queue.descriptors.ptr();
@@ -797,7 +793,7 @@ mod tests {
         kani::assume(pkt_len >= 64);
         kani::assume(pkt_len <= 1500);
 
-        let mut dev = get_initialized_device(InitMode::RxNonempty(pkt_len));
+        let dev = get_initialized_device(InitMode::RxNonempty(pkt_len));
 
         // This computes the index of the first buffer that we would take a look
         // at to receive a packet. We want to assert later on that this is indeed
@@ -826,8 +822,8 @@ mod tests {
     #[kani::unwind(32)]
     // We don't clean in kani as the symex gets confused in the allocator
     #[kani::stub(verix_lib::init::clean_tx_queue, mock_clean)]
-    fn test_tx_batch_nonempty() {
-        let mut dev = get_initialized_device(InitMode::DontCare);
+    fn test_tx_batch_notfull() {
+        let dev = get_initialized_device(InitMode::TxNotFull);
 
         let mut pkts = VecDeque::new();
         let pkt_len = kani::any();
