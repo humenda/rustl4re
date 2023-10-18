@@ -14,8 +14,6 @@ use pc_hal::traits::{DsAttachFlags, DsMapFlags, MaFlags, MemoryInterface};
 
 use crate::types::{RxQueue, TxQueue};
 
-const PACKET_HEADROOM: usize = 32;
-
 pub struct DmaMemory<E, Dma, MM>
 where
     MM: pc_hal::traits::MappableMemory<Error = E, DmaSpace = Dma>,
@@ -308,14 +306,13 @@ where
     MM: pc_hal::traits::MappableMemory<Error = E, DmaSpace = Dma>,
     Dma: pc_hal::traits::DmaSpace,
 {
-    if size > pool.entry_size - PACKET_HEADROOM {
+    if size > pool.entry_size {
         return None;
     }
 
-    // TODO: Do we really need PACKET_HEADROOM? I think this is for virtio?
     pool.alloc_buf().map(|id| Packet {
-        addr_virt: unsafe { pool.get_our_addr(id).add(PACKET_HEADROOM) },
-        addr_phys: pool.get_device_addr(id) + PACKET_HEADROOM,
+        addr_virt: pool.get_our_addr(id),
+        addr_phys: pool.get_device_addr(id),
         len: size,
         pool: &pool,
         pool_entry: id,

@@ -543,7 +543,7 @@ mm2types! {
                 ts @ 16,
                 secp @ 17,
                 lb @ 18,
-                eserved2 @ 19,
+                reserved2 @ 19,
                 extended_error @ 31:20,
                 pkt_len @ 47:32,
                 vlan_tag @ 63:48

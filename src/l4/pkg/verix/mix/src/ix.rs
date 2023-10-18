@@ -733,15 +733,15 @@ impl IoMemInner {
                 self.mmio.dtxmxszrq.0
             }
             IXGBE_TDBAL0 => {
-                assert!(InitializationState::ConfigTransmit == self.init_state);
+                assert!(InitializationState::ConfigTransmit <= self.init_state);
                 self.mmio.tdbal0
             }
             IXGBE_TDBAH0 => {
-                assert!(InitializationState::ConfigTransmit == self.init_state);
+                assert!(InitializationState::ConfigTransmit <= self.init_state);
                 self.mmio.tdbah0
             }
             IXGBE_TDLEN0 => {
-                assert!(InitializationState::ConfigTransmit == self.init_state);
+                assert!(InitializationState::ConfigTransmit <= self.init_state);
                 self.mmio.tdlen0.0
             }
             IXGBE_TXDCTL0 => {

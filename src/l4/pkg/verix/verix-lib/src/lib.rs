@@ -67,7 +67,7 @@ where
                 }
             }
 
-            dev.tx_batch(&mut buffer) as u64;
+            dev.tx_batch(&mut buffer, constants::BATCH_SIZE) as u64;
 
             // drop packets if they haven't been sent out
             buffer.drain(..);

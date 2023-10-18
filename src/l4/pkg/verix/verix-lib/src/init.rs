@@ -1,14 +1,14 @@
 use std::cell::RefCell;
-use std::cmp::max;
 use std::collections::VecDeque;
 
-use std::time::{Duration};
+use std::time::Duration;
 use std::{mem, thread};
 
 use crate::constants::{
     ADV_TX_DESC_DTYP_DATA, AUTOC_LMS_10G_SFI, LINKS_LINK_SPEED_100M, LINKS_LINK_SPEED_10G,
     LINKS_LINK_SPEED_1G, NUM_RX_QUEUE_ENTRIES, NUM_TX_QUEUE_ENTRIES, PKT_BUF_ENTRY_SIZE,
-    SRRCTL_DESCTYPE_ADV_ONE_BUFFER, AUTOC2_10G_PMA_SERIAL_SFI, WAIT_LIMIT
+    SRRCTL_DESCTYPE_ADV_ONE_BUFFER, AUTOC2_10G_PMA_SERIAL_SFI, WAIT_LIMIT,
+    TX_CLEAN_BATCH
 };
 use crate::dev;
 use crate::dma::{DmaMemory, Mempool, Packet};
@@ -555,13 +555,14 @@ where
         received_packets
     }
 
-    pub fn tx_batch<'a>(&'a self, buffer: &mut VecDeque<Packet<'a, E, Dma, MM>>) -> usize {
+    pub fn tx_batch<'a>(&'a self, buffer: &mut VecDeque<Packet<'a, E, Dma, MM>>, num_packets: usize) -> usize {
         let mut sent = 0;
 
         let mut queue = self.tx_queue.borrow_mut();
 
         let mut cur_index = queue.tx_index;
         let pool = &self.pool;
+
         let clean_index = clean_tx_queue(&mut queue, pool);
 
         while let Some(mut packet) = buffer.pop_front() {
@@ -588,6 +589,8 @@ where
                 .write(|w| w.address(packet.get_device_addr() as u64));
             desc.upper().write(|w| {
                 w.paylen(packet.len() as u32)
+                    // TODO: Maybe change this to PKT_BUF_ENTRY_SIZE, I need hardware access to
+                    // verify this is correct
                     .dtalen(packet.len() as u16)
                     .eop(1)
                     .rs(1)
@@ -604,6 +607,10 @@ where
 
             cur_index = next_index;
             sent += 1;
+
+            if sent == num_packets {
+                break;
+            }
         }
 
         let queue_id = 0;
@@ -630,13 +637,12 @@ where
 }
 
 
-const TX_CLEAN_BATCH: usize = 32;
-
 fn clean_tx_queue<E, Dma, MM>(queue: &mut TxQueue<E, Dma, MM>, pool: &Mempool<E, Dma, MM>) -> usize
 where
     MM: pc_hal::traits::MappableMemory<Error = E, DmaSpace = Dma>,
     Dma: pc_hal::traits::DmaSpace,
 {
+
     let mut clean_index = queue.clean_index;
     let cur_index = queue.tx_index;
 

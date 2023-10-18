@@ -1,6 +1,6 @@
 use std::cell::RefCell;
 
-use crate::{emulator::{BasicDevice, Device, Error}, constants::{mmio::{DescriptorLen, QueuePointer, IXGBE_RDBAL0, IXGBE_RDBAH0, IXGBE_RDLEN0, IXGBE_RDT0, IXGBE_RDH0}, WriteRegister}};
+use crate::{emulator::{BasicDevice, Device, Error}, constants::{mmio::{DescriptorLen, QueuePointer, IXGBE_RDBAL0, IXGBE_RDBAH0, IXGBE_RDLEN0, IXGBE_RDT0, IXGBE_RDH0, IXGBE_TDBAL0, IXGBE_TDBAH0, IXGBE_TDLEN0, IXGBE_TDT0, IXGBE_TDH0}, WriteRegister}};
 
 pub struct IxInitializedDevice {
     pub(crate) basic: BasicDevice,
@@ -13,6 +13,11 @@ pub struct InitializedIoMemInner {
     pub rdlen0: DescriptorLen,
     pub rdt0: QueuePointer,
     pub rdh0: QueuePointer,
+    pub tdbal0: u32,
+    pub tdbah0: u32,
+    pub tdlen0: DescriptorLen,
+    pub tdt0: QueuePointer,
+    pub tdh0: QueuePointer,
 }
 
 impl IxInitializedDevice {
@@ -23,13 +28,20 @@ impl IxInitializedDevice {
 }
 
 impl InitializedIoMem {
-    pub fn new(rdbal0: u32, rdbah0: u32, rdlen0: u32, rdt0: u16, rdh0: u16) -> Self {
+    pub fn new(rdbal0: u32, rdbah0: u32, rdlen0: u32, rdt0: u16, rdh0: u16,
+               tdbal0: u32, tdbah0: u32, tdlen0: u32, tdt0: u16, tdh0: u16
+               ) -> Self {
         InitializedIoMem(RefCell::new(InitializedIoMemInner {
             rdbal0,
             rdbah0,
             rdlen0: DescriptorLen(rdlen0),
             rdt0: QueuePointer(rdt0.into()),
             rdh0: QueuePointer(rdh0.into()),
+            tdbal0,
+            tdbah0,
+            tdlen0: DescriptorLen(tdlen0),
+            tdt0: QueuePointer(tdt0.into()),
+            tdh0: QueuePointer(tdh0.into()),
         }))
     }
 }
@@ -58,6 +70,27 @@ impl InitializedIoMemInner {
                 proposed.assert_valid();
                 self.rdt0 = proposed;
             }
+            IXGBE_TDBAL0 => {
+                self.tdbal0 = val;
+            }
+            IXGBE_TDBAH0 => {
+                self.tdbah0 = val;
+            },
+            IXGBE_TDLEN0 => {
+                let proposed = DescriptorLen(val);
+                proposed.assert_valid();
+                self.tdlen0 = proposed;
+            }
+            IXGBE_TDH0 => {
+                let proposed = QueuePointer(val);
+                proposed.assert_valid();
+                self.tdh0 = proposed;
+            }
+            IXGBE_TDT0 => {
+                let proposed = QueuePointer(val);
+                proposed.assert_valid();
+                self.tdt0 = proposed;
+            }
             _ => panic!("invalid write offset: 0x{:x}", offset),
         }
     }
@@ -78,6 +111,21 @@ impl InitializedIoMemInner {
             }
             IXGBE_RDH0 => {
                 self.rdh0.0
+            }
+            IXGBE_TDBAL0 => {
+                self.tdbal0
+            }
+            IXGBE_TDBAH0 => {
+                self.tdbah0
+            }
+            IXGBE_TDLEN0 => {
+                self.tdlen0.0
+            }
+            IXGBE_TDT0 => {
+                self.tdt0.0
+            }
+            IXGBE_TDH0 => {
+                self.tdh0.0
             }
             _ => panic!("invalid read offset: 0x{:x}", offset),
         }

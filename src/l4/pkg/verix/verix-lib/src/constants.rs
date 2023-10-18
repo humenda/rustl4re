@@ -3,7 +3,7 @@ pub const NUM_RX_QUEUE_ENTRIES: u16 = 16;
 #[cfg(kani)]
 pub const NUM_TX_QUEUE_ENTRIES: u16 = 16;
 #[cfg(kani)]
-pub const BATCH_SIZE: usize = 2;
+pub const BATCH_SIZE: usize = 1;
 
 #[cfg(not(kani))]
 pub const NUM_RX_QUEUE_ENTRIES: u16 = 512;
@@ -11,6 +11,8 @@ pub const NUM_RX_QUEUE_ENTRIES: u16 = 512;
 pub const NUM_TX_QUEUE_ENTRIES: u16 = 512;
 #[cfg(not(kani))]
 pub const BATCH_SIZE: usize = 64;
+
+pub const TX_CLEAN_BATCH: usize = 32;
 
 pub const PKT_BUF_ENTRY_SIZE: usize = 2048;
 
