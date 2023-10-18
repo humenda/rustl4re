@@ -56,9 +56,6 @@ pub struct DmaSpace {
 }
 pub struct MappableMemory {
     data: Vec<u8>,
-    alloc_flags: pc_hal::traits::MaFlags,
-    map_flags: pc_hal::traits::DsMapFlags,
-    attach_flags: pc_hal::traits::DsAttachFlags,
 }
 
 impl Bus {
@@ -203,15 +200,12 @@ impl pc_hal::traits::MappableMemory for MappableMemory {
 
     fn alloc(
         size: usize,
-        alloc_flags: pc_hal::traits::MaFlags,
-        map_flags: pc_hal::traits::DsMapFlags,
-        attach_flags: pc_hal::traits::DsAttachFlags,
+        _alloc_flags: pc_hal::traits::MaFlags,
+        _map_flags: pc_hal::traits::DsMapFlags,
+        _attach_flags: pc_hal::traits::DsAttachFlags,
     ) -> Result<Self, Self::Error> {
         Ok(MappableMemory {
-            data: vec![0; size],
-            alloc_flags,
-            map_flags,
-            attach_flags,
+            data: vec![0; size]
         })
     }
 

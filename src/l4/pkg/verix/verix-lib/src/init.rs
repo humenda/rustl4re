@@ -67,7 +67,7 @@ where
         Ok(dev)
     }
 
-    pub fn init<MM>(mut self) -> Result<InitializedDevice<E, IM, PD, D, Res, MM, Dma>, E>
+    pub fn init<MM>(self) -> Result<InitializedDevice<E, IM, PD, D, Res, MM, Dma>, E>
     where
         MM: pc_hal::traits::MappableMemory<Error = E, DmaSpace = Dma>,
     {
