@@ -1036,3 +1036,76 @@ pub mod mmio {
         }
     }
 }
+
+pub mod desc {
+    pub mod rx {
+        use bitfield::bitfield;
+
+        bitfield! {
+            pub struct adv_wb_lower(u64);
+            pub rss_type, _ : 3,0;
+            pub packet_type, _ : 16,4;
+            pub rsccnt, _ : 20,17;
+            pub hdr_len, _ : 30,21;
+            pub sph, _ : 31;
+            pub rss_hash, _ : 63,32;
+        }
+
+        bitfield! {
+            pub struct adv_wb_upper(u64);
+            pub extended_status, _ : 19,0;
+            pub dd, _ : 0;
+            pub eop, _ : 1;
+            pub flm, _ : 2;
+            pub vp, _ : 3;
+            pub fcstat, _ : 5,4;
+            pub fceofs, _ : 6;
+            pub pif, _ : 7;
+            pub reserved0, _ : 8;
+            pub vext, _ : 9;
+            pub udpv, _ : 10;
+            pub llint, _ : 11;
+            pub reserved1, _ : 15,12;
+            pub ts, _ : 16;
+            pub secp, _ : 17;
+            pub lb, _ : 18;
+            pub reserved2, _ : 19;
+            pub extended_error, _ : 31,20;
+            pub pkt_len, _ : 47,32;
+            pub vlan_tag, _ : 63,48;
+        }
+    }
+
+    pub mod tx {
+        use bitfield::bitfield;
+
+        bitfield! {
+            pub struct adv_wb_upper(u64);
+            pub reserved0, _ : 31,0;
+            pub dd, _ : 32;
+            pub reserved_sta, _ : 35,33;
+            pub reserved1, _ : 63,36;
+        }
+
+        bitfield! {
+            pub struct adv_read_upper(u64);
+            pub dtalen, _ : 15,0;
+            pub reserved0, _ : 17,16;
+            pub mac, _ : 19,18;
+            pub dtyp, _ : 23,20;
+            pub eop, _ : 24;
+            pub ifcs, _ : 25;
+            pub reserved1, _ : 26;
+            pub rs, _ : 27;
+            pub reserved2, _ : 28;
+            pub dext, _ : 29;
+            pub vle, _ : 30;
+            pub tse, _ : 31;
+            pub sta, _ : 35,32;
+            pub idx, _ : 38,36;
+            pub cc, _ : 39;
+            pub popts, _ : 45,40;
+            pub paylen, _ : 63,46;
+        }
+    }
+}
