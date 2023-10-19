@@ -101,6 +101,9 @@ mod tests {
                 counter += 1;
                 idx = (idx + 1) % desc_count;
             }
+            // We are at the tail descriptor now, by our over approximation of
+            // valid queue this one must always be a valid read descriptor
+            valid_adv_read(descq_mem, rdh, counter, mode);
         }
 
         pub fn valid_wb(
@@ -131,23 +134,33 @@ mod tests {
             }
         }
 
+        pub fn rdt_invariant(rdt: u16, rx_index: usize, mode: &Mode) {
+            // The rx_index is always one ahead of RDT
+            verify(rx_index as u16 == (rdt + 1) % NUM_RX_QUEUE_ENTRIES, mode);
+        }
+
         pub fn get_valid_queue_state() -> (u16, u16, u32, u16) {
             // Compute a random but valid RX queue state
+
+            // RDH is a Fin NUM_RX_QUEUE_ENTRIES
             let rdh = kani::any::<u16>();
             kani::assume(rdh < NUM_RX_QUEUE_ENTRIES);
+
+            // RDT is a Fin NUM_RX_QUEUE_ENTRIES
             let rdt = kani::any::<u16>();
             kani::assume(rdt < NUM_RX_QUEUE_ENTRIES);
+
+            // RDLEN is a known constant
             let rdlen = (NUM_RX_QUEUE_ENTRIES as usize * std::mem::size_of::<[u64; 2]>()) as u32;
+
+            // The rx_index is a Fin NUM_RX_QUEUE_ENTRIES
             let rx_index = kani::any::<u16>();
             kani::assume(rx_index < NUM_RX_QUEUE_ENTRIES);
-            if rdh < rdt {
-                kani::assume(rx_index < rdh || rx_index >= rdt);
-            } else {
-                kani::assume(rx_index < rdh && rx_index >= rdt);
-            }
 
+            kani::assume(rx_index == (rdt + 1) % NUM_RX_QUEUE_ENTRIES);
             (rdh, rdt, rdlen, rx_index)
         }
+
     }
 
     mod tx {
@@ -393,7 +406,8 @@ mod tests {
          */
 
         let queue_len = NUM_RX_QUEUE_ENTRIES + NUM_TX_QUEUE_ENTRIES;
-        let num_rx_used = ((rdt + queue_len - rdh) % queue_len) as usize;
+        // + 1 because the descriptor at RDT is always used
+        let num_rx_used = ((rdt + queue_len - rdh) % queue_len) as usize + 1;
         let num_tx_used = ((clean_index + queue_len - tdh) % queue_len) as usize;
         let rx_used_bufs: Vec<usize> = (0..num_rx_used).collect();
         let tx_used_bufs: VecDeque<usize> = (num_rx_used..(num_rx_used + num_tx_used)).collect();
@@ -455,6 +469,10 @@ mod tests {
                 let upper = unsafe { desc_mem.add(1) } as *mut u16;
                 let pkt_len_ptr = unsafe { upper.add(2) };
                 unsafe { pkt_len_ptr.write(pkt_len) }
+
+                // While we need to set up all packets between rx_index and rdh
+                // as wb descs we only read one due to our batch size of 1. Hence
+                // it is fine to only set up this one for verification purposes
             }
             InitMode::TxNotFull => {
                 kani::assume(tdh != tdt);
@@ -608,8 +626,21 @@ mod tests {
         let rdbal = dev.bar0.rdbal(0).read().rdbal();
         let rdbah = dev.bar0.rdbah(0).read().rdbah();
         rx::valid_read(descq_addr, rdh, rdt, rdlen, rdbal, rdbah, &Mode::Assert);
-        // The read slice is not empty
-        assert!(rdh != rdt);
+    }
+
+    #[kani::proof]
+    #[kani::unwind(33)]
+    #[kani::stub(std::thread::sleep, mock_sleep)]
+    #[kani::stub(verix_lib::dma::DmaMemory::memset, mock_memset)]
+    fn test_setup_rx_rdt_invariant() {
+        // TODO: It would be cool if we had a version that doesn't do assertions
+        // such that we can skip the validation of the device here since we call setup_dev in
+        // multiple locations
+        let dev = setup_dev();
+        let rdt = dev.bar0.rdt(0).read().rdt();
+        let rx_queue = dev.rx_queue.borrow_mut();
+        let rx_index = rx_queue.rx_index;
+        rx::rdt_invariant(rdt, rx_index, &Mode::Assert);
     }
 
     #[kani::proof]
@@ -694,6 +725,21 @@ mod tests {
 
         rx::valid_wb(mem_ptr, rdh, rdlen, rdbal, rdbah, rx_index, &Mode::Assert);
 
+        // Dropping the buffer seems to confuse kani, we thus leak it for now
+        mem::forget(buffer);
+    }
+
+    #[kani::proof]
+    #[kani::unwind(32)]
+    fn test_rx_batch_rdt_invariant() {
+        let dev = get_initialized_device(InitMode::DontCare);
+        let mut buffer = VecDeque::with_capacity(BATCH_SIZE);
+        dev.rx_batch(&mut buffer, BATCH_SIZE);
+        let rdt = dev.bar0.rdt(0).read().rdt();
+        let rx_queue = dev.rx_queue.borrow_mut();
+        let rx_index = rx_queue.rx_index;
+
+        rx::rdt_invariant(rdt, rx_index, &Mode::Assert);
         // Dropping the buffer seems to confuse kani, we thus leak it for now
         mem::forget(buffer);
     }
