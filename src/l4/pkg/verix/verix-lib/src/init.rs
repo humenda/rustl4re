@@ -67,6 +67,18 @@ where
         Ok(dev)
     }
 
+    pub fn from_components(
+        bar0: dev::Intel82559ES::Bar0::Mem<IM>,
+        device: PD,
+        dma_space: Dma,
+    ) -> Self {
+        Self {
+            bar0,
+            device,
+            dma_space,
+        }
+    }
+
     pub fn init<MM>(self) -> Result<InitializedDevice<E, IM, PD, D, Res, MM, Dma>, E>
     where
         MM: pc_hal::traits::MappableMemory<Error = E, DmaSpace = Dma>,
@@ -487,6 +499,24 @@ where
     Dma: pc_hal::traits::DmaSpace,
     IM: pc_hal::traits::MemoryInterface,
 {
+    pub fn from_components(
+        bar0: dev::Intel82559ES::Bar0::Mem<IM>,
+        device: PD,
+        rx_queue: RefCell<RxQueue<E, Dma, MM>>,
+        tx_queue: RefCell<TxQueue<E, Dma, MM>>,
+        dma_space: Dma,
+        pool: Mempool<E, Dma, MM>,
+    ) -> Self {
+        Self {
+            bar0,
+            device,
+            rx_queue,
+            tx_queue,
+            dma_space,
+            pool,
+        }
+    }
+
     pub fn rx_batch<'a>(
         &'a self,
         buffer: &mut VecDeque<Packet<'a, E, Dma, MM>>,

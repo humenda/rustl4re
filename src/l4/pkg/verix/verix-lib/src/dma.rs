@@ -20,8 +20,8 @@ where
     Dma: pc_hal::traits::DmaSpace,
 {
     pub mem: MM,
-    pub device_addr: usize,
-    pub size: usize,
+    device_addr: usize,
+    size: usize,
 }
 
 pub struct Mempool<E, Dma, MM>
@@ -29,9 +29,9 @@ where
     MM: pc_hal::traits::MappableMemory<Error = E, DmaSpace = Dma>,
     Dma: pc_hal::traits::DmaSpace,
 {
-    pub num_entries: usize,
-    pub entry_size: usize,
-    pub shared: RefCell<SharedPart<E, Dma, MM>>,
+    num_entries: usize,
+    entry_size: usize,
+    shared: RefCell<SharedPart<E, Dma, MM>>,
 }
 
 pub struct SharedPart<E, Dma, MM>
@@ -39,8 +39,8 @@ where
     MM: pc_hal::traits::MappableMemory<Error = E, DmaSpace = Dma>,
     Dma: pc_hal::traits::DmaSpace,
 {
-    pub mem: DmaMemory<E, Dma, MM>,
-    pub free_stack: Vec<usize>,
+    mem: DmaMemory<E, Dma, MM>,
+    free_stack: Vec<usize>,
 }
 
 pub struct Packet<'a, E, Dma, MM>
@@ -87,6 +87,14 @@ where
             device_addr,
             size,
         })
+    }
+
+    pub fn from_components(mem: MM, device_addr: usize, size: usize) -> Self {
+        Self {
+            mem,
+            device_addr,
+            size,
+        }
     }
 
     // TODO: we do not necessarily have to memset everything, just the mapped chunk...
@@ -145,6 +153,18 @@ where
         trace!("Mempool setup done");
 
         Ok(pool)
+    }
+
+    pub fn from_components(
+        num_entries: usize,
+        entry_size: usize,
+        shared: RefCell<SharedPart<E, Dma, MM>>,
+    ) -> Self {
+        Self {
+            num_entries,
+            entry_size,
+            shared,
+        }
     }
 
     pub fn alloc_buf(&self) -> Option<usize> {
@@ -275,6 +295,16 @@ where
 
     pub fn get_pool_entry(&mut self) -> usize {
         self.pool_entry
+    }
+}
+
+impl<E, MM, Dma> SharedPart<E, Dma, MM>
+where
+    MM: pc_hal::traits::MappableMemory<Error = E, DmaSpace = Dma>,
+    Dma: pc_hal::traits::DmaSpace,
+{
+    pub fn from_components(mem: DmaMemory<E, Dma, MM>, free_stack: Vec<usize>) -> Self {
+        Self { mem, free_stack }
     }
 }
 

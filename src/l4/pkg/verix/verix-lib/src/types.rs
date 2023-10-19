@@ -36,9 +36,9 @@ where
     Dma: pc_hal::traits::DmaSpace,
     IM: pc_hal::traits::MemoryInterface,
 {
-    pub bar0: dev::Intel82559ES::Bar0::Mem<IM>,
-    pub device: PD,
-    pub dma_space: Dma,
+    pub(crate) bar0: dev::Intel82559ES::Bar0::Mem<IM>,
+    pub(crate) device: PD,
+    pub(crate) dma_space: Dma,
 }
 
 pub struct InitializedDevice<E, IM, PD, D, Res, MM, Dma>
@@ -51,10 +51,10 @@ where
     IM: pc_hal::traits::MemoryInterface,
 {
     pub bar0: dev::Intel82559ES::Bar0::Mem<IM>,
-    pub device: PD,
+    pub(crate) device: PD,
     pub rx_queue: RefCell<RxQueue<E, Dma, MM>>,
     pub tx_queue: RefCell<TxQueue<E, Dma, MM>>,
-    pub dma_space: Dma,
+    pub(crate) dma_space: Dma,
     pub pool: Mempool<E, Dma, MM>,
 }
 
@@ -79,22 +79,6 @@ where
     pub tx_index: usize,
     pub bufs_in_use: VecDeque<usize>,
 }
-/*
-pub struct Interrupts<ISR> {
-    pub(crate) timeout_ms: i16,
-    pub(crate) itr_rate: u8,
-    pub(crate) queues: Vec<InterruptsQueue<ISR>>,
-}
-
-pub struct InterruptsQueue<ISR> {
-    pub(crate) isr: ISR,
-    pub(crate) instr_counter: u64,
-    pub(crate) last_time_checked: Instant,
-    pub(crate) rx_pkts: u64,
-    pub(crate) interval: u64,
-    pub(crate) moving_avg: InterruptMovingAvg,
-}
-*/
 
 #[derive(Default)]
 pub struct InterruptMovingAvg {

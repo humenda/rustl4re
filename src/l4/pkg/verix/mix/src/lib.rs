@@ -436,18 +436,14 @@ mod tests {
         let bar0 = Bar0::new(io_mem);
         let dma_space = DmaSpace::new();
 
-        let mempool = Mempool {
-            num_entries: queue_len.into(),
-            entry_size: PKT_BUF_ENTRY_SIZE,
-            shared: RefCell::new(SharedPart {
-                mem: DmaMemory {
-                    mem: buf_mem,
-                    device_addr: buf_dev_addr,
-                    size: buf_mem_size,
-                },
-                free_stack: free_bufs,
-            }),
-        };
+        let mempool = Mempool::from_components(
+            queue_len.into(),
+            PKT_BUF_ENTRY_SIZE,
+            RefCell::new(SharedPart::from_components(
+                DmaMemory::from_components(buf_mem, buf_dev_addr, buf_mem_size),
+                free_bufs,
+            )),
+        );
 
         match init_mode {
             InitMode::RxNonempty(pkt_len) => {
@@ -472,36 +468,28 @@ mod tests {
         rx::valid_read(rx_ptr, rdh, rdt, rdlen, rdbal, rdbah, &mode);
 
         let rx_queue = RxQueue {
-            descriptors: DmaMemory {
-                mem: rx_mem,
-                device_addr: rx_dev_addr,
-                size: rdlen as usize,
-            },
+            descriptors: DmaMemory::from_components(rx_mem, rx_dev_addr, rdlen as usize),
             num_descriptors: NUM_RX_QUEUE_ENTRIES,
             rx_index,
             bufs_in_use: rx_used_bufs,
         };
 
         let tx_queue = TxQueue {
-            descriptors: DmaMemory {
-                mem: tx_mem,
-                device_addr: tx_dev_addr,
-                size: tx_size,
-            },
+            descriptors: DmaMemory::from_components(tx_mem, tx_dev_addr, tx_size),
             num_descriptors: NUM_TX_QUEUE_ENTRIES,
             clean_index: clean_index.into(),
             tx_index: tx_index.into(),
             bufs_in_use: tx_used_bufs,
         };
 
-        let dev = InitializedDevice {
+        let dev = InitializedDevice::from_components(
             bar0,
             device,
-            rx_queue: RefCell::new(rx_queue),
-            tx_queue: RefCell::new(tx_queue),
+            RefCell::new(rx_queue),
+            RefCell::new(tx_queue),
             dma_space,
-            pool: mempool,
-        };
+            mempool,
+        );
 
         dev
     }
@@ -573,11 +561,7 @@ mod tests {
         bus.assign_dma_domain(&mut dma_domain, &mut dma_space)
             .unwrap();
 
-        let dev = verix_lib::types::UninitializedDevice {
-            bar0,
-            device: ix,
-            dma_space,
-        };
+        let dev = verix_lib::types::UninitializedDevice::from_components(bar0, ix, dma_space);
 
         let dev = dev.init::<MappableMemory>().unwrap();
         dev
@@ -708,15 +692,7 @@ mod tests {
         let mem_ptr = dev.rx_queue.borrow_mut().descriptors.mem.ptr();
         let rx_index = dev.rx_queue.borrow_mut().rx_index;
 
-        rx::valid_wb(
-            mem_ptr,
-            rdh,
-            rdlen,
-            rdbal,
-            rdbah,
-            rx_index,
-            &Mode::Assert,
-        );
+        rx::valid_wb(mem_ptr, rdh, rdlen, rdbal, rdbah, rx_index, &Mode::Assert);
 
         // Dropping the buffer seems to confuse kani, we thus leak it for now
         mem::forget(buffer);

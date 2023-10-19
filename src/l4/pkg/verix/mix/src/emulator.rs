@@ -205,7 +205,7 @@ impl pc_hal::traits::MappableMemory for MappableMemory {
         _attach_flags: pc_hal::traits::DsAttachFlags,
     ) -> Result<Self, Self::Error> {
         Ok(MappableMemory {
-            data: vec![0; size]
+            data: vec![0; size],
         })
     }
 
