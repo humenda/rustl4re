@@ -153,11 +153,8 @@ mod tests {
             // RDLEN is a known constant
             let rdlen = (NUM_RX_QUEUE_ENTRIES as usize * std::mem::size_of::<[u64; 2]>()) as u32;
 
-            // The rx_index is a Fin NUM_RX_QUEUE_ENTRIES
-            let rx_index = kani::any::<u16>();
-            kani::assume(rx_index < NUM_RX_QUEUE_ENTRIES);
-
-            kani::assume(rx_index == (rdt + 1) % NUM_RX_QUEUE_ENTRIES);
+            // The rx_index is always 1 beyond RDT
+            let rx_index = (rdt + 1) % NUM_RX_QUEUE_ENTRIES;
             (rdh, rdt, rdlen, rx_index)
         }
 
@@ -236,6 +233,10 @@ mod tests {
                 counter += 1;
                 idx = (idx + 1) % desc_count;
             }
+
+            // We are at the tail descriptor now, by our over approximation of
+            // valid queue this one must always be a valid read descriptor
+            valid_adv_read(descq_mem, tdh, counter, mode);
         }
 
         pub fn valid_wb(
@@ -273,22 +274,31 @@ mod tests {
             }
         }
 
+        pub fn tdt_invariant(tdt: u16, tx_index: usize, mode: &Mode) {
+            // The tx_index is always equal to TDT
+            verify(rx_index as u16 == tdt, mode);
+        }
+
         pub fn get_valid_queue_state() -> (u16, u16, u32, u16, u16) {
             // Compute a random but valid TX queue state
+
+            // TDH is a Fin NUM_TX_QUEUE_ENTRIES
             let tdh = kani::any::<u16>();
             kani::assume(tdh < NUM_TX_QUEUE_ENTRIES);
+
+            // TDT is a Fin NUM_TX_QUEUE_ENTRIES
             let tdt = kani::any::<u16>();
             kani::assume(tdt < NUM_TX_QUEUE_ENTRIES);
-            let tdlen = (NUM_TX_QUEUE_ENTRIES as usize * std::mem::size_of::<[u64; 2]>()) as u32;
-            let tx_index = kani::any::<u16>();
-            kani::assume(tx_index < NUM_TX_QUEUE_ENTRIES);
-            if tdh < tdt {
-                kani::assume(tx_index < tdh || tx_index >= tdt);
-            } else {
-                kani::assume(tx_index < tdh && tx_index >= tdt);
-            }
 
-            // TODO: Additional constraints on clean_index
+            // TDLEN is a known constant
+            let tdlen = (NUM_TX_QUEUE_ENTRIES as usize * std::mem::size_of::<[u64; 2]>()) as u32;
+
+            // in our tx algorithm the tx_index is always precisely equal to TDT
+            let tx_index = tdt;
+
+            // The clean_index should in theory be constrained more. However
+            // kani seems incapable of doing deallocation of our Packet structure
+            // correctly so we don't really need clean_index
             let clean_index = kani::any::<u16>();
             kani::assume(clean_index < NUM_TX_QUEUE_ENTRIES);
 
@@ -406,11 +416,14 @@ mod tests {
          */
 
         let queue_len = NUM_RX_QUEUE_ENTRIES + NUM_TX_QUEUE_ENTRIES;
-        // + 1 because the descriptor at RDT is always used
+
+        // + 1 because the descriptor at RDT/TDT is always used
         let num_rx_used = ((rdt + queue_len - rdh) % queue_len) as usize + 1;
-        let num_tx_used = ((clean_index + queue_len - tdh) % queue_len) as usize;
+        let num_tx_used = ((clean_index + queue_len - tdh) % queue_len) as usize + 1;
+
         let rx_used_bufs: Vec<usize> = (0..num_rx_used).collect();
         let tx_used_bufs: VecDeque<usize> = (num_rx_used..(num_rx_used + num_tx_used)).collect();
+
         // TODO: I guess this will cause us to go OOM in some situations
         let free_bufs: Vec<usize> = ((num_rx_used + num_tx_used)..(queue_len as usize)).collect();
 
@@ -691,6 +704,18 @@ mod tests {
     }
 
     #[kani::proof]
+    #[kani::unwind(33)]
+    #[kani::stub(std::thread::sleep, mock_sleep)]
+    #[kani::stub(verix_lib::dma::DmaMemory::memset, mock_memset)]
+    fn test_setup_tx_tdt_invariant() {
+        let dev = setup_dev();
+        let tdt = dev.bar0.rdt(0).read().rdt();
+        let tx_queue = dev.rx_queue.borrow_mut();
+        let tx_index = rx_queue.rx_index;
+        tx::tdt_invariant(tdt, tx_index, &Mode::Assert);
+    }
+
+    #[kani::proof]
     #[kani::unwind(32)]
     fn test_rx_batch_read() {
         let dev = get_initialized_device(InitMode::DontCare);
@@ -807,6 +832,28 @@ mod tests {
         );
         mem::forget(pkts);
     }
+
+    #[kani::proof]
+    #[kani::unwind(32)]
+    fn test_tx_batch_tdt_invariant() {
+        let dev = get_initialized_device(InitMode::DontCare);
+
+        let mut pkts = VecDeque::new();
+        let pkt_len = kani::any();
+        kani::assume(pkt_len < 1500);
+        alloc_pkt_batch(&dev.pool, &mut pkts, BATCH_SIZE, pkt_len);
+
+        dev.tx_batch(&mut pkts, BATCH_SIZE);
+
+        let tdt = dev.bar0.rdt(0).read().rdt();
+        let tx_queue = dev.rx_queue.borrow_mut();
+        let tx_index = rx_queue.rx_index;
+        tx::tdt_invariant(tdt, tx_index, &Mode::Assert);
+
+        // Dropping the buffer seems to confuse kani, we thus leak it for now
+        mem::forget(buffer);
+    }
+
 
     #[kani::proof]
     #[kani::unwind(32)]
