@@ -188,7 +188,6 @@ mod tests {
                 Mode::Assert => {
                     let lower = unsafe { desc_mem.read() };
                     let pba_ptr = lower as *mut u8;
-                    // TODO: This is technically an over estimation
                     let pba_mtu_ptr = unsafe { pba_ptr.add(1500) }; // At least MTU size
                     unsafe { pba_ptr.read() };
                     unsafe { pba_mtu_ptr.read() };
@@ -427,7 +426,6 @@ mod tests {
         // TODO: I guess this will cause us to go OOM in some situations
         let free_bufs: Vec<usize> = ((num_rx_used + num_tx_used)..(queue_len as usize)).collect();
 
-        // TODO: get this from the device
         let tx_size = NUM_TX_QUEUE_ENTRIES as usize * mem::size_of::<[u64; 2]>();
         let ma_flags = MaFlags::PINNED | MaFlags::CONTINUOUS;
         let map_flags = DsMapFlags::RW;
@@ -475,7 +473,6 @@ mod tests {
         match init_mode {
             InitMode::RxNonempty(pkt_len) => {
                 kani::assume(rx_index != rdh);
-                // TODO duplication with valid_adv_rx_wb
                 let idx = rx_index;
                 let offset = idx as usize * std::mem::size_of::<[u64; 2]>();
                 let desc_mem = unsafe { rx_mem.ptr().add(offset) } as *mut u64;
@@ -661,9 +658,6 @@ mod tests {
     #[kani::stub(std::thread::sleep, mock_sleep)]
     #[kani::stub(verix_lib::dma::DmaMemory::memset, mock_memset)]
     fn test_setup_tx_wb() {
-        // TODO: It would be cool if we had a version that doesn't do assertions
-        // such that we can skip the validation of the device here since we call setup_dev in
-        // multiple locations
         let dev = setup_dev();
         let tx_queue = dev.tx_queue.borrow_mut();
         let descq_addr = tx_queue.descriptors.ptr();

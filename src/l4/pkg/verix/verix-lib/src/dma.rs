@@ -1,5 +1,3 @@
-// TODO: maybe this fits into pc-hal-utils we will see
-
 use std::collections::VecDeque;
 use std::fmt;
 use std::fmt::Debug;
@@ -97,7 +95,6 @@ where
         }
     }
 
-    // TODO: we do not necessarily have to memset everything, just the mapped chunk...
     pub fn memset(&mut self, val: u8) {
         for i in 0..self.size {
             unsafe { self.write8(i, val) }
@@ -135,7 +132,6 @@ where
             num_entries,
             entry_size
         );
-        // TODO: ixy allows the OS to be non contigious here, if i figure out how to tell L4 to translate arbitrary addresses we can do that
         let mut mem: DmaMemory<E, Dma, MM> = DmaMemory::new(num_entries * entry_size, space, true)?;
 
         // Clear the memory to a defined initial state
@@ -211,7 +207,6 @@ where
     }
 }
 
-// TODO: dedup
 impl<E, Dma, MM> RxQueue<E, Dma, MM>
 where
     MM: pc_hal::traits::MappableMemory<Error = E, DmaSpace = Dma>,

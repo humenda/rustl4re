@@ -94,7 +94,6 @@ where
             if f(self) {
                 return;
             }
-            // TODO: make this sleep high enough such that the driver consistently works
             thread::sleep(Duration::from_millis(100));
         }
         panic!("Wait limit exceeded");
@@ -166,7 +165,6 @@ where
         // section 4.6.8 - init tx
         let mut tx_queue = self.init_tx()?;
 
-        // TODO: is this required?
         enable_bus_master(&mut self.device)?;
 
         self.start_rx_queue(&mut rx_queue, &mempool)?;
@@ -532,8 +530,6 @@ where
         rx_index = queue.rx_index;
         last_rx_index = queue.rx_index;
 
-        // TODO: wait for interrupt on our queue
-
         for i in 0..num_packets {
             let descriptor_ptr = queue.nth_descriptor_ptr(rx_index);
             let desc = dev::Descriptors::adv_rx_desc_wb::new(descriptor_ptr);
@@ -547,8 +543,6 @@ where
                 panic!("increase buffer size or decrease MTU")
             }
 
-            // TODO: can we get bulk allocation going here?
-            // get a free buffer from the mempool
             if let Some(buf) = pool.alloc_buf() {
                 // replace currently used buffer with new buffer
                 let buf = mem::replace(&mut queue.bufs_in_use[rx_index], buf);
@@ -600,12 +594,6 @@ where
         let clean_index = clean_tx_queue(&mut queue, pool);
 
         while let Some(mut packet) = buffer.pop_front() {
-            // TODO
-            //assert!(
-            //    queue.contains(&packet),
-            //    "distinct memory pools for a single tx queue are not supported yet"
-            //);
-
             let next_index = wrap_ring(cur_index, queue.num_descriptors.into());
 
             if clean_index == next_index {
@@ -623,8 +611,6 @@ where
                 .write(|w| w.address(packet.get_device_addr() as u64));
             desc.upper().write(|w| {
                 w.paylen(packet.len() as u32)
-                    // TODO: Maybe change this to PKT_BUF_ENTRY_SIZE, I need hardware access to
-                    // verify this is correct
                     .dtalen(packet.len() as u16)
                     .eop(1)
                     .rs(1)

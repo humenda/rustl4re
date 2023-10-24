@@ -386,7 +386,6 @@ impl IoMemInner {
                     assert!(self.mmio.rttup2tc.up5map() == 0);
                     assert!(self.mmio.rttup2tc.up6map() == 0);
                     assert!(self.mmio.rttup2tc.up7map() == 0);
-                    // TODO: there is a bunch more stuff to assert here in principle, but it is all covered by default values anyways
 
                     // We don't want to do jumbo or linksec so we can ignore the jumbo field
                     // We are also not interested in receive coalescing for now.
@@ -665,7 +664,6 @@ impl IoMemInner {
             IXGBE_LINKS => {
                 assert!(InitializationState::WaitLink <= self.init_state);
                 if self.links_reads.reads > self.links_reads.limit.into() {
-                    // TODO
                     self.mmio.links.set_link_status(true);
                     self.mmio.links.set_teng_ser_en(true);
                     self.mmio.links.set_mlink_mode(0b10);
