@@ -381,7 +381,9 @@ mod tests {
     enum InitMode {
         DontCare,
         RxNonempty(u16),
+        RxEmpty,
         TxNotFull,
+        TxFull,
     }
 
     fn get_initialized_device(
@@ -484,8 +486,14 @@ mod tests {
                 // as wb descs we only read one due to our batch size of 1. Hence
                 // it is fine to only set up this one for verification purposes
             }
+            InitMode::RxEmpty => {
+                kani::assume(rdh == (rdt + 1) % NUM_RX_QUEUE_ENTRIES);
+            }
             InitMode::TxNotFull => {
                 kani::assume(tdh != tdt);
+            }
+            InitMode::TxFull => {
+                kani::assume(tdh == (tdt + 1) % NUM_TX_QUEUE_ENTRIES);
             }
             _ => {}
         }
@@ -857,6 +865,25 @@ mod tests {
 
     #[kani::proof]
     #[kani::unwind(9)]
+    fn test_rx_batch_empty() {
+        let pkt_len = kani::any::<u16>();
+        kani::assume(pkt_len >= 64);
+        kani::assume(pkt_len <= 1500);
+
+        let dev = get_initialized_device(InitMode::RxEmpty);
+
+        let mut buffer = VecDeque::with_capacity(BATCH_SIZE);
+        let num_rx = dev.rx_batch(&mut buffer, BATCH_SIZE);
+
+        // We receive nothing
+        assert!(num_rx == 0);
+
+        // Dropping the buffer seems to confuse kani, we thus leak it for now
+        mem::forget(buffer);
+    }
+
+    #[kani::proof]
+    #[kani::unwind(9)]
     // We don't clean in kani as the symex gets confused in the allocator
     #[kani::stub(verix_lib::init::clean_tx_queue, mock_clean)]
     fn test_tx_batch_notfull() {
@@ -870,6 +897,25 @@ mod tests {
 
         let num_tx = dev.tx_batch(&mut pkts, BATCH_SIZE);
         assert!(num_tx == BATCH_SIZE);
+
+        mem::forget(pkts);
+    }
+
+    #[kani::proof]
+    #[kani::unwind(9)]
+    // We don't clean in kani as the symex gets confused in the allocator
+    #[kani::stub(verix_lib::init::clean_tx_queue, mock_clean)]
+    fn test_tx_batch_full() {
+        let dev = get_initialized_device(InitMode::TxFull);
+
+        let mut pkts = VecDeque::new();
+        let pkt_len = kani::any();
+        kani::assume(pkt_len >= 64);
+        kani::assume(pkt_len <= 1500);
+        alloc_pkt_batch(&dev.pool, &mut pkts, BATCH_SIZE, pkt_len);
+
+        let num_tx = dev.tx_batch(&mut pkts, BATCH_SIZE);
+        assert!(num_tx == 0);
 
         mem::forget(pkts);
     }
