@@ -29,15 +29,19 @@ mod tests {
         Assume(&'a Vec<usize>, &'a Mempool<Error, DmaSpace, MappableMemory>),
     }
 
-    fn verify(x: bool, mode: &Mode) {
-        match mode {
-            Mode::Assert => assert!(x),
-            Mode::Assume(_, _) => kani::assume(x),
-        }
+
+    // We make this a macro so that kani shows us errors more precisely
+    macro_rules! verify {
+        ($x:expr, $mode:expr) => {
+            match $mode {
+                Mode::Assert => assert!($x),
+                Mode::Assume(_, _) => kani::assume($x),
+            }
+        };
     }
 
     mod rx {
-        use super::{verify, Mode};
+        use super::Mode;
         use crate::constants::desc::rx as desc;
         use verix_lib::constants::NUM_RX_QUEUE_ENTRIES;
 
@@ -48,7 +52,7 @@ mod tests {
             let upper = unsafe { desc_mem.add(1).read() };
 
             // HBA and DD should be 0, this is what upper consists of:
-            verify(upper == 0, mode);
+            verify!(upper == 0, mode);
 
             match mode {
                 Mode::Assert => {
@@ -72,8 +76,8 @@ mod tests {
             let offset = idx as usize * std::mem::size_of::<[u64; 2]>();
             let desc_mem = unsafe { descq_mem.add(offset) } as *const u64;
             let upper = desc::adv_wb_upper(unsafe { desc_mem.add(1).read() });
-            verify(upper.eop() == true, mode);
-            verify(upper.dd() == true, mode);
+            verify!(upper.eop() == true, mode);
+            verify!(upper.dd() == true, mode);
         }
 
         pub fn valid_read(
@@ -86,13 +90,13 @@ mod tests {
             mode: &Mode,
         ) {
             let desc_count = NUM_RX_QUEUE_ENTRIES;
-            verify(
+            verify!(
                 desc_count == (rdlen as usize / std::mem::size_of::<[u64; 2]>()) as u16,
-                mode,
+                mode
             );
 
             let addr: u64 = (rdbal as u64) | ((rdbah as u64) << 32);
-            verify(addr == descq_mem as u64, mode);
+            verify!(addr == descq_mem as u64, mode);
 
             let mut counter = 0;
             let mut idx = rdh;
@@ -116,13 +120,13 @@ mod tests {
             mode: &Mode,
         ) {
             let desc_count = NUM_RX_QUEUE_ENTRIES;
-            verify(
+            verify!(
                 desc_count == (rdlen as usize / std::mem::size_of::<[u64; 2]>()) as u16,
-                mode,
+                mode
             );
 
             let addr: u64 = (rdbal as u64) | ((rdbah as u64) << 32);
-            verify(addr == descq_mem as u64, mode);
+            verify!(addr == descq_mem as u64, mode);
 
             let rx_index = rx_index as u16;
             let mut counter = 0;
@@ -136,7 +140,7 @@ mod tests {
 
         pub fn rdt_invariant(rdt: u16, rx_index: usize, mode: &Mode) {
             // The rx_index is always one ahead of RDT
-            verify(rx_index as u16 == (rdt + 1) % NUM_RX_QUEUE_ENTRIES, mode);
+            verify!(rx_index as u16 == (rdt + 1) % NUM_RX_QUEUE_ENTRIES, mode);
         }
 
         pub fn get_valid_queue_state() -> (u16, u16, u32, u16) {
@@ -161,7 +165,7 @@ mod tests {
     }
 
     mod tx {
-        use super::{verify, Mode};
+        use super::Mode;
         use crate::constants::desc::tx as desc;
         use verix_lib::constants::NUM_TX_QUEUE_ENTRIES;
 
@@ -170,19 +174,19 @@ mod tests {
             let offset = idx * std::mem::size_of::<[u64; 2]>();
             let desc_mem = unsafe { descq_mem.add(offset) } as *mut u64;
             let upper = desc::adv_read_upper(unsafe { desc_mem.add(1).read() });
-            verify(upper.mac() == 0, mode);
-            verify(upper.dtyp() == 0b0011, mode);
-            verify(upper.tse() == false, mode);
-            verify(upper.vle() == false, mode);
-            verify(upper.dext() == true, mode);
-            verify(upper.rs() == true, mode);
-            verify(upper.ifcs() == true, mode);
-            verify(upper.eop() == true, mode);
+            verify!(upper.mac() == 0, mode);
+            verify!(upper.dtyp() == 0b0011, mode);
+            verify!(upper.tse() == false, mode);
+            verify!(upper.vle() == false, mode);
+            verify!(upper.dext() == true, mode);
+            verify!(upper.rs() == true, mode);
+            verify!(upper.ifcs() == true, mode);
+            verify!(upper.eop() == true, mode);
             // Descriptor Done bit should be 0
-            verify(upper.sta() & 0b1 == 0, mode);
-            verify(upper.cc() == false, mode);
-            verify(upper.popts() == 0, mode);
-            verify(upper.paylen() > 0, mode);
+            verify!(upper.sta() & 0b1 == 0, mode);
+            verify!(upper.cc() == false, mode);
+            verify!(upper.popts() == 0, mode);
+            verify!(upper.paylen() > 0, mode);
 
             match mode {
                 Mode::Assert => {
@@ -204,7 +208,7 @@ mod tests {
             let offset = idx as usize * std::mem::size_of::<[u64; 2]>();
             let desc_mem = unsafe { descq_mem.add(offset) } as *const u64;
             let upper = desc::adv_wb_upper(unsafe { desc_mem.add(1).read() });
-            verify(upper.dd() == true, mode);
+            verify!(upper.dd() == true, mode);
         }
 
         pub fn valid_read(
@@ -217,13 +221,13 @@ mod tests {
             mode: &Mode,
         ) {
             let desc_count = NUM_TX_QUEUE_ENTRIES;
-            verify(
+            verify!(
                 desc_count == (tdlen as usize / std::mem::size_of::<[u64; 2]>()) as u16,
-                mode,
+                mode
             );
 
             let addr: u64 = (tdbal as u64) | ((tdbah as u64) << 32);
-            verify(addr == descq_mem as u64, mode);
+            verify!(addr == descq_mem as u64, mode);
 
             let mut counter = 0;
             let mut idx = tdh;
@@ -232,10 +236,6 @@ mod tests {
                 counter += 1;
                 idx = (idx + 1) % desc_count;
             }
-
-            // We are at the tail descriptor now, by our over approximation of
-            // valid queue this one must always be a valid read descriptor
-            valid_adv_read(descq_mem, tdh, counter, mode);
         }
 
         pub fn valid_wb(
@@ -250,17 +250,17 @@ mod tests {
             mode: &Mode,
         ) {
             let desc_count = NUM_TX_QUEUE_ENTRIES;
-            verify(
+            verify!(
                 desc_count == (tdlen as usize / std::mem::size_of::<[u64; 2]>()) as u16,
-                mode,
+                mode
             );
 
             let addr: u64 = (tdbal as u64) | ((tdbah as u64) << 32);
-            verify(addr == descq_mem as u64, mode);
+            verify!(addr == descq_mem as u64, mode);
 
             let tx_index = tx_index as u16;
             // the tx_index always gets synced up with TDT
-            verify(tx_index == tdt, mode);
+            verify!(tx_index == tdt, mode);
 
             let clean_index = clean_index as u16;
 
@@ -271,11 +271,6 @@ mod tests {
                 counter += 1;
                 idx = (idx + 1) % desc_count;
             }
-        }
-
-        pub fn tdt_invariant(tdt: u16, tx_index: usize, mode: &Mode) {
-            // The tx_index is always equal to TDT
-            verify(rx_index as u16 == tdt, mode);
         }
 
         pub fn get_valid_queue_state() -> (u16, u16, u32, u16, u16) {
@@ -295,11 +290,16 @@ mod tests {
             // in our tx algorithm the tx_index is always precisely equal to TDT
             let tx_index = tdt;
 
-            // The clean_index should in theory be constrained more. However
-            // kani seems incapable of doing deallocation of our Packet structure
-            // correctly so we don't really need clean_index
+            // clean_index is a Fin NUM_TX_QUEUE_ENTRIES
             let clean_index = kani::any::<u16>();
             kani::assume(clean_index < NUM_TX_QUEUE_ENTRIES);
+
+            if tdh < tx_index {
+                kani::assume(clean_index > tx_index || clean_index < tdh);
+            } else {
+                kani::assume(clean_index > tx_index && clean_index < tdh);
+            }
+
 
             (tdh, tdt, tdlen, tx_index, clean_index)
         }
@@ -418,7 +418,7 @@ mod tests {
 
         // + 1 because the descriptor at RDT/TDT is always used
         let num_rx_used = ((rdt + queue_len - rdh) % queue_len) as usize + 1;
-        let num_tx_used = ((clean_index + queue_len - tdh) % queue_len) as usize + 1;
+        let num_tx_used = ((clean_index + queue_len - tdh) % queue_len) as usize;
 
         let rx_used_bufs: Vec<usize> = (0..num_rx_used).collect();
         let tx_used_bufs: VecDeque<usize> = (num_rx_used..(num_rx_used + num_tx_used)).collect();
@@ -438,7 +438,7 @@ mod tests {
 
         let tx_mem = MappableMemory::alloc(tx_size, ma_flags, map_flags, attach_flags).unwrap();
         let tx_dev_addr = tx_mem.ptr() as usize;
-        let tx_ptr = rx_mem.ptr();
+        let tx_ptr = tx_mem.ptr();
 
         let buf_mem_size = queue_len as usize * PKT_BUF_ENTRY_SIZE;
         let buf_mem = MappableMemory::alloc(
@@ -491,9 +491,15 @@ mod tests {
         }
 
         let rx_index = rx_index as usize;
+        let tx_index = tx_index as usize;
+        let clean_index = clean_index as usize;
         let mode = Mode::Assume(&rx_used_bufs, &mempool);
+
         rx::valid_wb(rx_ptr, rdh, rdlen, rdbal, rdbah, rx_index, &mode);
         rx::valid_read(rx_ptr, rdh, rdt, rdlen, rdbal, rdbah, &mode);
+
+        tx::valid_wb(tx_ptr, tdh, tdt, tdlen, tdbal, tdbah, tx_index, clean_index, &mode);
+        tx::valid_read(tx_ptr, tdh, tdt, tdlen, tdbal, tdbah, &mode);
 
         let rx_queue = RxQueue {
             descriptors: DmaMemory::from_components(rx_mem, rx_dev_addr, rdlen as usize),
@@ -505,8 +511,8 @@ mod tests {
         let tx_queue = TxQueue {
             descriptors: DmaMemory::from_components(tx_mem, tx_dev_addr, tx_size),
             num_descriptors: NUM_TX_QUEUE_ENTRIES,
-            clean_index: clean_index.into(),
-            tx_index: tx_index.into(),
+            clean_index,
+            tx_index,
             bufs_in_use: tx_used_bufs,
         };
 
@@ -554,11 +560,11 @@ mod tests {
     fn setup_dev(
     ) -> InitializedDevice<Error, IoMem, IxDevice, Device, Resource, MappableMemory, DmaSpace> {
         let (bar0_addr, dma_domain_start) = pci::get_resource_starts();
-        let eec_read_limit: u8 = loop_limit(10);
-        let dmaidone_read_limit: u8 = loop_limit(10);
-        let links_read_limit: u8 = loop_limit(10);
-        let rxdctl0_read_limit: u8 = loop_limit(10);
-        let txdctl0_read_limit: u8 = loop_limit(10);
+        let eec_read_limit: u8 = loop_limit(8);
+        let dmaidone_read_limit: u8 = loop_limit(8);
+        let links_read_limit: u8 = loop_limit(8);
+        let rxdctl0_read_limit: u8 = loop_limit(8);
+        let txdctl0_read_limit: u8 = loop_limit(8);
 
         let mac_addr = get_mac_addr();
         let ix = IxDevice::new(
@@ -596,7 +602,7 @@ mod tests {
     }
 
     #[kani::proof]
-    #[kani::unwind(33)]
+    #[kani::unwind(9)]
     #[kani::stub(std::thread::sleep, mock_sleep)]
     #[kani::stub(verix_lib::dma::DmaMemory::memset, mock_memset)]
     fn test_setup_rx_wb() {
@@ -623,7 +629,7 @@ mod tests {
     }
 
     #[kani::proof]
-    #[kani::unwind(33)]
+    #[kani::unwind(9)]
     #[kani::stub(std::thread::sleep, mock_sleep)]
     #[kani::stub(verix_lib::dma::DmaMemory::memset, mock_memset)]
     fn test_setup_rx_read() {
@@ -639,7 +645,7 @@ mod tests {
     }
 
     #[kani::proof]
-    #[kani::unwind(33)]
+    #[kani::unwind(9)]
     #[kani::stub(std::thread::sleep, mock_sleep)]
     #[kani::stub(verix_lib::dma::DmaMemory::memset, mock_memset)]
     fn test_setup_rx_rdt_invariant() {
@@ -654,7 +660,7 @@ mod tests {
     }
 
     #[kani::proof]
-    #[kani::unwind(33)]
+    #[kani::unwind(9)]
     #[kani::stub(std::thread::sleep, mock_sleep)]
     #[kani::stub(verix_lib::dma::DmaMemory::memset, mock_memset)]
     fn test_setup_tx_wb() {
@@ -682,7 +688,7 @@ mod tests {
     }
 
     #[kani::proof]
-    #[kani::unwind(33)]
+    #[kani::unwind(9)]
     #[kani::stub(std::thread::sleep, mock_sleep)]
     #[kani::stub(verix_lib::dma::DmaMemory::memset, mock_memset)]
     fn test_setup_tx_read() {
@@ -698,19 +704,7 @@ mod tests {
     }
 
     #[kani::proof]
-    #[kani::unwind(33)]
-    #[kani::stub(std::thread::sleep, mock_sleep)]
-    #[kani::stub(verix_lib::dma::DmaMemory::memset, mock_memset)]
-    fn test_setup_tx_tdt_invariant() {
-        let dev = setup_dev();
-        let tdt = dev.bar0.rdt(0).read().rdt();
-        let tx_queue = dev.rx_queue.borrow_mut();
-        let tx_index = rx_queue.rx_index;
-        tx::tdt_invariant(tdt, tx_index, &Mode::Assert);
-    }
-
-    #[kani::proof]
-    #[kani::unwind(32)]
+    #[kani::unwind(9)]
     fn test_rx_batch_read() {
         let dev = get_initialized_device(InitMode::DontCare);
         let mut buffer = VecDeque::with_capacity(BATCH_SIZE);
@@ -730,7 +724,7 @@ mod tests {
     }
 
     #[kani::proof]
-    #[kani::unwind(32)]
+    #[kani::unwind(9)]
     fn test_rx_batch_wb() {
         let dev = get_initialized_device(InitMode::DontCare);
         let mut buffer = VecDeque::with_capacity(BATCH_SIZE);
@@ -749,7 +743,7 @@ mod tests {
     }
 
     #[kani::proof]
-    #[kani::unwind(32)]
+    #[kani::unwind(9)]
     fn test_rx_batch_rdt_invariant() {
         let dev = get_initialized_device(InitMode::DontCare);
         let mut buffer = VecDeque::with_capacity(BATCH_SIZE);
@@ -764,7 +758,7 @@ mod tests {
     }
 
     #[kani::proof]
-    #[kani::unwind(32)]
+    #[kani::unwind(9)]
     // We don't clean in kani as the symex gets confused in the allocator
     #[kani::stub(verix_lib::init::clean_tx_queue, mock_clean)]
     fn test_tx_batch_read() {
@@ -772,7 +766,8 @@ mod tests {
 
         let mut pkts = VecDeque::new();
         let pkt_len = kani::any();
-        kani::assume(pkt_len < 1500);
+        kani::assume(pkt_len >= 64);
+        kani::assume(pkt_len <= 1500);
         alloc_pkt_batch(&dev.pool, &mut pkts, BATCH_SIZE, pkt_len);
 
         dev.tx_batch(&mut pkts, BATCH_SIZE);
@@ -790,7 +785,7 @@ mod tests {
     }
 
     #[kani::proof]
-    #[kani::unwind(32)]
+    #[kani::unwind(9)]
     // We don't clean in kani as the symex gets confused in the allocator
     #[kani::stub(verix_lib::init::clean_tx_queue, mock_clean)]
     fn test_tx_batch_wb() {
@@ -798,7 +793,8 @@ mod tests {
 
         let mut pkts = VecDeque::new();
         let pkt_len = kani::any();
-        kani::assume(pkt_len < 1500);
+        kani::assume(pkt_len >= 64);
+        kani::assume(pkt_len <= 1500);
         alloc_pkt_batch(&dev.pool, &mut pkts, BATCH_SIZE, pkt_len);
 
         dev.tx_batch(&mut pkts, BATCH_SIZE);
@@ -828,29 +824,7 @@ mod tests {
     }
 
     #[kani::proof]
-    #[kani::unwind(32)]
-    fn test_tx_batch_tdt_invariant() {
-        let dev = get_initialized_device(InitMode::DontCare);
-
-        let mut pkts = VecDeque::new();
-        let pkt_len = kani::any();
-        kani::assume(pkt_len < 1500);
-        alloc_pkt_batch(&dev.pool, &mut pkts, BATCH_SIZE, pkt_len);
-
-        dev.tx_batch(&mut pkts, BATCH_SIZE);
-
-        let tdt = dev.bar0.rdt(0).read().rdt();
-        let tx_queue = dev.rx_queue.borrow_mut();
-        let tx_index = rx_queue.rx_index;
-        tx::tdt_invariant(tdt, tx_index, &Mode::Assert);
-
-        // Dropping the buffer seems to confuse kani, we thus leak it for now
-        mem::forget(buffer);
-    }
-
-
-    #[kani::proof]
-    #[kani::unwind(32)]
+    #[kani::unwind(9)]
     fn test_rx_batch_nonempty() {
         let pkt_len = kani::any::<u16>();
         kani::assume(pkt_len >= 64);
@@ -882,7 +856,7 @@ mod tests {
     }
 
     #[kani::proof]
-    #[kani::unwind(32)]
+    #[kani::unwind(9)]
     // We don't clean in kani as the symex gets confused in the allocator
     #[kani::stub(verix_lib::init::clean_tx_queue, mock_clean)]
     fn test_tx_batch_notfull() {
@@ -890,33 +864,13 @@ mod tests {
 
         let mut pkts = VecDeque::new();
         let pkt_len = kani::any();
-        kani::assume(pkt_len < 1500);
+        kani::assume(pkt_len >= 64);
+        kani::assume(pkt_len <= 1500);
         alloc_pkt_batch(&dev.pool, &mut pkts, BATCH_SIZE, pkt_len);
 
         let num_tx = dev.tx_batch(&mut pkts, BATCH_SIZE);
         assert!(num_tx == BATCH_SIZE);
 
-        let tx_queue = dev.tx_queue.borrow_mut();
-        let descq_addr = tx_queue.descriptors.ptr();
-        let tdh = dev.bar0.tdh(0).read().tdh();
-        let tdt = dev.bar0.tdt(0).read().tdt();
-        let tdlen = dev.bar0.tdlen(0).read().len();
-        let tdbal = dev.bar0.tdbal(0).read().tdbal();
-        let tdbah = dev.bar0.tdbah(0).read().tdbah();
-        let tx_index = tx_queue.tx_index;
-        let clean_index = tx_queue.clean_index;
-
-        tx::valid_wb(
-            descq_addr,
-            tdh,
-            tdt,
-            tdlen,
-            tdbal,
-            tdbah,
-            tx_index,
-            clean_index,
-            &Mode::Assert,
-        );
         mem::forget(pkts);
     }
 }

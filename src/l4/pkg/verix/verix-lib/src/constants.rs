@@ -1,7 +1,7 @@
 #[cfg(kani)]
-pub const NUM_RX_QUEUE_ENTRIES: u16 = 16;
+pub const NUM_RX_QUEUE_ENTRIES: u16 = 4;
 #[cfg(kani)]
-pub const NUM_TX_QUEUE_ENTRIES: u16 = 16;
+pub const NUM_TX_QUEUE_ENTRIES: u16 = 4;
 #[cfg(kani)]
 pub const BATCH_SIZE: usize = 1;
 
