@@ -610,7 +610,7 @@ mod tests {
     }
 
     #[kani::proof]
-    #[kani::unwind(9)]
+    #[kani::unwind(33)]
     #[kani::stub(std::thread::sleep, mock_sleep)]
     #[kani::stub(verix_lib::dma::DmaMemory::memset, mock_memset)]
     fn test_setup_rx_wb() {
@@ -637,7 +637,7 @@ mod tests {
     }
 
     #[kani::proof]
-    #[kani::unwind(9)]
+    #[kani::unwind(33)]
     #[kani::stub(std::thread::sleep, mock_sleep)]
     #[kani::stub(verix_lib::dma::DmaMemory::memset, mock_memset)]
     fn test_setup_rx_read() {
@@ -653,7 +653,7 @@ mod tests {
     }
 
     #[kani::proof]
-    #[kani::unwind(9)]
+    #[kani::unwind(33)]
     #[kani::stub(std::thread::sleep, mock_sleep)]
     #[kani::stub(verix_lib::dma::DmaMemory::memset, mock_memset)]
     fn test_setup_rx_rdt_invariant() {
@@ -668,7 +668,7 @@ mod tests {
     }
 
     #[kani::proof]
-    #[kani::unwind(9)]
+    #[kani::unwind(33)]
     #[kani::stub(std::thread::sleep, mock_sleep)]
     #[kani::stub(verix_lib::dma::DmaMemory::memset, mock_memset)]
     fn test_setup_tx_wb() {
@@ -696,7 +696,7 @@ mod tests {
     }
 
     #[kani::proof]
-    #[kani::unwind(9)]
+    #[kani::unwind(33)]
     #[kani::stub(std::thread::sleep, mock_sleep)]
     #[kani::stub(verix_lib::dma::DmaMemory::memset, mock_memset)]
     fn test_setup_tx_read() {
@@ -712,7 +712,7 @@ mod tests {
     }
 
     #[kani::proof]
-    #[kani::unwind(9)]
+    #[kani::unwind(33)]
     fn test_rx_batch_read() {
         let dev = get_initialized_device(InitMode::DontCare);
         let mut buffer = VecDeque::with_capacity(BATCH_SIZE);
@@ -732,7 +732,7 @@ mod tests {
     }
 
     #[kani::proof]
-    #[kani::unwind(9)]
+    #[kani::unwind(33)]
     fn test_rx_batch_wb() {
         let dev = get_initialized_device(InitMode::DontCare);
         let mut buffer = VecDeque::with_capacity(BATCH_SIZE);
@@ -751,7 +751,7 @@ mod tests {
     }
 
     #[kani::proof]
-    #[kani::unwind(9)]
+    #[kani::unwind(33)]
     fn test_rx_batch_rdt_invariant() {
         let dev = get_initialized_device(InitMode::DontCare);
         let mut buffer = VecDeque::with_capacity(BATCH_SIZE);
@@ -766,7 +766,7 @@ mod tests {
     }
 
     #[kani::proof]
-    #[kani::unwind(9)]
+    #[kani::unwind(33)]
     // We don't clean in kani as the symex gets confused in the allocator
     #[kani::stub(verix_lib::init::clean_tx_queue, mock_clean)]
     fn test_tx_batch_read() {
@@ -793,7 +793,7 @@ mod tests {
     }
 
     #[kani::proof]
-    #[kani::unwind(9)]
+    #[kani::unwind(33)]
     // We don't clean in kani as the symex gets confused in the allocator
     #[kani::stub(verix_lib::init::clean_tx_queue, mock_clean)]
     fn test_tx_batch_wb() {
@@ -832,7 +832,7 @@ mod tests {
     }
 
     #[kani::proof]
-    #[kani::unwind(9)]
+    #[kani::unwind(33)]
     fn test_rx_batch_nonempty() {
         let pkt_len = kani::any::<u16>();
         kani::assume(pkt_len >= 64);
@@ -864,7 +864,7 @@ mod tests {
     }
 
     #[kani::proof]
-    #[kani::unwind(9)]
+    #[kani::unwind(33)]
     fn test_rx_batch_empty() {
         let pkt_len = kani::any::<u16>();
         kani::assume(pkt_len >= 64);
@@ -883,7 +883,7 @@ mod tests {
     }
 
     #[kani::proof]
-    #[kani::unwind(9)]
+    #[kani::unwind(33)]
     // We don't clean in kani as the symex gets confused in the allocator
     #[kani::stub(verix_lib::init::clean_tx_queue, mock_clean)]
     fn test_tx_batch_notfull() {
@@ -902,7 +902,7 @@ mod tests {
     }
 
     #[kani::proof]
-    #[kani::unwind(9)]
+    #[kani::unwind(33)]
     // We don't clean in kani as the symex gets confused in the allocator
     #[kani::stub(verix_lib::init::clean_tx_queue, mock_clean)]
     fn test_tx_batch_full() {
