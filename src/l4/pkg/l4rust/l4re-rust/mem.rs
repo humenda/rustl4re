@@ -7,168 +7,212 @@ use l4::{
 };
 use l4_derive::{iface, l4_client};
 use super::sys::L4ReProtocols::L4RE_PROTO_DATASPACE;
+use l4::Error;
+use l4::Result;
+use l4::cap::CapIdx;
+use l4::cap::Interface;
+use l4::task::THIS_TASK;
+use l4::ipc::MsgTag;
+use bitflags::bitflags;
+use crate::factory::DmaSpace;
+use crate::sys::l4re_ma_alloc;
+use crate::sys::l4re_ds_map_flags::*;
+use crate::sys::l4re_ma_flags::*;
+use crate::sys::l4re_rm_flags_values::*;
+use crate::sys::l4re_rm_attach;
+use crate::sys::l4re_rm_detach;
+use crate::sys::L4_fpage_rights::L4_FPAGE_RWX;
+use crate::sys::l4_msg_item_consts_t::L4_MAP_ITEM_MAP;
+use l4_sys::l4re_util_cap_alloc;
+use l4_sys::l4_error_code_t::L4_EOK;
+use l4_sys::{L4_PAGESHIFT, L4_SUPERPAGESHIFT};
+use l4_sys::l4_task_map;
+use l4_sys::l4_msg_item_consts_t::*;
+use l4_sys::l4_map_obj_control;
+use l4_sys::L4_fpage_rights::*;
+use l4_sys::l4_fpage_w;
 
-const PROTO_DATASPACE: i64 = L4RE_PROTO_DATASPACE as i64;
+use core::ffi::c_void;
+use core::marker::PhantomData;
 
-/// Information about the dataspace
-#[repr(C)]
-#[derive(Clone)]
-pub struct DsStats {
-    /// size of dataspace
-    pub size: u64,
-    /// dataspace flags
-    pub flags: u64,
+use crate::OwnedCap;
+
+// TODO: This file shows that the OwnedCap abstraction doesn't compose well, fix it
+#[derive(Debug)]
+pub struct Dataspace {
+    cap : CapIdx,
+    size: usize,
+    pageshift: usize
 }
 
-// the struct is #[repr(C)] and hence the default implementation can be used
-unsafe impl l4::ipc::Serialisable for DsStats { }
-unsafe impl l4::ipc::Serialiser for DsStats {
+pub struct AttachedDataspace {
+    cap: OwnedCap<Dataspace>,
+    ptr: *mut u8,
+}
+
+pub trait VolatileMemoryInterface {
+    fn ptr(&self) -> *mut u8;
+
+    fn write8(&mut self, offset: usize, val: u8) {
+        unsafe { core::ptr::write_volatile(self.ptr().add(offset), val) }
+    }
+
+    fn write16(&mut self, offset: usize, val: u16) {
+        unsafe { core::ptr::write_volatile(self.ptr().add(offset) as *mut u16, val) }
+    }
+
+    fn write32(&mut self, offset: usize, val: u32) {
+        unsafe { core::ptr::write_volatile(self.ptr().add(offset) as *mut u32, val) }
+    }
+
+    fn write64(&mut self, offset: usize, val: u64) {
+        unsafe { core::ptr::write_volatile(self.ptr().add(offset) as *mut u64, val) }
+    }
+
+    fn read8(&self, offset: usize) -> u8 {
+        unsafe { core::ptr::read_volatile(self.ptr().add(offset)) }
+    }
+
+    fn read16(&self, offset: usize) -> u16 {
+        unsafe { core::ptr::read_volatile(self.ptr().add(offset) as *mut u16) }
+    }
+
+    fn read32(&self, offset: usize) -> u32 {
+        unsafe { core::ptr::read_volatile(self.ptr().add(offset) as *mut u32) }
+    }
+
+    fn read64(&self, offset: usize) -> u64 {
+        unsafe { core::ptr::read_volatile(self.ptr().add(offset) as *mut u64) }
+    }
+}
+
+bitflags! {
+    pub struct MaFlags : u64 {
+        const CONTINUOUS = L4RE_MA_CONTINUOUS as u64;
+        const PINNED = L4RE_MA_PINNED as u64;
+        const SUPER_PAGES = L4RE_MA_SUPER_PAGES as u64;
+    }
+}
+
+bitflags! {
+    pub struct DsMapFlags : u64 {
+        const R = L4RE_DS_F_R as u64;
+        const W = L4RE_DS_F_W as u64;
+        const X = L4RE_DS_F_X as u64;
+        const RW = L4RE_DS_F_RW as u64;
+        const RX = L4RE_DS_F_RX as u64;
+        const RWX = L4RE_DS_F_RWX as u64;
+        const RIGHTS_MASK = L4RE_DS_F_RIGHTS_MASK as u64;
+        const NORMAL = L4RE_DS_F_NORMAL as u64;
+        const BUFFERABLE = L4RE_DS_F_BUFFERABLE as u64;
+        const UNCACHEABLE = L4RE_DS_F_UNCACHEABLE as u64;
+        const CACHING_MASK = L4RE_DS_F_CACHING_MASK as u64;
+    }
+}
+
+bitflags! {
+    pub struct DsAttachFlags : u64 {
+        const SEARCH_ADDR =  L4RE_RM_F_SEARCH_ADDR as u64;
+        const IN_AREA = L4RE_RM_F_IN_AREA as u64;
+        const EAGER_MAP = L4RE_RM_F_EAGER_MAP as u64;
+    }
+}
+
+impl Interface for Dataspace {
     #[inline]
-    fn read(mr: &mut l4::utcb::UtcbMr, _: &mut l4::ipc::BufferAccess) -> l4::error::Result<Self> {
-        mr.read::<Self>() // most types are read from here
-    }
-
-    #[inline]
-    fn write(self, mr: &mut l4::utcb::UtcbMr) -> l4::error::Result<()> {
-        mr.write::<Self>(self)
+    fn raw(&self) -> CapIdx {
+        self.cap
     }
 }
 
-#[l4_client(DataspaceProvider)]
-pub struct Dataspace;
-
-/// used as return type for the **deprecated** phys() method of the DataspaceProvider trait
-#[derive(Clone)]
-#[repr(C)]
-pub struct DeprecatedPhys {
-    phys_addr: l4_addr_t,
-    phys_size: l4_size_t
-}
-unsafe impl l4::ipc::Serialisable for DeprecatedPhys { }
-unsafe impl l4::ipc::Serialiser for DeprecatedPhys {
-    #[inline]
-    fn read(mr: &mut l4::utcb::UtcbMr, _: &mut l4::ipc::BufferAccess) -> l4::error::Result<Self> {
-        mr.read::<Self>()
-    }
-
-    #[inline]
-    fn write(self, mr: &mut l4::utcb::UtcbMr) -> l4::error::Result<()> {
-        mr.write::<Self>(self)
+impl Drop for AttachedDataspace {
+    fn drop(&mut self) {
+        let err = unsafe { l4re_rm_detach(self.ptr as *mut c_void) };
+        if err < 0 {
+            Err(Error::from_ipc(err.into())).unwrap()
+        }
     }
 }
 
-// ToDo: this interface is not functional, the map operation is **broken**; it serves mostly as a
-// marker trait and needs to be fixed; only the info() operation is tested
-iface! {
-    trait DataspaceProvider {
-        const PROTOCOL_ID: i64 = PROTO_DATASPACE;
-        // ToDo: docs
-        fn map(&mut self, offset: l4_addr_t, spot: l4_addr_t, flags: u64,
-                r: FlexPage) -> Cap<Dataspace>;
+impl Dataspace {
+    pub fn alloc(size: usize, flags: MaFlags) -> Result<OwnedCap<Dataspace>> {
+        let cap = unsafe { l4re_util_cap_alloc() };
+        let err = unsafe { l4re_ma_alloc(size, cap, flags.bits() as u64) };
+        if err != 0 {
+            Err(Error::from_ipc(err.into()))
+        } else {
+            let has_super = flags.contains(MaFlags::SUPER_PAGES);
+            let pageshift = if has_super { L4_SUPERPAGESHIFT } else { L4_PAGESHIFT };
+            Ok(OwnedCap(Cap::from_raw(Dataspace {
+                cap,
+                size,
+                pageshift: pageshift as usize
+            })))
+        }
+    }
 
-        /// Clear parts of a dataspace.
-        ///
-        /// Clear region within dataspace. `offset` gives the offset within the
-        /// dataspace to mark the beginning and `offset + size` the end of the region.
-        /// The memory is either zeroed out or unmapped and replaced through a null
-        /// page mapping.
-        fn clear(&mut self, offset: usize, size: usize) -> ();
+    pub fn attach(space: OwnedCap<Dataspace>, map_flags: DsMapFlags, attach_flags: DsAttachFlags) -> Result<AttachedDataspace> {
+        let mut vaddr = core::ptr::null_mut();
+        let err = unsafe { l4re_rm_attach(
+            &mut vaddr as *mut *mut c_void,
+            space.size as u64,
+            map_flags.bits() as u64 | attach_flags.bits() as u64,
+            space.cap,
+            0,
+            space.pageshift as u8
+        ) };
 
-        /// Get information on the dataspace.
-        fn info(&mut self) -> DsStats;
-
-        /// Copy contents from another dataspace.
-        ///
-        /// The copy operation may use copy-on-write mechanisms. The operation may also fail if both
-        /// dataspaces are not from the same dataspace manager or the dataspace managers do not
-        /// cooperate.
-        fn copy_in(&mut self, dst_offset: l4_addr_t, src: Cap<Dataspace>,
-                src_offset: l4_addr_t, size: l4_addr_t) -> ();
-
-        /// Take operation.
-        /// **Deprecated**: Dataspaces exists as long as a capability on the dataspace exists.
-        fn take(&mut self, todo_delme: i32) -> ();
-
-        /// Release operation.
-        /// **Deprecated:** Dataspaces exist as long as a capability on the dataspace exists.
-        fn release(&mut self, todo_delme: i32) -> ();
-
-        /// Get the physical addresses of a dataspace.
-        ///
-        /// This call will only succeed on pinned memory dataspaces.  
-        /// Returns phys_size
-        /// **Deprecated:** Use L4Re::Dma_space instead. This function will be removed
-        fn phys(&mut self, offset: l4_addr_t) -> DeprecatedPhys;
-
-        /// Allocate a range in the dataspace.
-        ///
-        /// On success, at least the given range is guaranteed to be allocated. The
-        /// dataspace manager may also allocate more memory due to page granularity.
-        ///
-        /// The memory is allocated with the same rights as the dataspace
-        /// capability.
-        ///
-        /// A dataspace provider may also silently ignore areas
-        /// outside the dataspace.
-        fn allocate(&mut self, offset: l4_addr_t, size: l4_size_t) -> ();
+        if err != L4_EOK as i32 {
+            Err(Error::from_ipc(err.into()))
+        } else {
+            Ok(AttachedDataspace {
+                cap: space,
+                ptr: vaddr as *mut u8,
+            })
+        }
     }
 }
 
-
-/// Flags for memory allocation
-#[repr(u8)]
-pub enum MemAllocFlags {
-    /// Allocate physically contiguous memory
-    Continuous   = 0x01,
-    /// Allocate super pages
-    SuperPages  = 0x04,
-}
-
-// TODO: this interface is not functional
-// The Mem_alloc (C++) interface just mimics the ipc_iface framework, but is actually a plain C++
-// task. To expose this interface, the factory interface (also mimicking the framework interface to
-// some extend) needs to be ported and then this stub needs to be rewritten to expose Cap, Demand,
-// etc. manually.
-/*
-/// Memory allocation interface.
-///
-/// The memory-allocator API is the basic API to allocate memory from the L4Re
-/// subsystem. The memory is allocated in terms of dataspaces (see
-/// [l4re::mem::dataspace](trait.Dataspace.html).
-/// The provided dataspaces have at least the property that data written to such
-/// a dataspace is available as long as the dataspace is not freed or the data
-/// is not overwritten. In particular, the memory backing a dataspace from an
-/// allocator need not be allocated instantly, but may be allocated lazily on
-/// demand. 
-///
-/// A memory allocator can provide dataspaces with additional properties, such
-/// as physically contiguous memory, pre-allocated memory, or pinned memory. To
-/// request memory with an additional property the `alloc()` method provides a
-/// flags parameter. If the concrete implementation of a memory allocator does
-/// not support or allow allocation of memory with a certain property, the
-/// allocation may be refused.
-///
-/// Memory is not freed using this interface; use
-/// `l4_task_unmap(mem, L4_FP_DELETE_OBJ)` or other similar means to remove a
-/// dataspace.
-iface! {
-    trait MemoryAllocator {
-        const PROTOCOL_ID: i64 = PROTO_EMPTY;
-        /// Allocate anonymous memory.
-        ///
-        /// The size is given in bytes and has the granularity of a (super)page.
-        /// If `size` is a negative value and `flags` set the
-        /// [MemAllocFlags::Continuous](enum.MemAllocFlags.html) bit the
-        /// allocator tries to allocate as much memory as possible leaving an
-        /// amount of at least `-size` bytes within the associated quota.
-        /// The flags parameters controls the allocation, see [MemAllocFlags](enum.MemAllocFlags.html)
-        /// If `align` is given and the allocator supports it, the memory will
-        /// be aligned and will be at least L4_PAGESHIFT, with SuperPages flag
-        /// set at least L4_SUPERPAGESHIFT
-        fn alloc(&mut self, size: isize, flags: u64, align: Option<u64>) -> Cap<Dataspace>;
+fn maxorder(base: usize, size: usize, pageshift: usize) -> usize {
+    let mut o = pageshift;
+    loop {
+		let m = (1 << (o+1)) - 1;
+		if (base & m) != 0 {
+			return o;
+		}
+		if size <= m {
+			return o;
+		}
+		o += 1;
     }
 }
 
-#[l4_client(MemoryAllocator, demand = 1)]
-pub struct MemAlloc;
-*/
+impl AttachedDataspace {
+    pub fn map_dma(&mut self, target: &DmaSpace) -> Result<usize> {
+        let mut len = self.cap.size;
+        let mut addr = self.ptr as usize; // source address;
+        let page_size = 1 << self.cap.pageshift;
+        assert!((addr | len) % page_size == 0);
+
+        while len != 0 {
+            let o = maxorder(addr, len, self.cap.pageshift);
+            let sz = 1 << o;
+
+            let fp = unsafe { l4_fpage_w(addr, o as u32, L4_FPAGE_RWX as u8) };
+            let ctl = l4_map_obj_control(addr as u64, L4_MAP_ITEM_MAP as u32);
+            let tag : MsgTag = unsafe { l4_task_map(target.raw(), THIS_TASK.raw(), fp, ctl as usize) }.into();
+            tag.result()?;
+
+            len -= sz;
+            addr += sz;
+        }
+
+        Ok(self.ptr as usize)
+    }
+}
+
+impl VolatileMemoryInterface for AttachedDataspace {
+    fn ptr(&self) -> *mut u8 {
+        self.ptr
+    }
+}

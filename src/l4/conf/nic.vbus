@@ -1,0 +1,10 @@
+Io.add_vbusses
+{
+  nic = Io.Vi.System_bus(function ()
+    Property.num_msis = 20;
+    PCI0 = Io.Vi.PCI_bus(function ()
+      pci_nic = wrap(Io.system_bus():match("PCI/VEN_8086&DEV_10fb"));
+    end);
+  end);
+};
+

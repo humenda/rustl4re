@@ -1,0 +1,12 @@
+pub use crate::traits::Bus as _pc_hal_Bus;
+pub use crate::traits::Device as _pc_hal_Device;
+pub use crate::traits::DmaSpace as _pc_hal_DmaSpace;
+pub use crate::traits::FailibleMemoryInterface32 as _pc_hal_FailibleMemoryInterface32;
+pub use crate::traits::Icu as _pc_hal_Icu;
+pub use crate::traits::IrqHandler as _pc_hal_IrqHandler;
+pub use crate::traits::MappableMemory as _pc_hal_MappableMemory;
+pub use crate::traits::MemoryInterface as _pc_hal_MemoryInterface;
+pub use crate::traits::PciDevice as _pc_hal_PciDevice;
+pub use crate::traits::RawMemoryInterface as _pc_hal_RawMemoryInterface;
+pub use crate::traits::Resource as _pc_hal_Resource;
+pub use crate::traits::{BusInterface, ResourceType};

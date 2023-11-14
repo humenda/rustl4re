@@ -3,6 +3,10 @@
 #include <l4/re/c/mem_alloc.h>
 #include <l4/re/c/rm.h>
 #include <l4/re/c/util/cap_alloc.h>
+#include <l4/re/c/dma_space.h>
 #include <l4/re/protocols.h>
+#include <l4/io/io.h>
+#include <l4/io/types.h>
 #include <l4/l4rust/env.h>
 #include <l4/l4rust/mem.h>
+#include <l4/l4rust/vbus.h>

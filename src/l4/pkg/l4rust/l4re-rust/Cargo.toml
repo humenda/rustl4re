@@ -15,5 +15,12 @@ path = "../l4-rust"
 # ToDo: make this conditional
 default-features = false
 
+[dependencies.l4_sys]
+path = "../l4-sys-rust"
+
 [dependencies.l4_derive]
 path = "../l4_derive-rust"
+
+[dependencies.bitflags]
+version = "1.0"
+default-features = false

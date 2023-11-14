@@ -11,7 +11,9 @@ fn main() {
         .blocklist_type("strtod")
         .blocklist_type("max_align_t")
         .blocklist_file(".*/stdlib.h")
-        .ctypes_prefix("core::ffi");
+        .ctypes_prefix("core::ffi")
+        .blocklist_type("l4_addr_t")
+        .ctypes_prefix("::libc");
     if let Ok(include_dirs) = ::std::env::var("L4_INCLUDE_DIRS") {
         for item in include_dirs.split(" ") {
             bindings = bindings.clang_arg(item);

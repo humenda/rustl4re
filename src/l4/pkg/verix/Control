@@ -1,0 +1,3 @@
+provides: verix
+requires:  l4re libc libpthread libc_be_sig l4re_c-util libc_support_misc libio-vbus libio l4-sys-rust libdl l4re-rust l4-rust l4_derive-rust
+maintainer: hboeving@genua.de

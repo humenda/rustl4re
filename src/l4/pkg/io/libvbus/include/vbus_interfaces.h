@@ -28,7 +28,7 @@
  * the type of the device, i.e. from the point of view of the client
  * a device is defined by the kinds of sub-interfaces it supports.
  */
-enum l4vbus_iface_type_t {
+typedef enum {
   L4VBUS_INTERFACE_ICU = 0,
   L4VBUS_INTERFACE_GPIO,
   L4VBUS_INTERFACE_PCI,
@@ -36,7 +36,7 @@ enum l4vbus_iface_type_t {
   L4VBUS_INTERFACE_PM,
   L4VBUS_INTERFACE_BUS,
   L4VBUS_INTERFACE_GENERIC = 0x20
-};
+} l4vbus_iface_type_t;
 
 
 enum {

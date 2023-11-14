@@ -1,0 +1,12 @@
+[package]
+name = "pc-hal-l4"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+pc-hal = { path = "../pc-hal" }
+l4_sys = { path = "../../l4rust/l4-sys-rust/" }
+l4re = { path = "../../l4rust/l4re-rust/" }
+l4 = { path = "../../l4rust/l4-rust/" }

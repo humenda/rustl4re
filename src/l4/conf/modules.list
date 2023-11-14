@@ -213,3 +213,13 @@ module[arch=arm64,fname=linux]            https://l4re.org/download/Linux-kernel
 module[arch=arm,fname=ramdisk-arm.rd]     https://os.inf.tu-dresden.de/~adam/dl/ramdisks/ramdisk-armv7.rd
 module[arch=arm64,fname=ramdisk-arm64.rd] https://os.inf.tu-dresden.de/~adam/dl/ramdisks/ramdisk-armv8-64.rd
 # TODO: Add x86 and MIPS
+
+entry verix
+kernel fiasco -serial_esc -esc
+roottask moe rom/verix.ned
+module l4re
+module ned
+module verix
+module verix.ned
+module nic.vbus
+module io
