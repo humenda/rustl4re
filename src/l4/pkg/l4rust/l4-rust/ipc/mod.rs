@@ -30,6 +30,7 @@ use num_traits::FromPrimitive;
 
 use crate::error::{Error, Result};
 use crate::types::{Mword, Protocol, UMword};
+use crate::utcb::Utcb;
 
 use l4_sys;
 

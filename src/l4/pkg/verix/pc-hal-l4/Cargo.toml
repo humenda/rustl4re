@@ -7,3 +7,6 @@ edition = "2021"
 
 [dependencies]
 pc-hal = { path = "../pc-hal" }
+l4_sys = { path = "../../l4rust/l4-sys-rust/" }
+l4re = { path = "../../l4rust/l4re-rust/" }
+l4 = { path = "../../l4rust/l4-rust/" }

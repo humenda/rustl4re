@@ -1,5 +1,3 @@
-extern crate l4;
-
 use pc_hal::traits::Bus;
 use pc_hal_l4::{Device, DmaSpace, IoMem, MappableMemory, PciDevice, Resource, Vbus};
 use verix_lib::run;

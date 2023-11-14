@@ -1,7 +1,3 @@
-extern crate l4;
-extern crate l4_sys;
-extern crate l4re;
-
 use l4::cap::Cap;
 use l4re::env::get_cap;
 use l4re::factory::{Factory, FactoryCreate, IrqSender};

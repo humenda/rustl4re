@@ -11,7 +11,6 @@ use l4::Error;
 use l4::Result;
 use l4::cap::CapIdx;
 use l4::cap::Interface;
-use l4::cap::Cap;
 use l4::task::THIS_TASK;
 use l4::ipc::MsgTag;
 use bitflags::bitflags;
@@ -22,6 +21,8 @@ use crate::sys::l4re_ma_flags::*;
 use crate::sys::l4re_rm_flags_values::*;
 use crate::sys::l4re_rm_attach;
 use crate::sys::l4re_rm_detach;
+use crate::sys::L4_fpage_rights::L4_FPAGE_RWX;
+use crate::sys::l4_msg_item_consts_t::L4_MAP_ITEM_MAP;
 use l4_sys::l4re_util_cap_alloc;
 use l4_sys::l4_error_code_t::L4_EOK;
 use l4_sys::{L4_PAGESHIFT, L4_SUPERPAGESHIFT};
@@ -192,19 +193,17 @@ impl AttachedDataspace {
         let mut addr = self.ptr as usize; // source address;
         let page_size = 1 << self.cap.pageshift;
         assert!((addr | len) % page_size == 0);
-        println!("Starting to map dataspace from 0x{:x} to 0x{:x}, length: 0x{:x}, alignment: 0x{:x}", addr, addr, len, page_size);
 
         while len != 0 {
             let o = maxorder(addr, len, self.cap.pageshift);
             let sz = 1 << o;
 
             let fp = unsafe { l4_fpage_w(addr, o as u32, L4_FPAGE_RWX as u8) };
-            let ctl = l4_map_obj_control(addr as u64, L4_MAP_ITEM_MAP as u64);
+            let ctl = l4_map_obj_control(addr as u64, L4_MAP_ITEM_MAP as u32);
             let tag : MsgTag = unsafe { l4_task_map(target.raw(), THIS_TASK.raw(), fp, ctl as usize) }.into();
             tag.result()?;
 
             len -= sz;
-            println!("Mapped from 0x{:x} to 0x{:x}, length: 0x{:x}, remaining: 0x{:x}", addr, addr, sz, len);
             addr += sz;
         }
 
